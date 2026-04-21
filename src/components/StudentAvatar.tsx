@@ -133,7 +133,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
   }, [user, studentData.email, isStudentLoggedIn, onAvatarUpdate]);
 
   const sizeClasses = {
-    sm: 'w-8 h-8',
+    sm: 'w-11 h-11',
     md: 'w-16 h-16',
     lg: 'w-32 h-32'
   };
@@ -343,7 +343,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const cameraIconSize = size === 'lg' ? 'w-6 h-6' : size === 'md' ? 'w-4 h-4' : 'w-3 h-3';
+  const cameraIconSize = size === 'lg' ? 'w-6 h-6' : size === 'md' ? 'w-4 h-4' : 'w-3.5 h-3.5';
 
   return (
     <div
@@ -351,7 +351,11 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       title={showUpload ? 'Clique para alterar a foto de perfil' : undefined}
     >
       <Avatar
-        className={`${sizeClasses[size]} border-2 transition-all ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer border-primary/30 hover:border-primary hover:ring-2 hover:ring-primary/40 hover:ring-offset-1 hover:shadow-md' : 'border-primary/20'}`}
+        className={`${sizeClasses[size]} transition-all duration-200 ${uploading ? 'opacity-50' : ''} ${
+          avatarUrl
+            ? 'ring-2 ring-white/60 ring-offset-1 ring-offset-primary shadow-md'
+            : 'border-2 border-white/40'
+        } ${showUpload ? 'cursor-pointer hover:ring-white hover:shadow-lg hover:scale-105' : ''}`}
         onClick={showUpload ? handleAvatarClick : undefined}
       >
         {avatarUrl && (
@@ -361,28 +365,28 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
             className="object-cover"
           />
         )}
-        <AvatarFallback className="bg-primary/10 text-primary">
+        <AvatarFallback className="bg-white/20 text-white font-semibold">
           {studentData.nomeUsuario ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
       </Avatar>
 
-      {/* Overlay de câmera — permanente se sem foto, visível no hover se tiver foto */}
+      {/* Overlay de câmera — só aparece no hover quando há foto; permanente quando sem foto */}
       {showUpload && !uploading && (
         <div
-          className={`absolute inset-0 rounded-full flex items-center justify-center transition-opacity pointer-events-none ${
+          className={`absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-200 pointer-events-none ${
             avatarUrl
               ? 'bg-black/50 opacity-0 group-hover:opacity-100'
-              : 'bg-primary/20 opacity-100'
+              : 'bg-black/30 opacity-100'
           }`}
         >
-          <Camera className={`${cameraIconSize} ${avatarUrl ? 'text-white' : 'text-primary'}`} />
+          <Camera className={`${cameraIconSize} text-white`} />
         </div>
       )}
 
-      {/* Badge de câmera fixo no canto inferior direito (só no tamanho sm do header) */}
-      {showUpload && size === 'sm' && !uploading && (
-        <div className="absolute -bottom-0.5 -right-0.5 bg-primary rounded-full p-0.5 shadow-sm border border-white/30 pointer-events-none">
-          <Camera className="w-2.5 h-2.5 text-white" />
+      {/* Badge de câmera no canto — só aparece quando não há foto */}
+      {showUpload && size === 'sm' && !uploading && !avatarUrl && (
+        <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-sm pointer-events-none">
+          <Camera className="w-2.5 h-2.5 text-primary" />
         </div>
       )}
 
