@@ -27,9 +27,10 @@ interface MenuItem {
 interface MenuGridProps {
   menuItems: MenuItem[];
   showMinhasRedacoes: boolean;
+  maxCards?: number;
 }
 
-export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
+export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridProps) => {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState('');
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
@@ -70,10 +71,15 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   }, [studentData.email, buscarMensagensNaoLidasAluno]);
 
   // Filtra os itens do menu baseado na disponibilidade de conteúdo
-  const visibleMenuItems = menuItems.filter(item => {
+  let visibleMenuItems = menuItems.filter(item => {
     if (item.showAlways) return true;
     return item.showCondition === true;
   });
+
+  // Se maxCards foi definido, limitar quantidade de cards
+  if (maxCards && maxCards > 0) {
+    visibleMenuItems = visibleMenuItems.slice(0, maxCards);
+  }
 
   const handleBlockedClick = (resourceName: string) => {
     setSelectedResource(resourceName);

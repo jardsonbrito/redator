@@ -87,6 +87,10 @@ const GuiaTematicoAdmin       = lazy(() => import("./pages/admin/GuiaTematicoAdm
 const Jarvis                  = lazy(() => import("./pages/Jarvis"));
 const PlanoEstudo             = lazy(() => import("./pages/PlanoEstudo"));
 const PlanoEstudoAdmin        = lazy(() => import("./pages/admin/PlanoEstudoAdmin"));
+const Desempenho              = lazy(() => import("./pages/Desempenho"));
+const Plano                   = lazy(() => import("./pages/Plano"));
+const Mais                    = lazy(() => import("./pages/Mais"));
+const EditarPerfil            = lazy(() => import("./pages/EditarPerfil"));
 
 // ── Páginas com named export ─────────────────────────────────────────────────
 const Avisos            = lazy(() => import("./pages/admin/Avisos").then(m => ({ default: m.Avisos })));
@@ -146,6 +150,10 @@ function App() {
                     <Route path="/processo-seletivo/inscricao/:formularioId" element={<ProcessoSeletivoInscricao />} />
 
                     <Route path="/app" element={<ProtectedStudentRoute><Index /></ProtectedStudentRoute>} />
+                    <Route path="/desempenho" element={<ProtectedStudentRoute><Desempenho /></ProtectedStudentRoute>} />
+                    <Route path="/plano" element={<ProtectedStudentRoute><Plano /></ProtectedStudentRoute>} />
+                    <Route path="/mais" element={<ProtectedStudentRoute><Mais /></ProtectedStudentRoute>} />
+                    <Route path="/editar-perfil" element={<ProtectedStudentRoute><EditarPerfil /></ProtectedStudentRoute>} />
                     <Route path="/temas" element={<ProtectedStudentRoute><Temas /></ProtectedStudentRoute>} />
                     <Route path="/temas/:id" element={<ProtectedStudentRoute><TemaDetalhes /></ProtectedStudentRoute>} />
                     <Route path="/simulados" element={<ProtectedStudentRoute><Simulados /></ProtectedStudentRoute>} />
