@@ -215,7 +215,7 @@ async function fetchBoletimData(
 
     supabase
       .from("aulas_virtuais")
-      .select("id, titulo, data_aula, aula_mae_id")
+      .select("id, titulo, data_aula, aula_mae_id, tipo_aula")
       .contains("turmas_autorizadas", [turma])
       .gte("data_aula", dateStart)
       .lte("data_aula", dateEnd),
@@ -377,7 +377,9 @@ async function fetchBoletimData(
   // --- Métricas ---
   // Agrupar aulas virtuais por unidade pedagógica:
   // repetições (aula_mae_id != null) se juntam ao grupo da aula mãe
-  const rawAulasList = (aulasRes.data || []) as { id: string; titulo: string; data_aula: string; aula_mae_id: string | null }[];
+  const rawAulasAll = (aulasRes.data || []) as { id: string; titulo: string; data_aula: string; aula_mae_id: string | null; tipo_aula: string | null }[];
+  // Nivelamento é convite — não entra no denominador de frequência nem no boletim
+  const rawAulasList = rawAulasAll.filter(a => a.tipo_aula !== 'nivelamento');
   const gruposAulas: Record<string, string[]> = {};
   for (const a of rawAulasList.filter(a => !a.aula_mae_id)) {
     gruposAulas[a.id] = [a.id];

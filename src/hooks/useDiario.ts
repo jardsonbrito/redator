@@ -207,7 +207,8 @@ export function useAulaMutation() {
             turma: aula.turma,
             data_aula: aula.data_aula,
             conteudo_ministrado: aula.conteudo_ministrado,
-            observacoes: aula.observacoes
+            observacoes: aula.observacoes,
+            tipo_aula: aula.tipo_aula || null,
           })
           .eq('id', aula.id)
           .select()
@@ -224,7 +225,8 @@ export function useAulaMutation() {
             data_aula: aula.data_aula,
             conteudo_ministrado: aula.conteudo_ministrado,
             observacoes: aula.observacoes,
-            professor_email: aula.professor_email
+            professor_email: aula.professor_email,
+            tipo_aula: aula.tipo_aula || null,
           })
           .select()
           .single();
@@ -397,7 +399,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           .select('id, turma')
           .in('turma', possiveisTurmas)
           .eq('etapa_id', etapa.id)
-          .is('origem_aula_virtual_id', null); // Excluir entradas criadas por aulas ao vivo (contadas em totalAulasVirtuais)
+          .is('origem_aula_virtual_id', null) // Excluir entradas criadas por aulas ao vivo (contadas em totalAulasVirtuais)
+          .or('tipo_aula.is.null,tipo_aula.neq.nivelamento'); // Nivelamento é convite — não penaliza frequência
 
         // Buscar presença do aluno nessas aulas do diário
         const aulaIds = aulas?.map(a => a.id) || [];
@@ -430,13 +433,14 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           // Repetições da mesma aula são agrupadas e contam como 1 unidade pedagógica
           const { data: rawAulas } = await supabase
             .from('aulas_virtuais')
-            .select('id, aula_mae_id')
+            .select('id, aula_mae_id, tipo_aula')
             .eq('ativo', true)
             .gte('data_aula', etapa.data_inicio)
             .lt('data_aula', etapa.data_fim + 'T23:59:59')
             .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
-          const aulasVirtuais = (rawAulas || []) as { id: string; aula_mae_id: string | null }[];
+          // Nivelamento é convite — não entra no denominador de frequência
+          const aulasVirtuais = (rawAulas || []).filter((a: any) => a.tipo_aula !== 'nivelamento') as { id: string; aula_mae_id: string | null }[];
 
           if (aulasVirtuais.length > 0) {
             // Agrupar: aulas raiz (aula_mae_id IS NULL) são unidades pedagógicas independentes
@@ -782,13 +786,14 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       // Para participação: incluímos todas, pois o campo `participou` é registrado no diário mesmo para aulas ao vivo
       const { data: aulas } = await supabase
         .from('aulas_diario')
-        .select('id, data_aula, origem_aula_virtual_id')
+        .select('id, data_aula, origem_aula_virtual_id, tipo_aula')
         .in('turma', possiveisTurmas)
         .eq('etapa_id', etapas.id);
 
-      const aulasData = (aulas || []) as { id: string; data_aula: string; origem_aula_virtual_id: string | null }[];
-      // Apenas aulas puras do diário (sem origem virtual) → denominador de FREQUÊNCIA do diário
-      const aulasFreqData = aulasData.filter(a => !a.origem_aula_virtual_id);
+      const aulasData = (aulas || []) as { id: string; data_aula: string; origem_aula_virtual_id: string | null; tipo_aula: string | null }[];
+      // Apenas aulas puras do diário (sem origem virtual e sem nivelamento) → denominador de FREQUÊNCIA do diário
+      // Nivelamento é convite — ausência não penaliza o perfil do aluno
+      const aulasFreqData = aulasData.filter(a => !a.origem_aula_virtual_id && a.tipo_aula !== 'nivelamento');
       const allAulaIds = aulasData.map(a => a.id);
 
       // Buscar TODAS as presenças de UMA VEZ para todos os alunos (frequência + participação)
@@ -802,13 +807,14 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
       const { data: aulasVirtuais } = await supabase
         .from('aulas_virtuais')
-        .select('id, aula_mae_id, data_aula')
+        .select('id, aula_mae_id, data_aula, tipo_aula')
         .eq('ativo', true)
         .gte('data_aula', etapas.data_inicio)
         .lt('data_aula', etapas.data_fim + 'T23:59:59')
         .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
-      const rawAulasVirtuais = (aulasVirtuais || []) as { id: string; aula_mae_id: string | null; data_aula: string }[];
+      // Nivelamento é convite — não entra no denominador de frequência
+      const rawAulasVirtuais = (aulasVirtuais || []).filter((a: any) => a.tipo_aula !== 'nivelamento') as { id: string; aula_mae_id: string | null; data_aula: string }[];
       const allAulasVirtuaisIds = rawAulasVirtuais.map(a => a.id);
 
       // Agrupar aulas virtuais por unidade pedagógica (mãe + filhas = 1 unidade)

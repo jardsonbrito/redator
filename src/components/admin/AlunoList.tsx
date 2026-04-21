@@ -807,6 +807,7 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
               selectedIds={selectedIds}
               onSelectItem={handleSelectItem}
               onSelectAll={handleSelectAll}
+              turmasComPlano={turmasComPlano}
             />
           </TabsContent>
 
@@ -1076,6 +1077,7 @@ interface AlunoTableProps {
   selectedIds: Set<string>;
   onSelectItem: (id: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
+  turmasComPlano: string[];
 }
 
 const AlunoTable = ({
@@ -1094,7 +1096,8 @@ const AlunoTable = ({
   onDeleteDefinitivo,
   selectedIds,
   onSelectItem,
-  onSelectAll
+  onSelectAll,
+  turmasComPlano,
 }: AlunoTableProps) => {
   const [openRowDropdownId, setOpenRowDropdownId] = useState<string | null>(null);
   const allSelected = alunos.length > 0 && alunos.every(a => selectedIds.has(a.id));

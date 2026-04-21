@@ -12,6 +12,11 @@ export interface EtapaEstudo {
   updated_at: string;
 }
 
+// Tipos de aula que NÃO devem ser computados em frequência, nota ou boletim.
+// Nivelamento: alunos são apenas convidados — a ausência não penaliza o perfil do aluno.
+export const TIPOS_AULA_SEM_COMPUTO = ['nivelamento'] as const;
+export type TipoAulaSemComputo = typeof TIPOS_AULA_SEM_COMPUTO[number];
+
 export interface AulaDiario {
   id: string;
   turma: string;
@@ -22,6 +27,8 @@ export interface AulaDiario {
   professor_email?: string;
   created_at: string;
   updated_at: string;
+  // Se preenchido com valor em TIPOS_AULA_SEM_COMPUTO, a aula não entra em cálculos de frequência/nota.
+  tipo_aula?: string;
   // Campos para integração com Aulas Ao Vivo
   origem_aula_virtual_id?: string;  // Referência à aula virtual de origem
   eh_aula_online?: boolean;          // Indica se é uma aula online/ao vivo
@@ -161,6 +168,7 @@ export interface FormAulaData {
   data_aula: string;
   conteudo_ministrado: string;
   observacoes?: string;
+  tipo_aula?: string;
 }
 
 export interface PresencaFormData {

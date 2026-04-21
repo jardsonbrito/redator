@@ -48,6 +48,8 @@ const TIPOS_EVENTO = [
   { value: 'guia_tematico',        label: 'Guia Temático' },
   { value: 'repertorio_orientado', label: 'Repertório Orientado' },
   { value: 'laboratorio',          label: 'Laboratório' },
+  // Nivelamento: alunos são apenas CONVIDADOS — não computa frequência, nota nem boletim.
+  // A ausência nessa aula NÃO deve rebaixar o perfil do aluno. Ver useDiario.ts e useAlunoBoletim.ts.
   { value: 'nivelamento',          label: 'Aula de Nivelamento' },
   { value: 'prazo',                label: 'Prazo Importante' },
   { value: 'aviso_pedagogico',     label: 'Aviso Pedagógico' },

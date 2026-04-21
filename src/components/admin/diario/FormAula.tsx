@@ -17,6 +17,7 @@ const aulaSchema = z.object({
   data_aula: z.string().min(1, 'Data da aula é obrigatória'),
   conteudo_ministrado: z.string().min(1, 'Conteúdo ministrado é obrigatório'),
   observacoes: z.string().optional(),
+  tipo_aula: z.string().optional(),
 });
 
 type FormData = z.infer<typeof aulaSchema>;
@@ -38,6 +39,7 @@ export function FormAula({ turma, aula, onSave, onCancel }: FormAulaProps) {
       data_aula: aula?.data_aula ? formatDateFromDatabase(aula.data_aula) : getTodayLocalDate(),
       conteudo_ministrado: aula?.conteudo_ministrado || '',
       observacoes: aula?.observacoes || '',
+      tipo_aula: aula?.tipo_aula || '',
     }
   });
 
@@ -126,6 +128,23 @@ export function FormAula({ turma, aula, onSave, onCancel }: FormAulaProps) {
               {errors.conteudo_ministrado && (
                 <p className="text-sm text-destructive">{errors.conteudo_ministrado.message}</p>
               )}
+            </div>
+
+            {/* Tipo de Aula */}
+            <div className="space-y-2">
+              <Label htmlFor="tipo_aula">Tipo de Aula</Label>
+              <Select
+                value={watch('tipo_aula') || ''}
+                onValueChange={(value) => setValue('tipo_aula', value === 'regular' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Regular (conta para frequência e boletim)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="regular">Regular — conta para frequência e boletim</SelectItem>
+                  <SelectItem value="nivelamento">Nivelamento — apenas convite, não penaliza o aluno</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Observações */}
