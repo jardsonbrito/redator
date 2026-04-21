@@ -47,34 +47,44 @@ export function useAlertasAtividades({ turma, userType, email, enabled = true }:
       };
 
       // ========================================
-      // 1. AULAS AO VIVO - Três cenários
+      // 1. AULAS AO VIVO
+      // Regras de exibição no dashboard:
+      // - Todas as aulas de HOJE aparecem (ao vivo agora ou agendadas para hoje)
+      // - Aulas FUTURAS só aparecem se forem amanhã E não houver aula pendente/em curso hoje
+      // - Nunca mostrar aulas com mais de 1 dia de antecedência
       // ========================================
       try {
-        // Buscar todas as aulas ao vivo ativas (futuras e de hoje)
+        const amanha = new Date(agora);
+        amanha.setDate(amanha.getDate() + 1);
+        const amanhaStr = amanha.toISOString().split('T')[0];
+
         const { data: aulasVirtuais } = await supabase
           .from('aulas_virtuais')
-          .select('id, titulo, data_aula, horario_inicio, horario_fim, turmas_autorizadas, permite_visitante, criado_em')
+          .select('id, titulo, data_aula, horario_inicio, horario_fim, turmas_autorizadas, permite_visitante')
           .eq('ativo', true)
           .eq('eh_aula_ao_vivo', true)
-          .gte('data_aula', hoje) // Hoje ou futuro
+          .gte('data_aula', hoje)
+          .lte('data_aula', amanhaStr) // Busca só hoje e amanhã
           .order('data_aula', { ascending: true });
 
         if (aulasVirtuais) {
-          for (const aula of aulasVirtuais) {
-            const turmasAutorizadas = aula.turmas_autorizadas || [];
-            const permiteVisitante = aula.permite_visitante;
+          const aulasAcessiveis = aulasVirtuais.filter(a =>
+            temAcessoTurma(a.turmas_autorizadas || [], a.permite_visitante)
+          );
 
-            if (!temAcessoTurma(turmasAutorizadas, permiteVisitante)) {
-              continue;
-            }
+          // Há aula de hoje que ainda não terminou (pendente ou em curso)?
+          const temAulaHojeAtiva = aulasAcessiveis.some(
+            a => a.data_aula === hoje && a.horario_fim >= horaAtual
+          );
 
+          for (const aula of aulasAcessiveis) {
             const dataAula = aula.data_aula;
             const horaInicio = aula.horario_inicio;
             const horaFim = aula.horario_fim;
             const dataFormatada = new Date(dataAula + 'T12:00:00').toLocaleDateString('pt-BR');
 
-            // Cenário 1: Aula acontecendo AGORA (prioridade máxima)
             if (dataAula === hoje && horaAtual >= horaInicio && horaAtual <= horaFim) {
+              // Acontecendo AGORA
               alertas.push({
                 tipo: 'aula_ao_vivo',
                 id: aula.id,
@@ -83,9 +93,8 @@ export function useAlertasAtividades({ turma, userType, email, enabled = true }:
                 path: '/aulas-ao-vivo',
                 prioridade: 1
               });
-            }
-            // Cenário 2: Aula é HOJE (mas ainda não começou ou já terminou)
-            else if (dataAula === hoje) {
+            } else if (dataAula === hoje) {
+              // HOJE (antes ou depois do horário)
               alertas.push({
                 tipo: 'aula_hoje',
                 id: aula.id,
@@ -94,9 +103,8 @@ export function useAlertasAtividades({ turma, userType, email, enabled = true }:
                 path: '/aulas-ao-vivo',
                 prioridade: 2
               });
-            }
-            // Cenário 3: Aula AGENDADA para o futuro
-            else if (dataAula > hoje) {
+            } else if (dataAula === amanhaStr && !temAulaHojeAtiva) {
+              // AMANHÃ — só aparece quando não há aula pendente/em curso hoje
               alertas.push({
                 tipo: 'aula_agendada',
                 id: aula.id,
