@@ -78,7 +78,7 @@ const COMPETENCIA_LABELS: Record<string, string> = {
   C5: 'C5 — Intervenção',
 };
 
-const DIAS_SEMANA_CURTO = ['d', 's', 't', 'q', 'q', 's', 's'];
+const DIAS_SEMANA_CURTO = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────

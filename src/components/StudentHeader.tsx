@@ -141,8 +141,11 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
 
                   <div className="mt-6 space-y-6">
                     {/* Avatar grande */}
-                    <div className="flex justify-center">
+                    <div className="flex flex-col items-center gap-3">
                       <StudentAvatar size="lg" showUpload={true} />
+                      <p className="text-xs text-center font-medium text-primary/70 italic tracking-wide">
+                        redação na prática, aprovação na certa!
+                      </p>
                     </div>
 
                     {/* Seção: Dados Principais */}
