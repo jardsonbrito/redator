@@ -70,33 +70,6 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
     }
   }, [studentData.email, buscarMensagensNaoLidasAluno]);
 
-  // Filtra os itens do menu baseado na disponibilidade de conteúdo
-  let visibleMenuItems = menuItems.filter(item => {
-    if (item.showAlways) return true;
-    return item.showCondition === true;
-  });
-
-  // Ordena pelos valores de ordem_aluno vindos do banco (fallback: ordem original)
-  if (funcionalidadesOrdenadas && funcionalidadesOrdenadas.length > 0) {
-    visibleMenuItems = [...visibleMenuItems].sort((a, b) => {
-      const chaveA = getFunctionalityName(a.title);
-      const chaveB = getFunctionalityName(b.title);
-      const orderA = chaveA ? (funcionalidadesOrdenadas.find(f => f.chave === chaveA)?.ordem_aluno ?? 9999) : 9999;
-      const orderB = chaveB ? (funcionalidadesOrdenadas.find(f => f.chave === chaveB)?.ordem_aluno ?? 9999) : 9999;
-      return orderA - orderB;
-    });
-  }
-
-  // Se maxCards foi definido, limitar quantidade de cards
-  if (maxCards && maxCards > 0) {
-    visibleMenuItems = visibleMenuItems.slice(0, maxCards);
-  }
-
-  const handleBlockedClick = (resourceName: string) => {
-    setSelectedResource(resourceName);
-    setShowUnlockModal(true);
-  };
-
   // Mapeamento de títulos dos cards para nomes das funcionalidades
   const getFunctionalityName = (title: string): string => {
     const mapping: Record<string, string> = {
@@ -125,6 +98,33 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
       'Microaprendizagem': 'microaprendizagem'
     };
     return mapping[title] || '';
+  };
+
+  // Filtra os itens do menu baseado na disponibilidade de conteúdo
+  let visibleMenuItems = menuItems.filter(item => {
+    if (item.showAlways) return true;
+    return item.showCondition === true;
+  });
+
+  // Ordena pelos valores de ordem_aluno vindos do banco (fallback: ordem original)
+  if (funcionalidadesOrdenadas && funcionalidadesOrdenadas.length > 0) {
+    visibleMenuItems = [...visibleMenuItems].sort((a, b) => {
+      const chaveA = getFunctionalityName(a.title);
+      const chaveB = getFunctionalityName(b.title);
+      const orderA = chaveA ? (funcionalidadesOrdenadas.find(f => f.chave === chaveA)?.ordem_aluno ?? 9999) : 9999;
+      const orderB = chaveB ? (funcionalidadesOrdenadas.find(f => f.chave === chaveB)?.ordem_aluno ?? 9999) : 9999;
+      return orderA - orderB;
+    });
+  }
+
+  // Se maxCards foi definido, limitar quantidade de cards
+  if (maxCards && maxCards > 0) {
+    visibleMenuItems = visibleMenuItems.slice(0, maxCards);
+  }
+
+  const handleBlockedClick = (resourceName: string) => {
+    setSelectedResource(resourceName);
+    setShowUnlockModal(true);
   };
 
   // Paleta harmonizada baseada em tons roxos/lilás
