@@ -10,6 +10,7 @@ import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { AppSettingsForm } from './AppSettingsForm';
 import { CreditManagement } from './CreditManagement';
 import { SubscriptionManagementClean } from './SubscriptionManagementClean';
+import { PlansManager } from './PlansManager';
 import { DatabaseInitializer } from '../DatabaseInitializer';
 import { Mail, Key, User, Clock, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -51,6 +52,8 @@ export const AdminConfigForm = () => {
       setActiveTab(subtab);
     }
   }, [searchParams]);
+
+  const [activeSubTab, setActiveSubTab] = useState('alunos');
 
   const loadCurrentAdmin = async () => {
     setLoadingAdmin(true);
@@ -325,9 +328,20 @@ export const AdminConfigForm = () => {
         </TabsContent>
 
         <TabsContent value="subscriptions">
-          <DatabaseInitializer>
-            <SubscriptionManagementClean />
-          </DatabaseInitializer>
+          <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="alunos">Alunos</TabsTrigger>
+              <TabsTrigger value="planos">Planos</TabsTrigger>
+            </TabsList>
+            <TabsContent value="alunos">
+              <DatabaseInitializer>
+                <SubscriptionManagementClean />
+              </DatabaseInitializer>
+            </TabsContent>
+            <TabsContent value="planos">
+              <PlansManager />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>
