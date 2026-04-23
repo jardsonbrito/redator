@@ -4,34 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { usePlanOverrides } from '@/hooks/usePlanOverrides';
+import { useFuncionalidades } from '@/hooks/usePlansAdmin';
 import { Settings2, RotateCcw, User } from 'lucide-react';
-
-const FUNCTIONALITY_LABELS: Record<string, string> = {
-  temas: 'Temas',
-  enviar_tema_livre: 'Enviar Tema Livre',
-  exercicios: 'Exercícios',
-  simulados: 'Simulados',
-  lousa: 'Lousa',
-  biblioteca: 'Biblioteca',
-  redacoes_exemplares: 'Redações Exemplares',
-  aulas_ao_vivo: 'Aulas ao Vivo',
-  videoteca: 'Videoteca',
-  aulas_gravadas: 'Aulas Gravadas',
-  diario_online: 'Diário Online',
-  gamificacao: 'Gamificação',
-  top_5: 'Top 5',
-  minhas_conquistas: 'Minhas Conquistas',
-  jarvis: 'Jarvis',
-};
 
 interface StudentPlanSectionProps {
   studentId: string;
-  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista' | null;
+  plano: string | null;
 }
 
 export function StudentPlanSection({ studentId, plano }: StudentPlanSectionProps) {
   const { toast } = useToast();
   const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+
+  const { data: funcionalidades = [] } = useFuncionalidades();
 
   const {
     overrides,
@@ -83,14 +68,14 @@ export function StudentPlanSection({ studentId, plano }: StudentPlanSectionProps
       </CardHeader>
       <CardContent className="pt-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {Object.entries(FUNCTIONALITY_LABELS).map(([key, label]) => {
-            const isEnabled = isFunctionalityEnabled(key);
-            const isCustom = overrides[key] !== undefined;
-            const isSaving = savingStates[key];
+          {funcionalidades.map((f) => {
+            const isEnabled = isFunctionalityEnabled(f.chave);
+            const isCustom = overrides[f.chave] !== undefined;
+            const isSaving = savingStates[f.chave];
             return (
               <button
-                key={key}
-                onClick={() => toggleFunctionality(key)}
+                key={f.chave}
+                onClick={() => toggleFunctionality(f.chave)}
                 disabled={isSaving}
                 className={`
                   relative p-2.5 text-xs rounded-lg transition-all text-center border-2 font-medium
@@ -111,7 +96,7 @@ export function StudentPlanSection({ studentId, plano }: StudentPlanSectionProps
                     <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
-                {label}
+                {f.nome_exibicao}
                 {isCustom && !isSaving && (
                   <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mx-auto mt-1" />
                 )}

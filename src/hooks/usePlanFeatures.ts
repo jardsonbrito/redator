@@ -2,110 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from './useSubscription';
 
-// ─── FASE 4: remover estas constantes após validação em produção ───────────────
-
-// Fallback para visitante (usado se o banco não responder)
-const VISITANTE_FEATURES: Record<string, boolean> = {
-  'temas': true,
-  'enviar_tema_livre': true,
-  'exercicios': false,
-  'simulados': false,
-  'lousa': false,
-  'biblioteca': false,
-  'redacoes_exemplares': false,
-  'aulas_ao_vivo': false,
-  'videoteca': false,
-  'aulas_gravadas': false,
-  'diario_online': false,
-  'gamificacao': false,
-  'top_5': false,
-  'minhas_conquistas': false,
-  'repertorio_orientado': false,
-  'jarvis': true
-};
-
-// Fallback por plano (usado se o banco não responder)
-const DEFAULT_PLAN_FEATURES: Record<string, Record<string, boolean>> = {
-  'Largada': {
-    'temas': true,
-    'enviar_tema_livre': false,
-    'exercicios': false,
-    'simulados': false,
-    'lousa': false,
-    'biblioteca': false,
-    'redacoes_exemplares': false,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true,
-    'repertorio_orientado': false,
-    'jarvis': true,
-    'microaprendizagem': true
-  },
-  'Lapidação': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true,
-    'repertorio_orientado': true,
-    'jarvis': true,
-    'microaprendizagem': true
-  },
-  'Liderança': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': true,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true,
-    'repertorio_orientado': true,
-    'jarvis': true,
-    'microaprendizagem': true
-  },
-  'Bolsista': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true,
-    'repertorio_orientado': false,
-    'jarvis': true,
-    'microaprendizagem': true
-  }
-};
-
-// ─── fim das constantes de fallback ───────────────────────────────────────────
-
 export const usePlanFeatures = (userEmail: string) => {
   const { data: subscription } = useSubscription(userEmail);
 
@@ -161,6 +57,23 @@ export const usePlanFeatures = (userEmail: string) => {
     staleTime: 5 * 60 * 1000,
     retry: 1
   });
+
+  // ── Ordem dos cards para o MenuGrid ──────────────────────────────────────
+  // Carregado uma vez; cache de 5 min; sem retry excessivo.
+  const { data: funcionalidadesOrdenadas } = useQuery({
+    queryKey: ['funcionalidades-ordered'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('funcionalidades')
+        .select('chave, ordem_aluno, nome_exibicao')
+        .eq('ativo', true)
+        .order('ordem_aluno');
+      if (error) return null;
+      return (data ?? null) as Array<{ chave: string; ordem_aluno: number; nome_exibicao: string }> | null;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
   // ─────────────────────────────────────────────────────────────────────────
 
   // Overrides individuais por aluno (inalterado)
@@ -199,54 +112,41 @@ export const usePlanFeatures = (userEmail: string) => {
     staleTime: 5 * 60 * 1000
   });
 
-  // ── isFeatureEnabled: lógica de acesso com DB-first + fallback ────────────
+  // ── isFeatureEnabled: lógica de acesso DB-first ──────────────────────────
   //
   // Prioridade de resolução:
-  //   1. sempre_disponivel  → acesso livre, sem checar plano
-  //      (gerenciado em MenuGrid; exposto via alwaysAvailableKeys na Fase 4)
-  //   2. Visitante          → DB visitante_funcionalidades → fallback VISITANTE_FEATURES
-  //   3. Sem assinatura     → false para tudo
-  //   4. Override individual → plan_overrides (prioridade máxima, inalterada)
-  //   5. Plano              → DB plano_funcionalidades → fallback DEFAULT_PLAN_FEATURES
+  //   1. Visitante          → DB visitante_funcionalidades → false
+  //   2. Sem assinatura     → false para tudo
+  //   3. Override individual → plan_overrides (prioridade máxima)
+  //   4. Plano              → DB plano_funcionalidades → false
   //
   const isFeatureEnabled = (functionality: string): boolean => {
-    // Cenário: VISITANTE
     if (isVisitante) {
-      return dbVisitanteFeatures
-        ? (dbVisitanteFeatures[functionality] ?? false)
-        : (VISITANTE_FEATURES[functionality] ?? false);
+      return dbVisitanteFeatures ? (dbVisitanteFeatures[functionality] ?? false) : false;
     }
 
-    // Cenário: SEM ASSINATURA (inclui aluno sem plano ou plano vencido)
     if (!subscription?.plano) {
       return false;
     }
 
-    // Cenário: OVERRIDE INDIVIDUAL (prioridade máxima sobre tudo)
     const override = overrides.find(o => o.functionality === functionality);
     if (override !== undefined) {
       return override.enabled;
     }
 
-    // Cenário: PLANO (Largada / Lapidação / Bolsista / Liderança)
-    return dbPlanFeatures
-      ? (dbPlanFeatures[functionality] ?? false)
-      : (DEFAULT_PLAN_FEATURES[subscription.plano]?.[functionality] ?? false);
+    return dbPlanFeatures ? (dbPlanFeatures[functionality] ?? false) : false;
   };
 
-  // planFeatures: usado externamente (ex: CustomizePlanSimple) — DB-first
-  const planFeatures = subscription?.plano
-    ? (dbPlanFeatures ?? DEFAULT_PLAN_FEATURES[subscription.plano] ?? null)
-    : null;
+  const planFeatures = subscription?.plano ? (dbPlanFeatures ?? null) : null;
 
   return {
     subscription,
     isFeatureEnabled,
     planFeatures,
     overrides,
+    funcionalidadesOrdenadas,
     isLoading: !subscription,
     isVisitante,
-    // usingDbFeatures: true quando banco respondeu com sucesso (útil para debug/admin)
     usingDbFeatures: !!(dbPlanFeatures || dbVisitanteFeatures),
     debugInfo: {
       userEmail: userEmail ? userEmail.slice(0, 10) + '...' : '',

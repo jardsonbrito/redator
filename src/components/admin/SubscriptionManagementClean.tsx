@@ -17,6 +17,7 @@ import { Crown, Edit2, History, Calendar, MoreVertical, Trash2, Settings2 } from
 import { formatDateSafe, isDateActiveOrFuture, formatDateTimeSafe } from '@/utils/dateUtils';
 import { STATUS_ESPECIAIS, formatTurmaDisplay } from '@/utils/turmaUtils';
 import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
+import { usePlanos } from '@/hooks/usePlansAdmin';
 
 interface Student {
   id: string;
@@ -29,7 +30,7 @@ interface Student {
 interface Subscription {
   id: string;
   aluno_id: string;
-  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
+  plano: string;
   data_inscricao: string;
   data_validade: string;
   status: 'Ativo' | 'Vencido';
@@ -43,10 +44,9 @@ interface SubscriptionHistory {
   admin_responsavel: string;
 }
 
-const PLANOS = ['Liderança', 'Lapidação', 'Largada', 'Bolsista'] as const;
-
 export const SubscriptionManagementClean = () => {
   const { turmasDinamicas } = useTurmasAtivas();
+  const { data: planosData = [] } = usePlanos();
   const turmasFiltro = [
     ...turmasDinamicas.map(t => ({ valor: t.valor, label: t.label })),
     ...STATUS_ESPECIAIS.map(s => ({ valor: s, label: formatTurmaDisplay(s) })),
@@ -67,7 +67,7 @@ export const SubscriptionManagementClean = () => {
 
   // Estados do formulário de edição
   const [editForm, setEditForm] = useState({
-    plano: '' as 'Liderança' | 'Lapidação' | 'Largada' | '',
+    plano: '' as string,
     data_inscricao: '2025-02-03',
     data_validade: '',
     reason: ''
@@ -76,18 +76,17 @@ export const SubscriptionManagementClean = () => {
   // Verificar parâmetro turma da URL ou sessionStorage
   useEffect(() => {
     const turmaParam = searchParams.get('turma');
-    if (turmaParam && TURMAS.includes(decodeURIComponent(turmaParam))) {
-      const turmaNormalizada = decodeURIComponent(turmaParam);
-      setSelectedTurma(turmaNormalizada);
-      sessionStorage.setItem('last_selected_turma', turmaNormalizada);
+    const decoded = turmaParam ? decodeURIComponent(turmaParam) : null;
+    if (decoded && turmasFiltro.some(t => t.valor === decoded)) {
+      setSelectedTurma(decoded);
+      sessionStorage.setItem('last_selected_turma', decoded);
     } else {
-      // Tentar recuperar última turma selecionada do sessionStorage
       const lastTurma = sessionStorage.getItem('last_selected_turma');
-      if (lastTurma && TURMAS.includes(lastTurma)) {
+      if (lastTurma && turmasFiltro.some(t => t.valor === lastTurma)) {
         setSelectedTurma(lastTurma);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, turmasFiltro.length]);
 
   useEffect(() => {
     if (selectedTurma) {
@@ -496,7 +495,7 @@ export const SubscriptionManagementClean = () => {
                 <Label>Plano *</Label>
                 <Select
                   value={editForm.plano}
-                  onValueChange={(value: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista') =>
+                  onValueChange={(value: string) =>
                     setEditForm(prev => ({ ...prev, plano: value }))
                   }
                 >
@@ -504,9 +503,9 @@ export const SubscriptionManagementClean = () => {
                     <SelectValue placeholder="Selecione o plano" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PLANOS.map((plano) => (
-                      <SelectItem key={plano} value={plano}>
-                        {plano}
+                    {planosData.filter(p => p.ativo).map((p) => (
+                      <SelectItem key={p.nome} value={p.nome}>
+                        {p.nome_exibicao}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -38,7 +38,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
   const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
-  const { isFeatureEnabled, debugInfo, overrides, subscription } = usePlanFeatures(studentData.email);
+  const { isFeatureEnabled, debugInfo, overrides, subscription, funcionalidadesOrdenadas } = usePlanFeatures(studentData.email);
   const { professor } = useProfessorAuth();
   const isProfessor = !!professor;
 
@@ -75,6 +75,17 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
     if (item.showAlways) return true;
     return item.showCondition === true;
   });
+
+  // Ordena pelos valores de ordem_aluno vindos do banco (fallback: ordem original)
+  if (funcionalidadesOrdenadas && funcionalidadesOrdenadas.length > 0) {
+    visibleMenuItems = [...visibleMenuItems].sort((a, b) => {
+      const chaveA = getFunctionalityName(a.title);
+      const chaveB = getFunctionalityName(b.title);
+      const orderA = chaveA ? (funcionalidadesOrdenadas.find(f => f.chave === chaveA)?.ordem_aluno ?? 9999) : 9999;
+      const orderB = chaveB ? (funcionalidadesOrdenadas.find(f => f.chave === chaveB)?.ordem_aluno ?? 9999) : 9999;
+      return orderA - orderB;
+    });
+  }
 
   // Se maxCards foi definido, limitar quantidade de cards
   if (maxCards && maxCards > 0) {

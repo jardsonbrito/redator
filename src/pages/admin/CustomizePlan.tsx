@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useFuncionalidades } from '@/hooks/usePlansAdmin';
 import { ArrowLeft, Users, Settings2, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -13,7 +14,7 @@ interface Student {
   id: string;
   nome: string;
   email: string;
-  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista' | null;
+  plano: string | null;
 }
 
 interface FunctionalityOverride {
@@ -22,98 +23,35 @@ interface FunctionalityOverride {
   enabled: boolean;
 }
 
-type PlanType = 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
-
-// Definir funcionalidades padrão por plano
-const DEFAULT_PLAN_FEATURES = {
-  'Largada': {
-    'temas': true,
-    'enviar_tema_livre': false,
-    'exercicios': false,
-    'simulados': false,
-    'lousa': false,
-    'biblioteca': false,
-    'redacoes_exemplares': false,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Lapidação': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Liderança': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': true,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Bolsista': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  }
-};
-
-const FUNCTIONALITY_LABELS = {
-  'temas': 'Temas',
-  'enviar_tema_livre': 'Enviar Tema Livre',
-  'exercicios': 'Exercícios',
-  'simulados': 'Simulados',
-  'lousa': 'Lousa',
-  'biblioteca': 'Biblioteca',
-  'redacoes_exemplares': 'Redações Exemplares',
-  'aulas_ao_vivo': 'Aulas ao Vivo',
-  'videoteca': 'Videoteca',
-  'aulas_gravadas': 'Aulas Gravadas',
-  'diario_online': 'Diário Online',
-  'gamificacao': 'Gamificação',
-  'top_5': 'Top 5',
-  'minhas_conquistas': 'Minhas Conquistas'
-};
-
 export const CustomizePlan = () => {
   const { turmaId } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [overrides, setOverrides] = useState<Record<string, Record<string, boolean>>>({});
+
+  const { data: funcionalidades = [] } = useFuncionalidades();
+
+  // Features base de todos os planos ativos (fonte: banco)
+  const { data: allPlanFeatures } = useQuery({
+    queryKey: ['all-active-plan-features'],
+    queryFn: async (): Promise<Record<string, Record<string, boolean>>> => {
+      const { data, error } = await supabase
+        .from('plano_funcionalidades')
+        .select('habilitado, planos!inner(nome, ativo), funcionalidades!inner(chave)');
+      if (error) return {};
+      const result: Record<string, Record<string, boolean>> = {};
+      (data ?? []).forEach((row: any) => {
+        if (!row.planos?.ativo) return;
+        const planName = row.planos.nome as string;
+        const chave = row.funcionalidades?.chave as string;
+        if (!planName || !chave) return;
+        if (!result[planName]) result[planName] = {};
+        result[planName][chave] = row.habilitado;
+      });
+      return result;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Buscar dados da turma e seus alunos
   const { data: turmaData, isLoading: loadingTurma } = useQuery({
@@ -258,7 +196,7 @@ export const CustomizePlan = () => {
     const student = turmaData?.alunos.find(a => a.id === studentId);
     if (!student?.plano) return;
 
-    const defaultValue = DEFAULT_PLAN_FEATURES[student.plano][functionality];
+    const defaultValue = allPlanFeatures?.[student.plano]?.[functionality] ?? false;
     const currentValue = overrides[studentId]?.[functionality] ?? defaultValue;
     const newValue = !currentValue;
 
@@ -289,8 +227,7 @@ export const CustomizePlan = () => {
 
   const getFunctionalityStatus = (student: Student, functionality: string) => {
     if (!student.plano) return false;
-
-    const defaultValue = DEFAULT_PLAN_FEATURES[student.plano][functionality];
+    const defaultValue = allPlanFeatures?.[student.plano]?.[functionality] ?? false;
     return overrides[student.id]?.[functionality] ?? defaultValue;
   };
 
@@ -387,7 +324,9 @@ export const CustomizePlan = () => {
 
                 {student.plano ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                    {Object.entries(FUNCTIONALITY_LABELS).map(([key, label]) => {
+                    {funcionalidades.map((f) => {
+                      const key = f.chave;
+                      const label = f.nome_exibicao;
                       const isEnabled = getFunctionalityStatus(student, key);
                       const isCustom = overrides[student.id]?.[key] !== undefined;
 

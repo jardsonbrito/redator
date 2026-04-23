@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlanOverrides } from '@/hooks/usePlanOverrides';
+import { useFuncionalidades } from '@/hooks/usePlansAdmin';
 import { ArrowLeft, User, Settings2, RotateCcw, Home } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ModernAdminHeader } from '@/components/admin/ModernAdminHeader';
@@ -18,27 +19,8 @@ interface Student {
   nome: string;
   email: string;
   turma: string;
-  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista' | null;
+  plano: string | null;
 }
-
-
-const FUNCTIONALITY_LABELS = {
-  'temas': 'Temas',
-  'enviar_tema_livre': 'Enviar Tema Livre',
-  'exercicios': 'Exercícios',
-  'simulados': 'Simulados',
-  'lousa': 'Lousa',
-  'biblioteca': 'Biblioteca',
-  'redacoes_exemplares': 'Redações Exemplares',
-  'aulas_ao_vivo': 'Aulas ao Vivo',
-  'videoteca': 'Videoteca',
-  'aulas_gravadas': 'Aulas Gravadas',
-  'diario_online': 'Diário Online',
-  'gamificacao': 'Gamificação',
-  'top_5': 'Top 5',
-  'minhas_conquistas': 'Minhas Conquistas',
-  'jarvis': 'Jarvis'
-};
 
 export const CustomizeStudentPlan = () => {
   const { studentId } = useParams();
@@ -48,6 +30,8 @@ export const CustomizeStudentPlan = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+
+  const { data: funcionalidades = [] } = useFuncionalidades();
 
   // Usar o hook de plan overrides
   const {
@@ -170,9 +154,10 @@ export const CustomizeStudentPlan = () => {
       const success = await updateFunctionalityOverride(functionality, newValue);
 
       if (success) {
+        const label = funcionalidades.find(f => f.chave === functionality)?.nome_exibicao ?? functionality;
         toast({
           title: "✅ Salvo Automaticamente",
-          description: `${FUNCTIONALITY_LABELS[functionality]} foi ${newValue ? 'ativado' : 'desativado'} com sucesso!`,
+          description: `${label} foi ${newValue ? 'ativado' : 'desativado'} com sucesso!`,
         });
       }
     } catch (error) {
@@ -296,7 +281,9 @@ export const CustomizeStudentPlan = () => {
             {student.plano ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {Object.entries(FUNCTIONALITY_LABELS).map(([key, label]) => {
+                  {funcionalidades.map((f) => {
+                    const key = f.chave;
+                    const label = f.nome_exibicao;
                     const isEnabled = isFunctionalityEnabled(key);
                     const isCustom = overrides[key] !== undefined;
                     const isSaving = savingStates[key];
