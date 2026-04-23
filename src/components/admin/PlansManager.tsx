@@ -196,7 +196,13 @@ const SortableFeatureItem = ({ func, enabled, isSaving, onToggle }: SortableFeat
         style={style}
         className="flex items-center gap-3 px-3 py-2 rounded-md bg-muted/30 border border-dashed border-muted-foreground/30"
       >
-        <div className="w-4 h-4" />
+        <button
+          className="text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none shrink-0"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
         <div className="flex-1 min-w-0">
           <p className="text-sm text-muted-foreground truncate">{func.nome_exibicao}</p>
         </div>
