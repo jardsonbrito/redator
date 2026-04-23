@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from './useSubscription';
 
-type PlanType = 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
+// ─── FASE 4: remover estas constantes após validação em produção ───────────────
 
-// Definir funcionalidades para visitantes (acesso muito limitado)
-const VISITANTE_FEATURES = {
+// Fallback para visitante (usado se o banco não responder)
+const VISITANTE_FEATURES: Record<string, boolean> = {
   'temas': true,
   'enviar_tema_livre': true,
   'exercicios': false,
@@ -24,8 +24,8 @@ const VISITANTE_FEATURES = {
   'jarvis': true
 };
 
-// Definir funcionalidades padrão por plano
-const DEFAULT_PLAN_FEATURES = {
+// Fallback por plano (usado se o banco não responder)
+const DEFAULT_PLAN_FEATURES: Record<string, Record<string, boolean>> = {
   'Largada': {
     'temas': true,
     'enviar_tema_livre': false,
@@ -104,34 +104,71 @@ const DEFAULT_PLAN_FEATURES = {
   }
 };
 
+// ─── fim das constantes de fallback ───────────────────────────────────────────
+
 export const usePlanFeatures = (userEmail: string) => {
   const { data: subscription } = useSubscription(userEmail);
 
-  // Verificar se é visitante
+  // Verifica se é visitante
   const { data: isVisitante } = useQuery({
     queryKey: ['is-visitante', userEmail],
     queryFn: async () => {
       if (!userEmail) return false;
-
       const { data } = await supabase
         .from('visitante_sessoes')
         .select('id')
         .eq('email_visitante', userEmail)
         .single();
-
       return !!data;
     },
     enabled: !!userEmail,
-    staleTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 5 * 60 * 1000
   });
 
-  // Buscar overrides do aluno usando RPC
+  // ── FASE 2: DB-first — features do plano ─────────────────────────────────
+  // Ativo quando: tem plano e não é visitante.
+  // retry:1 → fallback rápido se o banco não responder.
+  // Retorna null se o banco falhar → isFeatureEnabled cai no hardcoded.
+  const { data: dbPlanFeatures } = useQuery({
+    queryKey: ['db-plan-features', subscription?.plano],
+    queryFn: async (): Promise<Record<string, boolean> | null> => {
+      if (!subscription?.plano) return null;
+      const { data, error } = await supabase
+        .rpc('get_features_for_plan', { plan_name: subscription.plano });
+      if (error || !data || data.length === 0) return null;
+      return Object.fromEntries(
+        (data as { chave: string; habilitado: boolean }[]).map(r => [r.chave, r.habilitado])
+      );
+    },
+    enabled: !!subscription?.plano && isVisitante !== true,
+    staleTime: 5 * 60 * 1000,
+    retry: 1
+  });
+
+  // ── FASE 2: DB-first — features do visitante ──────────────────────────────
+  // Ativo somente quando confirmado como visitante.
+  // get_visitante_features() não recebe parâmetro; cache global (sem email na key).
+  const { data: dbVisitanteFeatures } = useQuery({
+    queryKey: ['db-visitante-features'],
+    queryFn: async (): Promise<Record<string, boolean> | null> => {
+      const { data, error } = await supabase.rpc('get_visitante_features');
+      if (error || !data || data.length === 0) return null;
+      return Object.fromEntries(
+        (data as { chave: string; habilitado: boolean }[]).map(r => [r.chave, r.habilitado])
+      );
+    },
+    enabled: isVisitante === true,
+    staleTime: 5 * 60 * 1000,
+    retry: 1
+  });
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Overrides individuais por aluno (inalterado)
   const { data: overrides = [] } = useQuery({
     queryKey: ['student-plan-overrides', userEmail],
     queryFn: async () => {
       if (!userEmail) return [];
 
-      // Primeiro buscar o ID do aluno
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
@@ -141,28 +178,15 @@ export const usePlanFeatures = (userEmail: string) => {
 
       if (profileError || !profile) return [];
 
-      // Buscar overrides usando RPC para contornar RLS
-
       let { data, error } = await supabase
-        .rpc('get_student_plan_overrides', {
-          student_uuid: profile.id
-        });
+        .rpc('get_student_plan_overrides', { student_uuid: profile.id });
 
-      // Se a função RPC não existir, tentar buscar diretamente da tabela
       if (error && (error.code === '42883' || error.message?.includes('does not exist'))) {
         const { data: directData, error: directError } = await supabase
           .from('plan_overrides')
           .select('*')
           .eq('student_id', profile.id);
-
-        if (directError) {
-          // Se a tabela não existir, retornar array vazio em vez de falhar
-          if (directError.code === '42P01' || directError.message?.includes('does not exist')) {
-            return [];
-          }
-          return [];
-        }
-
+        if (directError) return [];
         data = directData;
         error = null;
       } else if (error) {
@@ -172,44 +196,65 @@ export const usePlanFeatures = (userEmail: string) => {
       return data || [];
     },
     enabled: !!userEmail,
-    staleTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 5 * 60 * 1000
   });
 
+  // ── isFeatureEnabled: lógica de acesso com DB-first + fallback ────────────
+  //
+  // Prioridade de resolução:
+  //   1. sempre_disponivel  → acesso livre, sem checar plano
+  //      (gerenciado em MenuGrid; exposto via alwaysAvailableKeys na Fase 4)
+  //   2. Visitante          → DB visitante_funcionalidades → fallback VISITANTE_FEATURES
+  //   3. Sem assinatura     → false para tudo
+  //   4. Override individual → plan_overrides (prioridade máxima, inalterada)
+  //   5. Plano              → DB plano_funcionalidades → fallback DEFAULT_PLAN_FEATURES
+  //
   const isFeatureEnabled = (functionality: string): boolean => {
-    // Visitantes têm acesso limitado (apenas Temas e Enviar Redação)
+    // Cenário: VISITANTE
     if (isVisitante) {
-      return VISITANTE_FEATURES[functionality] ?? false;
+      return dbVisitanteFeatures
+        ? (dbVisitanteFeatures[functionality] ?? false)
+        : (VISITANTE_FEATURES[functionality] ?? false);
     }
 
+    // Cenário: SEM ASSINATURA (inclui aluno sem plano ou plano vencido)
     if (!subscription?.plano) {
       return false;
     }
 
-    // Verificar se há override
+    // Cenário: OVERRIDE INDIVIDUAL (prioridade máxima sobre tudo)
     const override = overrides.find(o => o.functionality === functionality);
-    if (override) {
+    if (override !== undefined) {
       return override.enabled;
     }
 
-    // Usar padrão do plano
-    const defaultValue = DEFAULT_PLAN_FEATURES[subscription.plano]?.[functionality] ?? false;
-    return defaultValue;
+    // Cenário: PLANO (Largada / Lapidação / Bolsista / Liderança)
+    return dbPlanFeatures
+      ? (dbPlanFeatures[functionality] ?? false)
+      : (DEFAULT_PLAN_FEATURES[subscription.plano]?.[functionality] ?? false);
   };
+
+  // planFeatures: usado externamente (ex: CustomizePlanSimple) — DB-first
+  const planFeatures = subscription?.plano
+    ? (dbPlanFeatures ?? DEFAULT_PLAN_FEATURES[subscription.plano] ?? null)
+    : null;
 
   return {
     subscription,
     isFeatureEnabled,
-    planFeatures: subscription?.plano ? DEFAULT_PLAN_FEATURES[subscription.plano] : null,
+    planFeatures,
     overrides,
-    // Debug info
     isLoading: !subscription,
     isVisitante,
+    // usingDbFeatures: true quando banco respondeu com sucesso (útil para debug/admin)
+    usingDbFeatures: !!(dbPlanFeatures || dbVisitanteFeatures),
     debugInfo: {
       userEmail: userEmail ? userEmail.slice(0, 10) + '...' : '',
       hasSubscription: !!subscription,
       plano: subscription?.plano,
       overridesCount: overrides.length,
-      isVisitante
+      isVisitante,
+      dbSource: !!(dbPlanFeatures || dbVisitanteFeatures)
     }
   };
 };
