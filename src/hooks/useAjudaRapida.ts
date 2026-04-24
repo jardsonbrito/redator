@@ -472,34 +472,35 @@ export const useAjudaRapida = () => {
     }
   };
 
-  // Editar mensagem
-  const editarMensagem = async (mensagemId: string, novoTexto: string) => {
+  // Editar mensagem via RPC com SECURITY DEFINER (bypassa RLS silencioso)
+  const editarMensagem = async (
+    mensagemId: string,
+    novoTexto: string,
+    corretorId?: string,
+    alunoEmail?: string
+  ) => {
     try {
-      const { error } = await supabase
-        .from('ajuda_rapida_mensagens')
-        .update({
-          mensagem: novoTexto,
-          editada: true,
-          editada_em: new Date().toISOString()
-        })
-        .eq('id', mensagemId);
+      const { data, error } = await supabase.rpc('editar_mensagem_ajuda_rapida', {
+        p_mensagem_id: mensagemId,
+        p_novo_texto: novoTexto,
+        p_corretor_id: corretorId ?? null,
+        p_aluno_email: alunoEmail ?? null,
+      });
 
       if (error) throw error;
-      
-      // Atualizar o estado local das mensagens
-      setMensagens(mensagensAtuais => 
-        mensagensAtuais.map(msg => 
-          msg.id === mensagemId 
-            ? { 
-                ...msg, 
-                mensagem: novoTexto, 
-                editada: true, 
-                editada_em: new Date().toISOString() 
-              }
+
+      const result = data as { success: boolean; error?: string; message: string };
+      if (!result.success) throw new Error(result.message);
+
+      // Atualizar estado local imediatamente (sem refetch)
+      setMensagens(anterior =>
+        anterior.map(msg =>
+          msg.id === mensagemId
+            ? { ...msg, mensagem: novoTexto, editada: true, editada_em: new Date().toISOString() }
             : msg
         )
       );
-      
+
       console.log('✅ Mensagem editada com sucesso');
     } catch (error) {
       console.error('❌ Erro ao editar mensagem:', error);
@@ -512,16 +513,27 @@ export const useAjudaRapida = () => {
     }
   };
 
-  // Apagar mensagem
-  const apagarMensagem = async (mensagemId: string) => {
+  // Apagar mensagem via RPC com SECURITY DEFINER (bypassa RLS silencioso)
+  const apagarMensagem = async (
+    mensagemId: string,
+    corretorId?: string,
+    alunoEmail?: string
+  ) => {
     try {
-      const { error } = await supabase
-        .from('ajuda_rapida_mensagens')
-        .delete()
-        .eq('id', mensagemId);
+      const { data, error } = await supabase.rpc('apagar_mensagem_ajuda_rapida', {
+        p_mensagem_id: mensagemId,
+        p_corretor_id: corretorId ?? null,
+        p_aluno_email: alunoEmail ?? null,
+      });
 
       if (error) throw error;
-      
+
+      const result = data as { success: boolean; error?: string; message: string };
+      if (!result.success) throw new Error(result.message);
+
+      // Atualizar estado local imediatamente (sem refetch)
+      setMensagens(anterior => anterior.filter(msg => msg.id !== mensagemId));
+
       console.log('✅ Mensagem apagada com sucesso');
     } catch (error) {
       console.error('❌ Erro ao apagar mensagem:', error);
