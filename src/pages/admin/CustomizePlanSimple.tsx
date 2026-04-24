@@ -55,7 +55,7 @@ export const CustomizePlanSimple = () => {
       if (!turmaId) throw new Error('ID da turma não fornecido');
 
       const { data: turma, error: turmaError } = await supabase
-        .from('turmas')
+        .from('turmas_alunos')
         .select('nome')
         .eq('id', turmaId)
         .single();

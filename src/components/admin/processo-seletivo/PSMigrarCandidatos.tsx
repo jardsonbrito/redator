@@ -48,7 +48,7 @@ export const PSMigrarCandidatos: React.FC<PSMigrarCandidatosProps> = ({
     queryKey: ['turmas-lista'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('turmas')
+        .from('turmas_alunos')
         .select('id, nome')
         .order('nome');
       if (error) return [];

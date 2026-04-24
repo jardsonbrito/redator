@@ -25,8 +25,30 @@ const PLANOS_KEY   = ['admin-planos']          as const;
 const FUNC_KEY     = ['admin-funcionalidades'] as const;
 const VISIT_KEY    = ['admin-visitante-features'] as const;
 const PS_KEY       = ['admin-ps-features']     as const;
+const TURMAS_KEY   = ['turmas-alunos-lista']   as const;
+
+export interface TurmaAdmin {
+  id: string;
+  nome: string;
+  ativo: boolean;
+}
 
 // ── Queries ──────────────────────────────────────────────────────────────────
+
+export const useTurmas = () =>
+  useQuery({
+    queryKey: TURMAS_KEY,
+    queryFn: async (): Promise<TurmaAdmin[]> => {
+      const { data, error } = await supabase
+        .from('turmas_alunos')
+        .select('id, nome, ativo')
+        .eq('ativo', true)
+        .order('nome');
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
 export const usePlanos = () =>
   useQuery({

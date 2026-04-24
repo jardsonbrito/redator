@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserPlus } from "lucide-react";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfService } from "./AlunoSelfService";
-import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { useTurmas } from "@/hooks/usePlansAdmin";
 
 interface AlunoFormProps {
   onSuccess: () => void;
@@ -25,9 +25,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
   const [turma, setTurma] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  // Turmas geradas dinamicamente a partir do utils
-  const turmas = TODAS_TURMAS.map(turma => formatTurmaDisplay(turma));
+  const { data: turmasDisponiveis = [] } = useTurmas();
 
   // Preencher formulário quando um aluno for selecionado para edição
   useEffect(() => {
@@ -213,9 +211,9 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
                   <SelectValue placeholder="Selecione a turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  {turmas.map((turmaOption) => (
-                    <SelectItem key={turmaOption} value={turmaOption}>
-                      {turmaOption}
+                  {turmasDisponiveis.map((t) => (
+                    <SelectItem key={t.id} value={t.nome}>
+                      {t.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -292,9 +290,9 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
                     <SelectValue placeholder="Selecione a turma" />
                   </SelectTrigger>
                   <SelectContent>
-                    {turmas.map((turmaOption) => (
-                      <SelectItem key={turmaOption} value={turmaOption}>
-                        {turmaOption}
+                    {turmasDisponiveis.map((t) => (
+                      <SelectItem key={t.id} value={t.nome}>
+                        {t.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>

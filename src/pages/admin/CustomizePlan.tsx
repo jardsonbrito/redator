@@ -61,7 +61,7 @@ export const CustomizePlan = () => {
 
       // Buscar dados da turma
       const { data: turma, error: turmaError } = await supabase
-        .from('turmas')
+        .from('turmas_alunos')
         .select('nome')
         .eq('id', turmaId)
         .single();

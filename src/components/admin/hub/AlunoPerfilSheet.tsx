@@ -12,7 +12,8 @@ import { StudentLoginActivityModal } from '@/components/admin/StudentLoginActivi
 import { StudentSubscriptionSection } from './StudentSubscriptionSection';
 import { StudentPlanSection } from './StudentPlanSection';
 import { StudentCreditSection } from './StudentCreditSection';
-import { TURMAS_VALIDAS, formatTurmaDisplay, normalizeTurmaToLetter } from '@/utils/turmaUtils';
+import { normalizeTurmaToLetter } from '@/utils/turmaUtils';
+import { useTurmas } from '@/hooks/usePlansAdmin';
 import { Activity, Edit2, Save, X, MoveRight, BellOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { MigrarVisitanteModal } from '@/components/admin/MigrarVisitanteModal';
@@ -38,6 +39,7 @@ interface AlunoPerfilSheetProps {
 
 export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPerfilSheetProps) {
   const { toast } = useToast();
+  const { data: turmasDisponiveis = [] } = useTurmas();
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ nome: '', email: '', turma: '' });
@@ -213,8 +215,8 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
                         <Select value={formData.turma} onValueChange={(v) => setFormData((p) => ({ ...p, turma: v }))}>
                           <SelectTrigger><SelectValue placeholder="Selecione a turma" /></SelectTrigger>
                           <SelectContent>
-                            {TURMAS_VALIDAS.map((t) => (
-                              <SelectItem key={t} value={t}>{formatTurmaDisplay(t)}</SelectItem>
+                            {turmasDisponiveis.map((t) => (
+                              <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
