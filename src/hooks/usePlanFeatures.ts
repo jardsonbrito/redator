@@ -58,6 +58,41 @@ export const usePlanFeatures = (userEmail: string) => {
     retry: 1
   });
 
+  // ── Verifica se é candidato ativo do Processo Seletivo ────────────────────
+  const { data: isPSCandidate } = useQuery({
+    queryKey: ['is-ps-candidate', userEmail],
+    queryFn: async (): Promise<boolean> => {
+      if (!userEmail) return false;
+      const { data } = await supabase
+        .from('ps_candidatos')
+        .select('id, ps_formularios!inner(ativo)')
+        .ilike('email_aluno', userEmail.toLowerCase().trim())
+        .not('status', 'in', '("reprovado","migrado")')
+        .eq('ps_formularios.ativo', true)
+        .limit(1)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!userEmail && isVisitante !== true && !subscription?.plano,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  // ── Features do Processo Seletivo ─────────────────────────────────────────
+  const { data: dbPSFeatures } = useQuery({
+    queryKey: ['db-ps-features'],
+    queryFn: async (): Promise<Record<string, boolean> | null> => {
+      const { data, error } = await supabase.rpc('get_ps_features');
+      if (error || !data || data.length === 0) return null;
+      return Object.fromEntries(
+        (data as { chave: string; habilitado: boolean }[]).map(r => [r.chave, r.habilitado])
+      );
+    },
+    enabled: isPSCandidate === true,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
   // ── Ordem dos cards para o MenuGrid ──────────────────────────────────────
   // Carregado uma vez; cache de 5 min; sem retry excessivo.
   const { data: funcionalidadesOrdenadas } = useQuery({
@@ -116,13 +151,18 @@ export const usePlanFeatures = (userEmail: string) => {
   //
   // Prioridade de resolução:
   //   1. Visitante          → DB visitante_funcionalidades → false
-  //   2. Sem assinatura     → false para tudo
-  //   3. Override individual → plan_overrides (prioridade máxima)
-  //   4. Plano              → DB plano_funcionalidades → false
+  //   2. PS candidate       → DB ps_funcionalidades → false
+  //   3. Sem assinatura     → false para tudo
+  //   4. Override individual → plan_overrides (prioridade máxima)
+  //   5. Plano              → DB plano_funcionalidades → false
   //
   const isFeatureEnabled = (functionality: string): boolean => {
     if (isVisitante) {
       return dbVisitanteFeatures ? (dbVisitanteFeatures[functionality] ?? false) : false;
+    }
+
+    if (isPSCandidate) {
+      return dbPSFeatures ? (dbPSFeatures[functionality] ?? false) : false;
     }
 
     if (!subscription?.plano) {
@@ -147,7 +187,8 @@ export const usePlanFeatures = (userEmail: string) => {
     funcionalidadesOrdenadas,
     isLoading: !subscription,
     isVisitante,
-    usingDbFeatures: !!(dbPlanFeatures || dbVisitanteFeatures),
+    isPSCandidate,
+    usingDbFeatures: !!(dbPlanFeatures || dbVisitanteFeatures || dbPSFeatures),
     debugInfo: {
       userEmail: userEmail ? userEmail.slice(0, 10) + '...' : '',
       hasSubscription: !!subscription,

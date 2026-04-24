@@ -54,6 +54,7 @@ import {
   useFuncionalidades,
   usePlanoFeatures,
   useVisitanteFeatures,
+  usePSFeatures,
   usePlansAdminMutations,
   PlanoAdmin,
   FuncionalidadeAdmin,
@@ -256,6 +257,7 @@ export const PlansManager = () => {
 
   const { data: planFeatures = {} } = usePlanoFeatures(selectedPlanId);
   const { data: visitanteFeatures = {} } = useVisitanteFeatures();
+  const { data: psFeatures = {} } = usePSFeatures();
 
   // Estado local da ordem de features (para o botão "Salvar Ordem")
   const [localFuncOrder, setLocalFuncOrder] = useState<FuncionalidadeAdmin[] | null>(null);
@@ -265,6 +267,10 @@ export const PlansManager = () => {
   // Estado local do visitante (para o botão "Salvar Visitante")
   const [localVisitante, setLocalVisitante] = useState<Record<string, boolean> | null>(null);
   const displayVisitante = localVisitante ?? visitanteFeatures;
+
+  // Estado local do Processo Seletivo (para o botão "Salvar PS")
+  const [localPS, setLocalPS] = useState<Record<string, boolean> | null>(null);
+  const displayPS = localPS ?? psFeatures;
 
   // Drag state para overlay
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -348,6 +354,22 @@ export const PlansManager = () => {
     if (!localVisitante) return;
     mut.saveVisitante.mutate(localVisitante, {
       onSuccess: () => setLocalVisitante(null),
+    });
+  };
+
+  // ── Handlers: processo seletivo ──────────────────────────────────────────
+
+  const handleTogglePS = (chave: string, habilitado: boolean) => {
+    setLocalPS(prev => ({
+      ...(prev ?? psFeatures),
+      [chave]: habilitado,
+    }));
+  };
+
+  const handleSavePS = () => {
+    if (!localPS) return;
+    mut.savePS.mutate(localPS, {
+      onSuccess: () => setLocalPS(null),
     });
   };
 
@@ -494,11 +516,11 @@ export const PlansManager = () => {
               </p>
             )}
 
-            {/* Visitante como item separado na lista */}
+            {/* Visitante e Processo Seletivo como itens separados na lista */}
             <div className="pt-1">
               <Separator className="mb-2" />
               <div
-                className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors mb-1.5 ${
                   selectedPlanId === '__visitante__'
                     ? 'border-primary bg-primary/5'
                     : 'border-border bg-card hover:bg-muted/40'
@@ -511,6 +533,23 @@ export const PlansManager = () => {
                   <p className="text-xs text-muted-foreground">Acesso sem login</p>
                 </div>
                 {selectedPlanId === '__visitante__' && (
+                  <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+                )}
+              </div>
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedPlanId === '__ps__'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border bg-card hover:bg-muted/40'
+                }`}
+                onClick={() => setSelectedPlanId('__ps__')}
+              >
+                <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Processo Seletivo</p>
+                  <p className="text-xs text-muted-foreground">Candidatos sem plano ativo</p>
+                </div>
+                {selectedPlanId === '__ps__' && (
                   <ChevronRight className="w-4 h-4 text-primary shrink-0" />
                 )}
               </div>
@@ -651,6 +690,59 @@ export const PlansManager = () => {
                     <Switch
                       checked={displayVisitante[func.chave] ?? false}
                       onCheckedChange={(v) => handleToggleVisitante(func.chave, v)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : selectedPlanId === '__ps__' ? (
+          /* ── Painel do Processo Seletivo ─────────────────────────────── */
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Acesso do Processo Seletivo
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Cards liberados para candidatos inscritos no processo seletivo (sem plano ativo)
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleSavePS}
+                  disabled={mut.savePS.isPending || !localPS}
+                  variant={localPS ? 'default' : 'outline'}
+                >
+                  {mut.savePS.isPending
+                    ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    : <Save className="w-4 h-4 mr-2" />
+                  }
+                  Salvar
+                </Button>
+              </div>
+              {localPS && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  Alterações ainda não salvas
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1.5">
+                {funcionalidades.filter(f => !f.sempre_disponivel).map(func => (
+                  <div
+                    key={func.id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-md border border-border bg-card"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{func.nome_exibicao}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{func.chave}</p>
+                    </div>
+                    <Switch
+                      checked={displayPS[func.chave] ?? false}
+                      onCheckedChange={(v) => handleTogglePS(func.chave, v)}
                     />
                   </div>
                 ))}

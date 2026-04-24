@@ -24,6 +24,7 @@ export interface FuncionalidadeAdmin {
 const PLANOS_KEY   = ['admin-planos']          as const;
 const FUNC_KEY     = ['admin-funcionalidades'] as const;
 const VISIT_KEY    = ['admin-visitante-features'] as const;
+const PS_KEY       = ['admin-ps-features']     as const;
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,23 @@ export const useVisitanteFeatures = () =>
     staleTime: 0,
   });
 
+export const usePSFeatures = () =>
+  useQuery({
+    queryKey: PS_KEY,
+    queryFn: async (): Promise<Record<string, boolean>> => {
+      const { data, error } = await supabase
+        .from('ps_funcionalidades')
+        .select('habilitado, funcionalidades(chave)');
+      if (error) throw error;
+      const result: Record<string, boolean> = {};
+      (data ?? []).forEach((row: { habilitado: boolean; funcionalidades: { chave: string } | null }) => {
+        if (row.funcionalidades?.chave) result[row.funcionalidades.chave] = row.habilitado;
+      });
+      return result;
+    },
+    staleTime: 0,
+  });
+
 // ── Mutations ────────────────────────────────────────────────────────────────
 
 export const usePlansAdminMutations = () => {
@@ -142,6 +160,21 @@ export const usePlansAdminMutations = () => {
       toast.success('Acesso do visitante salvo');
     },
     onError: () => toast.error('Erro ao salvar acesso do visitante'),
+  });
+
+  // Salvar acesso do Processo Seletivo (bulk, botão explícito)
+  const savePS = useMutation({
+    mutationFn: async (features: Record<string, boolean>) => {
+      const { data, error } = await supabase.rpc('upsert_ps_features', { p_features: features });
+      if (error) throw error;
+      if (data === false) throw new Error('Banco retornou false');
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PS_KEY });
+      qc.invalidateQueries({ queryKey: ['db-ps-features'] });
+      toast.success('Acesso do Processo Seletivo salvo');
+    },
+    onError: () => toast.error('Erro ao salvar acesso do Processo Seletivo'),
   });
 
   // Reordenar planos (otimista, salva ao soltar)
@@ -280,6 +313,7 @@ export const usePlansAdminMutations = () => {
   return {
     toggleFeature,
     saveVisitante,
+    savePS,
     reorderPlanos,
     reorderFuncionalidades,
     togglePlanActive,
