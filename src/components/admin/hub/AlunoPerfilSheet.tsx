@@ -12,7 +12,6 @@ import { StudentLoginActivityModal } from '@/components/admin/StudentLoginActivi
 import { StudentSubscriptionSection } from './StudentSubscriptionSection';
 import { StudentPlanSection } from './StudentPlanSection';
 import { StudentCreditSection } from './StudentCreditSection';
-import { normalizeTurmaToLetter } from '@/utils/turmaUtils';
 import { useTurmas } from '@/hooks/usePlansAdmin';
 import { Activity, Edit2, Save, X, MoveRight, BellOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -56,7 +55,7 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
       setFormData({
         nome: aluno.nome || '',
         email: aluno.email || '',
-        turma: normalizeTurmaToLetter(aluno.turma) || '',
+        turma: aluno.turma || '',
       });
       setEditMode(false);
       // Carregar configuração de dispensa de notificação
@@ -98,12 +97,14 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
     }
     setSaving(true);
     try {
+      const turmaObj = turmasDisponiveis.find(t => t.nome === formData.turma);
       const { error } = await supabase
         .from('profiles')
         .update({
           nome: formData.nome.trim(),
           email: formData.email.trim().toLowerCase(),
           turma: formData.turma,
+          turma_id: turmaObj?.id ?? null,
         })
         .eq('id', aluno.id);
       if (error) throw error;

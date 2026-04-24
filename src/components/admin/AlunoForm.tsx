@@ -58,18 +58,20 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
 
     setLoading(true);
     try {
+      const turmaObj = turmasDisponiveis.find(t => t.nome === turma);
       if (alunoEditando) {
         console.log("AlunoForm - Modo de edição - Atualizando aluno:", alunoEditando.id);
-        
+
         // Modo de edição - fazer UPDATE
         const dadosAluno = {
           nome: nome.trim(),
-          sobrenome: "", // Mantém campo vazio para compatibilidade
+          sobrenome: "",
           email: email.trim().toLowerCase(),
           turma,
+          turma_id: turmaObj?.id ?? null,
           user_type: "aluno",
           is_authenticated_student: true,
-          ativo: true // Cadastros manuais são sempre ativos
+          ativo: true
         };
 
         console.log("AlunoForm - Dados para update:", dadosAluno);
@@ -114,12 +116,13 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
         const dadosAluno = {
           id: crypto.randomUUID(),
           nome: nome.trim(),
-          sobrenome: "", // Mantém campo vazio para compatibilidade
+          sobrenome: "",
           email: email.trim().toLowerCase(),
           turma,
+          turma_id: turmaObj?.id ?? null,
           user_type: "aluno",
           is_authenticated_student: true,
-          ativo: true // Cadastros manuais são sempre ativos
+          ativo: true
         };
 
         const { error } = await supabase
