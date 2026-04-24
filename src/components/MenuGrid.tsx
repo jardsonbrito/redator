@@ -35,7 +35,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
   const { isBlockedResource } = useTurmaERestrictions();
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
-  const { isFeatureEnabled, funcionalidadesOrdenadas } = usePlanFeatures(studentData.email);
+  const { isFeatureEnabled, funcionalidadesOrdenadas, isPSCandidate, isVisitante } = usePlanFeatures(studentData.email);
   const { professor } = useProfessorAuth();
   const isProfessor = !!professor;
 
@@ -129,11 +129,10 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
           const functionalityName = getFunctionalityName(item.title);
           const isPlanFeatureDisabled = !isProfessor && functionalityName && !isFeatureEnabled(functionalityName);
 
-          // Funcionalidades que sempre devem estar disponíveis (não controladas por plano)
-          // microaprendizagem: o card sempre aparece; o controle de acesso
-          // é feito por planos_permitidos em cada item de conteúdo
+          // Para visitantes e candidatos do PS, a tabela de features é autoritativa — sem bypass.
+          // Para alunos com plano, algumas funcionalidades sempre ficam ativas.
           const alwaysAvailableFeatures = ['minhas_redacoes', 'jarvis', 'microaprendizagem'];
-          const isAlwaysAvailable = alwaysAvailableFeatures.includes(functionalityName || '');
+          const isAlwaysAvailable = !isVisitante && !isPSCandidate && alwaysAvailableFeatures.includes(functionalityName || '');
 
           // Verificação de funcionalidades (logs de debug removidos para produção)
           
