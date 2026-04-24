@@ -1,4 +1,5 @@
-import { ArrowRight } from 'lucide-react';
+import { Edit3, Inbox, MessageCircle, Users, StickyNote, Bell } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface CardDataEntry {
   info: string;
@@ -12,13 +13,18 @@ interface RecentActivityProps {
   onCardClick: (view: string) => void;
 }
 
-const ACTIVITY_SOURCES: { id: string; label: string }[] = [
-  { id: 'redacoes-enviadas', label: 'Redações enviadas' },
-  { id: 'inbox', label: 'Inbox' },
-  { id: 'ajuda-rapida', label: 'Ajuda rápida' },
-  { id: 'alunos', label: 'Alunos' },
-  { id: 'anotacoes', label: 'Anotações' },
-  { id: 'avisos', label: 'Mural de Avisos' },
+const SOURCES: {
+  id: string;
+  label: string;
+  Icon: LucideIcon;
+  timeLabel: string;
+}[] = [
+  { id: 'redacoes-enviadas', label: 'Redações enviadas', Icon: Edit3, timeLabel: 'agora' },
+  { id: 'inbox', label: 'Inbox', Icon: Inbox, timeLabel: 'hoje' },
+  { id: 'ajuda-rapida', label: 'Ajuda rápida', Icon: MessageCircle, timeLabel: 'hoje' },
+  { id: 'alunos', label: 'Alunos', Icon: Users, timeLabel: 'geral' },
+  { id: 'anotacoes', label: 'Anotações', Icon: StickyNote, timeLabel: 'geral' },
+  { id: 'avisos', label: 'Mural de Avisos', Icon: Bell, timeLabel: 'geral' },
 ];
 
 export const RecentActivity = ({
@@ -26,50 +32,69 @@ export const RecentActivity = ({
   isLoading,
   onCardClick,
 }: RecentActivityProps) => {
-  const items = isLoading
-    ? []
-    : ACTIVITY_SOURCES.filter((s) => {
-        const info = cardData[s.id]?.info;
-        return info && info.trim() !== '' && info !== 'Erro ao carregar';
-      }).slice(0, 6);
+  const items = SOURCES.filter((s) => {
+    const info = cardData[s.id]?.info;
+    return !isLoading && info && info.trim() !== '' && info !== 'Erro ao carregar';
+  });
 
   return (
-    <div>
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-        Movimento recente
-      </h2>
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        {isLoading ? (
-          <div className="px-4 py-6 text-sm text-gray-400 text-center">Carregando...</div>
-        ) : items.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-gray-400 text-center">
-            Nenhuma atividade
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {items.map((source) => {
-              const info = cardData[source.id]?.info || '';
-              return (
-                <li key={source.id}>
-                  <button
-                    type="button"
-                    onClick={() => onCardClick(source.id)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left group"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-800 truncate">
-                        {source.label}
-                      </p>
-                      <p className="text-xs text-gray-400 truncate">{info}</p>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0 ml-2" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+    <div
+      className="border border-purple-900/[0.09] rounded-[26px] bg-white/95 p-[18px]"
+      style={{ boxShadow: '0 10px 30px rgba(63,32,104,.045)' }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2
+          className="font-bold text-[#21122f]"
+          style={{ fontSize: '18px', letterSpacing: '-.03em' }}
+        >
+          Movimento recente
+        </h2>
+        <button
+          type="button"
+          className="border border-purple-900/[0.09] bg-white text-[#6f647c] rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-gray-50 transition-colors"
+        >
+          Hoje
+        </button>
       </div>
+
+      {/* Lista de atividades */}
+      {isLoading ? (
+        <p className="text-sm text-[#8a8096] py-4 text-center">Carregando...</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-[#8a8096] py-4 text-center">Nenhuma atividade recente</p>
+      ) : (
+        <div className="space-y-2.5">
+          {items.map((source) => {
+            const info = cardData[source.id]?.info || '';
+            const { Icon } = source;
+            return (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => onCardClick(source.id)}
+                className="w-full text-left hover:bg-purple-50/30 transition-colors rounded-[16px] border border-purple-900/[0.06] bg-[#fdfcff] p-3"
+                style={{ display: 'grid', gridTemplateColumns: '38px 1fr auto', gap: '10px', alignItems: 'center' }}
+              >
+                <span className="w-[38px] h-[38px] flex items-center justify-center rounded-[13px] bg-[#f1e8ff] text-[#4B078F] flex-shrink-0">
+                  <Icon size={17} />
+                </span>
+                <div className="min-w-0">
+                  <strong className="block text-sm text-[#21122f] font-semibold leading-tight">
+                    {source.label}
+                  </strong>
+                  <small className="text-[#8a8096] text-xs leading-tight truncate block">
+                    {info}
+                  </small>
+                </div>
+                <em className="text-[11px] text-[#a49cad] not-italic flex-shrink-0">
+                  {source.timeLabel}
+                </em>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

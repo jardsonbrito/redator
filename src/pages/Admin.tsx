@@ -532,11 +532,12 @@ const Admin = () => {
         badge: undefined
       };
 
-      // Ajuda Rápida - mensagens pendentes de resposta
+      // Ajuda Rápida - mensagens de alunos não lidas (aguardando resposta)
       const { data: mensagensPendentes } = await supabase
-        .from('ajuda_rapida')
-        .select('id, respondida')
-        .eq('respondida', false);
+        .from('ajuda_rapida_mensagens')
+        .select('id, autor, lida')
+        .eq('autor', 'aluno')
+        .eq('lida', false);
 
       const totalPendentes = mensagensPendentes?.length || 0;
 
@@ -1341,30 +1342,61 @@ const Admin = () => {
 
       default:
         return (
-          <div id="section-visao-geral" className="space-y-10 pb-10">
-            {/* Cabeçalho da visão geral */}
-            <div className="space-y-1">
-              <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
-              <p className="text-sm text-gray-500">
-                Gestão pedagógica, acompanhamento dos alunos e controle da plataforma.
+          <div id="section-visao-geral" className="space-y-6 pb-10">
+            {/* Overview banner */}
+            <div
+              className="relative overflow-hidden"
+              style={{
+                borderRadius: '28px',
+                padding: '24px 26px',
+                background: 'linear-gradient(135deg, rgba(255,255,255,.95) 0%, rgba(247,241,255,.96) 100%)',
+                border: '1px solid rgba(183,140,255,.28)',
+                boxShadow: '0 18px 42px rgba(63,32,104,.07)',
+              }}
+            >
+              {/* Círculo decorativo */}
+              <div
+                className="pointer-events-none"
+                style={{
+                  position: 'absolute',
+                  right: '-64px',
+                  top: '-80px',
+                  width: '240px',
+                  height: '240px',
+                  borderRadius: '50%',
+                  border: '42px solid rgba(183,140,255,.13)',
+                }}
+              />
+              <h2
+                className="font-bold text-[#21122f]"
+                style={{ fontSize: '20px', letterSpacing: '-.03em', margin: 0 }}
+              >
+                Resumo da operação pedagógica
+              </h2>
+              <p className="text-[#8a8096] text-[13px] mt-1">
+                Acompanhe os principais fluxos da plataforma e tome ações rápidas.
               </p>
-              <div className="flex flex-wrap gap-2 pt-3">
-                <Button variant="outline" size="sm" onClick={() => setActiveView('redacoes-enviadas')}
-                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
-                  Corrigir redações
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setActiveView('inbox')}
-                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
-                  Ver mensagens
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setActiveView('calendario')}
-                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
-                  Gerenciar calendário
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setActiveView('jarvis')}
-                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
-                  Configurar Jarvis
-                </Button>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {[
+                  { label: 'Configurar Jarvis', view: 'jarvis' },
+                  { label: 'Gerenciar alunos', view: 'alunos' },
+                  { label: 'Calendário', view: 'calendario' },
+                  { label: 'Temas', view: 'temas' },
+                ].map((item) => (
+                  <button
+                    key={item.view}
+                    type="button"
+                    onClick={() => setActiveView(item.view)}
+                    className="text-[#4B078F] font-semibold text-[12px] bg-white hover:bg-[#f1e8ff] transition-colors"
+                    style={{
+                      borderRadius: '999px',
+                      padding: '6px 14px',
+                      border: '1px solid rgba(107,33,168,.12)',
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -1376,21 +1408,17 @@ const Admin = () => {
             />
 
             {/* Central de trabalho + Movimento recente */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <WorkCenter
-                  cardData={cardData}
-                  isLoading={isLoadingCards}
-                  onCardClick={setActiveView}
-                />
-              </div>
-              <div>
-                <RecentActivity
-                  cardData={cardData}
-                  isLoading={isLoadingCards}
-                  onCardClick={setActiveView}
-                />
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-6">
+              <WorkCenter
+                cardData={cardData}
+                isLoading={isLoadingCards}
+                onCardClick={setActiveView}
+              />
+              <RecentActivity
+                cardData={cardData}
+                isLoading={isLoadingCards}
+                onCardClick={setActiveView}
+              />
             </div>
 
             {/* Módulos agrupados por setor */}
@@ -1419,7 +1447,7 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#f7f6fb] flex">
       {/* Sidebar lateral */}
       <AdminSidebar
         activeSection={activeSection}

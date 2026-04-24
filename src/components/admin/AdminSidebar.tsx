@@ -90,7 +90,7 @@ const SidebarInner = ({
 
     {/* Footer */}
     <div className="px-4 py-3 border-t border-white/10">
-      <p className="text-white/25 text-[10px] text-center">Laboratório do Redator</p>
+      <p className="text-white/20 text-[10px] text-center">© Laboratório do Redator</p>
     </div>
   </div>
 );
@@ -104,7 +104,7 @@ export const AdminSidebar = ({
 }: AdminSidebarProps) => (
   <>
     {/* Desktop: sticky sidebar */}
-    <aside className="hidden lg:flex lg:flex-col lg:w-60 lg:flex-shrink-0 bg-[#1E0A3C]">
+    <aside className="hidden lg:flex lg:flex-col lg:flex-shrink-0 bg-[#21083f]" style={{ width: '284px' }}>
       <div className="sticky top-0 h-screen overflow-y-auto">
         <SidebarInner
           activeSection={activeSection}
@@ -116,7 +116,7 @@ export const AdminSidebar = ({
 
     {/* Mobile: Sheet drawer */}
     <Sheet open={isMobileOpen} onOpenChange={(open) => { if (!open) onMobileClose(); }}>
-      <SheetContent side="left" className="p-0 w-64 bg-[#1E0A3C] border-none">
+      <SheetContent side="left" className="p-0 bg-[#21083f] border-none" style={{ width: '284px' }}>
         <SidebarInner
           activeSection={activeSection}
           onSectionClick={onSectionClick}

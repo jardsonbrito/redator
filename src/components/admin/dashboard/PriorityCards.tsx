@@ -17,37 +17,25 @@ const PRIORITY_ITEMS = [
     id: 'redacoes-enviadas',
     label: 'Redações aguardando',
     icon: AlertCircle,
-    accentColor: 'bg-rose-400',
-    iconBg: 'bg-rose-50',
-    iconColor: 'text-rose-500',
-    border: 'border-rose-100',
+    accent: '#16a34a',
   },
   {
     id: 'inbox',
-    label: 'Mensagens pendentes',
+    label: 'Mensagens',
     icon: MessageCircle,
-    accentColor: 'bg-amber-400',
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-500',
-    border: 'border-amber-100',
+    accent: '#f97316',
   },
   {
     id: 'salas-virtuais',
     label: 'Aulas agendadas',
     icon: Video,
-    accentColor: 'bg-blue-400',
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-500',
-    border: 'border-blue-100',
+    accent: '#db2777',
   },
   {
     id: 'ajuda-rapida',
-    label: 'Ajuda rápida pendente',
+    label: 'Ajuda Rápida',
     icon: HelpCircle,
-    accentColor: 'bg-violet-400',
-    iconBg: 'bg-violet-50',
-    iconColor: 'text-violet-500',
-    border: 'border-violet-100',
+    accent: '#7c3aed',
   },
 ] as const;
 
@@ -56,53 +44,54 @@ export const PriorityCards = ({
   isLoading,
   onCardClick,
 }: PriorityCardsProps) => (
-  <div>
-    <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-      Prioridades
-    </h2>
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {PRIORITY_ITEMS.map((item) => {
-        const Icon = item.icon;
-        const data = cardData[item.id];
-        const raw = isLoading ? '...' : (data?.info || '—');
-        const numMatch = raw.match(/^(\d+)/);
-        const num = numMatch ? numMatch[1] : null;
-        const tail = num ? raw.replace(num, '').trim() : raw;
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+    {PRIORITY_ITEMS.map((item) => {
+      const Icon = item.icon;
+      const raw = isLoading ? '...' : (cardData[item.id]?.info || '—');
+      const numMatch = raw.match(/^(\d+)/);
+      const num = numMatch ? numMatch[1] : null;
+      const note = num ? raw.replace(num, '').trim() : '';
 
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onCardClick(item.id)}
-            className={`relative overflow-hidden text-left bg-white border ${item.border} rounded-xl p-4 hover:shadow-md transition-all duration-200 group`}
+      return (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onCardClick(item.id)}
+          className="group text-left border border-purple-900/[0.09] rounded-[22px] bg-white/95 p-4 shadow-md hover:-translate-y-0.5 transition-all duration-150 cursor-pointer"
+          style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: '13px', alignItems: 'start' }}
+        >
+          {/* Ícone com cor de acento */}
+          <div
+            className="w-[42px] h-[42px] rounded-[15px] flex items-center justify-center flex-shrink-0"
+            style={{
+              backgroundColor: `${item.accent}1a`,
+              color: item.accent,
+            }}
           >
-            {/* Barra de acento lateral */}
-            <div
-              className={`absolute left-0 top-0 bottom-0 w-1 ${item.accentColor} rounded-l-xl`}
-            />
-            <div className="flex items-start justify-between gap-2 pl-2">
-              <div className="flex-1 min-w-0">
-                {num ? (
-                  <>
-                    <p className="text-2xl font-bold text-gray-800 leading-none">{num}</p>
-                    <p className="text-xs text-gray-400 mt-1 truncate">
-                      {tail || item.label}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold text-gray-700">{raw}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">{item.label}</p>
-                  </>
-                )}
-              </div>
-              <div className={`${item.iconBg} p-2 rounded-lg flex-shrink-0`}>
-                <Icon className={`w-4 h-4 ${item.iconColor}`} />
-              </div>
-            </div>
-          </button>
-        );
-      })}
-    </div>
+            <Icon size={19} />
+          </div>
+
+          {/* Conteúdo */}
+          <div>
+            <p className="text-[13px] font-semibold text-[#746b80] mb-2 leading-tight">
+              {item.label}
+            </p>
+            {num ? (
+              <strong
+                className="block font-bold text-[#21122f] leading-none"
+                style={{ fontSize: '31px', letterSpacing: '-.045em' }}
+              >
+                {num}
+              </strong>
+            ) : (
+              <strong className="block text-xl font-bold text-[#21122f]">{raw}</strong>
+            )}
+            {note && (
+              <span className="block mt-2 text-xs text-[#8a8096]">{note}</span>
+            )}
+          </div>
+        </button>
+      );
+    })}
   </div>
 );

@@ -17,7 +17,7 @@ export const AdminAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }: 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<{ id: string; avatar_url?: string; email?: string } | null>(null);
 
   // Carregar avatar do admin
   useEffect(() => {
@@ -172,15 +172,24 @@ export const AdminAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }: 
       
       console.log("🌐 Nova URL pública do admin:", newAvatarUrl);
 
-      // Atualizar avatar_url no banco
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: filePath })
-        .eq('id', userId);
+      // Atualizar avatar_url — usa RPC SECURITY DEFINER para contornar RLS
+      // (admin usa sessão localStorage; auth.uid() pode ser null após reload)
+      const adminEmail = user?.email;
+      if (!adminEmail) throw new Error('Email do admin não encontrado na sessão.');
+
+      const { data: rpcResult, error: updateError } = await supabase
+        .rpc('update_admin_avatar_url', {
+          p_email: adminEmail,
+          p_avatar_path: filePath,
+        });
 
       if (updateError) {
         console.error("❌ Erro ao atualizar avatar do admin no banco:", updateError);
         throw updateError;
+      }
+
+      if (!rpcResult) {
+        throw new Error('Admin não encontrado ou sem permissão para atualizar avatar.');
       }
 
       console.log("✅ Avatar do admin atualizado no banco!");
