@@ -493,10 +493,32 @@ export const PlansManager = () => {
                 Nenhum plano cadastrado.
               </p>
             )}
+
+            {/* Visitante como item separado na lista */}
+            <div className="pt-1">
+              <Separator className="mb-2" />
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedPlanId === '__visitante__'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border bg-card hover:bg-muted/40'
+                }`}
+                onClick={() => setSelectedPlanId('__visitante__')}
+              >
+                <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Visitante</p>
+                  <p className="text-xs text-muted-foreground">Acesso sem login</p>
+                </div>
+                {selectedPlanId === '__visitante__' && (
+                  <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* ── Coluna direita: detalhe do plano selecionado ──────────────── */}
+        {/* ── Coluna direita ─────────────────────────────────────────────── */}
         {selectedPlan ? (
           <div className="space-y-4">
             {/* Cabeçalho do plano */}
@@ -581,60 +603,60 @@ export const PlansManager = () => {
                 </DndContext>
               </CardContent>
             </Card>
-
-            {/* Visitante */}
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Users className="w-4 h-4" /> Acesso do Visitante
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Visitante não é plano — configuração independente, válida para todos os visitantes
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveVisitante}
-                    disabled={mut.saveVisitante.isPending || !localVisitante}
-                    variant={localVisitante ? 'default' : 'outline'}
-                  >
-                    {mut.saveVisitante.isPending
-                      ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      : <Save className="w-4 h-4 mr-2" />
-                    }
-                    Salvar Visitante
-                  </Button>
-                </div>
-                {localVisitante && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
-                    <AlertCircle className="w-3 h-3 shrink-0" />
-                    Alterações do visitante ainda não salvas
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1.5">
-                  {funcionalidades.filter(f => !f.sempre_disponivel).map(func => (
-                    <div
-                      key={func.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md border border-border bg-card"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{func.nome_exibicao}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{func.chave}</p>
-                      </div>
-                      <Switch
-                        checked={displayVisitante[func.chave] ?? false}
-                        onCheckedChange={(v) => handleToggleVisitante(func.chave, v)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </div>
+        ) : selectedPlanId === '__visitante__' ? (
+          /* ── Painel do Visitante ─────────────────────────────────────── */
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Acesso do Visitante
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Configuração independente dos planos — válida para todos os visitantes sem login
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleSaveVisitante}
+                  disabled={mut.saveVisitante.isPending || !localVisitante}
+                  variant={localVisitante ? 'default' : 'outline'}
+                >
+                  {mut.saveVisitante.isPending
+                    ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    : <Save className="w-4 h-4 mr-2" />
+                  }
+                  Salvar
+                </Button>
+              </div>
+              {localVisitante && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  Alterações ainda não salvas
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1.5">
+                {funcionalidades.filter(f => !f.sempre_disponivel).map(func => (
+                  <div
+                    key={func.id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-md border border-border bg-card"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{func.nome_exibicao}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{func.chave}</p>
+                    </div>
+                    <Switch
+                      checked={displayVisitante[func.chave] ?? false}
+                      onCheckedChange={(v) => handleToggleVisitante(func.chave, v)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <Card className="flex items-center justify-center min-h-[300px]">
             <div className="text-center text-muted-foreground">
