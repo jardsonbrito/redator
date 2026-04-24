@@ -163,12 +163,21 @@ import ResumoTurma from "@/pages/admin/ResumoTurma";
 import AvaliacaoPresencial from "@/pages/admin/AvaliacaoPresencial";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { ProfessorasIcon } from "@/components/icons/ProfessorasIcon";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminProfileDrawer } from "@/components/admin/AdminProfileDrawer";
+import { PriorityCards } from "@/components/admin/dashboard/PriorityCards";
+import { WorkCenter } from "@/components/admin/dashboard/WorkCenter";
+import { RecentActivity } from "@/components/admin/dashboard/RecentActivity";
+import { ModuleGroups } from "@/components/admin/dashboard/ModuleGroups";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeView, setActiveView] = useState("dashboard");
+  const [showProfile, setShowProfile] = useState(false);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("visao-geral");
   const [refreshAvisos, setRefreshAvisos] = useState(false);
   const [showAvisosList, setShowAvisosList] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
@@ -850,6 +859,26 @@ const Admin = () => {
     }
   };
 
+  const handleSectionClick = (sectionId: string) => {
+    setActiveSection(sectionId);
+    if (activeView !== "dashboard") {
+      setActiveView("dashboard");
+      navigate('/admin', { replace: true });
+      setTimeout(() => {
+        const el = document.getElementById(`section-${sectionId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 200);
+    } else {
+      const el = document.getElementById(`section-${sectionId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleSearchResultClick = (type: string) => {
+    if (type === 'aluno') setActiveView('alunos');
+    else if (type === 'tema') setActiveView('temas');
+  };
+
 
 
   const renderContent = () => {
@@ -1312,117 +1341,69 @@ const Admin = () => {
 
       default:
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {menuItems.map((item, index) => {
-              const isJarvis = item.id === 'jarvis' && !!meuCorretor;
+          <div id="section-visao-geral" className="space-y-10 pb-10">
+            {/* Cabeçalho da visão geral */}
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
+              <p className="text-sm text-gray-500">
+                Gestão pedagógica, acompanhamento dos alunos e controle da plataforma.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-3">
+                <Button variant="outline" size="sm" onClick={() => setActiveView('redacoes-enviadas')}
+                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
+                  Corrigir redações
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setActiveView('inbox')}
+                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
+                  Ver mensagens
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setActiveView('calendario')}
+                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
+                  Gerenciar calendário
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setActiveView('jarvis')}
+                  className="text-xs border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700">
+                  Configurar Jarvis
+                </Button>
+              </div>
+            </div>
 
-              const cardEl = (
-                <DetailedDashboardCard
-                  title={item.label}
-                  icon={
-                    item.id === 'redacoes-comentadas'
-                      ? <RedacoesComentadasIcon className="w-8 h-8" style={{ color: item.iconColor } as React.CSSProperties} />
-                      : item.id === 'professores'
-                        ? <ProfessorasIcon className="w-8 h-8" style={{ color: item.iconColor } as React.CSSProperties} />
-                        : <item.icon size={32} color={item.iconColor} weight="fill" />
-                  }
-                  primaryInfo={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "")}
-                  secondaryInfo={cardData[item.id]?.badge}
-                  description=""
-                  chips={cardData[item.id]?.chips ?? item.chips}
-                  chipColor={item.iconColor}
-                  onClick={() => setActiveView(item.id)}
-                  onChipClick={(chipIndex, chipValue) => {
-                    // Handle Temas chips
-                    if (item.id === "temas") {
-                      let statusParam = 'todos';
-                      if (chipValue.includes('agendados')) statusParam = 'agendado';
-                      else if (chipValue.includes('rascunhos')) statusParam = 'rascunho';
-                      setActiveView("temas");
-                      const newParams = new URLSearchParams();
-                      newParams.set('status', statusParam);
-                      navigate(`?${newParams.toString()}`);
-                      return;
-                    }
-                    // Handle Jarvis chips
-                    if (item.id === "jarvis") {
-                      const subtabMap: Record<string, string> = {
-                        "Créditos": "creditos",
-                        "Modos": "modos",
-                        "Parâmetros": "configuracoes",
-                        "Tutoria": "tutoria",
-                        "Histórico": "historico"
-                      };
-                      const subtab = subtabMap[chipValue];
-                      if (subtab) {
-                        setActiveView("jarvis");
-                        const newParams = new URLSearchParams();
-                        newParams.set('view', 'jarvis');
-                        newParams.set('subtab', subtab);
-                        navigate(`?${newParams.toString()}`);
-                      }
-                    }
-                    // Handle Diário Online chips
-                    else if (item.id === "diario") {
-                      const subtabMap: Record<string, string> = {
-                        "Etapas": "etapas",
-                        "Aulas": "aulas",
-                        "Turma": "turma",
-                        "Avaliação": "avaliação"
-                      };
-                      const subtab = subtabMap[chipValue];
-                      if (subtab) {
-                        setActiveView("diario");
-                        const newParams = new URLSearchParams();
-                        newParams.set('view', 'diario');
-                        newParams.set('subtab', subtab);
-                        navigate(`?${newParams.toString()}`);
-                      }
-                    }
-                    // Handle Configurações chips
-                    else if (item.id === "configuracoes") {
-                      const subtabMap: Record<string, string> = {
-                        "Conta": "account",
-                        "Envios": "submissions",
-                        "Créditos": "credits",
-                        "Assinatura": "subscriptions"
-                      };
-                      const subtab = subtabMap[chipValue];
-                      if (subtab) {
-                        setActiveView("configuracoes");
-                        const newParams = new URLSearchParams();
-                        newParams.set('view', 'configuracoes');
-                        newParams.set('subtab', subtab);
-                        navigate(`?${newParams.toString()}`);
-                      }
-                    }
-                  }}
+            {/* Cards de prioridade */}
+            <PriorityCards
+              cardData={cardData}
+              isLoading={isLoadingCards}
+              onCardClick={setActiveView}
+            />
+
+            {/* Central de trabalho + Movimento recente */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <WorkCenter
+                  cardData={cardData}
+                  isLoading={isLoadingCards}
+                  onCardClick={setActiveView}
                 />
-              );
+              </div>
+              <div>
+                <RecentActivity
+                  cardData={cardData}
+                  isLoading={isLoadingCards}
+                  onCardClick={setActiveView}
+                />
+              </div>
+            </div>
 
-              // Card Jarvis: sobrepõe badge de mensagens não lidas + botão de acesso ao corretor
-              if (isJarvis) {
-                return (
-                  <div key={item.id} className="relative">
-                    {mensagensCorretorNaoLidas > 0 && (
-                      <span className="absolute top-3 right-10 z-10 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-5 flex items-center justify-center px-1.5 rounded-full shadow pointer-events-none">
-                        {mensagensCorretorNaoLidas}
-                      </span>
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleAcessarPainelCorretor(); }}
-                      title="Acessar painel do corretor"
-                      className="absolute top-3 right-3 z-10 text-gray-400 hover:text-[#7C3AED] transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
-                    {cardEl}
-                  </div>
-                );
-              }
-
-              return <React.Fragment key={item.id}>{cardEl}</React.Fragment>;
-            })}
+            {/* Módulos agrupados por setor */}
+            <ModuleGroups
+              menuItems={menuItems}
+              cardData={cardData}
+              isLoading={isLoadingCards}
+              setActiveView={setActiveView}
+              navigate={navigate}
+              meuCorretor={meuCorretor}
+              mensagensCorretorNaoLidas={mensagensCorretorNaoLidas}
+              handleAcessarPainelCorretor={handleAcessarPainelCorretor}
+            />
           </div>
         );
     }
@@ -1438,42 +1419,68 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Modern Header */}
-      <ModernAdminHeader
-        userEmail={user?.email}
-        onLogout={handleLogout}
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar lateral */}
+      <AdminSidebar
+        activeSection={activeSection}
+        onSectionClick={handleSectionClick}
+        onNavigateDashboard={() => {
+          setActiveView("dashboard");
+          navigate('/admin', { replace: true });
+        }}
+        isMobileOpen={sidebarMobileOpen}
+        onMobileClose={() => setSidebarMobileOpen(false)}
       />
 
-      {/* Navigation */}
-      {activeView !== "dashboard" && (
-        <nav className="bg-white/80 backdrop-blur-sm border-b border-primary/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3 py-3">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setActiveView("dashboard");
-                  navigate('/admin', { replace: true });
-                }}
-                className="hover:bg-primary/10 text-primary"
-              >
-                Dashboard
-              </Button>
-              <span className="text-primary/40">/</span>
-              <span className="text-primary font-semibold">
-                {menuItems.find(item => item.id === activeView)?.label}
-              </span>
-            </div>
-          </div>
-        </nav>
-      )}
+      {/* Área principal */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <ModernAdminHeader
+          userEmail={user?.email}
+          onLogout={handleLogout}
+          onProfileClick={() => setShowProfile(true)}
+          onMenuClick={() => setSidebarMobileOpen(true)}
+          onSearchResultClick={handleSearchResultClick}
+        />
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderContent()}
-      </main>
+        {/* Breadcrumb — visível apenas fora do dashboard */}
+        {activeView !== "dashboard" && (
+          <nav className="bg-white border-b border-gray-200 flex-shrink-0">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-3 py-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setActiveView("dashboard");
+                    navigate('/admin', { replace: true });
+                  }}
+                  className="hover:bg-primary/10 text-primary"
+                >
+                  Dashboard
+                </Button>
+                <span className="text-gray-300">/</span>
+                <span className="text-gray-700 font-medium text-sm">
+                  {menuItems.find(item => item.id === activeView)?.label}
+                </span>
+              </div>
+            </div>
+          </nav>
+        )}
+
+        {/* Conteúdo principal */}
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 overflow-auto">
+          {renderContent()}
+        </main>
+      </div>
+
+      {/* Painel Meu Perfil */}
+      <AdminProfileDrawer
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        onLogout={handleLogout}
+        user={user}
+      />
 
       {/* Pop-up de aprovação de alunos */}
       <AlunosAprovacaoPopup
