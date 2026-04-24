@@ -5,7 +5,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, Library, Map, Bot } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, Presentation, Gamepad2, Calendar, ClipboardList, Library, Map, Bot } from "lucide-react";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 
@@ -144,13 +144,6 @@ const Mais = () => {
       path: "/biblioteca",
       icon: File,
       tooltip: "Acesse materiais em PDF organizados por competência.",
-      showAlways: true
-    },
-    {
-      title: "Ajuda Rápida",
-      path: "/ajuda-rapida",
-      icon: MessageSquare,
-      tooltip: "Converse com seus corretores.",
       showAlways: true
     },
     {

@@ -3,10 +3,9 @@ import { Link } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { LucideIcon, Lock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { UnlockModal } from "./UnlockModal";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
-import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
@@ -33,42 +32,12 @@ interface MenuGridProps {
 export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridProps) => {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState('');
-  const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
   const { isBlockedResource } = useTurmaERestrictions();
-  const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
-  const { isFeatureEnabled, debugInfo, overrides, subscription, funcionalidadesOrdenadas } = usePlanFeatures(studentData.email);
+  const { isFeatureEnabled, funcionalidadesOrdenadas } = usePlanFeatures(studentData.email);
   const { professor } = useProfessorAuth();
   const isProfessor = !!professor;
-
-  // Estado do hook de planos (logs removidos para produção)
-
-  useEffect(() => {
-    if (studentData.email) {
-      const fetchMensagensNaoLidas = async () => {
-        const count = await buscarMensagensNaoLidasAluno(studentData.email);
-        setMensagensNaoLidas(count);
-      };
-      
-      fetchMensagensNaoLidas();
-      
-      // Atualizar a cada 30 segundos
-      const interval = setInterval(fetchMensagensNaoLidas, 30000);
-      
-      // Escutar evento customizado para atualizar badge quando mensagens forem lidas
-      const handleMensagensLidas = () => {
-        fetchMensagensNaoLidas();
-      };
-      
-      window.addEventListener('mensagensLidas', handleMensagensLidas);
-      
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('mensagensLidas', handleMensagensLidas);
-      };
-    }
-  }, [studentData.email, buscarMensagensNaoLidasAluno]);
 
   // Mapeamento de títulos dos cards para nomes das funcionalidades
   const getFunctionalityName = (title: string): string => {
@@ -85,8 +54,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
       'Aulas': 'aulas_gravadas',
       'Aulas Gravadas': 'aulas_gravadas',
       'Aulas ao Vivo': 'aulas_ao_vivo',
-      'Ajuda Rápida': 'ajuda_rapida', // Não controlada por plano
-      'Minhas Redações': 'minhas_redacoes', // Não controlada por plano
+      'Minhas Redações': 'minhas_redacoes',
       'Simulados': 'simulados',
       // Funcionalidades que estavam faltando no mapeamento:
       'Top 5': 'top_5',
@@ -164,7 +132,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
           // Funcionalidades que sempre devem estar disponíveis (não controladas por plano)
           // microaprendizagem: o card sempre aparece; o controle de acesso
           // é feito por planos_permitidos em cada item de conteúdo
-          const alwaysAvailableFeatures = ['ajuda_rapida', 'minhas_redacoes', 'jarvis', 'microaprendizagem'];
+          const alwaysAvailableFeatures = ['minhas_redacoes', 'jarvis', 'microaprendizagem'];
           const isAlwaysAvailable = alwaysAvailableFeatures.includes(functionalityName || '');
 
           // Verificação de funcionalidades (logs de debug removidos para produção)
@@ -254,12 +222,6 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
                       </span>
                     )}
 
-                    {/* Badge de notificação para Ajuda Rápida */}
-                    {item.title === "Ajuda Rápida" && mensagensNaoLidas > 0 && (
-                      <Badge variant="destructive" className="absolute top-2 left-2 rounded-full text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
-                        {mensagensNaoLidas}
-                      </Badge>
-                    )}
                   </Link>
                 )}
               </TooltipTrigger>
