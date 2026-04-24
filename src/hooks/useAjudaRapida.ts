@@ -308,7 +308,7 @@ export const useAjudaRapida = () => {
           corretor_id: corretorId,
           mensagem,
           autor,
-          lida: autor === 'corretor' // Se o corretor envia, marca como lida automaticamente
+          lida: false // destinatário ainda não leu; será true após marcarComoLida/Aluno
         });
 
       if (error) {
