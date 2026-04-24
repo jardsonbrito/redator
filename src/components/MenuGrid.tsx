@@ -87,7 +87,6 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
       'Aulas ao Vivo': 'aulas_ao_vivo',
       'Ajuda Rápida': 'ajuda_rapida', // Não controlada por plano
       'Minhas Redações': 'minhas_redacoes', // Não controlada por plano
-      'Minhas Conquistas': 'minhas_conquistas',
       'Simulados': 'simulados',
       // Funcionalidades que estavam faltando no mapeamento:
       'Top 5': 'top_5',
