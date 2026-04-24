@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { computeSimuladoStatus } from "@/utils/simuladoStatus";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -220,7 +220,8 @@ const Admin = () => {
       email: meuCorretor.email,
       ativo: true,
     }));
-    navigate('/corretor');
+    // Full reload necessário para que CorretorAuthProvider releia o localStorage
+    window.location.href = '/corretor';
   };
   const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
 
@@ -1312,39 +1313,11 @@ const Admin = () => {
       default:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {/* Atalho para o painel do corretor — aparece primeiro quando o admin tem conta de corretor */}
-            {meuCorretor && (
-              <div
-                onClick={handleAcessarPainelCorretor}
-                className="col-span-1 md:col-span-2 lg:col-span-3 cursor-pointer rounded-2xl bg-gradient-to-r from-[#3F0077] to-[#662F96] text-white shadow-lg hover:shadow-xl hover:opacity-95 transition-all duration-200 p-5 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 rounded-full p-3">
-                    <MessageCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-base">Painel do Corretor</p>
-                    <p className="text-sm text-white/70">{meuCorretor.nome_completo} · clique para acessar já autenticado</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {mensagensCorretorNaoLidas > 0 && (
-                    <span className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
-                      {mensagensCorretorNaoLidas} nova{mensagensCorretorNaoLidas > 1 ? 's' : ''}
-                    </span>
-                  )}
-                  <ExternalLink className="w-5 h-5 text-white/60" />
-                </div>
-              </div>
-            )}
             {menuItems.map((item, index) => {
+              const isJarvis = item.id === 'jarvis' && !!meuCorretor;
 
-
-
-              // Cards normais para os outros itens
-              return (
+              const cardEl = (
                 <DetailedDashboardCard
-                  key={item.id}
                   title={item.label}
                   icon={
                     item.id === 'redacoes-comentadas'
@@ -1426,6 +1399,29 @@ const Admin = () => {
                   }}
                 />
               );
+
+              // Card Jarvis: sobrepõe badge de mensagens não lidas + botão de acesso ao corretor
+              if (isJarvis) {
+                return (
+                  <div key={item.id} className="relative">
+                    {mensagensCorretorNaoLidas > 0 && (
+                      <span className="absolute top-3 right-10 z-10 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-5 flex items-center justify-center px-1.5 rounded-full shadow pointer-events-none">
+                        {mensagensCorretorNaoLidas}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAcessarPainelCorretor(); }}
+                      title="Acessar painel do corretor"
+                      className="absolute top-3 right-3 z-10 text-gray-400 hover:text-[#7C3AED] transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
+                    {cardEl}
+                  </div>
+                );
+              }
+
+              return <React.Fragment key={item.id}>{cardEl}</React.Fragment>;
             })}
           </div>
         );
