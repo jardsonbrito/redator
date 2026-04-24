@@ -161,7 +161,7 @@ export const usePlanFeatures = (userEmail: string) => {
       return dbVisitanteFeatures ? (dbVisitanteFeatures[functionality] ?? false) : false;
     }
 
-    if (isPSCandidate) {
+    if (isPSCandidate && !subscription?.plano) {
       return dbPSFeatures ? (dbPSFeatures[functionality] ?? false) : false;
     }
 
