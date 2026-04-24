@@ -17,10 +17,10 @@ export const MensagensCorretor = () => {
   } | null>(null);
 
   useEffect(() => {
-    if (corretor?.id) {
-      console.log('🔍 Carregando conversas para corretor:', corretor.id);
-      buscarConversasCorretor(corretor.id);
-    }
+    if (!corretor?.id) return;
+    buscarConversasCorretor(corretor.id);
+    const interval = setInterval(() => buscarConversasCorretor(corretor.id), 30000);
+    return () => clearInterval(interval);
   }, [corretor?.id]);
 
   if (conversaAtiva) {
@@ -29,7 +29,10 @@ export const MensagensCorretor = () => {
         alunoId={conversaAtiva.alunoId}
         corretorId={corretor?.id || ''}
         alunoNome={conversaAtiva.alunoNome}
-        onVoltar={() => setConversaAtiva(null)}
+        onVoltar={() => {
+          setConversaAtiva(null);
+          if (corretor?.id) buscarConversasCorretor(corretor.id);
+        }}
         tipoUsuario="corretor"
       />
     );
