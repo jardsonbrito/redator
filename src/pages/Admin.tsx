@@ -194,7 +194,7 @@ const Admin = () => {
       const { data: corretorData } = await supabase
         .from('corretores')
         .select('id, nome_completo, email')
-        .eq('email', user.email.toLowerCase())
+        .eq('acesso_admin', true)
         .eq('ativo', true)
         .maybeSingle();
 
@@ -202,7 +202,7 @@ const Admin = () => {
       setMeuCorretor(corretorData);
 
       const { data: count } = await supabase.rpc('contar_mensagens_nao_lidas_corretor', {
-        corretor_email: user.email,
+        corretor_email: corretorData.email,
       });
       setMensagensCorretorNaoLidas(count || 0);
     };
