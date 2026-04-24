@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -39,17 +40,37 @@ interface PSMigrarCandidatosProps {
   onMigracaoConcluida?: () => void;
 }
 
-const TURMAS_DESTINO = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-const PLANOS_DISPONIVEIS = [
-  { value: 'Liderança', label: 'Liderança', dias: 365 },
-  { value: 'Lapidação', label: 'Lapidação', dias: 180 },
-  { value: 'Largada', label: 'Largada', dias: 90 },
-];
-
 export const PSMigrarCandidatos: React.FC<PSMigrarCandidatosProps> = ({
   candidatos,
   onMigracaoConcluida
 }) => {
+  const { data: turmasDisponiveis = [] } = useQuery({
+    queryKey: ['turmas-lista'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('turmas')
+        .select('id, nome')
+        .order('nome');
+      if (error) return [];
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: planosDisponiveis = [] } = useQuery({
+    queryKey: ['planos-ativos-lista'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('planos')
+        .select('nome, nome_exibicao')
+        .eq('ativo', true)
+        .order('ordem');
+      if (error) return [];
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [turmaDestino, setTurmaDestino] = useState<string>('');
   const [ativarPlano, setAtivarPlano] = useState(false);
@@ -135,10 +156,6 @@ export const PSMigrarCandidatos: React.FC<PSMigrarCandidatosProps> = ({
 
   const handlePlanoChange = (plano: string) => {
     setPlanoSelecionado(plano);
-    const planoInfo = PLANOS_DISPONIVEIS.find(p => p.value === plano);
-    if (planoInfo) {
-      setDiasValidade(planoInfo.dias);
-    }
   };
 
   const handleMigrar = async () => {
@@ -249,9 +266,9 @@ export const PSMigrarCandidatos: React.FC<PSMigrarCandidatosProps> = ({
                 <SelectValue placeholder="Selecione a turma" />
               </SelectTrigger>
               <SelectContent>
-                {TURMAS_DESTINO.map(turma => (
-                  <SelectItem key={turma} value={turma}>
-                    Turma {turma}
+                {turmasDisponiveis.map(turma => (
+                  <SelectItem key={turma.id} value={turma.nome}>
+                    {turma.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -275,9 +292,9 @@ export const PSMigrarCandidatos: React.FC<PSMigrarCandidatosProps> = ({
                   <SelectValue placeholder="Selecione o plano" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PLANOS_DISPONIVEIS.map(plano => (
-                    <SelectItem key={plano.value} value={plano.value}>
-                      {plano.label} ({plano.dias} dias)
+                  {planosDisponiveis.map(plano => (
+                    <SelectItem key={plano.nome} value={plano.nome}>
+                      {plano.nome_exibicao}
                     </SelectItem>
                   ))}
                 </SelectContent>
