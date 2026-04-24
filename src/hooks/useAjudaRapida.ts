@@ -381,20 +381,15 @@ export const useAjudaRapida = () => {
     }
   };
 
-  // Marcar mensagens como lidas para aluno
+  // Marcar mensagens como lidas para aluno via RPC SECURITY DEFINER
+  // (update direto era bloqueado silenciosamente pelo RLS — políticas de UPDATE
+  //  cobrem apenas autor='aluno', mas aqui precisamos atualizar autor='corretor')
   const marcarComoLidaAluno = async (alunoEmail: string, corretorId: string) => {
     try {
-      const perfilAluno = await buscarPerfilAluno(alunoEmail);
-      if (!perfilAluno) return;
-
-      const { error } = await supabase
-        .from('ajuda_rapida_mensagens')
-        .update({ lida: true })
-        .eq('aluno_id', perfilAluno.id)
-        .eq('corretor_id', corretorId)
-        .eq('autor', 'corretor')
-        .eq('lida', false);
-
+      const { error } = await supabase.rpc('marcar_mensagens_lidas_aluno', {
+        p_aluno_email: alunoEmail,
+        p_corretor_id: corretorId,
+      });
       if (error) throw error;
     } catch (error) {
       console.error('Erro ao marcar mensagens como lidas para aluno:', error);
