@@ -32,7 +32,7 @@ export const BottomNavigation = () => {
 
   const navItems = [
     { path: "/app",          label: "Início",      icon: Home },
-    { path: "/ajuda-rapida", label: "Mensagens",   icon: MessageCircle, badge: mensagensNaoLidas },
+    { path: "/ajuda-rapida", label: "Ajuda Rápida", icon: MessageCircle, badge: mensagensNaoLidas },
     { path: "/desempenho",   label: "Desempenho",  icon: TrendingUp },
     { path: "/plano",        label: "Plano",       icon: BookOpen },
     { path: "/mais",         label: "Mais",        icon: Grid3x3 },
