@@ -95,7 +95,10 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
       'Gamificação': 'gamificacao',
       'Repertório Orientado': 'repertorio_orientado',
       'Jarvis': 'jarvis',
-      'Microaprendizagem': 'microaprendizagem'
+      'Microaprendizagem': 'microaprendizagem',
+      'Guia Temático': 'guia_tematico',
+      'Laboratório de Repertório': 'laboratorio_repertorio',
+      'Redações Comentadas': 'redacoes_comentadas',
     };
     return mapping[title] || '';
   };
