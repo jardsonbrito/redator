@@ -46,7 +46,9 @@ export const JarvisCorrecaoConfigManager = () => {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDetalhesDialog, setShowDetalhesDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
+  const [configToEdit, setConfigToEdit] = useState<any | null>(null);
   const [configToActivate, setConfigToActivate] = useState<string | null>(null);
   const [configToDelete, setConfigToDelete] = useState<string | null>(null);
 
@@ -74,6 +76,11 @@ export const JarvisCorrecaoConfigManager = () => {
   const handleVisualizar = (configId: string) => {
     setSelectedConfigId(configId);
     setShowDetalhesDialog(true);
+  };
+
+  const handleEditar = (config: any) => {
+    setConfigToEdit(config);
+    setShowEditDialog(true);
   };
 
   const handleDelete = (configId: string) => {
@@ -250,8 +257,17 @@ export const JarvisCorrecaoConfigManager = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleVisualizar(config.id)}
+                          title="Ver detalhes"
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditar(config)}
+                          title="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
                         </Button>
                         {!config.ativo && (
                           <>
@@ -259,6 +275,7 @@ export const JarvisCorrecaoConfigManager = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleAtivar(config.id)}
+                              title="Ativar"
                             >
                               <Power className="h-4 w-4" />
                             </Button>
@@ -266,6 +283,7 @@ export const JarvisCorrecaoConfigManager = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDuplicar(config.id)}
+                              title="Duplicar"
                             >
                               <Copy className="h-4 w-4" />
                             </Button>
@@ -274,6 +292,7 @@ export const JarvisCorrecaoConfigManager = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDelete(config.id)}
+                                title="Deletar"
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
@@ -314,6 +333,30 @@ export const JarvisCorrecaoConfigManager = () => {
               <DialogTitle>Detalhes da Configuração</DialogTitle>
             </DialogHeader>
             <JarvisCorrecaoConfigDetalhes configId={selectedConfigId} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialog: Editar Configuração */}
+      {configToEdit && (
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Configuração v{configToEdit.versao}</DialogTitle>
+              <DialogDescription>
+                {configToEdit.ativo && (
+                  <span className="text-orange-600 font-medium">
+                    ⚠️ Esta configuração está ATIVA. Alterações afetam correções imediatamente.
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <JarvisCorrecaoConfigForm
+              configId={configToEdit.id}
+              initialData={configToEdit}
+              onSuccess={() => setShowEditDialog(false)}
+              onCancel={() => setShowEditDialog(false)}
+            />
           </DialogContent>
         </Dialog>
       )}

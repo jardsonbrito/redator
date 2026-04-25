@@ -205,17 +205,6 @@ export const useJarvisCorrecaoConfig = () => {
       const { data: adminUser } = await supabase.auth.getUser();
       if (!adminUser?.user) throw new Error("Usuário não autenticado");
 
-      // Verificar se config está inativa
-      const { data: configAtual } = await supabase
-        .from("jarvis_correcao_config")
-        .select("ativo")
-        .eq("id", configId)
-        .single();
-
-      if (configAtual?.ativo) {
-        throw new Error("Não é possível editar configuração ativa. Duplique-a primeiro.");
-      }
-
       const { data: updatedConfig, error } = await supabase
         .from("jarvis_correcao_config")
         .update(data)
