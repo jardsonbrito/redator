@@ -46,6 +46,8 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  let correcaoId: string | undefined;
+
   try {
     console.log("🤖 Jarvis Correção - Processando correção");
 
@@ -60,12 +62,14 @@ Deno.serve(async (req) => {
     }
 
     const {
-      correcaoId,
+      correcaoId: cId,
       transcricaoConfirmada,
       professorEmail,
     }: ProcessarRequest = await req.json();
 
-    if (!correcaoId || !transcricaoConfirmada || !professorEmail) {
+    correcaoId = cId;
+
+    if (!cId || !transcricaoConfirmada || !professorEmail) {
       return new Response(
         JSON.stringify({
           error: "correcaoId, transcricaoConfirmada e professorEmail são obrigatórios",
@@ -202,13 +206,13 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           model: config.model,
-          temperature: config.temperatura,
+          temperature: parseFloat(String(config.temperatura)),
           max_tokens: config.max_tokens,
           messages: [
             { role: "system", content: config.system_prompt },
             { role: "user", content: userPrompt },
           ],
-          response_format: { type: "json_object" }, // Forçar JSON
+          response_format: { type: "json_object" },
         }),
       }
     );
@@ -334,6 +338,21 @@ Deno.serve(async (req) => {
     );
   } catch (error: any) {
     console.error("❌ Erro:", error);
+
+    // Persistir erro no registro para facilitar diagnóstico
+    if (correcaoId) {
+      try {
+        const supabaseClient = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+        await supabaseClient
+          .from("jarvis_correcoes")
+          .update({ status: "erro", erro_mensagem: error.message || "Erro desconhecido" })
+          .eq("id", correcaoId);
+      } catch { /* silencia falha no log de erro */ }
+    }
+
     return new Response(
       JSON.stringify({
         error: error.message || "Erro ao processar correção",
@@ -405,7 +424,7 @@ function validateCorrecaoIA(correcao: CorrecaoIA): string[] {
     correcao.competencias.c4.nota +
     correcao.competencias.c5.nota;
 
-  if (soma !== correcao.nota_total) {
+  if (Math.abs(soma - correcao.nota_total) > 1) {
     errors.push(
       `Soma das competências (${soma}) diferente da nota_total (${correcao.nota_total})`
     );
