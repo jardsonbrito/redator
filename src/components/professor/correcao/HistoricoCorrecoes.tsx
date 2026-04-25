@@ -38,8 +38,8 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
   const { correcoes, turmas, isLoading } = useJarvisCorrecao(professorEmail);
 
   const [filtroAluno, setFiltroAluno] = useState("");
-  const [filtroTurma, setFiltroTurma] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState("");
+  const [filtroTurma, setFiltroTurma] = useState("all");
+  const [filtroStatus, setFiltroStatus] = useState("all");
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [correcaoSelecionada, setCorrecaoSelecionada] = useState<JarvisCorrecao | null>(null);
 
@@ -56,12 +56,12 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
       }
 
       // Filtro por turma
-      if (filtroTurma && correcao.turma_id !== filtroTurma) {
+      if (filtroTurma !== "all" && correcao.turma_id !== filtroTurma) {
         return false;
       }
 
       // Filtro por status
-      if (filtroStatus && correcao.status !== filtroStatus) {
+      if (filtroStatus !== "all" && correcao.status !== filtroStatus) {
         return false;
       }
 
@@ -127,7 +127,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                   <SelectValue placeholder="Todas as turmas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as turmas</SelectItem>
+                  <SelectItem value="all">Todas as turmas</SelectItem>
                   {turmas?.map((turma: any) => (
                     <SelectItem key={turma.id} value={turma.id}>
                       {turma.nome}
@@ -143,7 +143,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="corrigida">Corrigida</SelectItem>
                   <SelectItem value="revisao_ocr">Aguardando Revisão</SelectItem>
                   <SelectItem value="aguardando_correcao">Aguardando Correção</SelectItem>

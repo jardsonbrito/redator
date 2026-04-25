@@ -240,6 +240,20 @@ Deno.serve(async (req) => {
       throw new Error("Resposta da IA não está em formato JSON válido");
     }
 
+    // Recalcular nota_total a partir das competências (o modelo às vezes erra a soma)
+    if (correcaoIA.competencias) {
+      const soma =
+        (correcaoIA.competencias.c1?.nota ?? 0) +
+        (correcaoIA.competencias.c2?.nota ?? 0) +
+        (correcaoIA.competencias.c3?.nota ?? 0) +
+        (correcaoIA.competencias.c4?.nota ?? 0) +
+        (correcaoIA.competencias.c5?.nota ?? 0);
+      if (typeof correcaoIA.nota_total !== "number" || correcaoIA.nota_total !== soma) {
+        console.log(`⚠️ nota_total corrigida: ${correcaoIA.nota_total} → ${soma}`);
+        correcaoIA.nota_total = soma;
+      }
+    }
+
     // ══════════════════════════════════════════════════════════════
     // 6. VALIDAR RESPOSTA
     // ══════════════════════════════════════════════════════════════
