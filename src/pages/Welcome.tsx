@@ -42,7 +42,7 @@ const Welcome = () => {
             if (professorData.primeiro_login) {
               navigate('/professor/trocar-senha', { replace: true });
             } else {
-              navigate('/professor/dashboard', { replace: true });
+              navigate('/professor', { replace: true });
             }
           }, 1000);
         }

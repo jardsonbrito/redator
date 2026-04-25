@@ -107,6 +107,7 @@ const AlunoAutoAtendimento    = lazy(() => import("./pages/AlunoAutoAtendimento"
 const ProfessorLogin          = lazy(() => import("./pages/ProfessorLogin").then(m => ({ default: m.ProfessorLogin })));
 const ProfessorAutoAtendimento = lazy(() => import("./pages/ProfessorAutoAtendimento"));
 const ProfessorHome        = lazy(() => import("./pages/professor/ProfessorHome"));
+const ProfessorDashboard   = lazy(() => import("./pages/ProfessorDashboard").then(m => ({ default: m.ProfessorDashboard })));
 const TrocarSenhaProfessor = lazy(() => import("./pages/TrocarSenhaProfessor").then(m => ({ default: m.TrocarSenhaProfessor })));
 const ProfessorTurmas      = lazy(() => import("./pages/professor/ProfessorTurmas").then(m => ({ default: m.ProfessorTurmas })));
 const ProfessorAlunos      = lazy(() => import("./pages/professor/ProfessorAlunos").then(m => ({ default: m.ProfessorAlunos })));
@@ -117,6 +118,7 @@ const ProfessorVisitantes  = lazy(() => import("./pages/professor/ProfessorVisit
 const LaboratorioAulaView  = lazy(() => import("./components/repertorio/laboratorio/LaboratorioAula").then(m => ({ default: m.LaboratorioAulaView })));
 const LaboratorioRepertorio = lazy(() => import("./pages/LaboratorioRepertorio"));
 const GuiaTematicoView     = lazy(() => import("./components/guia-tematico/GuiaTematicoView").then(m => ({ default: m.GuiaTematicoView })));
+const ProfessorJarvisCorrecao = lazy(() => import("./pages/professor/ProfessorJarvisCorrecao").then(m => ({ default: m.ProfessorJarvisCorrecao })));
 
 // Fallback de carregamento entre rotas
 const PageLoader = () => (
@@ -247,6 +249,11 @@ function App() {
                     {/* Rotas do Professor */}
                     <Route path="/professor/login" element={<ProfessorLogin />} />
                     <Route path="/professor/entrar" element={<ProfessorAutoAtendimento />} />
+                    <Route path="/professor" element={
+                      <ProfessorProtectedRoute>
+                        <ProfessorDashboard />
+                      </ProfessorProtectedRoute>
+                    } />
                     <Route path="/professor/dashboard" element={
                       <ProfessorProtectedRoute>
                         <ProfessorHome />
@@ -291,6 +298,11 @@ function App() {
                     <Route path="/professor/visitantes" element={
                       <ProfessorProtectedRoute>
                         <ProfessorVisitantes />
+                      </ProfessorProtectedRoute>
+                    } />
+                    <Route path="/professor/jarvis-correcao" element={
+                      <ProfessorProtectedRoute>
+                        <ProfessorJarvisCorrecao />
                       </ProfessorProtectedRoute>
                     } />
                     {/* Módulos herdados — mesma tela do aluno, só a rota muda */}

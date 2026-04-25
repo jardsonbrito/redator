@@ -201,7 +201,6 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
                     <SelectValue placeholder="Selecione uma turma (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem turma</SelectItem>
                     {turmas?.map((turma: any) => (
                       <SelectItem key={turma.id} value={turma.id}>
                         {turma.nome}

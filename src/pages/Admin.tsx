@@ -152,6 +152,8 @@ import { JarvisCreditManagementBulk } from "@/components/admin/JarvisCreditManag
 import { JarvisModosManagement } from "@/components/admin/JarvisModosManagement";
 import { JarvisHistoricoAdmin } from "@/components/admin/JarvisHistoricoAdmin";
 import { JarvisTutoriaConfiguracao } from "@/components/admin/JarvisTutoriaConfiguracao";
+import { JarvisCorrecaoConfigManager } from "@/components/admin/JarvisCorrecaoConfigManager";
+import { JarvisCorrecaoCreditosProfessores } from "@/components/admin/JarvisCorrecaoCreditosProfessores";
 
 // Import microaprendizagem admin
 import { MicroTopicosAdmin } from "@/components/microaprendizagem/admin/MicroTopicosAdmin";
@@ -1214,14 +1216,19 @@ const Admin = () => {
         return (
           <Tabs defaultValue={subtabJarvis || "creditos"} className="w-full">
             <TabsList>
-              <TabsTrigger value="creditos">Créditos</TabsTrigger>
+              <TabsTrigger value="creditos">Créditos Alunos</TabsTrigger>
+              <TabsTrigger value="creditos-professores">Créditos Professores</TabsTrigger>
               <TabsTrigger value="modos">Modos</TabsTrigger>
               <TabsTrigger value="configuracoes">Parâmetros</TabsTrigger>
               <TabsTrigger value="tutoria">Tutoria</TabsTrigger>
+              <TabsTrigger value="correcao">Correção IA</TabsTrigger>
               <TabsTrigger value="historico">Histórico</TabsTrigger>
             </TabsList>
             <TabsContent value="creditos" className="space-y-6">
               <JarvisCreditManagementBulk />
+            </TabsContent>
+            <TabsContent value="creditos-professores" className="space-y-6">
+              <JarvisCorrecaoCreditosProfessores />
             </TabsContent>
             <TabsContent value="modos" className="space-y-6">
               <JarvisModosManagement />
@@ -1231,6 +1238,9 @@ const Admin = () => {
             </TabsContent>
             <TabsContent value="tutoria" className="space-y-6">
               <JarvisTutoriaConfiguracao />
+            </TabsContent>
+            <TabsContent value="correcao" className="space-y-6">
+              <JarvisCorrecaoConfigManager />
             </TabsContent>
             <TabsContent value="historico" className="space-y-6">
               <JarvisHistoricoAdmin />
