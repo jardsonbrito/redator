@@ -183,7 +183,7 @@ export const useJarvisCorrecao = (professorEmail: string) => {
 
       const { data: novaTurma, error: turmaError } = await supabase
         .from("turmas_professores")
-        .insert({ nome, codigo_acesso: codigo })
+        .insert({ nome, codigo_acesso: codigo, criado_pelo_professor_id: professor.id })
         .select()
         .single();
 

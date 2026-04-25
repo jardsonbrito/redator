@@ -74,6 +74,7 @@ export const TurmasProfessoresManager = () => {
     const { data, error } = await supabase
       .from("turmas_professores")
       .select("*")
+      .is("criado_pelo_professor_id", null)
       .order("criado_em", { ascending: false });
 
     if (error) {
