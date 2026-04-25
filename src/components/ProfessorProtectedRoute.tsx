@@ -31,7 +31,7 @@ export const ProfessorProtectedRoute = ({
 
       // Se não for primeiro login mas está na página de trocar senha
       if (!professor.primeiro_login && location.pathname === '/professor/trocar-senha') {
-        navigate('/professor/dashboard', { replace: true });
+        navigate('/professor', { replace: true });
         return;
       }
 
