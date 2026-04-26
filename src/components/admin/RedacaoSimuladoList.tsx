@@ -223,7 +223,7 @@ const RedacaoSimuladoList = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('simulados')
-        .select('id, titulo')
+        .select('id, titulo, criado_em')
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
       if (error) throw error;
@@ -375,9 +375,18 @@ const RedacaoSimuladoList = () => {
     }
   });
 
-  // ── simulados visíveis — todos os ativos, independente de ter redações ──
+  // ── simulados visíveis — todos os ativos, filtrados por ano quando necessário ──
 
-  const simuladosVisiveis = useMemo(() => simulados ?? [], [simulados]);
+  const simuladosVisiveis = useMemo(() => {
+    const todos = simulados ?? [];
+    if (!apenasAnoAtual) return todos;
+    // inclui simulados do ano atual (por criado_em) OU que têm redações no ano atual
+    const idsComRedacoesNoAno = new Set((redacoes ?? []).map(r => r.id_simulado));
+    return todos.filter(s => {
+      const anoSimulado = s.criado_em ? new Date(s.criado_em).getFullYear() : null;
+      return anoSimulado === anoAtual || idsComRedacoesNoAno.has(s.id);
+    });
+  }, [simulados, redacoes, apenasAnoAtual, anoAtual]);
 
   // ── meses disponíveis (client-side, derivado dos dados já buscados) ──
 
