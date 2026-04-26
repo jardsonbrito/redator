@@ -375,12 +375,9 @@ const RedacaoSimuladoList = () => {
     }
   });
 
-  // ── simulados visíveis — apenas os que têm redações no período buscado ──
+  // ── simulados visíveis — todos os ativos, independente de ter redações ──
 
-  const simuladosVisiveis = useMemo(() => {
-    const idsNaView = new Set((redacoes ?? []).map(r => r.id_simulado));
-    return (simulados ?? []).filter(s => idsNaView.has(s.id));
-  }, [redacoes, simulados]);
+  const simuladosVisiveis = useMemo(() => simulados ?? [], [simulados]);
 
   // ── meses disponíveis (client-side, derivado dos dados já buscados) ──
 
