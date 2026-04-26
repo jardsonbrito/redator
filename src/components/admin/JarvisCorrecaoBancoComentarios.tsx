@@ -41,7 +41,6 @@ type FormData = {
   competencia: Competencia;
   categoria: string;
   texto: string;
-  prioridade: number;
   ativo: boolean;
 };
 
@@ -85,7 +84,7 @@ const ComentarioLista = ({ competencia }: { competencia: Competencia }) => {
 
   const abrirCriar = () => {
     setEditando(null);
-    reset({ competencia, categoria: "", texto: "", prioridade: 0, ativo: true });
+    reset({ competencia, categoria: "", texto: "", ativo: true });
     setShowForm(true);
   };
 
@@ -95,18 +94,16 @@ const ComentarioLista = ({ competencia }: { competencia: Competencia }) => {
       competencia: c.competencia,
       categoria: c.categoria || "",
       texto: c.texto,
-      prioridade: c.prioridade,
       ativo: c.ativo,
     });
     setShowForm(true);
   };
 
   const onSubmit = async (data: FormData) => {
-    const payload = { ...data, prioridade: Number(data.prioridade) };
     if (editando) {
-      await editar.mutateAsync({ id: editando.id, data: payload });
+      await editar.mutateAsync({ id: editando.id, data });
     } else {
-      await criar.mutateAsync(payload);
+      await criar.mutateAsync(data);
     }
     setShowForm(false);
     setEditando(null);
@@ -157,9 +154,6 @@ const ComentarioLista = ({ competencia }: { competencia: Competencia }) => {
                 </span>
               )}
               <p className="text-sm text-zinc-800">{c.texto}</p>
-              {c.prioridade > 0 && (
-                <p className="mt-0.5 text-[10px] text-zinc-400">Prioridade: {c.prioridade}</p>
-              )}
             </div>
             <div className="flex gap-1 shrink-0">
               <Button
@@ -267,18 +261,6 @@ const ComentarioLista = ({ competencia }: { competencia: Competencia }) => {
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 A IA seleciona este comentário quando ele se aplica ao texto do aluno.
-              </p>
-            </div>
-            <div>
-              <Label>Prioridade</Label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                {...register("prioridade", { valueAsNumber: true })}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Comentários com maior prioridade aparecem primeiro na devolutiva.
               </p>
             </div>
             <div className="flex justify-end gap-3">

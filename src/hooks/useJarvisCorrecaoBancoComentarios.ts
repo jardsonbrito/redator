@@ -10,14 +10,13 @@ export interface BancoComentario {
   categoria: string | null;
   texto: string;
   ativo: boolean;
-  prioridade: number;
   criado_em: string;
   atualizado_em: string;
 }
 
 export type CreateComentarioData = Pick<
   BancoComentario,
-  "competencia" | "categoria" | "texto" | "ativo" | "prioridade"
+  "competencia" | "categoria" | "texto" | "ativo"
 >;
 
 const getAdminId = async (): Promise<string> => {
@@ -42,7 +41,6 @@ export const useJarvisCorrecaoBancoComentarios = (competencia?: Competencia) => 
       let query = supabase
         .from("jarvis_correcao_banco_comentarios")
         .select("*")
-        .order("prioridade", { ascending: false })
         .order("criado_em", { ascending: true });
 
       if (competencia) {
