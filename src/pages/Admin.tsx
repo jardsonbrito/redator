@@ -1390,6 +1390,7 @@ const Admin = () => {
                 {[
                   { label: 'Calendário', view: 'calendario' },
                   { label: 'Temas', view: 'temas' },
+                  { label: 'Gerenciar alunos', view: 'alunos' },
                   { label: 'Gerenciar professores', view: 'professores' },
                   { label: 'Gerenciar corretores', view: 'corretores' },
                 ].map((item) => (

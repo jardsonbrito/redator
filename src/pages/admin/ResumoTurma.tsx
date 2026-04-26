@@ -103,7 +103,7 @@ export default function ResumoTurma() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Resumo da Turma</h1>
+          <h1 className="text-3xl font-bold">Desempenho Acadêmico dos Alunos</h1>
           <p className="text-muted-foreground">
             Visualize o desempenho dos alunos por etapa e exporte relatórios
           </p>

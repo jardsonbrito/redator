@@ -206,23 +206,13 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
 
     // Filtrar por turma
     if (activeTurma === "AGUARDANDO") {
-      // Aba especial: turma literal 'AGUARDANDO' (ano anterior) OU turmas dinâmicas sem plano ativo
-      filtered = filtered.filter(aluno => {
-        // Se turma é literalmente "AGUARDANDO"
-        if (aluno.turma === 'AGUARDANDO') return true;
-
-        // Ou se tem turma_id (turma dinâmica) mas não tem plano ativo
-        if (aluno.turma_id && !aluno.temPlanoAtivo) return true;
-
-        return false;
-      });
+      // Aba especial: apenas turma literal 'AGUARDANDO' (cadastros antigos/pendentes)
+      filtered = filtered.filter(aluno => aluno.turma === 'AGUARDANDO');
     } else if (activeTurma !== "todos") {
       if (turmasComPlano.includes(activeTurma)) {
-        // Turmas dinâmicas: filtrar por turma_id
+        // Turmas dinâmicas: filtrar por turma_id (independente de plano ativo)
         const turmaId = codigoToIdMap.get(activeTurma);
-        filtered = filtered.filter(aluno =>
-          aluno.turma_id === turmaId && aluno.temPlanoAtivo
-        );
+        filtered = filtered.filter(aluno => aluno.turma_id === turmaId);
       } else {
         // VISITANTE ou outras turmas: filtro normal pelo nome
         filtered = filtered.filter(aluno => aluno.turma === activeTurma);
@@ -240,35 +230,22 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
     return filtered;
   }, [alunos, activeTurma, searchTerm, turmasComPlano, codigoToIdMap]);
 
-  // Contar alunos por turma (considerando plano ativo)
+  // Contar alunos por turma
   const contadorPorTurma = useMemo(() => {
     const contador: { [key: string]: number } = {};
 
     alunos.forEach(aluno => {
-      // Para turmas dinâmicas: usar turma_id para identificar
       if (aluno.turma_id) {
-        // Encontrar o código correspondente ao turma_id
+        // Turmas dinâmicas: contar por turma_id, independente de plano ativo
         const codigoDaTurma = turmasDinamicas.find(t => t.id === aluno.turma_id)?.valor;
         if (codigoDaTurma && turmasComPlano.includes(codigoDaTurma)) {
-          // Para turmas dinâmicas: contar apenas se tem plano ativo
-          if (aluno.temPlanoAtivo) {
-            contador[codigoDaTurma] = (contador[codigoDaTurma] || 0) + 1;
-          }
-        } else {
-          // Turma dinâmica mas código não encontrado - pular
+          contador[codigoDaTurma] = (contador[codigoDaTurma] || 0) + 1;
         }
       } else {
-        // VISITANTE e outras: contagem normal
+        // VISITANTE, AGUARDANDO e outras: contagem pelo campo turma
         contador[aluno.turma] = (contador[aluno.turma] || 0) + 1;
       }
     });
-
-    // Contar alunos aguardando: turma literal 'AGUARDANDO' OU turmas dinâmicas sem plano ativo
-    contador['AGUARDANDO'] = alunos.filter(aluno => {
-      if (aluno.turma === 'AGUARDANDO') return true;
-      if (aluno.turma_id && !aluno.temPlanoAtivo) return true;
-      return false;
-    }).length;
 
     return contador;
   }, [alunos, turmasDinamicas, turmasComPlano]);
