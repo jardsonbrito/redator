@@ -21,7 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
-import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 import {
   verificarDivergencia,
   calcularNotasFinais,
@@ -375,6 +375,13 @@ const RedacaoSimuladoList = () => {
     }
   });
 
+  // ── turmas presentes nos dados (dinâmico) ──
+
+  const turmasUnicas = useMemo(() =>
+    [...new Set((redacoes ?? []).map(r => r.turma).filter(Boolean))].sort(),
+    [redacoes]
+  );
+
   // ── simulados visíveis — todos os ativos, filtrados por ano quando necessário ──
 
   const simuladosVisiveis = useMemo(() => {
@@ -486,8 +493,8 @@ const RedacaoSimuladoList = () => {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas as turmas</SelectItem>
-                  {TODAS_TURMAS.map(t => (
-                    <SelectItem key={t} value={t}>{formatTurmaDisplay(t)}</SelectItem>
+                  {turmasUnicas.map(t => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
