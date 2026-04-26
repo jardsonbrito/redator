@@ -333,11 +333,6 @@ export const JarvisCorrecaoBancoComentarios = () => {
     <Card>
       <CardHeader>
         <CardTitle>Banco de Comentários Pedagógicos</CardTitle>
-        <CardDescription>
-          Configure orientações por competência. A IA seleciona automaticamente quais comentários
-          aplicar de acordo com a realidade do texto do aluno. Comentários ativos com maior
-          prioridade são preferidos.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="geral">
