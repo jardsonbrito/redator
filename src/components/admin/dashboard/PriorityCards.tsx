@@ -1,4 +1,4 @@
-import { AlertCircle, MessageCircle, Video, HelpCircle } from 'lucide-react';
+import { AlertCircle, HelpCircle, Video, Bot } from 'lucide-react';
 
 interface CardDataEntry {
   info: string;
@@ -20,10 +20,10 @@ const PRIORITY_ITEMS = [
     accent: '#16a34a',
   },
   {
-    id: 'inbox',
-    label: 'Mensagens',
-    icon: MessageCircle,
-    accent: '#f97316',
+    id: 'ajuda-rapida',
+    label: 'Ajuda Rápida',
+    icon: HelpCircle,
+    accent: '#0891b2',
   },
   {
     id: 'salas-virtuais',
@@ -32,9 +32,9 @@ const PRIORITY_ITEMS = [
     accent: '#db2777',
   },
   {
-    id: 'ajuda-rapida',
-    label: 'Ajuda Rápida',
-    icon: HelpCircle,
+    id: 'jarvis',
+    label: 'Jarvis',
+    icon: Bot,
     accent: '#7c3aed',
   },
 ] as const;
