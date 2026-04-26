@@ -382,35 +382,17 @@ const RedacaoSimuladoList = () => {
     [redacoes]
   );
 
-  // ── simulados visíveis — filtrados por ano e pelo mês selecionado ──
+  // ── simulados visíveis — todos os ativos do ano selecionado ──
 
   const simuladosVisiveis = useMemo(() => {
     const todos = simulados ?? [];
-    const redacoesBase = redacoes ?? [];
-
-    // IDs dos simulados que têm redações no mês/período selecionado
-    const idsComRedacoes = new Set(
-      redacoesBase
-        .filter(r => {
-          if (filtroMes === 'todos' || filtroMes === '') return true;
-          const d = new Date(r.data_envio);
-          if (isNaN(d.getTime())) return false;
-          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === filtroMes;
-        })
-        .map(r => r.id_simulado)
-    );
-
+    if (!apenasAnoAtual) return todos;
+    const idsComRedacoesNoAno = new Set((redacoes ?? []).map(r => r.id_simulado));
     return todos.filter(s => {
-      if (!apenasAnoAtual) return idsComRedacoes.has(s.id);
-      // no modo ano atual: inclui simulados do ano atual com redações no mês selecionado
-      // OU simulados do ano atual sem redações ainda (em andamento)
       const anoSimulado = s.criado_em ? new Date(s.criado_em).getFullYear() : null;
-      if (anoSimulado !== anoAtual) return false;
-      // se filtrando por mês específico, só mostra simulados com redações nesse mês
-      if (filtroMes !== 'todos' && filtroMes !== '') return idsComRedacoes.has(s.id) || !redacoesBase.some(r => r.id_simulado === s.id);
-      return true;
+      return anoSimulado === anoAtual || idsComRedacoesNoAno.has(s.id);
     });
-  }, [simulados, redacoes, apenasAnoAtual, anoAtual, filtroMes]);
+  }, [simulados, redacoes, apenasAnoAtual, anoAtual]);
 
   // ── meses disponíveis (client-side, derivado dos dados já buscados) ──
 
