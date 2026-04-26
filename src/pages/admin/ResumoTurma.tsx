@@ -123,7 +123,6 @@ export default function ResumoTurma() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5" />
-            Filtros
           </CardTitle>
         </CardHeader>
         <CardContent>
