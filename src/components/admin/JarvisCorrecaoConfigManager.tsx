@@ -120,10 +120,6 @@ export const JarvisCorrecaoConfigManager = () => {
                 <TrendingUp className="h-5 w-5" />
                 Gerenciamento — Jarvis Correção IA
               </CardTitle>
-              <CardDescription>
-                Configurações de IA, calibração pedagógica e modelos de referência.
-                Apenas UMA configuração técnica pode estar ativa por vez.
-              </CardDescription>
             </div>
             <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -196,9 +192,6 @@ export const JarvisCorrecaoConfigManager = () => {
       <Card>
         <CardHeader>
           <CardTitle>Todas as Configurações</CardTitle>
-          <CardDescription>
-            Histórico completo de versões. Duplique uma config para criar nova versão baseada nela.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
