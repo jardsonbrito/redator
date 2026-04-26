@@ -1388,7 +1388,6 @@ const Admin = () => {
               </p>
               <div className="flex flex-wrap gap-2 mt-4">
                 {[
-                  { label: 'Configurar Jarvis', view: 'jarvis' },
                   { label: 'Calendário', view: 'calendario' },
                   { label: 'Temas', view: 'temas' },
                   { label: 'Gerenciar professores', view: 'professores' },
