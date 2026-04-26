@@ -169,6 +169,50 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     },
   });
 
+  // Deletar correção individual
+  const deletarCorrecao = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("jarvis_correcoes")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
+      toast.success("Correção removida.");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao remover: ${error.message}`);
+    },
+  });
+
+  // Deletar todas as correções de um aluno (por nome + professor)
+  const deletarPorAluno = useMutation({
+    mutationFn: async (autorNome: string) => {
+      const { data: professor } = await supabase
+        .from("professores")
+        .select("id")
+        .eq("email", professorEmail)
+        .single();
+      if (!professor) throw new Error("Professor não encontrado");
+
+      const { error } = await supabase
+        .from("jarvis_correcoes")
+        .delete()
+        .eq("professor_id", professor.id)
+        .eq("autor_nome", autorNome);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
+      toast.success("Histórico do aluno removido.");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao remover: ${error.message}`);
+    },
+  });
+
   // Criar turma nova
   const criarTurma = useMutation({
     mutationFn: async (nome: string) => {
@@ -220,6 +264,8 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     error,
     enviarRedacao,
     processarCorrecao,
+    deletarCorrecao,
+    deletarPorAluno,
     criarTurma,
   };
 };
