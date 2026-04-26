@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useJarvisCorrecaoModelosReferencia,
   ModeloReferencia,
@@ -28,17 +28,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type FormData = Omit<ModeloReferencia, "id" | "criado_em" | "atualizado_em">;
 
 const CAMPOS_COMP = [
-  { key: "c1", label: "Competência 1 — Norma Padrão" },
-  { key: "c2", label: "Competência 2 — Temática e Repertório" },
-  { key: "c3", label: "Competência 3 — Argumentação" },
-  { key: "c4", label: "Competência 4 — Coesão" },
-  { key: "c5", label: "Competência 5 — Proposta de Intervenção" },
+  { key: "c1", label: "C1 — Norma Padrão" },
+  { key: "c2", label: "C2 — Temática e Repertório" },
+  { key: "c3", label: "C3 — Argumentação" },
+  { key: "c4", label: "C4 — Coesão" },
+  { key: "c5", label: "C5 — Proposta de Intervenção" },
 ] as const;
+
+const SCORES = [0, 40, 80, 120, 160, 200] as const;
 
 const defaultValues: FormData = {
   titulo: "",
@@ -70,9 +72,15 @@ export const JarvisCorrecaoModelosReferencia = () => {
   const [deletando, setDeletando] = useState<string | null>(null);
   const [visualizando, setVisualizando] = useState<ModeloReferencia | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues,
   });
+
+  const [nc1, nc2, nc3, nc4, nc5] = watch(["nota_c1", "nota_c2", "nota_c3", "nota_c4", "nota_c5"]);
+
+  useEffect(() => {
+    setValue("nota_total", (nc1 || 0) + (nc2 || 0) + (nc3 || 0) + (nc4 || 0) + (nc5 || 0));
+  }, [nc1, nc2, nc3, nc4, nc5, setValue]);
 
   const abrirCriar = () => {
     setEditando(null);
@@ -253,6 +261,14 @@ export const JarvisCorrecaoModelosReferencia = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-2">
+            {/* Campos ocultos para registrar as notas no react-hook-form */}
+            <input type="hidden" {...register("nota_c1", { valueAsNumber: true })} />
+            <input type="hidden" {...register("nota_c2", { valueAsNumber: true })} />
+            <input type="hidden" {...register("nota_c3", { valueAsNumber: true })} />
+            <input type="hidden" {...register("nota_c4", { valueAsNumber: true })} />
+            <input type="hidden" {...register("nota_c5", { valueAsNumber: true })} />
+            <input type="hidden" {...register("nota_total", { valueAsNumber: true })} />
+
             <div>
               <Label>Título *</Label>
               <Input
@@ -280,22 +296,42 @@ export const JarvisCorrecaoModelosReferencia = () => {
               />
             </div>
 
-            {/* Notas */}
+            {/* Notas com chips clicáveis */}
             <div>
               <p className="text-sm font-semibold mb-3">Notas esperadas</p>
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                <div>
-                  <Label>Total</Label>
-                  <Input type="number" min="0" max="1000" step="40"
-                    {...register("nota_total", { required: true, valueAsNumber: true })} />
-                </div>
-                {CAMPOS_COMP.map(({ key }) => (
-                  <div key={key}>
-                    <Label>{key.toUpperCase()}</Label>
-                    <Input type="number" min="0" max="200" step="40"
-                      {...register(`nota_${key}` as any, { required: true, valueAsNumber: true })} />
-                  </div>
-                ))}
+              <div className="space-y-2.5">
+                {CAMPOS_COMP.map(({ key, label }) => {
+                  const currentVal = watch(`nota_${key}` as any) ?? 0;
+                  return (
+                    <div key={key} className="flex items-center gap-3 flex-wrap">
+                      <span className="text-sm text-muted-foreground w-52 shrink-0">{label}</span>
+                      <div className="flex gap-1.5">
+                        {SCORES.map((score) => (
+                          <button
+                            key={score}
+                            type="button"
+                            onClick={() => setValue(`nota_${key}` as any, score)}
+                            className={cn(
+                              "min-w-[44px] h-9 px-2 text-sm font-semibold rounded-lg border transition-colors",
+                              currentVal === score
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background hover:bg-accent border-input text-foreground"
+                            )}
+                          >
+                            {score}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex items-center gap-2">
+                <span className="text-sm font-semibold">Total:</span>
+                <span className="text-2xl font-bold text-primary">
+                  {(nc1 || 0) + (nc2 || 0) + (nc3 || 0) + (nc4 || 0) + (nc5 || 0)}
+                </span>
+                <span className="text-sm text-muted-foreground">/ 1000</span>
               </div>
             </div>
 
