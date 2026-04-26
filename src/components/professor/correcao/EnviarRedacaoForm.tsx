@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useJarvisCorrecao } from "@/hooks/useJarvisCorrecao";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,8 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Upload, Plus, AlertCircle, Check } from "lucide-react";
+import { Loader2, Plus, AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -38,8 +36,10 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
   const { turmas, creditos, enviarRedacao, processarCorrecao, criarTurma } =
     useJarvisCorrecao(professorEmail);
 
-  const [imagemPreview, setImagemPreview] = useState<string | null>(null);
+  const [modo, setModo] = useState<"manuscrita" | "digitada" | null>(null);
+  const [arquivoNome, setArquivoNome] = useState<string | null>(null);
   const [imagemBase64, setImagemBase64] = useState<string | null>(null);
+  const [textoDigitado, setTextoDigitado] = useState("");
   const [showCriarTurma, setShowCriarTurma] = useState(false);
   const [novaTurmaNome, setNovaTurmaNome] = useState("");
   const [showRevisaoOCR, setShowRevisaoOCR] = useState(false);
@@ -55,48 +55,38 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
     setValue,
     reset,
     formState: { errors },
-  } = useForm<FormData>({
-    defaultValues: {
-      turmaId: "",
-      autorNome: "",
-      tema: "",
-    },
-  });
+  } = useForm<FormData>({ defaultValues: { turmaId: "", autorNome: "", tema: "" } });
 
   const turmaIdSelecionada = watch("turmaId");
+  const isProcessing = enviarRedacao.isPending || processarCorrecao.isPending;
 
-  const handleImagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelecionarManuscrita = () => {
+    setModo("manuscrita");
+    fileInputRef.current?.click();
+  };
+
+  const handleArquivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validar tipo
-    if (!file.type.startsWith("image/")) {
-      toast.error("Apenas imagens são permitidas");
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Apenas JPG, JPEG ou PNG são permitidos");
       return;
     }
 
-    // Validar tamanho (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Imagem muito grande. Máximo: 10MB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Máximo: 5MB");
       return;
     }
 
-    // Preview
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      setImagemPreview(result);
       setImagemBase64(result);
+      setArquivoNome(file.name);
     };
     reader.readAsDataURL(file);
-  };
-
-  const removerImagem = () => {
-    setImagemPreview(null);
-    setImagemBase64(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
 
   const handleCriarTurma = async () => {
@@ -104,107 +94,109 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
       toast.error("Digite o nome da turma");
       return;
     }
-
     await criarTurma.mutateAsync(novaTurmaNome);
     setShowCriarTurma(false);
     setNovaTurmaNome("");
   };
 
+  const resetForm = () => {
+    reset();
+    setModo(null);
+    setArquivoNome(null);
+    setImagemBase64(null);
+    setTextoDigitado("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const onSubmit = async (data: FormData) => {
-    // Validar créditos
     if (!creditos || creditos < 1) {
-      toast.error("Você não tem créditos suficientes");
+      toast.error("Você não tem créditos disponíveis");
+      return;
+    }
+
+    if (!modo) {
+      toast.error("Selecione o tipo de redação: manuscrita ou digitada");
       return;
     }
 
     try {
-      const result = await enviarRedacao.mutateAsync({
-        turmaId: data.turmaId || null,
-        autorNome: data.autorNome,
-        tema: data.tema,
-        imagemBase64: imagemBase64 || undefined,
-      });
-
-      // Se tem OCR, abrir dialog de revisão
-      if (result.status === "revisao_ocr" && result.transcricaoOCR) {
-        setTranscricaoOCR(result.transcricaoOCR);
-        setCorrecaoIdEmRevisao(result.correcaoId);
-        setShowRevisaoOCR(true);
+      if (modo === "digitada") {
+        if (!textoDigitado.trim()) {
+          toast.error("Digite ou cole o texto da redação");
+          return;
+        }
+        const result = await enviarRedacao.mutateAsync({
+          turmaId: data.turmaId || null,
+          autorNome: data.autorNome,
+          tema: data.tema,
+        });
+        await processarCorrecao.mutateAsync({
+          correcaoId: result.correcaoId,
+          transcricaoConfirmada: textoDigitado,
+        });
+        resetForm();
       } else {
-        // Sem OCR, sucesso
-        toast.success("Redação enviada! Aguardando digitação do texto.");
-        reset();
-        removerImagem();
+        if (!imagemBase64) {
+          toast.error("Selecione uma imagem da redação");
+          return;
+        }
+        const result = await enviarRedacao.mutateAsync({
+          turmaId: data.turmaId || null,
+          autorNome: data.autorNome,
+          tema: data.tema,
+          imagemBase64,
+        });
+        if (result.status === "revisao_ocr" && result.transcricaoOCR) {
+          setTranscricaoOCR(result.transcricaoOCR);
+          setCorrecaoIdEmRevisao(result.correcaoId);
+          setShowRevisaoOCR(true);
+        }
       }
-    } catch (error) {
-      // Erro já tratado no hook
+    } catch {
+      // Erros tratados nos hooks
     }
   };
 
   const handleConfirmarOCR = async () => {
-    if (!correcaoIdEmRevisao) return;
-
-    if (!transcricaoOCR.trim()) {
+    if (!correcaoIdEmRevisao || !transcricaoOCR.trim()) {
       toast.error("A transcrição não pode estar vazia");
       return;
     }
-
     try {
       await processarCorrecao.mutateAsync({
         correcaoId: correcaoIdEmRevisao,
         transcricaoConfirmada: transcricaoOCR,
       });
-
       setShowRevisaoOCR(false);
       setTranscricaoOCR("");
       setCorrecaoIdEmRevisao(null);
-      reset();
-      removerImagem();
-    } catch (error) {
-      // Erro já tratado no hook
+      resetForm();
+    } catch {
+      // tratado no hook
     }
   };
 
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Alerta de créditos */}
-        {creditos !== undefined && creditos < 5 && (
-          <Alert variant={creditos === 0 ? "destructive" : "default"}>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {creditos === 0
-                ? "Você não tem créditos disponíveis. Entre em contato com o administrador."
-                : `Atenção: Você tem apenas ${creditos} crédito(s) restante(s).`}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Card: Informações Básicas */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações da Redação</CardTitle>
-            <CardDescription>
-              Preencha os dados básicos da redação a ser corrigida
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Campos principais */}
+        <div className="rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] p-5">
+          <div className="grid gap-4 md:grid-cols-2">
             {/* Turma */}
             <div>
-              <Label>Turma</Label>
+              <Label className="mb-2 block text-sm font-extrabold">Turma</Label>
               <div className="flex gap-2">
                 <Select
                   value={turmaIdSelecionada}
-                  onValueChange={(value) => setValue("turmaId", value)}
+                  onValueChange={(v) => setValue("turmaId", v)}
                 >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecione uma turma (opcional)" />
+                  <SelectTrigger className="h-12 flex-1 rounded-xl border-[#c9a6ed] focus:border-[#6B3294] focus:ring-[#a463f2]/15">
+                    <SelectValue placeholder="Selecione uma turma" />
                   </SelectTrigger>
                   <SelectContent>
                     {turmas?.map((turma: any) => (
                       <SelectItem key={turma.id} value={turma.id}>
-                        {turma.nome}
-                        {turma.escola && ` - ${turma.escola}`}
+                        {turma.nome}{turma.escola ? ` — ${turma.escola}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -212,113 +204,137 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
                 <Button
                   type="button"
                   variant="outline"
+                  size="icon"
+                  className="h-12 w-12 shrink-0 rounded-xl border-[#c9a6ed] text-[#4B0082] hover:bg-[#efe4ff]"
                   onClick={() => setShowCriarTurma(true)}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5" />
                 </Button>
               </div>
             </div>
 
-            {/* Nome do Aluno */}
+            {/* Aluno */}
             <div>
-              <Label htmlFor="autorNome">Nome do Aluno *</Label>
+              <Label htmlFor="autorNome" className="mb-2 block text-sm font-extrabold">
+                Nome do aluno *
+              </Label>
               <Input
                 id="autorNome"
-                placeholder="Digite o nome completo do aluno"
+                className="h-12 rounded-xl border-[#c9a6ed] focus-visible:ring-[#a463f2]/15 focus-visible:border-[#6B3294]"
+                placeholder="Digite o nome completo"
                 {...register("autorNome", { required: "Nome do aluno é obrigatório" })}
               />
               {errors.autorNome && (
-                <p className="text-sm text-destructive mt-1">{errors.autorNome.message}</p>
+                <p className="mt-1 text-xs text-destructive">{errors.autorNome.message}</p>
               )}
             </div>
+          </div>
 
-            {/* Tema */}
-            <div>
-              <Label htmlFor="tema">Tema da Redação *</Label>
-              <Input
-                id="tema"
-                placeholder="Ex: A importância da educação no Brasil"
-                {...register("tema", { required: "Tema é obrigatório" })}
-              />
-              {errors.tema && (
-                <p className="text-sm text-destructive mt-1">{errors.tema.message}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card: Upload de Imagem */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Imagem da Redação (Opcional)</CardTitle>
-            <CardDescription>
-              Envie uma foto da redação manuscrita. O sistema fará OCR automaticamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!imagemPreview ? (
-              <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImagemChange}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-32"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="h-8 w-8" />
-                    <span>Clique para selecionar imagem</span>
-                    <span className="text-xs text-muted-foreground">
-                      JPG, PNG (máx. 10MB)
-                    </span>
-                  </div>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <img
-                  src={imagemPreview}
-                  alt="Preview"
-                  className="w-full max-h-96 object-contain rounded-md border"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={removerImagem}
-                  className="w-full"
-                >
-                  Remover Imagem
-                </Button>
-              </div>
+          {/* Tema */}
+          <div className="mt-4">
+            <Label htmlFor="tema" className="mb-2 block text-sm font-extrabold">
+              Tema da redação *
+            </Label>
+            <Input
+              id="tema"
+              className="h-12 rounded-xl border-[#c9a6ed] focus-visible:ring-[#a463f2]/15 focus-visible:border-[#6B3294]"
+              placeholder="Ex: A importância da educação no Brasil"
+              {...register("tema", { required: "Tema é obrigatório" })}
+            />
+            {errors.tema && (
+              <p className="mt-1 text-xs text-destructive">{errors.tema.message}</p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Botão de Envio */}
+        {/* Seleção de modo */}
+        <div className="rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] p-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Manuscrita */}
+            <button
+              type="button"
+              onClick={handleSelecionarManuscrita}
+              className={`rounded-2xl border px-5 py-5 text-left transition ${
+                modo === "manuscrita"
+                  ? "border-[#4B0082] bg-[#efe4ff] text-[#4B0082]"
+                  : "border-[#d8c1f3] bg-white text-[#4f3a68] hover:bg-[#f7f0ff]"
+              }`}
+            >
+              <div className="flex items-center gap-2 text-base font-black">
+                <span aria-hidden="true">⇧</span>
+                Manuscrita
+              </div>
+              <p className="mt-1.5 text-sm text-[#78668e]">Upload da imagem com OCR</p>
+              {arquivoNome && modo === "manuscrita" && (
+                <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-[#4f3a68] truncate">
+                  {arquivoNome}
+                </p>
+              )}
+            </button>
+
+            {/* Digitada */}
+            <button
+              type="button"
+              onClick={() => setModo("digitada")}
+              className={`rounded-2xl border px-5 py-5 text-left transition ${
+                modo === "digitada"
+                  ? "border-[#4B0082] bg-[#efe4ff] text-[#4B0082]"
+                  : "border-[#d8c1f3] bg-white text-[#4f3a68] hover:bg-[#f7f0ff]"
+              }`}
+            >
+              <div className="flex items-center gap-2 text-base font-black">
+                <span aria-hidden="true">⌨</span>
+                Digitada
+              </div>
+              <p className="mt-1.5 text-sm text-[#78668e]">
+                Digite sua redação ou cole seu texto aqui
+              </p>
+            </button>
+          </div>
+
+          {/* Input de arquivo oculto */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png"
+            className="hidden"
+            onChange={handleArquivoChange}
+          />
+
+          {/* Textarea para modo digitada */}
+          {modo === "digitada" && (
+            <div className="mt-4">
+              <Textarea
+                className="min-h-[220px] rounded-2xl border-[#c9a6ed] bg-white p-4 text-base leading-relaxed focus-visible:ring-[#a463f2]/15 focus-visible:border-[#6B3294]"
+                placeholder="Digite sua redação ou cole seu texto aqui"
+                value={textoDigitado}
+                onChange={(e) => setTextoDigitado(e.target.value)}
+              />
+              {textoDigitado && (
+                <p className="mt-1.5 text-xs text-[#78668e]">
+                  {textoDigitado.split(/\s+/).filter(Boolean).length} palavras
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Botão de envio */}
         <div className="flex justify-end">
-          <Button
+          <button
             type="submit"
-            size="lg"
-            disabled={enviarRedacao.isPending || creditos === 0}
+            disabled={isProcessing || creditos === 0}
+            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#4B0082] to-[#8624d6] px-8 py-4 text-base font-black text-white shadow-[0_12px_24px_rgba(75,0,130,0.22)] transition hover:brightness-105 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {enviarRedacao.isPending ? (
+            {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Processando...
               </>
             ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                {imagemPreview ? "Enviar e Fazer OCR" : "Enviar Redação"}
-              </>
+              "Enviar redação"
             )}
-          </Button>
+          </button>
         </div>
       </form>
 
@@ -327,9 +343,7 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Criar Nova Turma</DialogTitle>
-            <DialogDescription>
-              Digite o nome da turma que deseja criar
-            </DialogDescription>
+            <DialogDescription>Digite o nome da turma que deseja criar</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -353,25 +367,20 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Revisão de OCR */}
+      {/* Dialog: Revisão do OCR */}
       <Dialog open={showRevisaoOCR} onOpenChange={setShowRevisaoOCR}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Revisar Transcrição do OCR</DialogTitle>
             <DialogDescription>
-              O sistema extraiu o texto da imagem. Revise e corrija se necessário antes de enviar
-              para correção.
+              O sistema extraiu o texto da imagem. Revise e corrija se necessário antes de enviar para correção.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Importante:</strong> Revise o texto com atenção. Erros no OCR podem afetar
-                a qualidade da correção.
-              </AlertDescription>
-            </Alert>
-
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Revise o texto com atenção. Erros no OCR podem afetar a qualidade da correção.</span>
+            </div>
             <div>
               <Label>Texto Transcrito</Label>
               <Textarea
@@ -380,11 +389,10 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
                 onChange={(e) => setTranscricaoOCR(e.target.value)}
                 className="font-mono text-sm"
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                {transcricaoOCR.split(/\s+/).length} palavras
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {transcricaoOCR.split(/\s+/).filter(Boolean).length} palavras
               </p>
             </div>
-
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -396,10 +404,7 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
               >
                 Cancelar
               </Button>
-              <Button
-                onClick={handleConfirmarOCR}
-                disabled={processarCorrecao.isPending}
-              >
+              <Button onClick={handleConfirmarOCR} disabled={processarCorrecao.isPending}>
                 {processarCorrecao.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

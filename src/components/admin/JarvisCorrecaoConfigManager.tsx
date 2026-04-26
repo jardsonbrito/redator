@@ -31,6 +31,9 @@ import {
 import { Loader2, Plus, Power, Copy, Eye, Edit, Trash2, TrendingUp } from "lucide-react";
 import { JarvisCorrecaoConfigForm } from "./JarvisCorrecaoConfigForm";
 import { JarvisCorrecaoConfigDetalhes } from "./JarvisCorrecaoConfigDetalhes";
+import { JarvisCorrecaoModelosReferencia } from "./JarvisCorrecaoModelosReferencia";
+import { JarvisCorrecaoBancoComentarios } from "./JarvisCorrecaoBancoComentarios";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export const JarvisCorrecaoConfigManager = () => {
@@ -115,11 +118,11 @@ export const JarvisCorrecaoConfigManager = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Gerenciamento de Configurações - Jarvis Correção
+                Gerenciamento — Jarvis Correção IA
               </CardTitle>
               <CardDescription>
-                Controle total sobre prompts, modelos e parâmetros da IA.
-                Apenas UMA configuração pode estar ativa por vez.
+                Configurações de IA, calibração pedagógica e modelos de referência.
+                Apenas UMA configuração técnica pode estar ativa por vez.
               </CardDescription>
             </div>
             <Button onClick={() => setShowCreateDialog(true)}>
@@ -129,6 +132,23 @@ export const JarvisCorrecaoConfigManager = () => {
           </div>
         </CardHeader>
       </Card>
+
+      <Tabs defaultValue="configs">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="configs">Configurações de IA</TabsTrigger>
+          <TabsTrigger value="comentarios">Banco de Comentários</TabsTrigger>
+          <TabsTrigger value="modelos">Modelos de Referência</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="comentarios" className="mt-6">
+          <JarvisCorrecaoBancoComentarios />
+        </TabsContent>
+
+        <TabsContent value="modelos" className="mt-6">
+          <JarvisCorrecaoModelosReferencia />
+        </TabsContent>
+
+        <TabsContent value="configs" className="mt-6 space-y-6">
 
       {/* Config Ativa - Destaque */}
       {configAtiva && (
@@ -406,6 +426,9 @@ export const JarvisCorrecaoConfigManager = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

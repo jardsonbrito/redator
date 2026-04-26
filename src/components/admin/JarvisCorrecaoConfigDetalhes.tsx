@@ -168,6 +168,20 @@ export const JarvisCorrecaoConfigDetalhes = ({ configId }: Props) => {
         </CardContent>
       </Card>
 
+      {/* Calibração Pedagógica */}
+      {config.calibracao_pedagogica && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Calibração Pedagógica</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="bg-muted p-4 rounded-md text-xs overflow-auto max-h-64 whitespace-pre-wrap">
+              {config.calibracao_pedagogica}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Prompts */}
       <Card>
         <CardHeader>

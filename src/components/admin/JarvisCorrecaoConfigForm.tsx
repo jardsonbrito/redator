@@ -53,6 +53,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
           max_tokens: initialData.max_tokens,
           system_prompt: initialData.system_prompt,
           user_prompt_template: initialData.user_prompt_template,
+          calibracao_pedagogica: initialData.calibracao_pedagogica || "",
           custo_creditos: initialData.custo_creditos,
           custo_estimado_usd: initialData.custo_estimado_usd || undefined,
           notas: initialData.notas || "",
@@ -66,6 +67,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
           max_tokens: 4000,
           system_prompt: DEFAULT_SYSTEM_PROMPT,
           user_prompt_template: DEFAULT_USER_PROMPT_TEMPLATE,
+          calibracao_pedagogica: "",
           custo_creditos: 1,
           custo_estimado_usd: 0.05,
           notas: "",
@@ -83,6 +85,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
         max_tokens: initialData.max_tokens,
         system_prompt: initialData.system_prompt,
         user_prompt_template: initialData.user_prompt_template,
+        calibracao_pedagogica: initialData.calibracao_pedagogica || "",
         custo_creditos: initialData.custo_creditos,
         custo_estimado_usd: initialData.custo_estimado_usd || undefined,
         notas: initialData.notas || "",
@@ -269,6 +272,32 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Calibração Pedagógica */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Calibração Pedagógica</CardTitle>
+          <CardDescription>
+            Instruções detalhadas sobre como a IA deve corrigir cada competência: critérios, rigor,
+            tom, limites de comentário, o que penalizar e o que não penalizar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Defina aqui as diretrizes pedagógicas da correção. Este conteúdo pode ser referenciado
+              ou incorporado no System Prompt para calibrar o comportamento da IA.
+            </AlertDescription>
+          </Alert>
+          <Textarea
+            rows={22}
+            className="font-mono text-xs"
+            placeholder={`Exemplos de instruções pedagógicas:\n\n- Como avaliar cada competência\n- Quais critérios considerar em cada faixa de nota\n- Qual nível de rigor adotar\n- Qual tom usar na devolutiva\n- Como identificar tese fraca vs. tese consistente\n- Como avaliar repertório (adequado vs. forçado)\n- Como avaliar proposta de intervenção\n- Quando penalizar por fuga ao tema\n- Como evitar comentários genéricos\n- Como garantir que a correção se baseie no texto real do aluno`}
+            {...register("calibracao_pedagogica")}
+          />
         </CardContent>
       </Card>
 

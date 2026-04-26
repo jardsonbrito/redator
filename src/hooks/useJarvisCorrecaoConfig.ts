@@ -15,6 +15,7 @@ export interface JarvisCorrecaoConfig {
   system_prompt: string;
   user_prompt_template: string;
   response_schema: any;
+  calibracao_pedagogica: string | null;
   custo_creditos: number;
   custo_estimado_usd: number | null;
   criado_por: string | null;
@@ -34,6 +35,7 @@ export interface CreateConfigData {
   system_prompt: string;
   user_prompt_template: string;
   response_schema: any;
+  calibracao_pedagogica?: string;
   custo_creditos: number;
   custo_estimado_usd?: number;
   notas?: string;

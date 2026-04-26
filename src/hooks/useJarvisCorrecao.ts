@@ -22,6 +22,8 @@ export interface JarvisCorrecao {
   nota_c3: number | null;
   nota_c4: number | null;
   nota_c5: number | null;
+  tokens_total: number | null;
+  tempo_processamento_ms: number | null;
   criado_em: string;
   corrigida_em: string | null;
 }

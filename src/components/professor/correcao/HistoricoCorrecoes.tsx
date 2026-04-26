@@ -239,7 +239,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
         <Dialog open={showDetalhes} onOpenChange={setShowDetalhes}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Detalhes da Correção</DialogTitle>
+              <DialogTitle className="text-lg font-bold">Correção pedagógica detalhada</DialogTitle>
             </DialogHeader>
             <DetalhesCorrecao correcao={correcaoSelecionada} />
           </DialogContent>
