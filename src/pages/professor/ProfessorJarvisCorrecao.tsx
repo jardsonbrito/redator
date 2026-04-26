@@ -3,11 +3,25 @@ import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useJarvisCorrecao } from "@/hooks/useJarvisCorrecao";
 import { EnviarRedacaoForm } from "@/components/professor/correcao/EnviarRedacaoForm";
 import { HistoricoCorrecoes } from "@/components/professor/correcao/HistoricoCorrecoes";
+import { DetalhesCorrecao } from "@/components/professor/correcao/DetalhesCorrecao";
+import { ArrowLeft, PlusCircle } from "lucide-react";
 
 export const ProfessorJarvisCorrecao = () => {
   const { professor } = useProfessorAuth();
-  const { creditos } = useJarvisCorrecao(professor?.email || "");
+  const { creditos, correcoes } = useJarvisCorrecao(professor?.email || "");
   const [activeTab, setActiveTab] = useState<"enviar" | "historico">("enviar");
+  const [resultadoId, setResultadoId] = useState<string | null>(null);
+
+  const correcaoResultado = resultadoId ? correcoes?.find((c) => c.id === resultadoId) ?? null : null;
+
+  const handleConcluida = (id: string) => {
+    setResultadoId(id);
+  };
+
+  const handleNovaCorrecao = () => {
+    setResultadoId(null);
+    setActiveTab("enviar");
+  };
 
   if (!professor) return <div className="p-6">Carregando...</div>;
 
@@ -42,33 +56,63 @@ export const ProfessorJarvisCorrecao = () => {
           </div>
         </header>
 
-        {/* Navegação */}
-        <nav className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setActiveTab("enviar")}
-            className={
-              activeTab === "enviar"
-                ? "rounded-full bg-gradient-to-r from-[#4B0082] to-[#8a25d9] px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_22px_rgba(124,43,216,0.18)] transition"
-                : "rounded-full border border-[#dcc8f5] bg-white px-5 py-2.5 text-sm font-extrabold text-[#4B0082] hover:bg-[#efe4ff] transition"
-            }
-          >
-            Enviar nova redação
-          </button>
-          <button
-            onClick={() => setActiveTab("historico")}
-            className={
-              activeTab === "historico"
-                ? "rounded-full bg-gradient-to-r from-[#4B0082] to-[#8a25d9] px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_22px_rgba(124,43,216,0.18)] transition"
-                : "rounded-full border border-[#dcc8f5] bg-white px-5 py-2.5 text-sm font-extrabold text-[#4B0082] hover:bg-[#efe4ff] transition"
-            }
-          >
-            Histórico
-          </button>
-        </nav>
+        {/* Navegação — oculta quando exibindo resultado */}
+        {!resultadoId && (
+          <nav className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setActiveTab("enviar")}
+              className={
+                activeTab === "enviar"
+                  ? "rounded-full bg-gradient-to-r from-[#4B0082] to-[#8a25d9] px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_22px_rgba(124,43,216,0.18)] transition"
+                  : "rounded-full border border-[#dcc8f5] bg-white px-5 py-2.5 text-sm font-extrabold text-[#4B0082] hover:bg-[#efe4ff] transition"
+              }
+            >
+              Enviar nova redação
+            </button>
+            <button
+              onClick={() => setActiveTab("historico")}
+              className={
+                activeTab === "historico"
+                  ? "rounded-full bg-gradient-to-r from-[#4B0082] to-[#8a25d9] px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_22px_rgba(124,43,216,0.18)] transition"
+                  : "rounded-full border border-[#dcc8f5] bg-white px-5 py-2.5 text-sm font-extrabold text-[#4B0082] hover:bg-[#efe4ff] transition"
+              }
+            >
+              Histórico
+            </button>
+          </nav>
+        )}
 
         {/* Conteúdo */}
-        {activeTab === "enviar" ? (
-          <EnviarRedacaoForm professorEmail={professor.email} />
+        {resultadoId ? (
+          <div className="space-y-4">
+            {/* Barra de ação do resultado */}
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] px-5 py-3">
+              <button
+                onClick={() => { setResultadoId(null); setActiveTab("historico"); }}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-[#4B0082] hover:underline"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Ver histórico
+              </button>
+              <button
+                onClick={handleNovaCorrecao}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#4B0082] to-[#8a25d9] px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_22px_rgba(124,43,216,0.18)] transition hover:brightness-105"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Nova correção
+              </button>
+            </div>
+
+            {correcaoResultado ? (
+              <DetalhesCorrecao correcao={correcaoResultado} />
+            ) : (
+              <div className="flex items-center justify-center py-12 text-[#78668e]">
+                <span className="animate-pulse">Carregando resultado...</span>
+              </div>
+            )}
+          </div>
+        ) : activeTab === "enviar" ? (
+          <EnviarRedacaoForm professorEmail={professor.email} onConcluida={handleConcluida} />
         ) : (
           <HistoricoCorrecoes professorEmail={professor.email} />
         )}

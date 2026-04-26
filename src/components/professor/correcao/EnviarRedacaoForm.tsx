@@ -24,6 +24,7 @@ import { toast } from "sonner";
 
 interface Props {
   professorEmail: string;
+  onConcluida?: (correcaoId: string) => void;
 }
 
 interface FormData {
@@ -32,7 +33,7 @@ interface FormData {
   tema: string;
 }
 
-export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
+export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
   const { turmas, creditos, enviarRedacao, processarCorrecao, criarTurma } =
     useJarvisCorrecao(professorEmail);
 
@@ -130,11 +131,12 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
           autorNome: data.autorNome,
           tema: data.tema,
         });
-        await processarCorrecao.mutateAsync({
+        const correcao = await processarCorrecao.mutateAsync({
           correcaoId: result.correcaoId,
           transcricaoConfirmada: textoDigitado,
         });
         resetForm();
+        onConcluida?.(correcao.correcaoId);
       } else {
         if (!imagemBase64) {
           toast.error("Selecione uma imagem da redação");
@@ -169,8 +171,10 @@ export const EnviarRedacaoForm = ({ professorEmail }: Props) => {
       });
       setShowRevisaoOCR(false);
       setTranscricaoOCR("");
-      setCorrecaoIdEmRevisao(null);
+      const idConcluido = correcaoIdEmRevisao;
       resetForm();
+      setCorrecaoIdEmRevisao(null);
+      if (idConcluido) onConcluida?.(idConcluido);
     } catch {
       // tratado no hook
     }
