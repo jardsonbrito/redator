@@ -64,6 +64,23 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
   const estrutura = correcaoIA.estrutura;
   const erros: any[] = correcaoIA.erros || [];
 
+  const COMP_LABELS_ORIENTACOES: Record<string, string> = {
+    geral: "Orientações Gerais",
+    c1: "Competência 1",
+    c2: "Competência 2",
+    c3: "Competência 3",
+    c4: "Competência 4",
+    c5: "Competência 5",
+  };
+  const COMP_ORDER = ["geral", "c1", "c2", "c3", "c4", "c5"];
+
+  const orientacoesAgrupadas: Array<{ label: string; items: string[] }> =
+    correcaoIA.orientacoes_selecionadas
+      ? COMP_ORDER
+          .filter((k) => (correcaoIA.orientacoes_selecionadas[k] ?? []).length > 0)
+          .map((k) => ({ label: COMP_LABELS_ORIENTACOES[k], items: correcaoIA.orientacoes_selecionadas[k] }))
+      : [];
+
   return (
     <div className="space-y-5">
       {/* Cabeçalho */}
@@ -242,10 +259,35 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
         </div>
       )}
 
-      {/* Seção Nota Final — orientações gerais + comentário final */}
+      {/* Seção Nota Final — orientações pedagógicas + comentário final */}
       {secaoAtiva === "nota_final" && (
         <div className="rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] p-5 space-y-4">
-          {correcaoIA.sugestoes_objetivas?.length > 0 && (
+          {/* Orientações do banco (nova abordagem) */}
+          {orientacoesAgrupadas.length > 0 && (
+            <div>
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
+                Orientações pedagógicas
+              </p>
+              <div className="space-y-3">
+                {orientacoesAgrupadas.map(({ label, items }) => (
+                  <div key={label}>
+                    <p className="mb-1.5 text-xs font-semibold text-[#4B0082]">{label}</p>
+                    <ul className="space-y-1.5">
+                      {items.map((s: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-zinc-700">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fallback: sugestoes_objetivas para correções antigas */}
+          {orientacoesAgrupadas.length === 0 && correcaoIA.sugestoes_objetivas?.length > 0 && (
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
                 Orientações gerais de melhoria
@@ -260,6 +302,7 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
               </ul>
             </div>
           )}
+
           {correcaoIA.resumo_geral && (
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#4B0082]">
@@ -268,7 +311,8 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
               <p className="text-sm leading-relaxed text-zinc-700">{correcaoIA.resumo_geral}</p>
             </div>
           )}
-          {!correcaoIA.sugestoes_objetivas?.length && !correcaoIA.resumo_geral && (
+
+          {orientacoesAgrupadas.length === 0 && !correcaoIA.sugestoes_objetivas?.length && !correcaoIA.resumo_geral && (
             <p className="text-sm text-zinc-500">Nenhum comentário geral disponível.</p>
           )}
         </div>

@@ -15,11 +15,11 @@ interface ProcessarRequest {
 
 interface CorrecaoIA {
   competencias: {
-    c1: { nota: number; justificativa: string };
-    c2: { nota: number; justificativa: string };
-    c3: { nota: number; justificativa: string };
-    c4: { nota: number; justificativa: string };
-    c5: { nota: number; justificativa: string };
+    c1: { nota: number; justificativa: string; sugestoes?: string[] };
+    c2: { nota: number; justificativa: string; sugestoes?: string[] };
+    c3: { nota: number; justificativa: string; sugestoes?: string[] };
+    c4: { nota: number; justificativa: string; sugestoes?: string[] };
+    c5: { nota: number; justificativa: string; sugestoes?: string[] };
   };
   nota_total: number;
   erros: Array<{
@@ -36,9 +36,16 @@ interface CorrecaoIA {
     uso_repertorio: string;
     proposta_intervencao: string;
   };
-  versao_lapidada: string;
-  sugestoes_objetivas: string[];
+  versao_lapidada?: string;
+  sugestoes_objetivas?: string[];
+  orientacoes_selecionadas?: Record<string, string[]>;
   resumo_geral: string;
+}
+
+interface BancoComentarioRow {
+  competencia: string;
+  categoria: string | null;
+  texto: string;
 }
 
 Deno.serve(async (req) => {
@@ -109,6 +116,20 @@ Deno.serve(async (req) => {
         "CONFIGURAÇÃO INVÁLIDA: system_prompt ou user_prompt_template ausentes"
       );
     }
+
+    // ══════════════════════════════════════════════════════════════
+    // 1.5 BUSCAR BANCO DE COMENTÁRIOS ATIVOS (OPCIONAL)
+    // ══════════════════════════════════════════════════════════════
+    console.log("📚 Buscando banco de comentários...");
+
+    const { data: bancoComentarios } = await supabaseClient
+      .from("jarvis_correcao_banco_comentarios")
+      .select("competencia, categoria, texto")
+      .eq("ativo", true)
+      .order("criado_em", { ascending: true });
+
+    const bancoBlocoPrompt = buildBancoBlock(bancoComentarios ?? []);
+    console.log(`📚 Banco: ${(bancoComentarios ?? []).length} comentários ativos`);
 
     // ══════════════════════════════════════════════════════════════
     // 2. BUSCAR CORREÇÃO
@@ -183,11 +204,15 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════
     console.log("📝 Montando prompt a partir do template...");
 
-    const userPrompt = config.user_prompt_template
+    let userPrompt = config.user_prompt_template
       .replace(/\{tema\}/g, correcao.tema)
       .replace(/\{texto\}/g, transcricaoConfirmada);
 
-    console.log("✅ Prompt montado");
+    if (bancoBlocoPrompt) {
+      userPrompt += bancoBlocoPrompt;
+    }
+
+    console.log("✅ Prompt montado" + (bancoBlocoPrompt ? " (com banco de comentários)" : ""));
 
     // ══════════════════════════════════════════════════════════════
     // 5. CHAMAR IA (OpenAI)
@@ -383,6 +408,44 @@ Deno.serve(async (req) => {
 // FUNÇÕES AUXILIARES
 // ══════════════════════════════════════════════════════════════════
 
+function buildBancoBlock(banco: BancoComentarioRow[]): string {
+  if (!banco.length) return "";
+
+  const grupos: Record<string, string[]> = {};
+  for (const item of banco) {
+    if (!grupos[item.competencia]) grupos[item.competencia] = [];
+    grupos[item.competencia].push(item.texto);
+  }
+
+  const labels: Record<string, string> = {
+    geral: "ORIENTAÇÕES GERAIS",
+    c1: "C1 — Norma Padrão",
+    c2: "C2 — Temática e Repertório",
+    c3: "C3 — Argumentação",
+    c4: "C4 — Coesão e Coerência",
+    c5: "C5 — Proposta de Intervenção",
+  };
+  const ordem = ["geral", "c1", "c2", "c3", "c4", "c5"];
+
+  let bloco = "\n\n---\nBANCO DE ORIENTAÇÕES PEDAGÓGICAS:\n";
+  bloco += "Após realizar a correção completa, analise quais das orientações abaixo se aplicam ESPECIFICAMENTE a esta redação.\n";
+  bloco += "Inclua no JSON de resposta o campo \"orientacoes_selecionadas\" com um objeto onde as chaves são as competências (c1, c2, c3, c4, c5, geral) e os valores são arrays com os textos EXATOS das orientações aplicáveis.\n";
+  bloco += "Selecione apenas as que realmente se aplicam ao texto analisado. Omita chaves de competências sem orientações aplicáveis. NÃO invente orientações além das listadas.\n\n";
+
+  for (const comp of ordem) {
+    const itens = grupos[comp];
+    if (!itens?.length) continue;
+    bloco += `[${labels[comp]}]\n`;
+    for (const texto of itens) {
+      bloco += `- ${texto}\n`;
+    }
+    bloco += "\n";
+  }
+
+  bloco += "---";
+  return bloco;
+}
+
 function validateCorrecaoIA(correcao: CorrecaoIA): string[] {
   const errors: string[] = [];
 
@@ -398,12 +461,6 @@ function validateCorrecaoIA(correcao: CorrecaoIA): string[] {
   }
   if (!correcao.estrutura) {
     errors.push("Campo 'estrutura' ausente");
-  }
-  if (!correcao.versao_lapidada) {
-    errors.push("Campo 'versao_lapidada' ausente");
-  }
-  if (!Array.isArray(correcao.sugestoes_objetivas)) {
-    errors.push("Campo 'sugestoes_objetivas' ausente ou não é array");
   }
   if (!correcao.resumo_geral) {
     errors.push("Campo 'resumo_geral' ausente");
