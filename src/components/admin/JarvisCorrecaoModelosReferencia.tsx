@@ -33,11 +33,11 @@ import { cn } from "@/lib/utils";
 type FormData = Omit<ModeloReferencia, "id" | "criado_em" | "atualizado_em">;
 
 const CAMPOS_COMP = [
-  { key: "c1", label: "C1 — Norma Padrão" },
-  { key: "c2", label: "C2 — Temática e Repertório" },
-  { key: "c3", label: "C3 — Argumentação" },
-  { key: "c4", label: "C4 — Coesão" },
-  { key: "c5", label: "C5 — Proposta de Intervenção" },
+  { key: "c1", label: "Competência 1" },
+  { key: "c2", label: "Competência 2" },
+  { key: "c3", label: "Competência 3" },
+  { key: "c4", label: "Competência 4" },
+  { key: "c5", label: "Competência 5" },
 ] as const;
 
 const SCORES = [0, 40, 80, 120, 160, 200] as const;
