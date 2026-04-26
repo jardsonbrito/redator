@@ -47,11 +47,11 @@ type FormData = {
 
 const ABAS: { key: Competencia; label: string }[] = [
   { key: "geral", label: "Orientações Gerais" },
-  { key: "c1", label: "C1 — Norma Padrão" },
-  { key: "c2", label: "C2 — Temática/Repertório" },
-  { key: "c3", label: "C3 — Argumentação" },
-  { key: "c4", label: "C4 — Coesão" },
-  { key: "c5", label: "C5 — Intervenção" },
+  { key: "c1", label: "Competência 1" },
+  { key: "c2", label: "Competência 2" },
+  { key: "c3", label: "Competência 3" },
+  { key: "c4", label: "Competência 4" },
+  { key: "c5", label: "Competência 5" },
 ];
 
 const COMP_LABEL: Record<Competencia, string> = {
