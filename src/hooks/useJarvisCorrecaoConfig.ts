@@ -39,6 +39,19 @@ export interface CreateConfigData {
   notas?: string;
 }
 
+const getAdminId = async (): Promise<string> => {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData?.user?.email) throw new Error("Usuário não autenticado");
+  const { data: adminRecord, error } = await supabase
+    .from("admin_users")
+    .select("id")
+    .eq("email", authData.user.email.toLowerCase())
+    .eq("ativo", true)
+    .single();
+  if (error || !adminRecord) throw new Error("Admin não encontrado");
+  return adminRecord.id;
+};
+
 export const useJarvisCorrecaoConfig = () => {
   const queryClient = useQueryClient();
 
@@ -97,16 +110,14 @@ export const useJarvisCorrecaoConfig = () => {
   // Criar nova configuração
   const createConfig = useMutation({
     mutationFn: async (data: CreateConfigData) => {
-      const { data: adminUser } = await supabase.auth.getUser();
-      if (!adminUser?.user) throw new Error("Usuário não autenticado");
-
+      const adminId = await getAdminId();
       const proximaVer = proximaVersao || 1;
 
       const { data: newConfig, error } = await supabase
         .from("jarvis_correcao_config")
         .insert({
           versao: proximaVer,
-          ativo: false, // Nova config sempre inativa
+          ativo: false,
           nome: data.nome,
           descricao: data.descricao,
           provider: data.provider,
@@ -118,7 +129,7 @@ export const useJarvisCorrecaoConfig = () => {
           response_schema: data.response_schema,
           custo_creditos: data.custo_creditos,
           custo_estimado_usd: data.custo_estimado_usd,
-          criado_por: adminUser.user.id,
+          criado_por: adminId,
           notas: data.notas,
         })
         .select()
@@ -126,11 +137,10 @@ export const useJarvisCorrecaoConfig = () => {
 
       if (error) throw error;
 
-      // Registrar no audit
       await supabase.from("jarvis_correcao_config_audit").insert({
         config_id: newConfig.id,
         acao: "criada",
-        admin_id: adminUser.user.id,
+        admin_id: adminId,
         observacao: `Configuração v${proximaVer} criada`,
       });
 
@@ -149,12 +159,11 @@ export const useJarvisCorrecaoConfig = () => {
   // Ativar configuração
   const ativarConfig = useMutation({
     mutationFn: async (configId: string) => {
-      const { data: adminUser } = await supabase.auth.getUser();
-      if (!adminUser?.user) throw new Error("Usuário não autenticado");
+      const adminId = await getAdminId();
 
       const { data, error } = await supabase.rpc("ativar_config_correcao", {
         config_id_param: configId,
-        admin_id_param: adminUser.user.id,
+        admin_id_param: adminId,
       });
 
       if (error) throw error;
@@ -175,12 +184,11 @@ export const useJarvisCorrecaoConfig = () => {
   // Duplicar configuração
   const duplicarConfig = useMutation({
     mutationFn: async ({ configId, novoNome }: { configId: string; novoNome?: string }) => {
-      const { data: adminUser } = await supabase.auth.getUser();
-      if (!adminUser?.user) throw new Error("Usuário não autenticado");
+      const adminId = await getAdminId();
 
       const { data, error } = await supabase.rpc("duplicar_config_correcao", {
         config_id_origem: configId,
-        admin_id_param: adminUser.user.id,
+        admin_id_param: adminId,
         novo_nome: novoNome,
       });
 
@@ -199,11 +207,10 @@ export const useJarvisCorrecaoConfig = () => {
     },
   });
 
-  // Editar configuração (apenas se inativa)
+  // Editar configuração
   const editarConfig = useMutation({
     mutationFn: async ({ configId, data }: { configId: string; data: Partial<CreateConfigData> }) => {
-      const { data: adminUser } = await supabase.auth.getUser();
-      if (!adminUser?.user) throw new Error("Usuário não autenticado");
+      const adminId = await getAdminId();
 
       const { data: updatedConfig, error } = await supabase
         .from("jarvis_correcao_config")
@@ -214,11 +221,10 @@ export const useJarvisCorrecaoConfig = () => {
 
       if (error) throw error;
 
-      // Registrar no audit
       await supabase.from("jarvis_correcao_config_audit").insert({
         config_id: configId,
         acao: "editada",
-        admin_id: adminUser.user.id,
+        admin_id: adminId,
         mudancas: data,
         observacao: "Configuração editada",
       });
