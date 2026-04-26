@@ -33,7 +33,7 @@ interface Professor {
   ultimo_login: string | null;
   ultimo_ip: unknown;
   criado_em: string;
-  turmas_professores?: { nome: string } | null;
+  professor_turmas?: { turmas_professores: { nome: string } | null }[];
 }
 
 interface ProfessorListProps {
@@ -52,7 +52,7 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
     try {
       const { data, error } = await supabase
         .from('professores')
-        .select('*, turmas_professores(nome)')
+        .select('*, professor_turmas(turmas_professores(nome))')
         .order('criado_em', { ascending: sortOrder === 'asc' });
 
       if (error) throw error;
@@ -166,7 +166,12 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                     </TableCell>
                     <TableCell className="font-mono text-sm">{professor.email}</TableCell>
                     <TableCell className="text-sm">
-                      {professor.turmas_professores?.nome ?? (
+                      {professor.professor_turmas?.length ? (
+                        professor.professor_turmas
+                          .map((pt) => pt.turmas_professores?.nome)
+                          .filter(Boolean)
+                          .join(', ')
+                      ) : (
                         <span className="text-muted-foreground">Sem turma</span>
                       )}
                     </TableCell>
