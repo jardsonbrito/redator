@@ -80,9 +80,11 @@
     "vaul": "^0.9.3",
     "zod": "^3.23.8"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.52.3"
+  },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
-    "@rollup/rollup-win32-x64-msvc": "^4.52.3",
     "@swc/core": "^1.13.5",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
