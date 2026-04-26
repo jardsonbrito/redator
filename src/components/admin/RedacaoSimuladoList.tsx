@@ -382,18 +382,35 @@ const RedacaoSimuladoList = () => {
     [redacoes]
   );
 
-  // ── simulados visíveis — todos os ativos, filtrados por ano quando necessário ──
+  // ── simulados visíveis — filtrados por ano e pelo mês selecionado ──
 
   const simuladosVisiveis = useMemo(() => {
     const todos = simulados ?? [];
-    if (!apenasAnoAtual) return todos;
-    // inclui simulados do ano atual (por criado_em) OU que têm redações no ano atual
-    const idsComRedacoesNoAno = new Set((redacoes ?? []).map(r => r.id_simulado));
+    const redacoesBase = redacoes ?? [];
+
+    // IDs dos simulados que têm redações no mês/período selecionado
+    const idsComRedacoes = new Set(
+      redacoesBase
+        .filter(r => {
+          if (filtroMes === 'todos' || filtroMes === '') return true;
+          const d = new Date(r.data_envio);
+          if (isNaN(d.getTime())) return false;
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === filtroMes;
+        })
+        .map(r => r.id_simulado)
+    );
+
     return todos.filter(s => {
+      if (!apenasAnoAtual) return idsComRedacoes.has(s.id);
+      // no modo ano atual: inclui simulados do ano atual com redações no mês selecionado
+      // OU simulados do ano atual sem redações ainda (em andamento)
       const anoSimulado = s.criado_em ? new Date(s.criado_em).getFullYear() : null;
-      return anoSimulado === anoAtual || idsComRedacoesNoAno.has(s.id);
+      if (anoSimulado !== anoAtual) return false;
+      // se filtrando por mês específico, só mostra simulados com redações nesse mês
+      if (filtroMes !== 'todos' && filtroMes !== '') return idsComRedacoes.has(s.id) || !redacoesBase.some(r => r.id_simulado === s.id);
+      return true;
     });
-  }, [simulados, redacoes, apenasAnoAtual, anoAtual]);
+  }, [simulados, redacoes, apenasAnoAtual, anoAtual, filtroMes]);
 
   // ── meses disponíveis (client-side, derivado dos dados já buscados) ──
 
@@ -552,7 +569,7 @@ const RedacaoSimuladoList = () => {
             <Button
               variant={filtroMes === 'todos' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setFiltroMes('todos')}
+              onClick={() => { setFiltroMes('todos'); setFiltroSimulado('todos'); }}
             >
               Todos os meses
             </Button>
@@ -565,7 +582,7 @@ const RedacaoSimuladoList = () => {
                   key={mes}
                   variant={filtroMes === mes ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setFiltroMes(mes)}
+                  onClick={() => { setFiltroMes(mes); setFiltroSimulado('todos'); }}
                 >
                   {nomeDoMes}
                 </Button>
