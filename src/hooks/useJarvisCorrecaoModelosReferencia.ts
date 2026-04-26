@@ -21,7 +21,6 @@ export interface ModeloReferencia {
   erros_identificados: string | null;
   sugestoes_melhoria: string | null;
   comentario_pedagogico: string | null;
-  prioridade: number;
   ativo: boolean;
   criado_em: string;
   atualizado_em: string;
@@ -51,7 +50,6 @@ export const useJarvisCorrecaoModelosReferencia = () => {
       const { data, error } = await supabase
         .from("jarvis_correcao_modelos_referencia")
         .select("*")
-        .order("prioridade", { ascending: false })
         .order("criado_em", { ascending: false });
       if (error) throw error;
       return data as ModeloReferencia[];

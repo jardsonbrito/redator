@@ -58,7 +58,6 @@ const defaultValues: FormData = {
   erros_identificados: "",
   sugestoes_melhoria: "",
   comentario_pedagogico: "",
-  prioridade: 0,
   ativo: true,
 };
 
@@ -101,7 +100,6 @@ export const JarvisCorrecaoModelosReferencia = () => {
       erros_identificados: modelo.erros_identificados || "",
       sugestoes_melhoria: modelo.sugestoes_melhoria || "",
       comentario_pedagogico: modelo.comentario_pedagogico || "",
-      prioridade: modelo.prioridade,
       ativo: modelo.ativo,
     });
     setShowForm(true);
@@ -117,7 +115,6 @@ export const JarvisCorrecaoModelosReferencia = () => {
         nota_c3: Number(data.nota_c3),
         nota_c4: Number(data.nota_c4),
         nota_c5: Number(data.nota_c5),
-        prioridade: Number(data.prioridade),
       };
       if (editando) {
         await editarModelo.mutateAsync({ id: editando.id, data: payload });
@@ -185,11 +182,6 @@ export const JarvisCorrecaoModelosReferencia = () => {
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="shrink-0">Inativo</Badge>
-                      )}
-                      {modelo.prioridade > 0 && (
-                        <Badge variant="secondary" className="shrink-0">
-                          P{modelo.prioridade}
-                        </Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{modelo.tema}</p>
@@ -261,25 +253,13 @@ export const JarvisCorrecaoModelosReferencia = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-2">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Título *</Label>
-                <Input
-                  placeholder="Ex: Redação 640 pontos — boa argumentação"
-                  {...register("titulo", { required: "Título é obrigatório" })}
-                />
-                {errors.titulo && <p className="text-xs text-destructive mt-1">{errors.titulo.message}</p>}
-              </div>
-              <div>
-                <Label>Prioridade</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  {...register("prioridade", { valueAsNumber: true })}
-                />
-                <p className="text-xs text-muted-foreground mt-1">Maior = mais relevante</p>
-              </div>
+            <div>
+              <Label>Título *</Label>
+              <Input
+                placeholder="Ex: Redação 640 pontos — boa argumentação"
+                {...register("titulo", { required: "Título é obrigatório" })}
+              />
+              {errors.titulo && <p className="text-xs text-destructive mt-1">{errors.titulo.message}</p>}
             </div>
 
             <div>
