@@ -4,44 +4,21 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Eye, EyeOff, Link as LinkIcon, MoreHorizontal, Plus, Power, PowerOff, Ticket, Trash2 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale/pt-BR";
+import { Copy, Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TurmaProfessor {
   id: string;
   nome: string;
   codigo_acesso: string;
   ativo: boolean;
-  criado_em: string;
-}
-
-interface Convite {
-  id: string;
-  codigo: string;
-  email_destinatario: string | null;
-  usado: boolean;
   criado_em: string;
 }
 
@@ -55,17 +32,14 @@ export const TurmasProfessoresManager = () => {
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState("");
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [turmaParaDeletar, setTurmaParaDeletar] = useState<TurmaProfessor | null>(null);
   const [codigosVisiveis, setCodigosVisiveis] = useState<Set<string>>(new Set());
 
-  // Estado do dialog de convite
-  const [turmaConvite, setTurmaConvite] = useState<TurmaProfessor | null>(null);
+  // Área de convite inline
+  const [turmaSelecionadaId, setTurmaSelecionadaId] = useState<string>("");
   const [emailDestinatario, setEmailDestinatario] = useState("");
   const [gerandoConvite, setGerandoConvite] = useState(false);
   const [conviteGerado, setConviteGerado] = useState<string | null>(null);
-  const [convitesPendentes, setConvitesPendentes] = useState<Convite[]>([]);
-  const [carregandoConvites, setCarregandoConvites] = useState(false);
 
   const { toast } = useToast();
 
@@ -80,30 +54,16 @@ export const TurmasProfessoresManager = () => {
     if (error) {
       toast({ title: "Erro", description: "Não foi possível carregar as turmas.", variant: "destructive" });
     } else {
-      setTurmas(data || []);
+      const resultado = data || [];
+      setTurmas(resultado);
+      if (resultado.length > 0 && !turmaSelecionadaId) {
+        setTurmaSelecionadaId(resultado.find(t => t.ativo)?.id || resultado[0].id);
+      }
     }
     setLoading(false);
   };
 
   useEffect(() => { fetchTurmas(); }, []);
-
-  // Carrega convites pendentes quando abre o dialog
-  const abrirDialogConvite = async (turma: TurmaProfessor) => {
-    setTurmaConvite(turma);
-    setEmailDestinatario("");
-    setConviteGerado(null);
-    setCarregandoConvites(true);
-
-    const { data } = await supabase
-      .from("convites_professores")
-      .select("*")
-      .eq("turma_id", turma.id)
-      .eq("usado", false)
-      .order("criado_em", { ascending: false });
-
-    setConvitesPendentes(data || []);
-    setCarregandoConvites(false);
-  };
 
   const handleCriarTurma = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +71,6 @@ export const TurmasProfessoresManager = () => {
       toast({ title: "Campo obrigatório", description: "Informe o nome da turma.", variant: "destructive" });
       return;
     }
-
     setCriando(true);
     const { error } = await supabase
       .from("turmas_professores")
@@ -143,26 +102,23 @@ export const TurmasProfessoresManager = () => {
 
   const handleDeletarTurma = async () => {
     if (!turmaParaDeletar) return;
-    const nome = turmaParaDeletar.nome;
+    const nomeTurma = turmaParaDeletar.nome;
 
-    // 1. Remover o nome da turma de turmas_autorizadas em aulas_virtuais e aulas
     await Promise.all([
-      supabase.rpc('array_remove_value_aulas_virtuais' as any, { p_valor: nome }).catch(() => null),
-      supabase.rpc('array_remove_value_aulas' as any, { p_valor: nome }).catch(() => null),
+      supabase.rpc('array_remove_value_aulas_virtuais' as any, { p_valor: nomeTurma }).catch(() => null),
+      supabase.rpc('array_remove_value_aulas' as any, { p_valor: nomeTurma }).catch(() => null),
     ]);
 
-    // Fallback: UPDATE direto via SQL (compatível com Supabase JS)
-    // Não há RPC específica — fazemos via filtro
     await supabase
       .from('aulas_virtuais')
       .select('id, turmas_autorizadas')
-      .contains('turmas_autorizadas', [nome])
+      .contains('turmas_autorizadas', [nomeTurma])
       .then(async ({ data }) => {
         if (!data) return;
         await Promise.all(data.map(aula =>
           supabase
             .from('aulas_virtuais')
-            .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nome) })
+            .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nomeTurma) })
             .eq('id', aula.id)
         ));
       });
@@ -170,18 +126,17 @@ export const TurmasProfessoresManager = () => {
     await supabase
       .from('aulas')
       .select('id, turmas_autorizadas')
-      .contains('turmas_autorizadas', [nome])
+      .contains('turmas_autorizadas', [nomeTurma])
       .then(async ({ data }) => {
         if (!data) return;
         await Promise.all(data.map(aula =>
           supabase
             .from('aulas')
-            .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nome) })
+            .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nomeTurma) })
             .eq('id', aula.id)
         ));
       });
 
-    // 2. Deletar a turma
     const { error } = await supabase
       .from('turmas_professores')
       .delete()
@@ -190,48 +145,42 @@ export const TurmasProfessoresManager = () => {
     if (error) {
       toast({ title: 'Erro', description: 'Não foi possível deletar a turma.', variant: 'destructive' });
     } else {
-      toast({ title: 'Turma deletada', description: `"${nome}" foi removida de todas as aulas.` });
+      toast({ title: 'Turma deletada', description: `"${nomeTurma}" foi removida.` });
       fetchTurmas();
     }
     setTurmaParaDeletar(null);
   };
 
   const handleGerarConvite = async () => {
-    if (!turmaConvite) return;
+    if (!turmaSelecionadaId) {
+      toast({ title: "Selecione uma turma", variant: "destructive" });
+      return;
+    }
     setGerandoConvite(true);
-
+    setConviteGerado(null);
     const codigo = gerarCodigo();
     const { error } = await supabase
       .from("convites_professores")
       .insert({
         codigo,
-        turma_id: turmaConvite.id,
+        turma_id: turmaSelecionadaId,
         email_destinatario: emailDestinatario.trim() || null,
       });
 
     if (error) {
       toast({ title: "Erro", description: "Não foi possível gerar o convite.", variant: "destructive" });
     } else {
-      setConviteGerado(codigo);
+      const link = `${window.location.origin}/professor/entrar?convite=${codigo}`;
+      setConviteGerado(link);
+      navigator.clipboard.writeText(link).catch(() => {});
+      toast({ title: "Convite gerado!", description: "Link copiado para a área de transferência." });
       setEmailDestinatario("");
-      // Recarrega lista de pendentes
-      const { data } = await supabase
-        .from("convites_professores")
-        .select("*")
-        .eq("turma_id", turmaConvite.id)
-        .eq("usado", false)
-        .order("criado_em", { ascending: false });
-      setConvitesPendentes(data || []);
     }
     setGerandoConvite(false);
   };
 
-  const linkConvite = (codigo: string) =>
-    `${window.location.origin}/professor/entrar?convite=${codigo}`;
-
-  const copiarLink = (codigo: string) => {
-    navigator.clipboard.writeText(linkConvite(codigo));
-    toast({ title: "Link copiado!", description: "Link de convite copiado para a área de transferência." });
+  const copiarLink = (link: string) => {
+    navigator.clipboard.writeText(link).then(() => toast({ title: "Link copiado!" })).catch(() => {});
   };
 
   const toggleCodigoVisivel = (id: string) => {
@@ -242,151 +191,173 @@ export const TurmasProfessoresManager = () => {
     });
   };
 
-  const formatarData = (str: string) =>
-    format(new Date(str), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-
   return (
-    <div className="space-y-6">
-      {/* Formulário de criação de turma */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Nova Turma de Professores
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCriarTurma} className="flex gap-3 items-end">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="nome-turma">Nome da turma</Label>
-              <Input
-                id="nome-turma"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Turma A — Manhã 2026"
-              />
-            </div>
-            <Button type="submit" disabled={criando}>
-              {criando ? "Criando..." : "Criar turma"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_1fr]">
 
-      {/* Lista de turmas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Turmas cadastradas ({turmas.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* ESQUERDA — Nova Turma */}
+      <article className="rounded-xl border border-purple-200 bg-white shadow-sm">
+        <div className="border-b border-purple-100 px-6 py-5">
+          <h1 className="text-2xl font-bold">Nova Turma</h1>
+        </div>
+        <form onSubmit={handleCriarTurma} className="space-y-4 px-6 py-5">
+          <div>
+            <Label className="mb-2 block text-sm font-semibold">Nome da turma</Label>
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder=""
+              className="border-purple-200 focus-visible:ring-purple-200"
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={criando}
+            className="w-full bg-purple-950 hover:bg-purple-800 font-bold py-6"
+          >
+            {criando ? "Criando..." : "Criar turma"}
+          </Button>
+        </form>
+      </article>
+
+      {/* DIREITA — Lista de turmas + convite inline */}
+      <article className="rounded-xl border border-purple-200 bg-white shadow-sm">
+        <div className="border-b border-purple-100 px-6 py-5">
+          <h2 className="text-2xl font-bold">Turmas de professores ({turmas.length})</h2>
+        </div>
+
+        <div className="px-6 py-5">
           {loading ? (
-            <p className="text-center text-muted-foreground py-6">Carregando...</p>
+            <p className="py-8 text-center text-muted-foreground">Carregando...</p>
           ) : turmas.length === 0 ? (
-            <p className="text-center text-muted-foreground py-6">Nenhuma turma cadastrada ainda.</p>
+            <p className="py-8 text-center text-muted-foreground">Nenhuma turma cadastrada ainda.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Código da turma</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {turmas.map((turma) => (
-                    <TableRow key={turma.id}>
-                      <TableCell className="font-medium">{turma.nome}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 font-mono text-sm">
-                          <span>
-                            {codigosVisiveis.has(turma.id) ? turma.codigo_acesso : "••••••••"}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => toggleCodigoVisivel(turma.id)}
-                            title={codigosVisiveis.has(turma.id) ? "Ocultar" : "Ver código"}
-                          >
-                            {codigosVisiveis.has(turma.id)
-                              ? <EyeOff className="w-3 h-3" />
-                              : <Eye className="w-3 h-3" />}
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={turma.ativo ? "default" : "secondary"}>
-                          {turma.ativo ? "Ativa" : "Inativa"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu
-                          open={openDropdownId === turma.id}
-                          onOpenChange={(open) => setOpenDropdownId(open ? turma.id : null)}
-                        >
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setOpenDropdownId(null);
-                              setTimeout(() => abrirDialogConvite(turma), 100);
-                            }}>
-                              <Ticket className="mr-2 h-4 w-4" />
-                              Gerar convite
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => {
-                              setOpenDropdownId(null);
-                              handleToggleAtivo(turma);
-                            }}>
-                              {turma.ativo ? (
-                                <>
-                                  <PowerOff className="mr-2 h-4 w-4 text-red-500" />
-                                  Inativar turma
-                                </>
-                              ) : (
-                                <>
-                                  <Power className="mr-2 h-4 w-4 text-green-500" />
-                                  Ativar turma
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => {
-                                setOpenDropdownId(null);
-                                setTimeout(() => setTurmaParaDeletar(turma), 100);
-                              }}
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[500px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-purple-200 text-left text-purple-900/80">
+                      <th className="px-4 py-4 font-semibold">Nome</th>
+                      <th className="px-4 py-4 font-semibold">Código da turma</th>
+                      <th className="px-4 py-4 font-semibold">Status</th>
+                      <th className="px-4 py-4 font-semibold">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {turmas.map((turma) => (
+                      <tr key={turma.id} className="border-b border-purple-100 last:border-0">
+                        <td className="px-4 py-5 font-semibold">{turma.nome}</td>
+                        <td className="px-4 py-5 font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="tracking-widest text-sm">
+                              {codigosVisiveis.has(turma.id) ? turma.codigo_acesso : "••••••••"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleCodigoVisivel(turma.id)}
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              title={codigosVisiveis.has(turma.id) ? "Ocultar" : "Ver código"}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              {codigosVisiveis.has(turma.id)
+                                ? <EyeOff className="w-3.5 h-3.5" />
+                                : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-5">
+                          <span className={cn(
+                            "rounded-full px-3 py-1 text-xs font-bold text-white",
+                            turma.ativo ? "bg-purple-950" : "bg-slate-400"
+                          )}>
+                            {turma.ativo ? "Ativa" : "Inativa"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-5">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAtivo(turma)}
+                              className="rounded-md border border-purple-200 bg-white px-3 py-2 text-xs font-bold text-purple-950 hover:bg-purple-50 transition-colors"
+                            >
+                              {turma.ativo ? "Inativar turma" : "Ativar turma"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTurmaParaDeletar(turma)}
+                              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition-colors"
+                            >
                               Deletar turma
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Área de convite inline */}
+              <section className="mt-6 rounded-xl border border-dashed border-purple-200 bg-purple-50/40 p-5">
+                <h3 className="text-lg font-bold">Adicionar professor à turma</h3>
+                <div className="mt-4 space-y-3">
+                  {turmas.filter(t => t.ativo).length > 1 && (
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-semibold">Turma</Label>
+                      <Select value={turmaSelecionadaId} onValueChange={setTurmaSelecionadaId}>
+                        <SelectTrigger className="border-purple-200">
+                          <SelectValue placeholder="Selecione a turma" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {turmas.filter(t => t.ativo).map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
+                    <Input
+                      type="email"
+                      placeholder=""
+                      value={emailDestinatario}
+                      onChange={(e) => setEmailDestinatario(e.target.value)}
+                      className="border-purple-200 focus-visible:ring-purple-200"
+                    />
+                    <Button
+                      onClick={handleGerarConvite}
+                      disabled={gerandoConvite}
+                      className="bg-purple-950 hover:bg-purple-800 font-bold"
+                    >
+                      {gerandoConvite ? "Gerando..." : "Gerar convite"}
+                    </Button>
+                  </div>
+                  {conviteGerado && (
+                    <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
+                      <code className="flex-1 truncate text-xs text-green-900">{conviteGerado}</code>
+                      <button
+                        type="button"
+                        onClick={() => copiarLink(conviteGerado)}
+                        className="shrink-0 text-green-700 hover:text-green-900 transition-colors"
+                        title="Copiar link"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </article>
 
       {/* AlertDialog de confirmação de exclusão */}
-      <AlertDialog open={!!turmaParaDeletar} onOpenChange={(open) => !open && setTurmaParaDeletar(null)}>
+      <AlertDialog open={!!turmaParaDeletar} onOpenChange={(open) => { if (!open) setTurmaParaDeletar(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deletar turma</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-700">Deletar turma</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja deletar a turma <strong>"{turmaParaDeletar?.nome}"</strong>?
-              Professores associados a ela ficarão sem turma. Esta ação não pode ser desfeita.
+              Professores associados ficarão sem turma. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -400,88 +371,6 @@ export const TurmasProfessoresManager = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Dialog de convite */}
-      <Dialog open={!!turmaConvite} onOpenChange={(open) => !open && setTurmaConvite(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Ticket className="w-5 h-5" />
-              Convites — {turmaConvite?.nome}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Gerar novo convite */}
-            <div className="space-y-3">
-              <Label>E-mail do destinatário <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  value={emailDestinatario}
-                  onChange={(e) => setEmailDestinatario(e.target.value)}
-                  placeholder="professor@email.com"
-                />
-                <Button onClick={handleGerarConvite} disabled={gerandoConvite}>
-                  {gerandoConvite ? "Gerando..." : "Gerar"}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Se informado, somente esse e-mail poderá usar o convite.
-              </p>
-            </div>
-
-            {/* Link gerado */}
-            {conviteGerado && (
-              <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-2">
-                <p className="text-sm font-medium text-green-800">Convite gerado com sucesso!</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-xs bg-white border rounded px-2 py-1 truncate">
-                    {linkConvite(conviteGerado)}
-                  </code>
-                  <Button size="sm" variant="outline" onClick={() => copiarLink(conviteGerado)}>
-                    <Copy className="w-3 h-3 mr-1" />
-                    Copiar
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Convites pendentes */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Convites pendentes (não utilizados)</p>
-              {carregandoConvites ? (
-                <p className="text-xs text-muted-foreground">Carregando...</p>
-              ) : convitesPendentes.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhum convite pendente.</p>
-              ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {convitesPendentes.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between rounded border px-3 py-2 text-sm">
-                      <div>
-                        <span className="font-mono text-xs">{c.codigo}</span>
-                        {c.email_destinatario && (
-                          <span className="ml-2 text-xs text-muted-foreground">→ {c.email_destinatario}</span>
-                        )}
-                        <span className="ml-2 text-xs text-muted-foreground">{formatarData(c.criado_em)}</span>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={() => copiarLink(c.codigo)}
-                        title="Copiar link"
-                      >
-                        <LinkIcon className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

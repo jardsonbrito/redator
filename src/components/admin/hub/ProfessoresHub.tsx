@@ -12,17 +12,15 @@ export function ProfessoresHub() {
   const handleSuccess = () => {
     setRefresh(v => !v);
     setProfessorEditando(null);
-    setActiveTab('lista');
   };
 
   const handleEdit = (professor: any) => {
     setProfessorEditando(professor);
-    setActiveTab('cadastramento');
+    setActiveTab('lista');
   };
 
   const handleCancelEdit = () => {
     setProfessorEditando(null);
-    setActiveTab('lista');
   };
 
   return (
@@ -32,19 +30,21 @@ export function ProfessoresHub() {
         <TabsTrigger value="cadastramento">Cadastramento</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="lista">
+      <TabsContent value="lista" className="space-y-6">
+        {professorEditando && (
+          <ProfessorForm
+            onSuccess={handleSuccess}
+            professorEditando={professorEditando}
+            onCancelEdit={handleCancelEdit}
+          />
+        )}
         <ProfessorList
           refresh={refresh}
           onEdit={handleEdit}
         />
       </TabsContent>
 
-      <TabsContent value="cadastramento" className="space-y-6">
-        <ProfessorForm
-          onSuccess={handleSuccess}
-          professorEditando={professorEditando}
-          onCancelEdit={handleCancelEdit}
-        />
+      <TabsContent value="cadastramento">
         <TurmasProfessoresManager />
       </TabsContent>
     </Tabs>
