@@ -117,9 +117,7 @@ import { CorretorForm } from "@/components/admin/CorretorForm";
 import { CorretorList } from "@/components/admin/CorretorList";
 
 // Import professor components
-import { ProfessorForm } from "@/components/admin/ProfessorForm";
-import { ProfessorList } from "@/components/admin/ProfessorList";
-import { TurmasProfessoresManager } from "@/components/admin/TurmasProfessoresManager";
+import { ProfessoresHub } from "@/components/admin/hub/ProfessoresHub";
 
 // Import lousa components
 import LousaForm from "@/components/admin/LousaForm";
@@ -188,9 +186,6 @@ const Admin = () => {
   const [alunoEditando, setAlunoEditando] = useState(null);
   const [refreshCorretores, setRefreshCorretores] = useState(false);
   const [corretorEditando, setCorretorEditando] = useState(null);
-  const [refreshProfessores, setRefreshProfessores] = useState(false);
-  const [professorEditando, setProfessorEditando] = useState(null);
-  
   // Hook para gerenciar alunos pendentes
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
 
@@ -1169,46 +1164,8 @@ const Admin = () => {
       case "alunos":
         return <AlunosHub />;
 
-      case "professores": {
-        const handleProfessorSuccess = () => {
-          setRefreshProfessores(!refreshProfessores);
-          setProfessorEditando(null);
-        };
-
-        const handleEditProfessor = (professor: any) => {
-          setProfessorEditando(professor);
-        };
-
-        const handleCancelProfessorEdit = () => {
-          setProfessorEditando(null);
-        };
-
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Gerenciar Professores</h1>
-            <Tabs defaultValue="professores" className="w-full">
-              <TabsList>
-                <TabsTrigger value="professores">Professores</TabsTrigger>
-                <TabsTrigger value="turmas">Turmas</TabsTrigger>
-              </TabsList>
-              <TabsContent value="professores" className="space-y-6 mt-6">
-                <ProfessorForm
-                  onSuccess={handleProfessorSuccess}
-                  professorEditando={professorEditando}
-                  onCancelEdit={handleCancelProfessorEdit}
-                />
-                <ProfessorList
-                  refresh={refreshProfessores}
-                  onEdit={handleEditProfessor}
-                />
-              </TabsContent>
-              <TabsContent value="turmas" className="mt-6">
-                <TurmasProfessoresManager />
-              </TabsContent>
-            </Tabs>
-          </div>
-        );
-      }
+      case "professores":
+        return <ProfessoresHub />;
 
       case "jarvis":
         const subtabJarvis = searchParams.get('subtab');
