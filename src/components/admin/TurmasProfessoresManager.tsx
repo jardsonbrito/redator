@@ -105,8 +105,8 @@ export const TurmasProfessoresManager = () => {
     const nomeTurma = turmaParaDeletar.nome;
 
     await Promise.all([
-      supabase.rpc('array_remove_value_aulas_virtuais' as any, { p_valor: nomeTurma }).catch(() => null),
-      supabase.rpc('array_remove_value_aulas' as any, { p_valor: nomeTurma }).catch(() => null),
+      Promise.resolve(supabase.rpc('array_remove_value_aulas_virtuais' as any, { p_valor: nomeTurma })).catch(() => null),
+      Promise.resolve(supabase.rpc('array_remove_value_aulas' as any, { p_valor: nomeTurma })).catch(() => null),
     ]);
 
     await supabase
