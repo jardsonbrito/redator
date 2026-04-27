@@ -173,6 +173,7 @@ const RedacaoSimuladoList = () => {
           corretor_1:corretores!corretor_id_1(nome_completo),
           corretor_2:corretores!corretor_id_2(nome_completo)
         `)
+        .is('deleted_at', null)
         .order('data_envio', { ascending: false });
 
       if (apenasAnoAtual) {

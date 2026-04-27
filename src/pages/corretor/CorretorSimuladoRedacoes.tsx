@@ -80,6 +80,7 @@ const CorretorSimuladoRedacoes = () => {
           simulados(frase_tematica, titulo)
         `)
         .eq('id_simulado', simuladoId)
+        .is('deleted_at', null)
         .order('nome_aluno', { ascending: true });
 
       if (error) {

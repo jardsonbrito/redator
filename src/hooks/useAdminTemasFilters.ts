@@ -121,7 +121,8 @@ export const useAdminTemasFilters = () => {
           const { count, error } = await supabase
             .from('redacoes_simulado')
             .select('*', { count: 'exact', head: true })
-            .eq('id_simulado', simulado.id);
+            .eq('id_simulado', simulado.id)
+            .is('deleted_at', null);
 
           if (!error && simulado.frase_tematica) {
             const countAtual = countMap[simulado.frase_tematica] || 0;

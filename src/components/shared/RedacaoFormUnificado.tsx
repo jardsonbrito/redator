@@ -126,7 +126,7 @@ export const RedacaoFormUnificado = ({
   useEffect(() => {
     if (userType === "aluno") {
       const alunoEmail = studentData.email || localStorage.getItem("alunoEmail");
-      const alunoNome = localStorage.getItem("alunoNome") || "Aluno";
+      const alunoNome = studentData.nomeUsuario || studentData.nome || localStorage.getItem("alunoNome") || "";
 
       if (alunoEmail && !email) {
         setEmail(alunoEmail);
