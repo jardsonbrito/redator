@@ -2,7 +2,8 @@ import { useState } from "react";
 import { JarvisCorrecao } from "@/hooks/useJarvisCorrecao";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, CheckCircle2, XCircle, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -36,6 +37,9 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
   const correcaoIA = correcao.correcao_ia;
   // "nota_final" | "c1" | "c2" | "c3" | "c4" | "c5" | null
   const [secaoAtiva, setSecaoAtiva] = useState<string | null>("c1");
+  const [showTexto, setShowTexto] = useState(false);
+
+  const textoOriginal = correcao.transcricao_confirmada || correcao.transcricao_ocr_original;
 
   const competenciaAtiva = secaoAtiva && secaoAtiva !== "nota_final" ? secaoAtiva : null;
 
@@ -84,16 +88,38 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
   return (
     <div className="space-y-5">
       {/* Cabeçalho */}
-      <div className="space-y-0.5">
-        <h3 className="text-xl font-black text-zinc-900">{correcao.autor_nome}</h3>
-        <p className="text-sm font-medium text-zinc-600">{correcao.tema}</p>
-        {correcao.corrigida_em && (
-          <p className="text-xs text-zinc-400">
-            Corrigida em{" "}
-            {format(new Date(correcao.corrigida_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-          </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-0.5">
+          <h3 className="text-xl font-black text-zinc-900">{correcao.autor_nome}</h3>
+          <p className="text-sm font-medium text-zinc-600">{correcao.tema}</p>
+          {correcao.corrigida_em && (
+            <p className="text-xs text-zinc-400">
+              Corrigida em{" "}
+              {format(new Date(correcao.corrigida_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            </p>
+          )}
+        </div>
+        {textoOriginal && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTexto((v) => !v)}
+            className="shrink-0 gap-1.5 text-xs"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Texto da redação
+            {showTexto ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </Button>
         )}
       </div>
+
+      {/* Texto original da redação */}
+      {textoOriginal && showTexto && (
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Texto da redação</p>
+          <p className="text-sm leading-relaxed text-zinc-800 whitespace-pre-wrap">{textoOriginal}</p>
+        </div>
+      )}
 
       {/* Nota final + Cards de competência — grid de 6 colunas iguais */}
       <div className="grid grid-cols-6 gap-2">

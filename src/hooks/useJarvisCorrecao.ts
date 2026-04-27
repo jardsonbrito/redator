@@ -172,10 +172,10 @@ export const useJarvisCorrecao = (professorEmail: string) => {
   // Deletar correção individual
   const deletarCorrecao = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("jarvis_correcoes")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.rpc("deletar_jarvis_correcao", {
+        p_correcao_id: id,
+        p_professor_email: professorEmail,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -190,18 +190,10 @@ export const useJarvisCorrecao = (professorEmail: string) => {
   // Deletar todas as correções de um aluno (por nome + professor)
   const deletarPorAluno = useMutation({
     mutationFn: async (autorNome: string) => {
-      const { data: professor } = await supabase
-        .from("professores")
-        .select("id")
-        .eq("email", professorEmail)
-        .single();
-      if (!professor) throw new Error("Professor não encontrado");
-
-      const { error } = await supabase
-        .from("jarvis_correcoes")
-        .delete()
-        .eq("professor_id", professor.id)
-        .eq("autor_nome", autorNome);
+      const { error } = await supabase.rpc("deletar_jarvis_correcoes_aluno", {
+        p_autor_nome: autorNome,
+        p_professor_email: professorEmail,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
