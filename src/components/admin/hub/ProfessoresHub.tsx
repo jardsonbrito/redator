@@ -30,7 +30,6 @@ export function ProfessoresHub() {
       <TabsList className="mb-4">
         <TabsTrigger value="lista">Lista</TabsTrigger>
         <TabsTrigger value="cadastramento">Cadastramento</TabsTrigger>
-        <TabsTrigger value="turmas">Turmas</TabsTrigger>
       </TabsList>
 
       <TabsContent value="lista">
@@ -40,15 +39,12 @@ export function ProfessoresHub() {
         />
       </TabsContent>
 
-      <TabsContent value="cadastramento">
+      <TabsContent value="cadastramento" className="space-y-6">
         <ProfessorForm
           onSuccess={handleSuccess}
           professorEditando={professorEditando}
           onCancelEdit={handleCancelEdit}
         />
-      </TabsContent>
-
-      <TabsContent value="turmas">
         <TurmasProfessoresManager />
       </TabsContent>
     </Tabs>

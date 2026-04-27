@@ -3,11 +3,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users,
   Edit,
+  Trash2,
   Power,
   PowerOff,
   ArrowUpDown,
@@ -46,6 +51,8 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
   const [loading, setLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [professorParaExcluir, setProfessorParaExcluir] = useState<Professor | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const fetchProfessores = async () => {
@@ -102,6 +109,35 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
+  const handleDelete = async () => {
+    if (!professorParaExcluir) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('professores')
+        .delete()
+        .eq('id', professorParaExcluir.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Professor excluído",
+        description: `${professorParaExcluir.nome_completo} foi removido com sucesso.`
+      });
+      setProfessorParaExcluir(null);
+      fetchProfessores();
+    } catch (error: any) {
+      console.error('Erro ao excluir professor:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o professor.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   };
@@ -117,6 +153,7 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -232,6 +269,17 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                               </>
                             )}
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setOpenDropdownId(null);
+                              setTimeout(() => setProfessorParaExcluir(professor), 100);
+                            }}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -243,5 +291,31 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
         )}
       </CardContent>
     </Card>
+
+    <AlertDialog open={!!professorParaExcluir} onOpenChange={(open) => { if (!open) setProfessorParaExcluir(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-red-700">
+            <AlertTriangle className="h-5 w-5" />
+            Excluir Professor
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja excluir <strong>{professorParaExcluir?.nome_completo}</strong>?
+            Esta ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isDeleting ? "Excluindo..." : "Excluir"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
