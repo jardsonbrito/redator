@@ -105,51 +105,53 @@ export const TurmasProfessoresManager = () => {
     if (!turmaParaDeletar) return;
     const nomeTurma = turmaParaDeletar.nome;
 
-    await Promise.all([
-      Promise.resolve(supabase.rpc('array_remove_value_aulas_virtuais' as any, { p_valor: nomeTurma })).catch(() => null),
-      Promise.resolve(supabase.rpc('array_remove_value_aulas' as any, { p_valor: nomeTurma })).catch(() => null),
-    ]);
+    try {
+      // Remove nome da turma de aulas_virtuais
+      const { data: aulasVirtuais } = await supabase
+        .from('aulas_virtuais')
+        .select('id, turmas_autorizadas')
+        .contains('turmas_autorizadas', [nomeTurma]);
 
-    await supabase
-      .from('aulas_virtuais')
-      .select('id, turmas_autorizadas')
-      .contains('turmas_autorizadas', [nomeTurma])
-      .then(async ({ data }) => {
-        if (!data) return;
-        await Promise.all(data.map(aula =>
+      if (aulasVirtuais?.length) {
+        await Promise.all(aulasVirtuais.map(aula =>
           supabase
             .from('aulas_virtuais')
             .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nomeTurma) })
             .eq('id', aula.id)
         ));
-      });
+      }
 
-    await supabase
-      .from('aulas')
-      .select('id, turmas_autorizadas')
-      .contains('turmas_autorizadas', [nomeTurma])
-      .then(async ({ data }) => {
-        if (!data) return;
-        await Promise.all(data.map(aula =>
+      // Remove nome da turma de aulas
+      const { data: aulas } = await supabase
+        .from('aulas')
+        .select('id, turmas_autorizadas')
+        .contains('turmas_autorizadas', [nomeTurma]);
+
+      if (aulas?.length) {
+        await Promise.all(aulas.map(aula =>
           supabase
             .from('aulas')
             .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nomeTurma) })
             .eq('id', aula.id)
         ));
-      });
+      }
 
-    const { error } = await supabase
-      .from('turmas_professores')
-      .delete()
-      .eq('id', turmaParaDeletar.id);
+      // Deleta a turma
+      const { error } = await supabase
+        .from('turmas_professores')
+        .delete()
+        .eq('id', turmaParaDeletar.id);
 
-    if (error) {
-      toast({ title: 'Erro', description: 'Não foi possível deletar a turma.', variant: 'destructive' });
-    } else {
-      toast({ title: 'Turma deletada', description: `"${nomeTurma}" foi removida.` });
+      if (error) throw error;
+
+      toast({ title: 'Turma deletada', description: `"${nomeTurma}" foi removida de todas as aulas.` });
       fetchTurmas();
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível deletar a turma.', variant: 'destructive' });
     }
+
     setTurmaParaDeletar(null);
+    setConfirmacaoNome("");
   };
 
   const handleGerarConvite = async () => {
