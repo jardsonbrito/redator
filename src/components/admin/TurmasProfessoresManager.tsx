@@ -33,6 +33,7 @@ export const TurmasProfessoresManager = () => {
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState("");
   const [turmaParaDeletar, setTurmaParaDeletar] = useState<TurmaProfessor | null>(null);
+  const [confirmacaoNome, setConfirmacaoNome] = useState("");
   const [codigosVisiveis, setCodigosVisiveis] = useState<Set<string>>(new Set());
 
   // Área de convite inline
@@ -351,22 +352,50 @@ export const TurmasProfessoresManager = () => {
       </article>
 
       {/* AlertDialog de confirmação de exclusão */}
-      <AlertDialog open={!!turmaParaDeletar} onOpenChange={(open) => { if (!open) setTurmaParaDeletar(null); }}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={!!turmaParaDeletar}
+        onOpenChange={(open) => { if (!open) { setTurmaParaDeletar(null); setConfirmacaoNome(""); } }}
+      >
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-700">Deletar turma</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-700">Deletar turma — ação irreversível</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja deletar a turma <strong>"{turmaParaDeletar?.nome}"</strong>?
-              Professores associados ficarão sem turma. Esta ação não pode ser desfeita.
+              Você está prestes a deletar{" "}
+              <strong className="text-slate-900">"{turmaParaDeletar?.nome}"</strong>.
+              Esta ação <strong>não pode ser desfeita</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="space-y-3 px-1 text-sm text-slate-700">
+            <ul className="list-disc pl-5 space-y-1 text-slate-600">
+              <li>Todos os convites pendentes desta turma serão removidos</li>
+              <li>Os professores vinculados perderão a referência de turma</li>
+              <li>O código de acesso deixará de funcionar</li>
+              <li>Filtros e relatórios baseados nessa turma serão afetados</li>
+            </ul>
+            <div className="rounded-md border border-red-200 bg-red-50 p-3">
+              <p className="font-semibold text-red-800 mb-1.5">
+                Para confirmar, digite o nome exato da turma:
+              </p>
+              <code className="block text-xs text-red-700 mb-2">{turmaParaDeletar?.nome}</code>
+              <Input
+                value={confirmacaoNome}
+                onChange={(e) => setConfirmacaoNome(e.target.value)}
+                placeholder="Digite o nome da turma..."
+                className="border-red-300 focus-visible:ring-red-300 bg-white"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setConfirmacaoNome("")}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={confirmacaoNome.trim() !== turmaParaDeletar?.nome}
               onClick={handleDeletarTurma}
             >
-              Deletar
+              Deletar permanentemente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
