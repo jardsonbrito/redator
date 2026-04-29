@@ -5,6 +5,7 @@ export type TurmaDisponivel = { id: string; valor: string; label: string };
 
 export function useTurmasAtivas() {
   const [turmasDinamicas, setTurmasDinamicas] = useState<TurmaDisponivel[]>([]);
+  const [turmasProfessores, setTurmasProfessores] = useState<TurmaDisponivel[]>([]);
 
   useEffect(() => {
     supabase
@@ -15,7 +16,16 @@ export function useTurmasAtivas() {
       .then(({ data }) => {
         setTurmasDinamicas((data || []).map(t => ({ id: t.id, valor: t.nome, label: t.nome })));
       });
+
+    supabase
+      .from('turmas_professores')
+      .select('id, nome')
+      .eq('ativo', true)
+      .order('nome')
+      .then(({ data }) => {
+        setTurmasProfessores((data || []).map(t => ({ id: t.id, valor: t.nome, label: t.nome })));
+      });
   }, []);
 
-  return { turmasDinamicas };
+  return { turmasDinamicas, turmasProfessores };
 }

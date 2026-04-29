@@ -16,7 +16,7 @@ export const TurmaSelector = ({
   permiteeVisitante = false,
   onPermiteVisitanteChange
 }: TurmaSelectorProps) => {
-  const { turmasDinamicas } = useTurmasAtivas();
+  const { turmasDinamicas, turmasProfessores } = useTurmasAtivas();
 
   const handleTurmaChange = (valor: string, checked: boolean) => {
     if (checked) {
@@ -26,45 +26,53 @@ export const TurmaSelector = ({
     }
   };
 
-  const handleTodasTurmasChange = (checked: boolean) => {
-    if (checked) {
-      onTurmasChange(turmasDinamicas.map(t => t.valor));
-    } else {
-      onTurmasChange([]);
-    }
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-base font-medium">Turmas Autorizadas</Label>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="todas-turmas"
-            checked={turmasDinamicas.length > 0 && selectedTurmas.length === turmasDinamicas.length}
-            onCheckedChange={handleTodasTurmasChange}
-          />
-          <Label htmlFor="todas-turmas" className="font-medium">
-            Todas as turmas
-          </Label>
+    <div className="space-y-5">
+      {/* Turmas de alunos */}
+      {turmasDinamicas.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold text-gray-700">Turmas de alunos</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {turmasDinamicas.map(({ valor, label }) => (
+              <div key={valor} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`aluno-${valor}`}
+                  checked={selectedTurmas.includes(valor)}
+                  onCheckedChange={(checked) => handleTurmaChange(valor, !!checked)}
+                />
+                <Label htmlFor={`aluno-${valor}`} className="text-sm font-normal">
+                  {label}
+                </Label>
+              </div>
+            ))}
+          </div>
         </div>
+      )}
 
-        <div className="grid grid-cols-2 gap-2 ml-6">
-          {turmasDinamicas.map(({ valor, label }) => (
-            <div key={valor} className="flex items-center space-x-2">
-              <Checkbox
-                id={valor}
-                checked={selectedTurmas.includes(valor)}
-                onCheckedChange={(checked) => handleTurmaChange(valor, !!checked)}
-              />
-              <Label htmlFor={valor} className="text-sm">
-                {label}
-              </Label>
-            </div>
-          ))}
+      {/* Turmas de professores */}
+      {turmasProfessores.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold text-gray-700">Turmas de professores</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {turmasProfessores.map(({ valor, label }) => (
+              <div key={valor} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`prof-${valor}`}
+                  checked={selectedTurmas.includes(valor)}
+                  onCheckedChange={(checked) => handleTurmaChange(valor, !!checked)}
+                />
+                <Label htmlFor={`prof-${valor}`} className="text-sm font-normal">
+                  {label}
+                </Label>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {turmasDinamicas.length === 0 && turmasProfessores.length === 0 && (
+        <p className="text-sm text-gray-400">Nenhuma turma ativa encontrada.</p>
+      )}
 
       {onPermiteVisitanteChange && (
         <div className="flex items-center space-x-2 pt-2 border-t">
