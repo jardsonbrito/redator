@@ -877,19 +877,25 @@ const Admin = () => {
     if (type === 'tema')  { setActiveView('temas');  return; }
     if (type === 'funcionalidade') {
       const viewMap: Record<string, string> = {
-        temas:               'temas',
-        exercicios:          'exercicios',
-        simulados:           'simulados',
-        aulas_gravadas:      'aulas',
-        aulas_ao_vivo:       'salas-virtuais',
-        biblioteca:          'biblioteca',
-        videoteca:           'videos',
-        lousa:               'lousa',
+        temas:                 'temas',
+        exercicios:            'exercicios',
+        simulados:             'simulados',
+        aulas_gravadas:        'aulas',
+        aulas_ao_vivo:         'salas-virtuais',
+        biblioteca:            'biblioteca',
+        videoteca:             'videos',
+        lousa:                 'lousa',
         calendario_atividades: 'calendario',
-        redacoes_exemplares: 'redacoes',
-        redacoes_comentadas: 'redacoes',
-        diario_online:       'inbox',
-        gamificacao:         'gamificacao',
+        redacoes_exemplares:   'redacoes',
+        redacoes_comentadas:   'redacoes',
+        diario_online:         'inbox',
+        gamificacao:           'gamificacao',
+        jarvis:                'jarvis',
+        jarvis_correcao:       'jarvis',
+        guia_tematico:         'guia-tematico',
+        microaprendizagem:     'microaprendizagem',
+        repertorio_orientado:  'repertorio-orientado',
+        top_5:                 'top5',
       };
       const view = viewMap[id];
       if (view) setActiveView(view);

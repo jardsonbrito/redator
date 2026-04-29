@@ -58,12 +58,16 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
             .from('alunos')
             .select('id, nome, email, turma')
             .or(`nome.ilike.${searchTerm},email.ilike.${searchTerm}`)
-            .limit(4),
+            .limit(4)
+            .then((r) => r)
+            .catch(() => ({ data: null, error: null })),
           supabase
             .from('temas')
-            .select('id, titulo, status')
-            .ilike('titulo', searchTerm)
-            .limit(4),
+            .select('id, frase_tematica, status')
+            .ilike('frase_tematica', searchTerm)
+            .limit(4)
+            .then((r) => r)
+            .catch(() => ({ data: null, error: null })),
           supabase
             .from('funcionalidades')
             .select('id, chave, nome_exibicao')
@@ -81,11 +85,11 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
           });
         });
 
-        (temasRes.data || []).forEach((t) => {
+        (temasRes.data || []).forEach((t: any) => {
           found.push({
             type: 'tema',
             id: t.id,
-            title: t.titulo || 'Tema',
+            title: t.frase_tematica || 'Tema',
             subtitle: t.status === 'rascunho' ? 'Rascunho' : 'Publicado',
           });
         });

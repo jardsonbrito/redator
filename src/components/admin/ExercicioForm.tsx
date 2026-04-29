@@ -55,7 +55,7 @@ interface ExercicioFormProps {
 }
 
 export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, onCancelEdit }: ExercicioFormProps) => {
-  const { turmasDinamicas } = useTurmasAtivas();
+  const { turmasDinamicas, turmasProfessores } = useTurmasAtivas();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(mode === 'edit');
   const [activeSection, setActiveSection] = useState<string>('capa');
@@ -788,21 +788,45 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
 
             {/* Turmas Autorizadas Section */}
             {activeSection === 'turmas' && (
-              <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {turmasDisponiveis.map(({ valor, label }) => (
-                    <div key={valor} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={valor}
-                        checked={turmasAutorizadas.includes(valor)}
-                        onCheckedChange={(checked) => handleTurmaChange(valor, checked as boolean)}
-                      />
-                      <Label htmlFor={valor} className="text-sm">
-                        {label}
-                      </Label>
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                {turmasDisponiveis.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Turmas de Alunos</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {turmasDisponiveis.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={valor}
+                            checked={turmasAutorizadas.includes(valor)}
+                            onCheckedChange={(checked) => handleTurmaChange(valor, checked as boolean)}
+                          />
+                          <Label htmlFor={valor} className="text-sm">
+                            {label}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+                {turmasProfessores.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Turmas de Professores</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {turmasProfessores.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`prof-${valor}`}
+                            checked={turmasAutorizadas.includes(valor)}
+                            onCheckedChange={(checked) => handleTurmaChange(valor, checked as boolean)}
+                          />
+                          <Label htmlFor={`prof-${valor}`} className="text-sm">
+                            {label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
