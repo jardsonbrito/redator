@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Calendar, Clock, CalendarDays } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
-import { verificarDivergencia } from "@/utils/simuladoDivergencia";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
@@ -166,37 +165,10 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
   // Usar dados completos diretamente do useSimuladoSubmission
   const redacaoData = submissionData?.submissionData;
 
-  // Calcular nota média apenas quando as correções necessárias estiverem finalizadas
-  const notaMedia = redacaoData ? (() => {
-    // Sinal primário: admin finalizou o processo (corrigida = true com nota_total)
-    // Isso cobre tanto a finalização pelo admin quanto pelo corretor quando não há divergência
-    if (redacaoData.corrigida && redacaoData.nota_total !== null && redacaoData.nota_total !== undefined) {
-      return redacaoData.nota_total;
-    }
-
-    // Fallback: ambos corretores finalizaram individualmente com status 'corrigida'
-    const status1 = redacaoData.status_corretor_1;
-    const status2 = redacaoData.status_corretor_2;
-    const nota1 = redacaoData.nota_final_corretor_1;
-    const nota2 = redacaoData.nota_final_corretor_2;
-    const corretor2Id = redacaoData.corretor_id_2;
-
-    if (corretor2Id !== null && corretor2Id !== undefined) {
-      if (status1 === 'corrigida' && status2 === 'corrigida' && nota1 !== null && nota2 !== null) {
-        // Não mostrar nota se há discrepância — admin precisa resolver primeiro
-        const div = verificarDivergencia(redacaoData);
-        if (div?.temDivergencia) return null;
-        return (nota1 + nota2) / 2;
-      }
-      return null;
-    }
-
-    if (status1 === 'corrigida' && nota1 !== null) {
-      return nota1;
-    }
-
-    return null;
-  })() : null;
+  // Exibir nota apenas quando o admin liberou manualmente (corrigida = true + nota_total preenchida)
+  const notaMedia = (redacaoData?.corrigida && redacaoData.nota_total != null)
+    ? redacaoData.nota_total
+    : null;
 
   const simuladoWithSubmission = {
     ...simulado,

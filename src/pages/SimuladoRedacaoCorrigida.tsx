@@ -319,7 +319,7 @@ const SimuladoRedacaoCorrigida = () => {
     }
   }, [redacoesSimulado]);
 
-  if (isLoading) {
+  if (isLoading || !studentData.email) {
     return (
       <ProtectedRoute>
         <TooltipProvider>
