@@ -110,6 +110,7 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
         const { data: inserted, error: insertError } = await supabase
           .from('profiles')
           .insert({
+            id: crypto.randomUUID(),
             nome,
             sobrenome,
             email: professor.email.toLowerCase(),

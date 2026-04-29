@@ -46,18 +46,27 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
         try {
           const professorData = JSON.parse(savedProfessorSession);
 
-          // Se turma_nome ainda não está na sessão, buscar e salvar
-          if (!professorData.turma_nome && professorData.id) {
+          // Sempre re-busca turma_nome para garantir que está atualizado
+          if (professorData.id) {
             try {
               const { data: profRow } = await supabase
                 .from('professores')
-                .select('turmas_professores(nome)')
+                .select('turma_id')
                 .eq('id', professorData.id)
                 .maybeSingle();
-              professorData.turma_nome = (profRow?.turmas_professores as any)?.nome ?? null;
+              if (profRow?.turma_id) {
+                const { data: turmaRow } = await supabase
+                  .from('turmas_professores')
+                  .select('nome')
+                  .eq('id', profRow.turma_id)
+                  .maybeSingle();
+                professorData.turma_nome = turmaRow?.nome ?? null;
+              } else {
+                professorData.turma_nome = null;
+              }
               localStorage.setItem('professor_session', JSON.stringify(professorData));
             } catch {
-              professorData.turma_nome = null;
+              // mantém turma_nome que já estava na sessão
             }
           }
 
@@ -96,10 +105,19 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
       try {
         const { data: profRow } = await supabase
           .from('professores')
-          .select('turmas_professores(nome)')
+          .select('turma_id')
           .eq('id', professorData.id)
           .maybeSingle();
-        professorData.turma_nome = (profRow?.turmas_professores as any)?.nome ?? null;
+        if (profRow?.turma_id) {
+          const { data: turmaRow } = await supabase
+            .from('turmas_professores')
+            .select('nome')
+            .eq('id', profRow.turma_id)
+            .maybeSingle();
+          professorData.turma_nome = turmaRow?.nome ?? null;
+        } else {
+          professorData.turma_nome = null;
+        }
       } catch {
         professorData.turma_nome = null;
       }
