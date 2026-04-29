@@ -1,29 +1,26 @@
-
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
-import { StudentHeader } from "@/components/StudentHeader";
-import { MenuGrid } from "@/components/MenuGrid";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { useProfessorAuth } from "@/hooks/useProfessorAuth";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import {
-  BookOpen,
-  FileText,
-  Video,
-  GraduationCap,
-  Library,
-  Map,
-  Layers,
-  Users,
-  Bell,
-  UserPlus,
-  Bot,
-  ClipboardList,
+  BookOpen, FileText, Video, GraduationCap, Library,
+  Map, Layers, Bot, ClipboardCheck, NotebookPen,
 } from "lucide-react";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { StudentHeader } from "@/components/StudentHeader";
+import { MenuGrid } from "@/components/MenuGrid";
+import { CalendarioAtividades } from "@/components/CalendarioAtividades";
+import { MuralAvisos } from "@/components/MuralAvisos";
+import { ProfessorBottomNavigation } from "@/components/professor/ProfessorBottomNavigation";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
+import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 
-const contentMenuItems = [
+const menuItems = [
+  {
+    title: "Jarvis",
+    path: "/professor/jarvis-correcao",
+    icon: Bot,
+    tooltip: "Correção inteligente de redações com IA — agrupe seus alunos e analise os textos.",
+    showAlways: true,
+  },
   {
     title: "Temas",
     path: "/professor/temas",
@@ -35,7 +32,21 @@ const contentMenuItems = [
     title: "Guia Temático",
     path: "/professor/guia-tematico",
     icon: Map,
-    tooltip: "Explore o guia temático com artigos e análises.",
+    tooltip: "Percorra um roteiro completo de aprofundamento sobre a frase temática.",
+    showAlways: true,
+  },
+  {
+    title: "Simulados",
+    path: "/professor/simulados",
+    icon: ClipboardCheck,
+    tooltip: "Participe de simulados com horário controlado e correção detalhada.",
+    showAlways: true,
+  },
+  {
+    title: "Exercícios",
+    path: "/professor/exercicios",
+    icon: NotebookPen,
+    tooltip: "Pratique com exercícios direcionados.",
     showAlways: true,
   },
   {
@@ -49,21 +60,7 @@ const contentMenuItems = [
     title: "Redações Comentadas",
     path: "/professor/redacoes-comentadas",
     icon: RedacoesComentadasIcon as any,
-    tooltip: "Redações com comentários detalhados e anotações por trecho.",
-    showAlways: true,
-  },
-  {
-    title: "Aulas ao Vivo",
-    path: "/professor/salas-virtuais",
-    icon: Video,
-    tooltip: "Participe das aulas ao vivo e registre sua presença.",
-    showAlways: true,
-  },
-  {
-    title: "Aulas Gravadas",
-    path: "/professor/aulas",
-    icon: GraduationCap,
-    tooltip: "Acesse aulas organizadas por competência.",
+    tooltip: "Analise redações com comentários detalhados e anotações por trecho.",
     showAlways: true,
   },
   {
@@ -74,10 +71,31 @@ const contentMenuItems = [
     showAlways: true,
   },
   {
+    title: "Aulas Gravadas",
+    path: "/professor/aulas",
+    icon: GraduationCap,
+    tooltip: "Acesse aulas organizadas por competência.",
+    showAlways: true,
+  },
+  {
+    title: "Aulas ao Vivo",
+    path: "/professor/salas-virtuais",
+    icon: Video,
+    tooltip: "Participe de aulas ao vivo com registro de frequência.",
+    showAlways: true,
+  },
+  {
     title: "Microaprendizagem",
     path: "/professor/microaprendizagem",
     icon: Layers,
     tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais.",
+    showAlways: true,
+  },
+  {
+    title: "Repertório Orientado",
+    path: "/professor/repertorio",
+    icon: Library,
+    tooltip: "Publique parágrafos com repertório e receba feedback dos colegas.",
     showAlways: true,
   },
   {
@@ -89,71 +107,39 @@ const contentMenuItems = [
   },
 ];
 
-const professorTools = [
-  { title: "Minhas Turmas", path: "/professor/turmas", icon: GraduationCap },
-  { title: "Meus Alunos", path: "/professor/alunos", icon: Users },
-  { title: "Jarvis Correção", path: "/professor/jarvis-correcao", icon: Bot },
-  { title: "Simulados", path: "/professor/simulados", icon: ClipboardList },
-  { title: "Avisos", path: "/professor/avisos", icon: Bell },
-  { title: "Visitantes", path: "/professor/visitantes", icon: UserPlus },
-];
-
 const ProfessorHome = () => {
   const { professor } = useProfessorAuth();
 
-  // Impede que o breadcrumb automático gere "Início > Início" no dashboard
   const emptyBreadcrumbs = useMemo(() => [], []);
   useBreadcrumbs(emptyBreadcrumbs);
 
-  const primeiroNome = professor?.nome_completo?.split(' ')[0] || 'Professor';
+  const primeiroNome = professor?.nome_completo?.split(" ")[0] || "Professor";
+  const turmaCode = professor?.turma_nome || "professor";
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 pb-8">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 pb-20">
         <StudentHeader />
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Saudação */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-800">
-              Olá, Prof. {primeiroNome}!
+              Olá, {primeiroNome}!
             </h1>
-            {professor?.turma_nome && (
-              <p className="text-sm text-gray-500 mt-1">
-                Turma: <span className="font-medium">{professor.turma_nome}</span>
-              </p>
-            )}
           </div>
 
-          {/* Ferramentas exclusivas do professor */}
-          <div className="mb-8">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Ferramentas do Professor
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {professorTools.map((tool) => (
-                <Link key={tool.path} to={tool.path}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2 bg-white hover:bg-primary hover:text-white transition-colors"
-                  >
-                    <tool.icon className="w-4 h-4" />
-                    {tool.title}
-                  </Button>
-                </Link>
-              ))}
-            </div>
+          <div className="max-w-5xl mx-auto mb-8">
+            <CalendarioAtividades turmaCode={turmaCode} />
           </div>
 
-          {/* Conteúdo herdado do app */}
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Conteúdo do App
-            </h2>
+          <div className="max-w-5xl mx-auto mb-8">
+            <MuralAvisos turmaCode={turmaCode} />
           </div>
-          <MenuGrid menuItems={contentMenuItems} showMinhasRedacoes={false} />
+
+          <MenuGrid menuItems={menuItems} showMinhasRedacoes={false} maxCards={6} />
         </main>
+
+        <ProfessorBottomNavigation />
       </div>
     </TooltipProvider>
   );
