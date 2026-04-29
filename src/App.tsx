@@ -119,6 +119,7 @@ const LaboratorioAulaView  = lazy(() => import("./components/repertorio/laborato
 const LaboratorioRepertorio = lazy(() => import("./pages/LaboratorioRepertorio"));
 const GuiaTematicoView     = lazy(() => import("./components/guia-tematico/GuiaTematicoView").then(m => ({ default: m.GuiaTematicoView })));
 const ProfessorJarvisCorrecao = lazy(() => import("./pages/professor/ProfessorJarvisCorrecao").then(m => ({ default: m.ProfessorJarvisCorrecao })));
+const ProfessorMais           = lazy(() => import("./pages/professor/ProfessorMais"));
 
 // Fallback de carregamento entre rotas
 const PageLoader = () => (
@@ -320,6 +321,7 @@ function App() {
                     <Route path="/professor/microaprendizagem" element={<ProfessorProtectedRoute><Microaprendizagem /></ProfessorProtectedRoute>} />
                     <Route path="/professor/microaprendizagem/:topicoId" element={<ProfessorProtectedRoute><MicroaprendizagemTopico /></ProfessorProtectedRoute>} />
                     <Route path="/professor/microaprendizagem/:topicoId/:itemId" element={<ProfessorProtectedRoute><MicroaprendizagemItem /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/mais" element={<ProfessorProtectedRoute><ProfessorMais /></ProfessorProtectedRoute>} />
                   </Routes>
                   </Suspense>
                 </div>

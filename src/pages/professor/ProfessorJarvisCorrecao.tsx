@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useJarvisCorrecao } from "@/hooks/useJarvisCorrecao";
+import { StudentHeader } from "@/components/StudentHeader";
 import { EnviarRedacaoForm } from "@/components/professor/correcao/EnviarRedacaoForm";
 import { HistoricoCorrecoes } from "@/components/professor/correcao/HistoricoCorrecoes";
 import { DetalhesCorrecao } from "@/components/professor/correcao/DetalhesCorrecao";
@@ -26,7 +27,9 @@ export const ProfessorJarvisCorrecao = () => {
   if (!professor) return <div className="p-6">Carregando...</div>;
 
   return (
-    <div className="min-h-screen bg-white px-4 py-6 text-zinc-950 md:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 pb-20">
+      <StudentHeader />
+      <div className="px-4 py-6 text-zinc-950 md:px-8">
       <div className="mx-auto max-w-5xl space-y-5">
         {/* Cabeçalho */}
         <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -116,6 +119,7 @@ export const ProfessorJarvisCorrecao = () => {
         ) : (
           <HistoricoCorrecoes professorEmail={professor.email} />
         )}
+      </div>
       </div>
     </div>
   );

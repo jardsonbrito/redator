@@ -66,7 +66,16 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       'manuscrita': 'Manuscrita',
       'guia-tematico': 'Guia Temático',
       'repertorio': 'Repertório Orientado',
+      'repertorio-orientado': 'Repertório Orientado',
+      'laboratorio-repertorio': 'Laboratório de Repertório',
       'microaprendizagem': 'Microaprendizagem',
+      'redacoes-comentadas': 'Redações Comentadas',
+      'jarvis-correcao': 'Jarvis',
+      'jarvis': 'Jarvis',
+      'turmas': 'Minhas Turmas',
+      'alunos': 'Meus Alunos',
+      'diario-online': 'Diário Online',
+      'salas-virtuais': 'Aulas ao Vivo',
       'dashboard': 'Início'
     };
 

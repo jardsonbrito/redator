@@ -58,11 +58,6 @@ interface ModoCorrecao {
   blocos_padrao: Array<{ tipo: TipoBloco; ordem: number; visivel: boolean }>;
 }
 
-interface TurmaProfessor {
-  id: string;
-  nome: string;
-}
-
 interface Props {
   editingId?: string | null;
   onSuccess: () => void;
@@ -880,7 +875,6 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
   const [capa, setCapa] = useState<ImageValue>(null);
 
   const [modosCorrecao, setModosCorrecao] = useState<ModoCorrecao[]>([]);
-  const [turmasProfessores, setTurmasProfessores] = useState<TurmaProfessor[]>([]);
 
   // Chip de bloco ativo na seção Blocos
   const [blocoAtivoLocalId, setBlocoAtivoLocalId] = useState<string | null>(null);
@@ -888,15 +882,11 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
   // Tipo de bloco a adicionar manualmente
   const [tipoParaAdicionar, setTipoParaAdicionar] = useState<TipoBloco>('texto_original');
 
-  // Carrega modos e turmas de professores
+  // Carrega modos de correção
   useEffect(() => {
     const carregar = async () => {
-      const [modosRes, turmasRes] = await Promise.all([
-        supabase.from('modos_correcao').select('*').order('id'),
-        supabase.from('turmas_professores').select('id, nome').eq('ativo', true).order('nome'),
-      ]);
-      setModosCorrecao((modosRes.data || []) as ModoCorrecao[]);
-      setTurmasProfessores((turmasRes.data || []) as TurmaProfessor[]);
+      const { data } = await supabase.from('modos_correcao').select('*').order('id');
+      setModosCorrecao((data || []) as ModoCorrecao[]);
     };
     carregar();
   }, []);
@@ -1219,7 +1209,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
           <div>
             <Label>Turmas Autorizadas *</Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Selecione quais turmas de alunos e/ou professores podem visualizar esta redação.
+              Selecione quais turmas podem visualizar esta redação.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {turmasAlunos.map(({ valor, label }) => (
@@ -1232,22 +1222,6 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
                 </label>
               ))}
             </div>
-            {turmasProfessores.length > 0 && (
-              <>
-                <p className="text-xs text-muted-foreground mt-3 mb-2">Turmas de professores:</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {turmasProfessores.map((tp) => (
-                    <label key={tp.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                      <Checkbox
-                        checked={turmasAutorizadas.includes(tp.nome)}
-                        onCheckedChange={() => handleToggleTurma(tp.nome)}
-                      />
-                      <span>{tp.nome}</span>
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
 
           <ImageSelector

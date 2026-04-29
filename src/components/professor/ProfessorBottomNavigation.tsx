@@ -1,13 +1,12 @@
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Home, Bot, BookOpen, GraduationCap, Grid3x3 } from "lucide-react";
+import { Home, Bot, BookOpen, Grid3x3 } from "lucide-react";
 
 const navItems = [
-  { path: "/professor",               label: "Início",  icon: Home },
-  { path: "/professor/jarvis-correcao", label: "Jarvis",  icon: Bot },
-  { path: "/professor/temas",         label: "Temas",   icon: BookOpen },
-  { path: "/professor/aulas",         label: "Aulas",   icon: GraduationCap },
-  { path: "/professor/turmas",        label: "Turmas",  icon: Grid3x3 },
+  { path: "/professor",                 label: "Início", icon: Home },
+  { path: "/professor/jarvis-correcao", label: "Jarvis", icon: Bot },
+  { path: "/professor/temas",           label: "Temas",  icon: BookOpen },
+  { path: "/professor/mais",            label: "Mais",   icon: Grid3x3 },
 ];
 
 export const ProfessorBottomNavigation = () => {
