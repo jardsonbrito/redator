@@ -251,7 +251,7 @@ function App() {
                     <Route path="/professor/entrar" element={<ProfessorAutoAtendimento />} />
                     <Route path="/professor" element={
                       <ProfessorProtectedRoute>
-                        <ProfessorDashboard />
+                        <ProfessorHome />
                       </ProfessorProtectedRoute>
                     } />
                     <Route path="/professor/dashboard" element={

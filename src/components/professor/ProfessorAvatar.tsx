@@ -27,36 +27,40 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
       try {
         let profileData = null;
         
-        console.log('🔍 Carregando avatar do professor. user?.id:', user?.id, 'professor.email:', professor.email);
-        
-        // Buscar por user.id primeiro (professor autenticado)
+        // 1. Buscar por user.id (sessão Supabase auth, se disponível)
         if (user?.id) {
           const { data, error } = await supabase
             .from('profiles')
             .select('avatar_url, id, email')
             .eq('id', user.id)
             .maybeSingle();
-          
+
           if (error) console.error('❌ Erro ao buscar avatar do professor por user.id:', error);
-          if (data) {
-            console.log('✅ Perfil do professor encontrado por user.id:', data);
-            profileData = data;
-          }
+          if (data) profileData = data;
         }
-        
-        // Fallback para buscar por email se não encontrou por ID
+
+        // 2. Buscar por professor.id (mesmo UUID da tabela professores)
+        if (!profileData && professor.id) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('avatar_url, id, email')
+            .eq('id', professor.id)
+            .maybeSingle();
+
+          if (error) console.error('❌ Erro ao buscar avatar do professor por professor.id:', error);
+          if (data) profileData = data;
+        }
+
+        // 3. Fallback para buscar por email
         if (!profileData && professor.email) {
           const { data, error } = await supabase
             .from('profiles')
             .select('avatar_url, id, email')
             .eq('email', professor.email.toLowerCase())
             .maybeSingle();
-          
+
           if (error) console.error('❌ Erro ao buscar avatar do professor por email:', error);
-          if (data) {
-            console.log('✅ Perfil do professor encontrado por email:', data);
-            profileData = data;
-          }
+          if (data) profileData = data;
         }
 
         // Se encontrou perfil com avatar_url, gerar URL pública
@@ -134,11 +138,11 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
     setUploading(true);
     
     try {
-      // Usar perfil já carregado ou buscar user.id
-      let userId = userProfile?.id || user?.id;
-      
+      // Usar perfil já carregado ou os IDs disponíveis como fallback
+      let userId = userProfile?.id || user?.id || professor?.id;
+
       if (!userId) {
-        console.error('❌ Perfil do professor não encontrado para upload');
+        console.error('❌ Nenhum ID disponível para upload do professor');
         throw new Error('Perfil do professor não encontrado. Verifique se você está logado corretamente.');
       }
 
@@ -172,11 +176,14 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
       
       console.log("🌐 Nova URL pública do professor:", newAvatarUrl);
 
-      // Atualizar avatar_url no banco
+      // Atualizar/criar perfil com o novo avatar_url
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: filePath })
-        .eq('id', userId);
+        .upsert({
+          id: userId,
+          email: professor.email.toLowerCase(),
+          avatar_url: filePath,
+        }, { onConflict: 'id' });
 
       if (updateError) {
         console.error("❌ Erro ao atualizar avatar do professor no banco:", updateError);

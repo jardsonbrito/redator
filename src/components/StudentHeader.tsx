@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAvatar } from "@/components/StudentAvatar";
+import { ProfessorAvatar } from "@/components/professor/ProfessorAvatar";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useSubscription } from "@/hooks/useSubscription";
 import { InboxNotificationIcon } from "@/components/student/InboxNotificationIcon";
@@ -32,8 +33,8 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Buscar subscription com o email correto
-  const userEmail = studentData.email || studentData.emailUsuario || '';
+  // Subscription só é relevante para alunos
+  const userEmail = !professor ? (studentData.email || studentData.emailUsuario || '') : '';
   const { data: subscription } = useSubscription(userEmail);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -51,21 +52,26 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   // Carregar dados do perfil quando o drawer abrir
   useEffect(() => {
     const carregarDadosPerfil = async () => {
-      if (drawerOpen && studentData.email) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', studentData.email)
-          .single();
+      if (!drawerOpen) return;
+      // Para professor usa o email do contexto professor; para aluno usa studentData
+      const emailParaBuscar = professor
+        ? professor.email
+        : (studentData.email || '');
+      if (!emailParaBuscar) return;
 
-        if (data && !error) {
-          setProfileData(data);
-        }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', emailParaBuscar)
+        .maybeSingle();
+
+      if (data && !error) {
+        setProfileData(data);
       }
     };
 
     carregarDadosPerfil();
-  }, [drawerOpen, studentData.email]);
+  }, [drawerOpen, studentData.email, professor?.email]);
 
   const handleLogout = () => {
     if (professor) {
@@ -89,7 +95,9 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
     ? null
     : (studentData.userType === "aluno" ? studentData.turma : null);
 
-  const emailExibido = studentData.email || studentData.emailUsuario || '';
+  const emailExibido = professor
+    ? professor.email
+    : (studentData.email || studentData.emailUsuario || '');
 
   return (
     <>
@@ -131,7 +139,10 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
               <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
                 <SheetTrigger asChild>
                   <button className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <StudentAvatar size="sm" showUpload={false} />
+                    {professor
+                      ? <ProfessorAvatar size="sm" showUpload={false} />
+                      : <StudentAvatar size="sm" showUpload={false} />
+                    }
                   </button>
                 </SheetTrigger>
 <SheetContent side="right" className="w-[320px] sm:w-[380px] overflow-y-auto">
@@ -142,9 +153,12 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                   <div className="mt-6 space-y-6">
                     {/* Avatar grande */}
                     <div className="flex flex-col items-center gap-3">
-                      <StudentAvatar size="lg" showUpload={true} />
+                      {professor
+                        ? <ProfessorAvatar size="lg" showUpload={true} />
+                        : <StudentAvatar size="lg" showUpload={true} />
+                      }
                       <p className="text-xs text-center font-medium text-primary/70 italic tracking-wide">
-                        redação na prática, aprovação na certa!
+                        {professor ? 'Área do Professor' : 'redação na prática, aprovação na certa!'}
                       </p>
                     </div>
 
@@ -220,91 +234,113 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                       </>
                     )}
 
-                    {/* Seção: Assinatura */}
-                    <>
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-sm text-gray-500 uppercase">Assinatura</h3>
+                    {/* Seção: Assinatura — apenas para alunos/visitantes */}
+                    {!professor && (
+                      <>
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-sm text-gray-500 uppercase">Assinatura</h3>
 
-                        {subscription ? (
-                          <div className="space-y-3">
-                            {/* Plano */}
-                            {subscription.plano ? (
+                          {subscription ? (
+                            <div className="space-y-3">
+                              {subscription.plano ? (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Plano:</span>
+                                  <Badge variant="secondary" className="px-3 py-1">
+                                    {subscription.plano === 'Bolsista' ? 'Bolsista' : `Plano ${subscription.plano}`}
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Plano:</span>
+                                  <span className="text-sm text-gray-400">Sem plano ativo</span>
+                                </div>
+                              )}
+
+                              {subscription.status && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Status:</span>
+                                  <Badge
+                                    variant={subscription.status === 'Ativo' ? 'default' : 'secondary'}
+                                    className="px-3 py-1"
+                                  >
+                                    {subscription.status}
+                                  </Badge>
+                                </div>
+                              )}
+
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Plano:</span>
-                                <Badge variant="secondary" className="px-3 py-1">
-                                  {subscription.plano === 'Bolsista' ? 'Bolsista' : `Plano ${subscription.plano}`}
+                                <span className="text-sm text-muted-foreground">Créditos:</span>
+                                <Badge variant="outline" className="px-3 py-1 font-semibold">
+                                  {subscription.creditos || 0}
                                 </Badge>
                               </div>
-                            ) : (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Plano:</span>
-                                <span className="text-sm text-gray-400">Sem plano ativo</span>
-                              </div>
-                            )}
 
-                            {/* Status */}
-                            {subscription.status && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Status:</span>
-                                <Badge
-                                  variant={subscription.status === 'Ativo' ? 'default' : 'secondary'}
-                                  className="px-3 py-1"
-                                >
-                                  {subscription.status}
-                                </Badge>
-                              </div>
-                            )}
+                              {subscription.data_validade && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Validade:</span>
+                                  <span className="text-sm font-medium">
+                                    {new Date(subscription.data_validade).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              )}
 
-                            {/* Créditos */}
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Créditos:</span>
-                              <Badge variant="outline" className="px-3 py-1 font-semibold">
-                                {subscription.creditos || 0}
-                              </Badge>
+                              {subscription.dias_restantes !== undefined && subscription.status === 'Ativo' && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Dias restantes:</span>
+                                  <span className={`text-sm font-semibold ${
+                                    subscription.dias_restantes <= 7 ? 'text-orange-600' :
+                                    subscription.dias_restantes <= 30 ? 'text-yellow-600' :
+                                    'text-green-600'
+                                  }`}>
+                                    {subscription.dias_restantes} {subscription.dias_restantes === 1 ? 'dia' : 'dias'}
+                                  </span>
+                                </div>
+                              )}
                             </div>
+                          ) : (
+                            <p className="text-sm text-gray-400">Carregando informações...</p>
+                          )}
+                        </div>
+                        <Separator />
+                      </>
+                    )}
 
-                            {/* Data de Validade */}
-                            {subscription.data_validade && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Validade:</span>
-                                <span className="text-sm font-medium">
-                                  {new Date(subscription.data_validade).toLocaleDateString('pt-BR')}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Dias Restantes */}
-                            {subscription.dias_restantes !== undefined && subscription.status === 'Ativo' && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Dias restantes:</span>
-                                <span className={`text-sm font-semibold ${
-                                  subscription.dias_restantes <= 7 ? 'text-orange-600' :
-                                  subscription.dias_restantes <= 30 ? 'text-yellow-600' :
-                                  'text-green-600'
-                                }`}>
-                                  {subscription.dias_restantes} {subscription.dias_restantes === 1 ? 'dia' : 'dias'}
-                                </span>
-                              </div>
+                    {/* Seção: Função — apenas para professor */}
+                    {professor && (
+                      <>
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-sm text-gray-500 uppercase">Função</h3>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <GraduationCap className="w-3.5 h-3.5 text-gray-400" />
+                              <Badge variant="secondary" className="px-3 py-1">Professor</Badge>
+                            </div>
+                            {professor.turma_nome && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                <GraduationCap className="w-3.5 h-3.5 text-gray-400" />
+                                <span>Turma:</span>
+                                <span className="font-medium">{professor.turma_nome}</span>
+                              </p>
                             )}
                           </div>
-                        ) : (
-                          <p className="text-sm text-gray-400">Carregando informações...</p>
-                        )}
-                      </div>
-                      <Separator />
-                    </>
+                        </div>
+                        <Separator />
+                      </>
+                    )}
 
                     {/* Botões de Ação */}
                     <div className="space-y-3">
-                      <Link to="/editar-perfil" onClick={() => setDrawerOpen(false)}>
-                        <Button
-                          variant="outline"
-                          className="w-full flex items-center justify-center gap-2"
-                        >
-                          <UserCircle className="w-4 h-4" />
-                          Editar Perfil
-                        </Button>
-                      </Link>
+                      {!professor && (
+                        <Link to="/editar-perfil" onClick={() => setDrawerOpen(false)}>
+                          <Button
+                            variant="outline"
+                            className="w-full flex items-center justify-center gap-2"
+                          >
+                            <UserCircle className="w-4 h-4" />
+                            Editar Perfil
+                          </Button>
+                        </Link>
+                      )}
 
                       <Button
                         onClick={() => {
