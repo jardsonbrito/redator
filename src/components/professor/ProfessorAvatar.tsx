@@ -60,7 +60,7 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
     loadAvatar();
   }, [professor?.email, onAvatarUpdate]);
 
-  const sizeClasses = { sm: 'w-8 h-8', md: 'w-16 h-16', lg: 'w-32 h-32' };
+  const sizeClasses = { sm: 'w-11 h-11', md: 'w-16 h-16', lg: 'w-32 h-32' };
   const cameraIconSize = size === 'lg' ? 'w-6 h-6' : 'w-4 h-4';
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
