@@ -23,6 +23,7 @@ export interface EventoCalendario {
   cor?: string;
   entidade_tipo?: string;
   entidade_id?: string;
+  link_direto?: string;
   turmas_autorizadas: string[];
   permite_visitante: boolean;
   status: string;
@@ -53,6 +54,7 @@ const TIPOS_EVENTO = [
   { value: 'nivelamento',          label: 'Aula de Nivelamento' },
   { value: 'prazo',                label: 'Prazo Importante' },
   { value: 'aviso_pedagogico',     label: 'Aviso Pedagógico' },
+  { value: 'reuniao',              label: 'Reunião (Google Meet)' },
   { value: 'atividade_especial',   label: 'Atividade Especial' },
 ];
 
@@ -78,6 +80,7 @@ const TIPO_CORES: Record<string, string> = {
   nivelamento:          '#6366f1',
   prazo:                '#ef4444',
   aviso_pedagogico:     '#6b7280',
+  reuniao:              '#0ea5e9',
   atividade_especial:   '#10b981',
 };
 
@@ -119,6 +122,7 @@ export const EventoCalendarioForm = ({
     cor: '',
     entidade_tipo: '',
     entidade_id: '',
+    link_direto: '',
     turmas_autorizadas: [],
     permite_visitante: false,
     status: 'publicado',
@@ -133,6 +137,7 @@ export const EventoCalendarioForm = ({
         cor: initialValues.cor || '',
         entidade_tipo: initialValues.entidade_tipo || '',
         entidade_id: initialValues.entidade_id || '',
+        link_direto: initialValues.link_direto || '',
         competencia: initialValues.competencia || '',
         descricao: initialValues.descricao || '',
       });
@@ -198,6 +203,7 @@ export const EventoCalendarioForm = ({
       cor: form.cor || null,
       entidade_tipo: form.entidade_tipo || null,
       entidade_id: form.entidade_id || null,
+      link_direto: form.link_direto?.trim() || null,
       turmas_autorizadas: form.turmas_autorizadas,
       permite_visitante: form.permite_visitante,
       status: form.status,
@@ -221,6 +227,7 @@ export const EventoCalendarioForm = ({
           titulo: '', descricao: '', tipo_evento: 'aviso_pedagogico', competencia: '',
           data_evento: new Date().toISOString().slice(0, 10),
           hora_inicio: '', hora_fim: '', cor: '', entidade_tipo: '', entidade_id: '',
+          link_direto: '',
           turmas_autorizadas: [], permite_visitante: false, status: 'publicado',
         });
       }
@@ -316,6 +323,28 @@ export const EventoCalendarioForm = ({
                 </SelectContent>
               </Select>
             </div>
+            {(form.tipo_evento === 'aviso_pedagogico' || form.tipo_evento === 'reuniao') && (
+              <div className="space-y-1.5">
+                <Label>
+                  Link do Google Meet{' '}
+                  {form.tipo_evento === 'reuniao'
+                    ? <span className="text-red-400">*</span>
+                    : <span className="text-gray-400 font-normal">(opcional)</span>}
+                </Label>
+                <Input
+                  value={form.link_direto}
+                  onChange={e => setForm(f => ({ ...f, link_direto: e.target.value }))}
+                  placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                  spellCheck={false}
+                />
+                {form.tipo_evento === 'reuniao' && (
+                  <p className="text-xs text-gray-400">
+                    O link ficará disponível como botão "Entrar na reunião" no calendário.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label>Competência Associada <span className="text-gray-400 font-normal">(opcional)</span></Label>
               <Select

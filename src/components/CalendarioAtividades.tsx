@@ -484,8 +484,10 @@ export const CalendarioAtividades = ({ turmaCode }: Props) => {
                           onClick={() => handleAcao(evento)}
                         >
                           <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                          {evento.link_direto && evento.entidade_tipo === 'aula_ao_vivo'
+                          {evento.link_direto && evento.tipo_evento === 'aula_ao_vivo'
                             ? 'Entrar na aula'
+                            : evento.link_direto
+                            ? 'Entrar na reunião'
                             : acaoConfig?.label}
                         </Button>
                       )}

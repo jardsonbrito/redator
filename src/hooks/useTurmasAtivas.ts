@@ -21,6 +21,7 @@ export function useTurmasAtivas() {
       .from('turmas_professores')
       .select('id, nome')
       .eq('ativo', true)
+      .is('criado_pelo_professor_id', null)
       .order('nome')
       .then(({ data }) => {
         setTurmasProfessores((data || []).map(t => ({ id: t.id, valor: t.nome, label: t.nome })));

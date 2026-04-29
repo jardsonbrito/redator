@@ -46,6 +46,19 @@ export const TurmaSelector = ({
               </div>
             ))}
           </div>
+
+          {onPermiteVisitanteChange && (
+            <div className="flex items-center space-x-2 pt-2 mt-1 border-t border-dashed border-gray-200">
+              <Checkbox
+                id="permite-visitante"
+                checked={permiteeVisitante}
+                onCheckedChange={(checked) => onPermiteVisitanteChange(!!checked)}
+              />
+              <Label htmlFor="permite-visitante" className="text-sm font-normal text-gray-600">
+                Permitir visitantes
+              </Label>
+            </div>
+          )}
         </div>
       )}
 
@@ -74,15 +87,16 @@ export const TurmaSelector = ({
         <p className="text-sm text-gray-400">Nenhuma turma ativa encontrada.</p>
       )}
 
-      {onPermiteVisitanteChange && (
+      {/* Fallback: Permite visitante quando não há turmas de alunos mas o prop é fornecido */}
+      {onPermiteVisitanteChange && turmasDinamicas.length === 0 && (
         <div className="flex items-center space-x-2 pt-2 border-t">
           <Checkbox
-            id="permite-visitante"
+            id="permite-visitante-fb"
             checked={permiteeVisitante}
             onCheckedChange={(checked) => onPermiteVisitanteChange(!!checked)}
           />
-          <Label htmlFor="permite-visitante" className="font-medium">
-            Permite visitante
+          <Label htmlFor="permite-visitante-fb" className="text-sm font-normal text-gray-600">
+            Permitir visitantes
           </Label>
         </div>
       )}
