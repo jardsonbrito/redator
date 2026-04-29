@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Users, BookOpen, FileText } from 'lucide-react';
+import { Search, X, Users, BookOpen, LayoutGrid } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
-  type: 'aluno' | 'tema';
+  type: 'aluno' | 'tema' | 'funcionalidade';
   id: string;
   title: string;
   subtitle: string;
@@ -15,8 +15,9 @@ interface AdminGlobalSearchProps {
 }
 
 const TYPE_CONFIG = {
-  aluno: { icon: Users, label: 'Aluno', color: 'text-emerald-600' },
-  tema: { icon: BookOpen, label: 'Tema', color: 'text-orange-500' },
+  aluno:          { icon: Users,       label: 'Aluno',          color: 'text-emerald-600' },
+  tema:           { icon: BookOpen,    label: 'Tema',           color: 'text-orange-500'  },
+  funcionalidade: { icon: LayoutGrid,  label: 'Funcionalidade', color: 'text-violet-600'  },
 } as const;
 
 export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => {
@@ -52,7 +53,7 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
         const searchTerm = `%${query.trim()}%`;
         const found: SearchResult[] = [];
 
-        const [alunosRes, temasRes] = await Promise.all([
+        const [alunosRes, temasRes, funcsRes] = await Promise.all([
           supabase
             .from('alunos')
             .select('id, nome, email, turma')
@@ -63,6 +64,12 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
             .select('id, titulo, status')
             .ilike('titulo', searchTerm)
             .limit(4),
+          supabase
+            .from('funcionalidades')
+            .select('id, chave, nome_exibicao')
+            .ilike('nome_exibicao', searchTerm)
+            .eq('ativo', true)
+            .limit(5),
         ]);
 
         (alunosRes.data || []).forEach((a) => {
@@ -80,6 +87,15 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
             id: t.id,
             title: t.titulo || 'Tema',
             subtitle: t.status === 'rascunho' ? 'Rascunho' : 'Publicado',
+          });
+        });
+
+        (funcsRes.data || []).forEach((f) => {
+          found.push({
+            type: 'funcionalidade',
+            id: (f as { chave: string }).chave,
+            title: (f as { nome_exibicao: string }).nome_exibicao,
+            subtitle: 'Ir para o módulo',
           });
         });
 
@@ -112,7 +128,7 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setIsOpen(true)}
-          placeholder="Buscar aluno, tema, redação, módulo..."
+          placeholder="Buscar aluno, tema, funcionalidade..."
           className="w-full pl-9 pr-8 py-2 text-sm bg-gray-100 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 focus:bg-white transition-all placeholder:text-gray-400"
         />
         {query && (

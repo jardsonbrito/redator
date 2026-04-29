@@ -872,9 +872,28 @@ const Admin = () => {
     }
   };
 
-  const handleSearchResultClick = (type: string) => {
-    if (type === 'aluno') setActiveView('alunos');
-    else if (type === 'tema') setActiveView('temas');
+  const handleSearchResultClick = (type: string, id: string) => {
+    if (type === 'aluno') { setActiveView('alunos'); return; }
+    if (type === 'tema')  { setActiveView('temas');  return; }
+    if (type === 'funcionalidade') {
+      const viewMap: Record<string, string> = {
+        temas:               'temas',
+        exercicios:          'exercicios',
+        simulados:           'simulados',
+        aulas_gravadas:      'aulas',
+        aulas_ao_vivo:       'salas-virtuais',
+        biblioteca:          'biblioteca',
+        videoteca:           'videos',
+        lousa:               'lousa',
+        calendario_atividades: 'calendario',
+        redacoes_exemplares: 'redacoes',
+        redacoes_comentadas: 'redacoes',
+        diario_online:       'inbox',
+        gamificacao:         'gamificacao',
+      };
+      const view = viewMap[id];
+      if (view) setActiveView(view);
+    }
   };
 
 
