@@ -47,6 +47,7 @@ const MODULE_FALLBACKS: Record<string, string> = {
   top5: 'Destaques da turma',
   'repertorio-orientado': 'Aulas e repertórios',
   microaprendizagem: 'Tópicos formativos',
+  interatividade: 'Enquetes e participação',
   'plano-estudo': 'Trilhas pedagógicas',
   configuracoes: 'Conta, envios e assinatura',
 };
@@ -94,7 +95,7 @@ const GROUPS: {
     title: 'Aulas e Experiências',
     description: 'Vídeo, aulas e engajamento.',
     Icon: MonitorPlay,
-    moduleIds: ['salas-virtuais', 'aulas', 'videos', 'gamificacao', 'diario'],
+    moduleIds: ['salas-virtuais', 'aulas', 'videos', 'gamificacao', 'diario', 'interatividade'],
   },
   {
     id: 'comunicacao',
