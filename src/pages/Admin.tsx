@@ -898,6 +898,7 @@ const Admin = () => {
         jarvis_correcao:       'jarvis',
         guia_tematico:         'guia-tematico',
         microaprendizagem:     'microaprendizagem',
+        interatividade:        'interatividade',
         repertorio_orientado:  'repertorio-orientado',
         top_5:                 'top5',
       };
