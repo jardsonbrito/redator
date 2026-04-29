@@ -18,7 +18,6 @@ interface AulaVirtualFormProps {
 }
 
 type AulaDisponivel = { id: string; titulo: string; data_aula: string };
-type TurmaProfessor = { id: string; nome: string };
 
 const formatarData = (data: string) => {
   if (!data) return '';
@@ -32,7 +31,6 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
-  const [turmasProfessores, setTurmasProfessores] = useState<TurmaProfessor[]>([]);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -53,22 +51,14 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
 
   useEffect(() => {
     const carregarDados = async () => {
-      const [aulasRes, turmasRes] = await Promise.all([
-        (supabase
-          .from('aulas_virtuais')
-          .select('id, titulo, data_aula')
-          .eq('eh_aula_ao_vivo', true)
-          .eq('ativo', true)
-          .is('aula_mae_id', null)
-          .order('data_aula', { ascending: false }) as any),
-        supabase
-          .from('turmas_professores')
-          .select('id, nome')
-          .eq('ativo', true)
-          .order('nome', { ascending: true }),
-      ]);
-      setAulasDisponiveis((aulasRes.data || []) as AulaDisponivel[]);
-      setTurmasProfessores((turmasRes.data || []) as TurmaProfessor[]);
+      const { data } = await (supabase
+        .from('aulas_virtuais')
+        .select('id, titulo, data_aula')
+        .eq('eh_aula_ao_vivo', true)
+        .eq('ativo', true)
+        .is('aula_mae_id', null)
+        .order('data_aula', { ascending: false }) as any);
+      setAulasDisponiveis((data || []) as AulaDisponivel[]);
     };
     carregarDados();
   }, []);
@@ -542,33 +532,6 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
                       ))}
                     </div>
                   </div>
-
-                  {/* Turmas de Professores */}
-                  {turmasProfessores.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium">Turmas de Professores</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {turmasProfessores.map((turma) => (
-                          <div key={turma.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`turma-prof-${turma.id}`}
-                              checked={formData.turmas_autorizadas.includes(turma.nome)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, turma.nome]});
-                                } else {
-                                  setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== turma.nome)});
-                                }
-                              }}
-                            />
-                            <label htmlFor={`turma-prof-${turma.id}`} className="text-sm font-medium">
-                              {turma.nome}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Permitir Visitantes */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
