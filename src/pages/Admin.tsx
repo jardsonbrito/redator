@@ -156,6 +156,9 @@ import { JarvisCorrecaoCreditosProfessores } from "@/components/admin/JarvisCorr
 // Import microaprendizagem admin
 import { MicroTopicosAdmin } from "@/components/microaprendizagem/admin/MicroTopicosAdmin";
 
+// Import interacoes admin
+import { InteracoesAdmin } from "@/components/interacoes/admin/InteracoesAdmin";
+
 // Import diário components
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
 import RegistroAulas from "@/pages/admin/RegistroAulas";
@@ -806,6 +809,7 @@ const Admin = () => {
     { id: "repertorio-orientado", label: "Repertório Orientado", icon: Article, iconColor: "#8B5CF6" },
     { id: "laboratorio", label: "Laboratório", icon: LaboratorioIcon, iconColor: "#7C3AED" },
     { id: "microaprendizagem", label: "Microaprendizagem", icon: Layers, iconColor: "#8B5CF6" },
+    { id: "interatividade", label: "Interatividade", icon: ListChecks, iconColor: "#6D28D9" },
     { id: "guia-tematico", label: "Guia Temático", icon: Map, iconColor: "#7C3AED" },
     { id: "plano-estudo", label: "Plano de Estudo", icon: ListChecks, iconColor: "#3F0776" },
 
@@ -1252,6 +1256,19 @@ const Admin = () => {
               </div>
             </div>
             <MicroTopicosAdmin />
+          </div>
+        );
+
+      case "interatividade":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Interatividade</h1>
+                <p className="text-muted-foreground mt-1">Crie enquetes e atividades para os alunos responderem.</p>
+              </div>
+            </div>
+            <InteracoesAdmin />
           </div>
         );
 

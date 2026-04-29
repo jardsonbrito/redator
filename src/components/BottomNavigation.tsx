@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, TrendingUp, BookOpen, Grid3x3, MessageCircle } from "lucide-react";
+import { Home, TrendingUp, BookOpen, Grid3x3, MessageCircle, ClipboardList } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 
@@ -31,11 +31,11 @@ export const BottomNavigation = () => {
   }, [studentData.email]);
 
   const navItems = [
-    { path: "/app",          label: "Início",      icon: Home },
-    { path: "/ajuda-rapida", label: "Ajuda Rápida", icon: MessageCircle, badge: mensagensNaoLidas },
-    { path: "/desempenho",   label: "Desempenho",  icon: TrendingUp },
-    { path: "/plano",        label: "Plano",       icon: BookOpen },
-    { path: "/mais",         label: "Mais",        icon: Grid3x3 },
+    { path: "/app",             label: "Início",        icon: Home },
+    { path: "/ajuda-rapida",    label: "Ajuda Rápida",  icon: MessageCircle, badge: mensagensNaoLidas },
+    { path: "/interatividade",  label: "Interatividade", icon: ClipboardList },
+    { path: "/desempenho",      label: "Desempenho",    icon: TrendingUp },
+    { path: "/mais",            label: "Mais",          icon: Grid3x3 },
   ];
 
   return (

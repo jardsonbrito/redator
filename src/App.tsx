@@ -27,6 +27,8 @@ const Simulados               = lazy(() => import("./pages/Simulados"));
 const Microaprendizagem       = lazy(() => import("./pages/Microaprendizagem"));
 const MicroaprendizagemTopico = lazy(() => import("./pages/MicroaprendizagemTopico"));
 const MicroaprendizagemItem   = lazy(() => import("./pages/MicroaprendizagemItem"));
+const Interatividade          = lazy(() => import("./pages/Interatividade"));
+const InteratividadeResposta  = lazy(() => import("./pages/InteratividadeResposta"));
 const Temas                   = lazy(() => import("./pages/Temas"));
 const TemaDetalhes            = lazy(() => import("./pages/TemaDetalhes"));
 const Aulas                   = lazy(() => import("./pages/Aulas"));
@@ -202,6 +204,8 @@ function App() {
                     <Route path="/microaprendizagem" element={<ProtectedStudentRoute><Microaprendizagem /></ProtectedStudentRoute>} />
                     <Route path="/microaprendizagem/:topicoId" element={<ProtectedStudentRoute><MicroaprendizagemTopico /></ProtectedStudentRoute>} />
                     <Route path="/microaprendizagem/:topicoId/:itemId" element={<ProtectedStudentRoute><MicroaprendizagemItem /></ProtectedStudentRoute>} />
+                    <Route path="/interatividade" element={<ProtectedStudentRoute><Interatividade /></ProtectedStudentRoute>} />
+                    <Route path="/interatividade/:id" element={<ProtectedStudentRoute><InteratividadeResposta /></ProtectedStudentRoute>} />
 
                     {/* Rotas do Admin */}
                     <Route path="/admin" element={<Admin />} />
