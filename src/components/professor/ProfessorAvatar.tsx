@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User } from 'lucide-react';
+import { User, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,221 +12,126 @@ interface ProfessorAvatarProps {
 }
 
 export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }: ProfessorAvatarProps) => {
-  const { user } = useAuth();
   const { professor } = useProfessorAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
 
-  // Carregar avatar do professor
+  // Carrega avatar a partir de profiles (mesmo mecanismo do aluno)
   useEffect(() => {
+    if (!professor?.email) return;
+
     const loadAvatar = async () => {
-      try {
-        let profileData = null;
-        
-        // 1. Buscar por user.id (sessão Supabase auth, se disponível)
-        if (user?.id) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('avatar_url, id, email')
-            .eq('id', user.id)
-            .maybeSingle();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, avatar_url')
+        .eq('email', professor.email.toLowerCase())
+        .maybeSingle();
 
-          if (error) console.error('❌ Erro ao buscar avatar do professor por user.id:', error);
-          if (data) profileData = data;
-        }
+      if (error) {
+        console.error('Erro ao carregar avatar do professor:', error);
+        return;
+      }
 
-        // 2. Buscar por professor.id (mesmo UUID da tabela professores)
-        if (!profileData && professor.id) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('avatar_url, id, email')
-            .eq('id', professor.id)
-            .maybeSingle();
-
-          if (error) console.error('❌ Erro ao buscar avatar do professor por professor.id:', error);
-          if (data) profileData = data;
-        }
-
-        // 3. Fallback para buscar por email
-        if (!profileData && professor.email) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('avatar_url, id, email')
-            .eq('email', professor.email.toLowerCase())
-            .maybeSingle();
-
-          if (error) console.error('❌ Erro ao buscar avatar do professor por email:', error);
-          if (data) profileData = data;
-        }
-
-        // Se encontrou perfil com avatar_url, gerar URL pública
-        if (profileData?.avatar_url) {
-          let finalAvatarUrl: string;
-          
-          // Verificar se é URL externa (http/https) ou arquivo do Storage
-          if (profileData.avatar_url.startsWith('http')) {
-            finalAvatarUrl = profileData.avatar_url;
-            console.log('🌐 Usando avatar externo do professor:', finalAvatarUrl);
-          } else {
-            // Arquivo do Storage
-            const cleanPath = profileData.avatar_url.startsWith('avatars/') 
-              ? profileData.avatar_url.substring(8) 
-              : profileData.avatar_url;
-            
-            const { data } = supabase.storage
-              .from('avatars')
-              .getPublicUrl(cleanPath);
-            
-            finalAvatarUrl = data.publicUrl;
-            console.log('📁 Usando avatar do professor do Storage:', finalAvatarUrl);
-          }
-          
-          setAvatarUrl(finalAvatarUrl);
+      if (data) {
+        setProfileId(data.id);
+        if (data.avatar_url) {
+          const url = data.avatar_url.startsWith('http')
+            ? data.avatar_url
+            : supabase.storage.from('avatars').getPublicUrl(
+                data.avatar_url.startsWith('avatars/')
+                  ? data.avatar_url.substring(8)
+                  : data.avatar_url
+              ).data.publicUrl;
+          setAvatarUrl(url);
           onAvatarUpdate?.(true);
-          setUserProfile(profileData);
-          
-          console.log('✅ Avatar do professor carregado:', finalAvatarUrl);
         } else {
           setAvatarUrl(null);
           onAvatarUpdate?.(false);
-          setUserProfile(profileData);
-          console.log('ℹ️ Professor sem avatar configurado');
         }
-      } catch (error) {
-        console.error('❌ Erro ao carregar avatar do professor:', error);
+      } else {
         setAvatarUrl(null);
         onAvatarUpdate?.(false);
       }
     };
 
     loadAvatar();
-  }, [user, professor.email, onAvatarUpdate]);
+  }, [professor?.email, onAvatarUpdate]);
 
-  const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-16 h-16',
-    lg: 'w-32 h-32'
-  };
+  const sizeClasses = { sm: 'w-8 h-8', md: 'w-16 h-16', lg: 'w-32 h-32' };
+  const cameraIconSize = size === 'lg' ? 'w-6 h-6' : 'w-4 h-4';
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !professor?.email) return;
 
-    // Validar formato e tamanho
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Erro',
-        description: 'Por favor, selecione uma imagem válida.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: 'Selecione uma imagem válida.', variant: 'destructive' });
       return;
     }
-
-    if (file.size > 5 * 1024 * 1024) { // 5MB
-      toast({
-        title: 'Erro',
-        description: 'A imagem deve ter no máximo 5MB.',
-        variant: 'destructive',
-      });
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Erro', description: 'A imagem deve ter no máximo 5 MB.', variant: 'destructive' });
       return;
     }
 
     setUploading(true);
-    
     try {
-      // Usar perfil já carregado ou os IDs disponíveis como fallback
-      let userId = userProfile?.id || user?.id || professor?.id;
+      // Usa profileId se já carregado, senão professor.id como nome de arquivo
+      const fileId = profileId || professor.id;
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${fileId}-${Date.now()}.${fileExt}`;
 
-      if (!userId) {
-        console.error('❌ Nenhum ID disponível para upload do professor');
-        throw new Error('Perfil do professor não encontrado. Verifique se você está logado corretamente.');
-      }
-
-      const fileExt = file.name.split(".").pop();
-      const timestamp = Date.now();
-      const filePath = `${userId}-${timestamp}.${fileExt}`;
-
-      console.log("📁 Path do novo avatar do professor:", filePath);
-
-      // Upload no Supabase Storage
+      // 1. Upload para o bucket avatars
       const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, { 
-          cacheControl: '3600',
-          upsert: true 
-        });
+        .from('avatars')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
 
-      if (uploadError) {
-        console.error("❌ Erro no upload do avatar do professor:", uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      console.log("✅ Upload do avatar do professor realizado com sucesso!");
+      const newAvatarUrl = supabase.storage.from('avatars').getPublicUrl(filePath).data.publicUrl;
 
-      // Gerar URL pública
-      const { data: publicData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-      
-      const newAvatarUrl = publicData.publicUrl;
-      
-      console.log("🌐 Nova URL pública do professor:", newAvatarUrl);
-
-      // Se o perfil já foi encontrado, apenas atualiza avatar_url
-      // Caso contrário, faz upsert completo com os campos obrigatórios
-      if (userProfile?.id) {
+      if (profileId) {
+        // 2a. Profile já existe — atualiza avatar_url por email (policy pública permite)
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: filePath })
-          .eq('id', userProfile.id);
+          .eq('email', professor.email.toLowerCase())
+          .eq('user_type', 'professor');
 
-        if (updateError) {
-          console.error("❌ Erro ao atualizar avatar do professor no banco:", updateError);
-          throw updateError;
-        }
+        if (updateError) throw updateError;
       } else {
-        const nomeParts = (professor.nome_completo || '').trim().split(/\s+/);
-        const nome = nomeParts[0] || 'Professor';
-        const sobrenome = nomeParts.length > 1 ? nomeParts.slice(1).join(' ') : '-';
+        // 2b. Professor sem profile — insere com campos obrigatórios
+        const parts = (professor.nome_completo || '').trim().split(/\s+/);
+        const nome = parts[0] || 'Professor';
+        const sobrenome = parts.length > 1 ? parts.slice(1).join(' ') : '-';
 
-        const { error: upsertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('profiles')
-          .upsert({
-            id: userId,
+          .insert({
             nome,
             sobrenome,
             email: professor.email.toLowerCase(),
             avatar_url: filePath,
             user_type: 'professor',
-          }, { onConflict: 'id' });
+            ativo: true,
+          })
+          .select('id')
+          .single();
 
-        if (upsertError) {
-          console.error("❌ Erro ao criar perfil do professor no banco:", upsertError);
-          throw upsertError;
-        }
+        if (insertError) throw insertError;
+        if (inserted?.id) setProfileId(inserted.id);
       }
 
-      console.log("✅ Avatar do professor atualizado no banco!");
-
-      // Atualizar visualização
       setAvatarUrl(newAvatarUrl);
       onAvatarUpdate?.(true);
-      
-      console.log("✅ Avatar do professor atualizado com sucesso! Nova URL:", newAvatarUrl);
-
-      toast({
-        title: 'Sucesso',
-        description: 'Foto de perfil atualizada com sucesso!',
-      });
-
+      toast({ title: 'Sucesso', description: 'Foto de perfil atualizada!' });
     } catch (error) {
-      console.error("❌ Erro inesperado no upload do professor:", error);
+      console.error('Erro no upload do avatar do professor:', error);
       toast({
         title: 'Erro',
-        description: error instanceof Error ? error.message : 'Erro ao fazer upload da imagem. Tente novamente.',
+        description: error instanceof Error ? error.message : 'Erro ao fazer upload.',
         variant: 'destructive',
       });
     } finally {
@@ -235,36 +139,38 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
     }
   };
 
-  const handleAvatarClick = () => {
-    if (fileInputRef.current && showUpload) {
-      console.log('🖱️ Avatar do professor clicado. Abrindo seletor de arquivo...');
-      fileInputRef.current.click();
-    }
-  };
-
   const getInitials = () => {
-    const name = professor.nome_completo || user?.email || 'Professor';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    const name = professor?.nome_completo || 'P';
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
-    <div className="relative group">
-      <Avatar 
+    <div
+      className="relative group"
+      title={showUpload ? 'Clique para alterar a foto de perfil' : undefined}
+    >
+      <Avatar
         className={`${sizeClasses[size]} border border-primary/20 transition-all ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 hover:shadow-lg' : ''}`}
-        onClick={handleAvatarClick}
+        onClick={() => showUpload && fileInputRef.current?.click()}
       >
         {avatarUrl && (
-          <AvatarImage 
-            src={avatarUrl} 
-            alt="Avatar do professor"
-            className="object-cover"
-          />
+          <AvatarImage src={avatarUrl} alt="Avatar do professor" className="object-cover" />
         )}
-        <AvatarFallback className="bg-primary/10 text-primary">
-          {professor.nome_completo ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
+        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+          {professor?.nome_completo ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
       </Avatar>
-      
+
+      {showUpload && !uploading && (
+        <div
+          className={`absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-200 pointer-events-none ${
+            avatarUrl ? 'bg-black/50 opacity-0 group-hover:opacity-100' : 'bg-black/30 opacity-100'
+          }`}
+        >
+          <Camera className={`${cameraIconSize} text-white`} />
+        </div>
+      )}
+
       {showUpload && (
         <input
           ref={fileInputRef}
