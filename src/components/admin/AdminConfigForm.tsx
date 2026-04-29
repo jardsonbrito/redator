@@ -11,6 +11,7 @@ import { AppSettingsForm } from './AppSettingsForm';
 import { CreditManagement } from './CreditManagement';
 import { SubscriptionManagementClean } from './SubscriptionManagementClean';
 import { PlansManager } from './PlansManager';
+import { ProfessorFeaturesManager } from './ProfessorFeaturesManager';
 import { DatabaseInitializer } from '../DatabaseInitializer';
 import { Mail, Key, User, Clock, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -332,6 +333,7 @@ export const AdminConfigForm = () => {
             <TabsList className="mb-4">
               <TabsTrigger value="alunos">Alunos</TabsTrigger>
               <TabsTrigger value="planos">Planos</TabsTrigger>
+              <TabsTrigger value="professores">Professores</TabsTrigger>
             </TabsList>
             <TabsContent value="alunos">
               <DatabaseInitializer>
@@ -340,6 +342,9 @@ export const AdminConfigForm = () => {
             </TabsContent>
             <TabsContent value="planos">
               <PlansManager />
+            </TabsContent>
+            <TabsContent value="professores">
+              <ProfessorFeaturesManager />
             </TabsContent>
           </Tabs>
         </TabsContent>
