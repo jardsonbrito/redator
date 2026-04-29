@@ -176,18 +176,38 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
       
       console.log("🌐 Nova URL pública do professor:", newAvatarUrl);
 
-      // Atualizar/criar perfil com o novo avatar_url
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          email: professor.email.toLowerCase(),
-          avatar_url: filePath,
-        }, { onConflict: 'id' });
+      // Se o perfil já foi encontrado, apenas atualiza avatar_url
+      // Caso contrário, faz upsert completo com os campos obrigatórios
+      if (userProfile?.id) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: filePath })
+          .eq('id', userProfile.id);
 
-      if (updateError) {
-        console.error("❌ Erro ao atualizar avatar do professor no banco:", updateError);
-        throw updateError;
+        if (updateError) {
+          console.error("❌ Erro ao atualizar avatar do professor no banco:", updateError);
+          throw updateError;
+        }
+      } else {
+        const nomeParts = (professor.nome_completo || '').trim().split(/\s+/);
+        const nome = nomeParts[0] || 'Professor';
+        const sobrenome = nomeParts.length > 1 ? nomeParts.slice(1).join(' ') : '-';
+
+        const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            nome,
+            sobrenome,
+            email: professor.email.toLowerCase(),
+            avatar_url: filePath,
+            user_type: 'professor',
+          }, { onConflict: 'id' });
+
+        if (upsertError) {
+          console.error("❌ Erro ao criar perfil do professor no banco:", upsertError);
+          throw upsertError;
+        }
       }
 
       console.log("✅ Avatar do professor atualizado no banco!");
