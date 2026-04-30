@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS interacoes_respostas (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   interacao_id   uuid NOT NULL REFERENCES interacoes(id) ON DELETE CASCADE,
   email_aluno    text NOT NULL,
-  alternativa_id uuid REFERENCES interacoes_alternativas(id),
+  alternativa_id uuid REFERENCES interacoes_alternativas(id) ON DELETE SET NULL,
   resposta_texto text,
   criado_em      timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_resposta_por_aluno UNIQUE (interacao_id, email_aluno)
