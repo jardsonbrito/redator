@@ -25,6 +25,7 @@ interface CorrecaoIA {
   erros: Array<{
     numero: number;
     tipo: string;
+    competencia_relacionada?: "c1" | "c2" | "c3" | "c4" | "c5";
     descricao: string;
     trecho_original: string;
     sugestao: string;
@@ -46,6 +47,23 @@ interface BancoComentarioRow {
   competencia: string;
   categoria: string | null;
   texto: string;
+}
+
+interface ModeloReferenciaRow {
+  titulo: string;
+  tema: string;
+  texto_aluno: string;
+  nota_total: number;
+  nota_c1: number;
+  nota_c2: number;
+  nota_c3: number;
+  nota_c4: number;
+  nota_c5: number;
+  justificativa_c1: string | null;
+  justificativa_c2: string | null;
+  justificativa_c3: string | null;
+  justificativa_c4: string | null;
+  justificativa_c5: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -110,7 +128,6 @@ Deno.serve(async (req) => {
     console.log(`✅ Config ativa: v${config.versao} - ${config.nome}`);
     console.log(`🤖 Modelo: ${config.model} | Temp: ${config.temperatura}`);
 
-    // Validar campos obrigatórios da config
     if (!config.system_prompt || !config.user_prompt_template) {
       throw new Error(
         "CONFIGURAÇÃO INVÁLIDA: system_prompt ou user_prompt_template ausentes"
@@ -132,6 +149,23 @@ Deno.serve(async (req) => {
     console.log(`📚 Banco: ${(bancoComentarios ?? []).length} comentários ativos`);
 
     // ══════════════════════════════════════════════════════════════
+    // 1.7 BUSCAR MODELOS DE REFERÊNCIA ATIVOS (FEW-SHOT)
+    // ══════════════════════════════════════════════════════════════
+    console.log("📖 Buscando modelos de referência...");
+
+    const { data: modelosReferencia } = await supabaseClient
+      .from("jarvis_correcao_modelos_referencia")
+      .select(
+        "titulo, tema, texto_aluno, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, justificativa_c1, justificativa_c2, justificativa_c3, justificativa_c4, justificativa_c5"
+      )
+      .eq("ativo", true)
+      .order("prioridade", { ascending: false })
+      .limit(2);
+
+    const fewShotBloco = buildFewShotBlock(modelosReferencia ?? []);
+    console.log(`📖 Modelos de referência: ${(modelosReferencia ?? []).length} carregados`);
+
+    // ══════════════════════════════════════════════════════════════
     // 2. BUSCAR CORREÇÃO
     // ══════════════════════════════════════════════════════════════
     const { data: correcao, error: correcaoError } = await supabaseClient
@@ -147,7 +181,6 @@ Deno.serve(async (req) => {
     console.log("📝 Tema:", correcao.tema);
     console.log("👤 Aluno:", correcao.autor_nome);
 
-    // Validar status
     if (correcao.status === "corrigida") {
       throw new Error("Esta correção já foi processada");
     }
@@ -170,7 +203,6 @@ Deno.serve(async (req) => {
       `👨‍🏫 Professor: ${professor.nome_completo} | Créditos: ${professor.jarvis_correcao_creditos}`
     );
 
-    // Consumir crédito
     const { data: creditResult, error: creditError } = await supabaseClient.rpc(
       "consumir_credito_professor",
       {
@@ -190,7 +222,6 @@ Deno.serve(async (req) => {
       `💳 Crédito consumido: ${creditResult.creditos_anteriores} → ${creditResult.creditos_atuais}`
     );
 
-    // Atualizar auditoria com correcao_id
     await supabaseClient
       .from("jarvis_correcao_credit_audit")
       .update({ correcao_id: correcaoId })
@@ -212,7 +243,18 @@ Deno.serve(async (req) => {
       userPrompt += bancoBlocoPrompt;
     }
 
-    console.log("✅ Prompt montado" + (bancoBlocoPrompt ? " (com banco de comentários)" : ""));
+    // Modelos de referência são concatenados ao system_prompt (calibração few-shot)
+    const systemPromptFinal = fewShotBloco
+      ? config.system_prompt + "\n\n" + fewShotBloco
+      : config.system_prompt;
+
+    const temFewShot = !!fewShotBloco;
+    const temBanco = !!bancoBlocoPrompt;
+    console.log(
+      `✅ Prompt montado` +
+      (temBanco ? " (+ banco de comentários)" : "") +
+      (temFewShot ? " (+ few-shot de referência)" : "")
+    );
 
     // ══════════════════════════════════════════════════════════════
     // 5. CHAMAR IA (OpenAI)
@@ -234,7 +276,7 @@ Deno.serve(async (req) => {
           temperature: parseFloat(String(config.temperatura)),
           max_tokens: config.max_tokens,
           messages: [
-            { role: "system", content: config.system_prompt },
+            { role: "system", content: systemPromptFinal },
             { role: "user", content: userPrompt },
           ],
           response_format: { type: "json_object" },
@@ -256,7 +298,6 @@ Deno.serve(async (req) => {
     console.log(`⏱️ Tempo: ${tempoProcessamento}ms`);
     console.log(`📊 Tokens: ${openaiData.usage.total_tokens}`);
 
-    // Parse da resposta JSON
     let correcaoIA: CorrecaoIA;
     try {
       correcaoIA = JSON.parse(openaiData.choices[0].message.content);
@@ -284,7 +325,7 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════
     console.log("🔍 Validando resposta da IA...");
 
-    const validationErrors = validateCorrecaoIA(correcaoIA);
+    const validationErrors = validateCorrecaoIA(correcaoIA, config.versao);
     if (validationErrors.length > 0) {
       console.error("❌ Validação falhou:", validationErrors);
       throw new Error(
@@ -314,7 +355,6 @@ Deno.serve(async (req) => {
     const { error: updateError } = await supabaseClient
       .from("jarvis_correcoes")
       .update({
-        // Dados da correção
         transcricao_confirmada: transcricaoConfirmada,
         correcao_ia: correcaoIA,
         nota_total: correcaoIA.nota_total,
@@ -324,7 +364,6 @@ Deno.serve(async (req) => {
         nota_c4: correcaoIA.competencias.c4.nota,
         nota_c5: correcaoIA.competencias.c5.nota,
 
-        // Rastreabilidade da config usada
         config_id: config.id,
         config_versao: config.versao,
         provider: config.provider,
@@ -332,18 +371,16 @@ Deno.serve(async (req) => {
         temperatura: config.temperatura,
         max_tokens: config.max_tokens,
 
-        // Snapshots dos prompts (imutáveis - para auditoria)
-        prompt_system_usado: config.system_prompt,
+        // Snapshot dos prompts efetivamente enviados (inclui few-shot se houver)
+        prompt_system_usado: systemPromptFinal,
         prompt_user_usado: userPrompt,
 
-        // Metadados técnicos
         tokens_input: openaiData.usage.prompt_tokens,
         tokens_output: openaiData.usage.completion_tokens,
         tokens_total: openaiData.usage.total_tokens,
         tempo_processamento_ms: tempoProcessamento,
         custo_estimado: custoEstimado,
 
-        // Status
         status: "corrigida",
         corrigida_em: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
@@ -378,7 +415,6 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error("❌ Erro:", error);
 
-    // Persistir erro no registro para facilitar diagnóstico
     if (correcaoId) {
       try {
         const supabaseClient = createClient(
@@ -446,30 +482,46 @@ function buildBancoBlock(banco: BancoComentarioRow[]): string {
   return bloco;
 }
 
-function validateCorrecaoIA(correcao: CorrecaoIA): string[] {
+function buildFewShotBlock(modelos: ModeloReferenciaRow[]): string {
+  if (!modelos.length) return "";
+
+  let bloco = "\n\n---\n# EXEMPLOS DE REFERÊNCIA (Calibração do padrão de correção)\n";
+  bloco += "Use os exemplos abaixo como referência do padrão esperado para notas e justificativas. Calibre sua avaliação em relação a esses modelos.\n\n";
+
+  for (let i = 0; i < modelos.length; i++) {
+    const m = modelos[i];
+    const textoResumido = m.texto_aluno.length > 600
+      ? m.texto_aluno.substring(0, 600) + "..."
+      : m.texto_aluno;
+
+    bloco += `## Exemplo ${i + 1}: ${m.titulo}\n`;
+    bloco += `**Tema:** ${m.tema}\n\n`;
+    bloco += `**Texto do aluno (trecho):**\n"${textoResumido}"\n\n`;
+    bloco += `**Gabarito de notas:** Total: ${m.nota_total} | C1: ${m.nota_c1} | C2: ${m.nota_c2} | C3: ${m.nota_c3} | C4: ${m.nota_c4} | C5: ${m.nota_c5}\n`;
+
+    if (m.justificativa_c1) bloco += `**Justificativa C1:** ${m.justificativa_c1}\n`;
+    if (m.justificativa_c2) bloco += `**Justificativa C2:** ${m.justificativa_c2}\n`;
+    if (m.justificativa_c3) bloco += `**Justificativa C3:** ${m.justificativa_c3}\n`;
+    if (m.justificativa_c4) bloco += `**Justificativa C4:** ${m.justificativa_c4}\n`;
+    if (m.justificativa_c5) bloco += `**Justificativa C5:** ${m.justificativa_c5}\n`;
+    bloco += "\n";
+  }
+
+  bloco += "---";
+  return bloco;
+}
+
+function validateCorrecaoIA(correcao: CorrecaoIA, configVersao?: number): string[] {
   const errors: string[] = [];
 
-  // Validar campos obrigatórios
-  if (!correcao.competencias) {
-    errors.push("Campo 'competencias' ausente");
-  }
-  if (typeof correcao.nota_total !== "number") {
-    errors.push("Campo 'nota_total' ausente ou inválido");
-  }
-  if (!Array.isArray(correcao.erros)) {
-    errors.push("Campo 'erros' ausente ou não é array");
-  }
-  if (!correcao.estrutura) {
-    errors.push("Campo 'estrutura' ausente");
-  }
-  if (!correcao.resumo_geral) {
-    errors.push("Campo 'resumo_geral' ausente");
-  }
+  if (!correcao.competencias) errors.push("Campo 'competencias' ausente");
+  if (typeof correcao.nota_total !== "number") errors.push("Campo 'nota_total' ausente ou inválido");
+  if (!Array.isArray(correcao.erros)) errors.push("Campo 'erros' ausente ou não é array");
+  if (!correcao.estrutura) errors.push("Campo 'estrutura' ausente");
+  if (!correcao.resumo_geral) errors.push("Campo 'resumo_geral' ausente");
 
-  // Se campos básicos faltando, retornar já
   if (errors.length > 0) return errors;
 
-  // Validar competências
   const competencias = ["c1", "c2", "c3", "c4", "c5"];
   for (const comp of competencias) {
     const c = (correcao.competencias as any)[comp];
@@ -481,13 +533,10 @@ function validateCorrecaoIA(correcao: CorrecaoIA): string[] {
       } else if (c.nota < 0 || c.nota > 200) {
         errors.push(`Nota da ${comp} fora do intervalo 0-200: ${c.nota}`);
       }
-      if (!c.justificativa) {
-        errors.push(`Justificativa da ${comp} ausente`);
-      }
+      if (!c.justificativa) errors.push(`Justificativa da ${comp} ausente`);
     }
   }
 
-  // Validar soma das competências = nota_total
   const soma =
     correcao.competencias.c1.nota +
     correcao.competencias.c2.nota +
@@ -501,9 +550,23 @@ function validateCorrecaoIA(correcao: CorrecaoIA): string[] {
     );
   }
 
-  // Validar nota_total dentro do range
   if (correcao.nota_total < 0 || correcao.nota_total > 1000) {
     errors.push(`nota_total fora do intervalo 0-1000: ${correcao.nota_total}`);
+  }
+
+  // A partir da config v2, exigir competencia_relacionada em cada erro
+  const exigirCompRelacionada = (configVersao ?? 1) >= 2;
+  if (exigirCompRelacionada && Array.isArray(correcao.erros)) {
+    const compValidas = ["c1", "c2", "c3", "c4", "c5"];
+    correcao.erros.forEach((erro: any, idx: number) => {
+      if (!erro.competencia_relacionada) {
+        errors.push(`Erro ${idx + 1}: campo 'competencia_relacionada' ausente`);
+      } else if (!compValidas.includes(erro.competencia_relacionada)) {
+        errors.push(
+          `Erro ${idx + 1}: 'competencia_relacionada' inválido: "${erro.competencia_relacionada}"`
+        );
+      }
+    });
   }
 
   return errors;
@@ -514,15 +577,13 @@ function calcularCusto(
   inputTokens: number,
   outputTokens: number
 ): number {
-  // Custos por 1M tokens (atualizado em 2024)
   const custos: Record<string, { input: number; output: number }> = {
-    "gpt-4o-mini": { input: 0.15, output: 0.6 }, // $0.15/$0.60 per 1M tokens
-    "gpt-4o": { input: 2.5, output: 10.0 }, // $2.50/$10.00 per 1M tokens
-    "gpt-3.5-turbo": { input: 0.5, output: 1.5 }, // $0.50/$1.50 per 1M tokens
+    "gpt-4o-mini": { input: 0.15, output: 0.6 },
+    "gpt-4o": { input: 2.5, output: 10.0 },
+    "gpt-3.5-turbo": { input: 0.5, output: 1.5 },
   };
 
   const modelCost = custos[model] || custos["gpt-4o-mini"];
-
   const custoInput = (inputTokens / 1_000_000) * modelCost.input;
   const custoOutput = (outputTokens / 1_000_000) * modelCost.output;
 

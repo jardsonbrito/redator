@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { JarvisCorrecao } from "@/hooks/useJarvisCorrecao";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle2, XCircle, FileText, ChevronDown, ChevronUp } from "lucide-react";
@@ -33,9 +32,15 @@ const NOTA_BG = (nota: number, max = 200) => {
   return "bg-red-50 border-red-200";
 };
 
+// Compatibilidade retroativa: se os erros não têm competencia_relacionada (correções v1),
+// infere a competência pelo tipo do erro para manter o comportamento anterior.
+function inferirCompetencia(tipo: string): string {
+  if (["coesão", "coerência"].includes(tipo)) return "c4";
+  return "c1";
+}
+
 export const DetalhesCorrecao = ({ correcao }: Props) => {
   const correcaoIA = correcao.correcao_ia;
-  // "nota_final" | "c1" | "c2" | "c3" | "c4" | "c5" | null
   const [secaoAtiva, setSecaoAtiva] = useState<string | null>("c1");
   const [showTexto, setShowTexto] = useState(false);
 
@@ -67,6 +72,21 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
   const compIA = competenciaAtiva ? correcaoIA.competencias?.[competenciaAtiva] : null;
   const estrutura = correcaoIA.estrutura;
   const erros: any[] = correcaoIA.erros || [];
+
+  // Detecta se a correção usa o novo campo competencia_relacionada (v2+)
+  const errosComClassificacao = erros.filter((e: any) => !!e.competencia_relacionada);
+  const usaClassificacaoPorComp = errosComClassificacao.length === erros.length && erros.length > 0;
+
+  // Retorna os erros relevantes para a competência ativa.
+  // Se a correção for v2+ (todos têm competencia_relacionada), filtra pelo campo.
+  // Se for v1 (sem o campo), aplica fallback por tipo.
+  const getErrosDaComp = (comp: string): any[] => {
+    if (usaClassificacaoPorComp) {
+      return erros.filter((e: any) => e.competencia_relacionada === comp);
+    }
+    // Fallback para correções v1: usa tipo para inferir a competência
+    return erros.filter((e: any) => inferirCompetencia(e.tipo ?? "") === comp);
+  };
 
   const COMP_LABELS_ORIENTACOES: Record<string, string> = {
     geral: "Orientações Gerais",
@@ -172,7 +192,8 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
       {/* Detalhe da competência selecionada */}
       {competenciaAtiva && compIA && (
         <div className="rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] p-5 space-y-4">
-          {/* Justificativa */}
+
+          {/* Justificativa da competência */}
           {compIA.justificativa && (
             <div>
               <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-zinc-500">
@@ -182,50 +203,17 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
             </div>
           )}
 
-          {/* C1 — Erros identificados (todos) */}
-          {competenciaAtiva === "c1" && erros.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">
-                Erros identificados ({erros.length})
-              </p>
-              <div className="space-y-2">
-                {erros.map((erro: any, i: number) => (
-                  <div
-                    key={i}
-                    className="rounded-xl border-l-4 border-red-400 bg-white pl-4 pr-3 py-3"
-                  >
-                    <p className="text-xs font-bold text-red-700">
-                      {erro.tipo || `Erro ${i + 1}`}
-                    </p>
-                    {erro.trecho_original && (
-                      <p className="mt-1 text-xs italic text-zinc-500">
-                        "{erro.trecho_original}"
-                      </p>
-                    )}
-                    {erro.descricao && (
-                      <p className="mt-1 text-sm text-zinc-700">{erro.descricao}</p>
-                    )}
-                    {erro.sugestao && (
-                      <p className="mt-1.5 text-xs font-medium text-emerald-700">
-                        ✓ {erro.sugestao}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* C1 — Norma padrão: erros gramaticais, ortográficos etc. */}
+          {competenciaAtiva === "c1" && (() => {
+            const errosDaComp = getErrosDaComp("c1");
+            if (!errosDaComp.length) return null;
+            return (
+              <ErrosBlock erros={errosDaComp} />
+            );
+          })()}
 
-          {/* C2 — Repertório */}
-          {competenciaAtiva === "c2" && estrutura?.uso_repertorio && (
-            <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
-              <p className="mb-1 text-xs font-bold text-zinc-500">Uso de Repertório</p>
-              <p className="text-sm text-zinc-700">{estrutura.uso_repertorio}</p>
-            </div>
-          )}
-
-          {/* C3 — Tese e argumentos */}
-          {competenciaAtiva === "c3" && (
+          {/* C2 — Tema, tese e repertório */}
+          {competenciaAtiva === "c2" && (
             <div className="space-y-3">
               {estrutura?.tese_identificada && (
                 <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
@@ -242,9 +230,26 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
                   </p>
                 </div>
               )}
+              {estrutura?.uso_repertorio && (
+                <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
+                  <p className="mb-1 text-xs font-bold text-zinc-500">Uso de Repertório</p>
+                  <p className="text-sm text-zinc-700">{estrutura.uso_repertorio}</p>
+                </div>
+              )}
+              {(() => {
+                const errosDaComp = getErrosDaComp("c2");
+                if (!errosDaComp.length) return null;
+                return <ErrosBlock erros={errosDaComp} />;
+              })()}
+            </div>
+          )}
+
+          {/* C3 — Desenvolvimento argumentativo */}
+          {competenciaAtiva === "c3" && (
+            <div className="space-y-3">
               {estrutura?.argumentos?.length > 0 && (
                 <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
-                  <p className="mb-2 text-xs font-bold text-zinc-500">Argumentos</p>
+                  <p className="mb-2 text-xs font-bold text-zinc-500">Argumentos identificados</p>
                   <ul className="space-y-1.5">
                     {estrutura.argumentos.map((arg: string, i: number) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-zinc-700">
@@ -255,18 +260,30 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
                   </ul>
                 </div>
               )}
+              {(() => {
+                const errosDaComp = getErrosDaComp("c3");
+                if (!errosDaComp.length) return null;
+                return <ErrosBlock erros={errosDaComp} />;
+              })()}
             </div>
           )}
+
+          {/* C4 — Coesão e coerência */}
+          {competenciaAtiva === "c4" && (() => {
+            const errosDaComp = getErrosDaComp("c4");
+            if (!errosDaComp.length) return null;
+            return <ErrosBlock erros={errosDaComp} />;
+          })()}
 
           {/* C5 — Proposta de intervenção */}
           {competenciaAtiva === "c5" && estrutura?.proposta_intervencao && (
             <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
-              <p className="mb-1 text-xs font-bold text-zinc-500">Proposta de Intervenção</p>
+              <p className="mb-1 text-xs font-bold text-zinc-500">Elementos da Proposta</p>
               <p className="text-sm text-zinc-700">{estrutura.proposta_intervencao}</p>
             </div>
           )}
 
-          {/* Sugestões da competência */}
+          {/* Sugestões da competência (campo opcional) */}
           {compIA.sugestoes && compIA.sugestoes.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">
@@ -288,7 +305,7 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
       {/* Seção Nota Final — orientações pedagógicas + comentário final */}
       {secaoAtiva === "nota_final" && (
         <div className="rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] p-5 space-y-4">
-          {/* Orientações do banco (nova abordagem) */}
+          {/* Orientações do banco (campo orientacoes_selecionadas) */}
           {orientacoesAgrupadas.length > 0 && (
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
@@ -312,7 +329,7 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
             </div>
           )}
 
-          {/* Fallback: sugestoes_objetivas para correções antigas */}
+          {/* Fallback: sugestoes_objetivas para correções sem banco de comentários ativo */}
           {orientacoesAgrupadas.length === 0 && correcaoIA.sugestoes_objetivas?.length > 0 && (
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
@@ -346,3 +363,41 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────
+// Componente reutilizável para bloco de erros (usado em todas as abas)
+// ─────────────────────────────────────────────────────────────────
+function ErrosBlock({ erros }: { erros: any[] }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">
+        Erros identificados ({erros.length})
+      </p>
+      <div className="space-y-2">
+        {erros.map((erro: any, i: number) => (
+          <div
+            key={i}
+            className="rounded-xl border-l-4 border-red-400 bg-white pl-4 pr-3 py-3"
+          >
+            <p className="text-xs font-bold text-red-700">
+              {erro.tipo || `Erro ${i + 1}`}
+            </p>
+            {erro.trecho_original && (
+              <p className="mt-1 text-xs italic text-zinc-500">
+                "{erro.trecho_original}"
+              </p>
+            )}
+            {erro.descricao && (
+              <p className="mt-1 text-sm text-zinc-700">{erro.descricao}</p>
+            )}
+            {erro.sugestao && (
+              <p className="mt-1.5 text-xs font-medium text-emerald-700">
+                ✓ {erro.sugestao}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
