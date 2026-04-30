@@ -58,19 +58,15 @@ const InteratividadeResposta = () => {
   const isAberta = tipoResposta === 'aberta';
   const isComAberta = tipoResposta === 'alternativas_com_aberta';
 
-  const alternativaSelecionadaTexto = useMemo(
-    () => alternativas.find(a => a.id === selecionada)?.texto ?? '',
-    [alternativas, selecionada]
-  );
-  const exigeTextoAberto = isAberta || (isComAberta && alternativaSelecionadaTexto === 'Outro motivo');
+  // Campo de texto visível para 'aberta' (obrigatório) e 'alternativas_com_aberta' (opcional)
+  const mostraTextoAberto = isAberta || isComAberta;
 
   const podeEnviar = useMemo(() => {
     if (jaRespondeu || encerrada) return false;
     if (isAberta) return textoAberto.trim().length > 0;
     if (selecionada === null) return false;
-    if (exigeTextoAberto) return textoAberto.trim().length > 0;
-    return true;
-  }, [jaRespondeu, encerrada, isAberta, selecionada, exigeTextoAberto, textoAberto]);
+    return true; // para alternativas_com_aberta o texto é opcional
+  }, [jaRespondeu, encerrada, isAberta, selecionada, textoAberto]);
 
   const handleResponder = async () => {
     if (!id || !podeEnviar) return;
@@ -251,10 +247,10 @@ const InteratividadeResposta = () => {
               )}
 
               {/* Campo de texto aberto */}
-              {(isAberta || exigeTextoAberto) && (
+              {mostraTextoAberto && (
                 <div>
                   <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    {isAberta ? 'Resposta' : 'Complemento (obrigatório)'}
+                    {isAberta ? 'Resposta' : 'Comentário (opcional)'}
                   </label>
                   <textarea
                     value={jaRespondeu ? (minhaResposta?.resposta_texto ?? '') : textoAberto}

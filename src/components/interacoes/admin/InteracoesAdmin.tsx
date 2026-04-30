@@ -218,21 +218,14 @@ export const InteracoesAdmin = () => {
             <p className="text-xs text-muted-foreground">
               {tipoResposta === 'alternativas' && 'O aluno escolhe uma das opções.'}
               {tipoResposta === 'aberta' && 'O aluno escreve livremente. Sem alternativas.'}
-              {tipoResposta === 'alternativas_com_aberta' && 'O aluno escolhe uma opção ou complementa com texto livre.'}
+              {tipoResposta === 'alternativas_com_aberta' && 'O aluno escolhe uma opção e pode adicionar um comentário livre (opcional).'}
             </p>
           </div>
 
           {/* Alternativas — só exibido quando tipo_resposta ≠ aberta */}
           {usaAlternativas && (
             <div className="space-y-3">
-              <Label>
-                Alternativas *
-                {tipoResposta === 'alternativas_com_aberta' && (
-                  <span className="text-muted-foreground font-normal ml-1 text-xs">
-                    — inclua "Outro motivo" como última opção se quiser campo aberto
-                  </span>
-                )}
-              </Label>
+              <Label>Alternativas *</Label>
               <div className="space-y-2">
                 {fields.map((field, idx) => (
                   <div key={field.id} className="flex items-center gap-2">
