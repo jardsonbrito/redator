@@ -81,9 +81,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY não configurada");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY não configurada");
     }
 
     const {
@@ -257,50 +257,49 @@ Deno.serve(async (req) => {
     );
 
     // ══════════════════════════════════════════════════════════════
-    // 5. CHAMAR IA (OpenAI)
+    // 5. CHAMAR IA (Gemini)
     // ══════════════════════════════════════════════════════════════
-    console.log("🚀 Chamando OpenAI...");
+    console.log("🚀 Chamando Gemini...");
 
     const startTime = Date.now();
+    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-1.5-flash";
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
 
-    const openaiResponse = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: config.model,
+    const geminiResponse = await fetch(geminiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPromptFinal }] },
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        generationConfig: {
           temperature: parseFloat(String(config.temperatura)),
-          max_tokens: config.max_tokens,
-          messages: [
-            { role: "system", content: systemPromptFinal },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: { type: "json_object" },
-        }),
-      }
-    );
+          maxOutputTokens: config.max_tokens,
+          responseMimeType: "application/json",
+        },
+      }),
+    });
 
     const endTime = Date.now();
     const tempoProcessamento = endTime - startTime;
 
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.text();
-      console.error("❌ Erro na OpenAI:", errorData);
-      throw new Error(`Erro na OpenAI: ${errorData}`);
+    if (!geminiResponse.ok) {
+      const errorData = await geminiResponse.text();
+      console.error("❌ Erro no Gemini:", errorData);
+      throw new Error(`Erro no Gemini: ${errorData}`);
     }
 
-    const openaiData = await openaiResponse.json();
-    console.log("✅ Resposta da OpenAI recebida");
+    const geminiData = await geminiResponse.json();
+    const geminiText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!geminiText) {
+      throw new Error("Resposta vazia ou inválida do Gemini");
+    }
+    console.log("✅ Resposta do Gemini recebida");
     console.log(`⏱️ Tempo: ${tempoProcessamento}ms`);
-    console.log(`📊 Tokens: ${openaiData.usage.total_tokens}`);
+    console.log(`📊 Tokens: ${geminiData.usageMetadata?.totalTokenCount ?? "N/A"}`);
 
     let correcaoIA: CorrecaoIA;
     try {
-      correcaoIA = JSON.parse(openaiData.choices[0].message.content);
+      correcaoIA = JSON.parse(geminiText);
     } catch (e) {
       console.error("❌ Erro ao parsear JSON da IA:", e);
       throw new Error("Resposta da IA não está em formato JSON válido");
@@ -340,9 +339,9 @@ Deno.serve(async (req) => {
     // 7. CALCULAR CUSTO
     // ══════════════════════════════════════════════════════════════
     const custoEstimado = calcularCusto(
-      config.model,
-      openaiData.usage.prompt_tokens,
-      openaiData.usage.completion_tokens
+      geminiModel,
+      geminiData.usageMetadata?.promptTokenCount ?? 0,
+      geminiData.usageMetadata?.candidatesTokenCount ?? 0
     );
 
     console.log(`💰 Custo estimado: $${custoEstimado.toFixed(6)}`);
@@ -375,9 +374,9 @@ Deno.serve(async (req) => {
         prompt_system_usado: systemPromptFinal,
         prompt_user_usado: userPrompt,
 
-        tokens_input: openaiData.usage.prompt_tokens,
-        tokens_output: openaiData.usage.completion_tokens,
-        tokens_total: openaiData.usage.total_tokens,
+        tokens_input: geminiData.usageMetadata?.promptTokenCount ?? 0,
+        tokens_output: geminiData.usageMetadata?.candidatesTokenCount ?? 0,
+        tokens_total: geminiData.usageMetadata?.totalTokenCount ?? 0,
         tempo_processamento_ms: tempoProcessamento,
         custo_estimado: custoEstimado,
 
@@ -409,7 +408,7 @@ Deno.serve(async (req) => {
         correcaoId,
         nota_total: correcaoIA.nota_total,
         config_versao: config.versao,
-        tokens_usados: openaiData.usage.total_tokens,
+        tokens_usados: geminiData.usageMetadata?.totalTokenCount ?? 0,
         tempo_processamento_ms: tempoProcessamento,
         custo_estimado: custoEstimado,
         creditos_restantes: creditResult.creditos_atuais,
@@ -584,12 +583,14 @@ function calcularCusto(
   outputTokens: number
 ): number {
   const custos: Record<string, { input: number; output: number }> = {
-    "gpt-4o-mini": { input: 0.15, output: 0.6 },
-    "gpt-4o": { input: 2.5, output: 10.0 },
-    "gpt-3.5-turbo": { input: 0.5, output: 1.5 },
+    "gemini-1.5-flash": { input: 0.075, output: 0.30 },
+    "gemini-1.5-flash-8b": { input: 0.0375, output: 0.15 },
+    "gemini-1.5-pro": { input: 3.5, output: 10.5 },
+    "gemini-2.0-flash": { input: 0.10, output: 0.40 },
+    "gemini-2.0-flash-lite": { input: 0.075, output: 0.30 },
   };
 
-  const modelCost = custos[model] || custos["gpt-4o-mini"];
+  const modelCost = custos[model] || custos["gemini-1.5-flash"];
   const custoInput = (inputTokens / 1_000_000) * modelCost.input;
   const custoOutput = (outputTokens / 1_000_000) * modelCost.output;
 
