@@ -62,6 +62,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       'gamificacao': 'Gamificação',
       'lousa': 'Lousa Interativa',
       'ajuda-rapida': 'Ajuda Rápida',
+      'interatividade': 'Interatividade',
       'envie-redacao': 'Enviar Redação',
       'manuscrita': 'Manuscrita',
       'guia-tematico': 'Guia Temático',

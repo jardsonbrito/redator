@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS interacoes (
   titulo                  text NOT NULL,
   descricao               text,
   tipo                    text NOT NULL DEFAULT 'enquete',
+  tipo_resposta           text NOT NULL DEFAULT 'alternativas',
   pergunta                text NOT NULL,
   ativa                   boolean NOT NULL DEFAULT true,
   mostrar_resultado_aluno boolean NOT NULL DEFAULT false,
@@ -22,11 +23,14 @@ CREATE TABLE IF NOT EXISTS interacoes_alternativas (
 );
 
 -- Respostas dos alunos (UNIQUE impede resposta dupla por aluno)
+-- alternativa_id é nullable para respostas abertas
+-- resposta_texto armazena texto livre
 CREATE TABLE IF NOT EXISTS interacoes_respostas (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   interacao_id   uuid NOT NULL REFERENCES interacoes(id) ON DELETE CASCADE,
   email_aluno    text NOT NULL,
-  alternativa_id uuid NOT NULL REFERENCES interacoes_alternativas(id),
+  alternativa_id uuid REFERENCES interacoes_alternativas(id),
+  resposta_texto text,
   criado_em      timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_resposta_por_aluno UNIQUE (interacao_id, email_aluno)
 );
@@ -42,20 +46,40 @@ ALTER TABLE interacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interacoes_alternativas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interacoes_respostas ENABLE ROW LEVEL SECURITY;
 
--- Políticas: alunos lêem interações ativas
+-- ── Políticas: alunos (anon) ─────────────────────────────────────────────────
+
+-- Alunos lêem interações ativas
 CREATE POLICY "publico_le_interacoes_ativas" ON interacoes
   FOR SELECT USING (ativa = true);
 
--- Políticas: alunos lêem todas as alternativas (necessário para exibir)
+-- Alunos lêem todas as alternativas (necessário para exibir perguntas)
 CREATE POLICY "publico_le_alternativas" ON interacoes_alternativas
   FOR SELECT USING (true);
 
--- Políticas: alunos inserem e lêem suas próprias respostas
+-- Alunos inserem suas próprias respostas
 CREATE POLICY "aluno_insere_resposta" ON interacoes_respostas
   FOR INSERT WITH CHECK (true);
 
+-- Alunos lêem respostas (para verificar se já responderam e ver resultados agregados)
 CREATE POLICY "aluno_le_respostas" ON interacoes_respostas
   FOR SELECT USING (true);
+
+-- ── Políticas: admin (authenticated via Supabase Auth) ───────────────────────
+
+-- Admin lê TODAS as interações (ativas e inativas)
+CREATE POLICY "admin_gerencia_interacoes" ON interacoes
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Admin gerencia alternativas
+CREATE POLICY "admin_gerencia_alternativas" ON interacoes_alternativas
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Admin gerencia respostas (lê tudo)
+CREATE POLICY "admin_gerencia_respostas" ON interacoes_respostas
+  FOR ALL USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Trigger para atualizar atualizado_em
 CREATE OR REPLACE FUNCTION update_interacoes_atualizado_em()

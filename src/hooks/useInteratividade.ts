@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStudentAuth } from './useStudentAuth';
 import { toast } from 'sonner';
 
+export type TipoResposta = 'alternativas' | 'aberta' | 'alternativas_com_aberta';
+
 export interface InteracaoAlternativa {
   id: string;
   interacao_id: string;
@@ -15,6 +17,7 @@ export interface Interacao {
   titulo: string;
   descricao: string | null;
   tipo: string;
+  tipo_resposta: TipoResposta;
   pergunta: string;
   ativa: boolean;
   mostrar_resultado_aluno: boolean;
@@ -29,7 +32,8 @@ export interface InteracaoResposta {
   id: string;
   interacao_id: string;
   email_aluno: string;
-  alternativa_id: string;
+  alternativa_id: string | null;
+  resposta_texto: string | null;
   criado_em: string;
 }
 
@@ -42,8 +46,9 @@ export interface ResultadoAlternativa {
 
 export interface ResultadoParticipante {
   email_aluno: string;
-  alternativa_id: string;
+  alternativa_id: string | null;
   alternativa_texto: string;
+  resposta_texto: string | null;
   criado_em: string;
 }
 
@@ -108,14 +113,17 @@ export const useResponderInteracao = () => {
     mutationFn: async ({
       interacao_id,
       alternativa_id,
+      resposta_texto,
     }: {
       interacao_id: string;
-      alternativa_id: string;
+      alternativa_id?: string | null;
+      resposta_texto?: string | null;
     }) => {
       if (!email) throw new Error('Aluno não autenticado');
       const { error } = await supabase.from('interacoes_respostas').insert({
         interacao_id,
-        alternativa_id,
+        alternativa_id: alternativa_id ?? null,
+        resposta_texto: resposta_texto ?? null,
         email_aluno: email,
       });
       if (error) {
@@ -158,7 +166,11 @@ export const useResultadoInteracao = (interacaoId: string) =>
 
       const contagem: Record<string, number> = {};
       alternativas.forEach(a => { contagem[a.id] = 0; });
-      respostas.forEach(r => { contagem[r.alternativa_id] = (contagem[r.alternativa_id] ?? 0) + 1; });
+      respostas.forEach(r => {
+        if (r.alternativa_id) {
+          contagem[r.alternativa_id] = (contagem[r.alternativa_id] ?? 0) + 1;
+        }
+      });
 
       const resultados: ResultadoAlternativa[] = alternativas.map(a => ({
         alternativa_id: a.id,
@@ -171,6 +183,7 @@ export const useResultadoInteracao = (interacaoId: string) =>
         email_aluno: r.email_aluno,
         alternativa_id: r.alternativa_id,
         alternativa_texto: alternativas.find(a => a.id === r.alternativa_id)?.texto ?? '',
+        resposta_texto: r.resposta_texto,
         criado_em: r.criado_em,
       }));
 
@@ -233,7 +246,6 @@ export const useUpdateInteracao = () => {
         .eq('id', id);
       if (errI) throw errI;
 
-      // Substituir alternativas: apaga e reinserir
       const { error: errD } = await supabase
         .from('interacoes_alternativas')
         .delete()
@@ -290,4 +302,16 @@ export const useDeleteInteracao = () => {
     },
     onError: () => toast.error('Erro ao excluir interação.'),
   });
+};
+
+// ── Utilitário: determina status visual da interação ─────────────────────────
+export const statusInteracao = (
+  interacao: Interacao,
+  jaRespondeu: boolean
+): 'aberta' | 'respondida' | 'encerrada' => {
+  if (interacao.encerramento_em && new Date(interacao.encerramento_em) < new Date()) {
+    return 'encerrada';
+  }
+  if (jaRespondeu) return 'respondida';
+  return 'aberta';
 };
