@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS interacoes_alternativas (
 
 -- Respostas dos alunos (UNIQUE impede resposta dupla por aluno)
 -- alternativa_id é nullable para respostas abertas
--- resposta_texto armazena texto livre
 CREATE TABLE IF NOT EXISTS interacoes_respostas (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   interacao_id   uuid NOT NULL REFERENCES interacoes(id) ON DELETE CASCADE,
@@ -41,45 +40,20 @@ CREATE INDEX IF NOT EXISTS idx_interacoes_alt_interacao ON interacoes_alternativ
 CREATE INDEX IF NOT EXISTS idx_interacoes_respostas_interacao ON interacoes_respostas(interacao_id);
 CREATE INDEX IF NOT EXISTS idx_interacoes_respostas_email ON interacoes_respostas(email_aluno);
 
--- RLS
+-- RLS habilitado, mas políticas permissivas pois o controle de acesso
+-- é feito no nível do app (nenhum usuário usa Supabase Auth)
 ALTER TABLE interacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interacoes_alternativas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interacoes_respostas ENABLE ROW LEVEL SECURITY;
 
--- ── Políticas: alunos (anon) ─────────────────────────────────────────────────
+CREATE POLICY "acesso_total_interacoes" ON interacoes
+  FOR ALL USING (true) WITH CHECK (true);
 
--- Alunos lêem interações ativas
-CREATE POLICY "publico_le_interacoes_ativas" ON interacoes
-  FOR SELECT USING (ativa = true);
+CREATE POLICY "acesso_total_alternativas" ON interacoes_alternativas
+  FOR ALL USING (true) WITH CHECK (true);
 
--- Alunos lêem todas as alternativas (necessário para exibir perguntas)
-CREATE POLICY "publico_le_alternativas" ON interacoes_alternativas
-  FOR SELECT USING (true);
-
--- Alunos inserem suas próprias respostas
-CREATE POLICY "aluno_insere_resposta" ON interacoes_respostas
-  FOR INSERT WITH CHECK (true);
-
--- Alunos lêem respostas (para verificar se já responderam e ver resultados agregados)
-CREATE POLICY "aluno_le_respostas" ON interacoes_respostas
-  FOR SELECT USING (true);
-
--- ── Políticas: admin (authenticated via Supabase Auth) ───────────────────────
-
--- Admin lê TODAS as interações (ativas e inativas)
-CREATE POLICY "admin_gerencia_interacoes" ON interacoes
-  FOR ALL USING (auth.uid() IS NOT NULL)
-  WITH CHECK (auth.uid() IS NOT NULL);
-
--- Admin gerencia alternativas
-CREATE POLICY "admin_gerencia_alternativas" ON interacoes_alternativas
-  FOR ALL USING (auth.uid() IS NOT NULL)
-  WITH CHECK (auth.uid() IS NOT NULL);
-
--- Admin gerencia respostas (lê tudo)
-CREATE POLICY "admin_gerencia_respostas" ON interacoes_respostas
-  FOR ALL USING (auth.uid() IS NOT NULL)
-  WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "acesso_total_respostas" ON interacoes_respostas
+  FOR ALL USING (true) WITH CHECK (true);
 
 -- Trigger para atualizar atualizado_em
 CREATE OR REPLACE FUNCTION update_interacoes_atualizado_em()

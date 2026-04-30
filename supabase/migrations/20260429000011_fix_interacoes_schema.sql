@@ -6,41 +6,32 @@ ALTER TABLE interacoes
 ALTER TABLE interacoes_respostas
   ALTER COLUMN alternativa_id DROP NOT NULL;
 
--- Remove a FK NOT NULL constraint antiga se existir e reaplica como nullable
--- (DROP NOT NULL acima já é suficiente para PostgreSQL)
-
 -- Adiciona resposta_texto para armazenar respostas abertas
 ALTER TABLE interacoes_respostas
   ADD COLUMN IF NOT EXISTS resposta_texto text;
 
--- Políticas admin (caso a migration anterior não tenha criado)
+-- Remove políticas antigas que usam auth.uid() e recria permissivas
+-- (nenhum usuário do sistema usa Supabase Auth)
 DO $$
+DECLARE
+  pol text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE tablename = 'interacoes' AND policyname = 'admin_gerencia_interacoes'
-  ) THEN
-    EXECUTE 'CREATE POLICY "admin_gerencia_interacoes" ON interacoes
-      FOR ALL USING (auth.uid() IS NOT NULL)
-      WITH CHECK (auth.uid() IS NOT NULL)';
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE tablename = 'interacoes_alternativas' AND policyname = 'admin_gerencia_alternativas'
-  ) THEN
-    EXECUTE 'CREATE POLICY "admin_gerencia_alternativas" ON interacoes_alternativas
-      FOR ALL USING (auth.uid() IS NOT NULL)
-      WITH CHECK (auth.uid() IS NOT NULL)';
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE tablename = 'interacoes_respostas' AND policyname = 'admin_gerencia_respostas'
-  ) THEN
-    EXECUTE 'CREATE POLICY "admin_gerencia_respostas" ON interacoes_respostas
-      FOR ALL USING (auth.uid() IS NOT NULL)
-      WITH CHECK (auth.uid() IS NOT NULL)';
-  END IF;
+  FOR pol IN
+    SELECT policyname FROM pg_policies
+    WHERE tablename IN ('interacoes', 'interacoes_alternativas', 'interacoes_respostas')
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I',
+      pol,
+      (SELECT tablename FROM pg_policies WHERE policyname = pol LIMIT 1));
+  END LOOP;
 END
 $$;
+
+CREATE POLICY "acesso_total_interacoes" ON interacoes
+  FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "acesso_total_alternativas" ON interacoes_alternativas
+  FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "acesso_total_respostas" ON interacoes_respostas
+  FOR ALL USING (true) WITH CHECK (true);
