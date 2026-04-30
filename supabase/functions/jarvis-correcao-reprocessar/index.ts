@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
     console.log("🚀 Chamando Gemini...");
 
     const startTime = Date.now();
-    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-1.5-flash";
+    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-3-flash-preview";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
 
     const geminiResponse = await fetch(geminiUrl, {
@@ -236,6 +236,7 @@ Deno.serve(async (req) => {
           temperature: parseFloat(String(config.temperatura)),
           maxOutputTokens: config.max_tokens,
           responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 24576 }, // thinking_level="HIGH"
         },
       }),
     });
@@ -249,9 +250,12 @@ Deno.serve(async (req) => {
     }
 
     const geminiData = await geminiResponse.json();
-    const geminiText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Modelos com thinking retornam múltiplas parts; a de conteúdo não tem `thought: true`
+    const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
+    const geminiText = parts.find((p) => !p.thought)?.text;
     if (!geminiText) throw new Error("Resposta vazia ou inválida do Gemini");
-    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | ${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} tokens`);
+    const thoughtsTokens = geminiData.usageMetadata?.thoughtsTokenCount ?? 0;
+    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} tokens | pensamento=${thoughtsTokens}`);
 
     let correcaoIA: CorrecaoIA;
     try {
@@ -493,11 +497,12 @@ function validateCorrecaoIA(correcao: CorrecaoIA, configVersao?: number): string
 
 function calcularCusto(model: string, inputTokens: number, outputTokens: number): number {
   const custos: Record<string, { input: number; output: number }> = {
-    "gemini-1.5-flash": { input: 0.075, output: 0.30 },
-    "gemini-1.5-flash-8b": { input: 0.0375, output: 0.15 },
-    "gemini-1.5-pro": { input: 3.5, output: 10.5 },
+    "gemini-3-flash-preview": { input: 0.10, output: 0.40 },
+    "gemini-2.5-flash-preview": { input: 0.15, output: 0.60 },
+    "gemini-2.5-pro-preview": { input: 1.25, output: 10.0 },
     "gemini-2.0-flash": { input: 0.10, output: 0.40 },
-    "gemini-2.0-flash-lite": { input: 0.075, output: 0.30 },
+    "gemini-1.5-flash": { input: 0.075, output: 0.30 },
+    "gemini-1.5-pro": { input: 3.5, output: 10.5 },
   };
   const modelCost = custos[model] || custos["gemini-1.5-flash"];
   return (inputTokens / 1_000_000) * modelCost.input + (outputTokens / 1_000_000) * modelCost.output;
