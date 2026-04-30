@@ -480,9 +480,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
               <Textarea
                 value={observacaoRevisao}
                 onChange={(e) => setObservacaoRevisao(e.target.value)}
-                placeholder={
-                  "Ex.: Acredito que o uso de repertório na introdução merece nota maior, pois o aluno cita dado estatístico concreto.\n\nEx.: Questiono a nota de C3 — os argumentos parecem mais desenvolvidos do que foi considerado."
-                }
+                placeholder=""
                 className="min-h-[110px] text-sm resize-none"
                 disabled={reprocessar.isPending}
               />
