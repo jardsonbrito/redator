@@ -45,6 +45,7 @@ export interface ResultadoAlternativa {
 }
 
 export interface ResultadoParticipante {
+  resposta_id: string;
   email_aluno: string;
   alternativa_id: string | null;
   alternativa_texto: string;
@@ -180,6 +181,7 @@ export const useResultadoInteracao = (interacaoId: string) =>
       }));
 
       const participantes: ResultadoParticipante[] = respostas.map(r => ({
+        resposta_id: r.id,
         email_aluno: r.email_aluno,
         alternativa_id: r.alternativa_id,
         alternativa_texto: alternativas.find(a => a.id === r.alternativa_id)?.texto ?? '',
@@ -301,6 +303,50 @@ export const useDeleteInteracao = () => {
       toast.success('Interação excluída.');
     },
     onError: () => toast.error('Erro ao excluir interação.'),
+  });
+};
+
+// ── Aluno: remove própria resposta ───────────────────────────────────────────
+export const useRemoverRespostaAluno = () => {
+  const { studentData } = useStudentAuth();
+  const queryClient = useQueryClient();
+  const email = studentData.email?.toLowerCase().trim();
+
+  return useMutation({
+    mutationFn: async (interacao_id: string) => {
+      if (!email) throw new Error('Aluno não autenticado');
+      const { error } = await supabase
+        .from('interacoes_respostas')
+        .delete()
+        .eq('interacao_id', interacao_id)
+        .eq('email_aluno', email);
+      if (error) throw error;
+    },
+    onSuccess: (_, interacao_id) => {
+      queryClient.invalidateQueries({ queryKey: ['minhas-respostas-interacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['resultado-interacao', interacao_id] });
+    },
+    onError: () => toast.error('Erro ao remover participação.'),
+  });
+};
+
+// ── Admin: remove resposta de qualquer aluno ──────────────────────────────────
+export const useRemoverRespostaAdmin = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, interacao_id }: { id: string; interacao_id: string }) => {
+      const { error } = await supabase
+        .from('interacoes_respostas')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['resultado-interacao', vars.interacao_id] });
+      toast.success('Participação removida.');
+    },
+    onError: () => toast.error('Erro ao remover participação.'),
   });
 };
 

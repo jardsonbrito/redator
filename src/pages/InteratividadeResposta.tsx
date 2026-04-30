@@ -1,15 +1,26 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart2, CheckCircle2, ClipboardList } from 'lucide-react';
+import { ArrowLeft, BarChart2, CheckCircle2, ClipboardList, Trash2 } from 'lucide-react';
 import { StudentHeader } from '@/components/StudentHeader';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   useInteracoesAtivas,
   useMinhasRespostas,
   useResponderInteracao,
+  useRemoverRespostaAluno,
   useResultadoInteracao,
   statusInteracao,
 } from '@/hooks/useInteratividade';
@@ -33,8 +44,10 @@ const InteratividadeResposta = () => {
   );
 
   const responderMutation = useResponderInteracao();
+  const removerMutation = useRemoverRespostaAluno();
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const [textoAberto, setTextoAberto] = useState('');
+  const [confirmRemover, setConfirmRemover] = useState(false);
 
   const alternativas = useMemo(
     () => [...(interacao?.alternativas ?? [])].sort((a, b) => a.ordem - b.ordem),
@@ -156,12 +169,22 @@ const InteratividadeResposta = () => {
 
               {/* Banner: participação registrada */}
               {jaRespondeu && !encerrada && (
-                <div className="rounded-2xl border border-purple-100 bg-purple-50 p-4 flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 mt-0.5 text-[#5b16a3] shrink-0" />
-                  <div>
-                    <p className="font-bold text-[#4b0082]">Participação registrada</p>
-                    <p className="mt-1 text-sm text-slate-600">Sua resposta foi enviada com sucesso.</p>
+                <div className="rounded-2xl border border-purple-100 bg-purple-50 p-4 flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 mt-0.5 text-[#5b16a3] shrink-0" />
+                    <div>
+                      <p className="font-bold text-[#4b0082]">Participação registrada</p>
+                      <p className="mt-1 text-sm text-slate-600">Sua resposta foi enviada com sucesso.</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setConfirmRemover(true)}
+                    className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-red-500 transition-colors mt-0.5"
+                    title="Remover minha participação"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remover
+                  </button>
                 </div>
               )}
 
@@ -298,6 +321,33 @@ const InteratividadeResposta = () => {
           </div>
         </main>
       </div>
+
+      <AlertDialog open={confirmRemover} onOpenChange={setConfirmRemover}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover participação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sua resposta será apagada e você poderá responder novamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => {
+                if (!id) return;
+                await removerMutation.mutateAsync(id);
+                setSelecionada(null);
+                setTextoAberto('');
+                setConfirmRemover(false);
+                toast.success('Participação removida. Você pode responder novamente.');
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 };

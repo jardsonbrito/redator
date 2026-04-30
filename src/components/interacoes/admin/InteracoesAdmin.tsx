@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Plus, Pencil, Trash2, MoreHorizontal,
-  BarChart2, Users, ArrowLeft, GripVertical, X,
+  BarChart2, Users, ArrowLeft, GripVertical, X, UserX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ import {
   useToggleInteracaoAtiva,
   useDeleteInteracao,
   useResultadoInteracao,
+  useRemoverRespostaAdmin,
   type Interacao,
   type InteracaoAlternativa,
   type TipoResposta,
@@ -466,6 +467,8 @@ const InteracaoCard = ({
 
 const ResultadoView = ({ interacao, onVoltar }: { interacao: Interacao; onVoltar: () => void }) => {
   const { data, isLoading } = useResultadoInteracao(interacao.id);
+  const removerMutation = useRemoverRespostaAdmin();
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -531,19 +534,30 @@ const ResultadoView = ({ interacao, onVoltar }: { interacao: Interacao; onVoltar
               <CardContent>
                 <div className="divide-y">
                   {data.participantes.map((p, i) => (
-                    <div key={i} className="py-2.5 text-sm">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-gray-800">{p.email_aluno}</p>
-                        <span className="text-xs text-gray-400 shrink-0 ml-3">
-                          {format(new Date(p.criado_em), "dd/MM/yy HH:mm", { locale: ptBR })}
-                        </span>
+                    <div key={i} className="py-2.5 text-sm flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-800 truncate">{p.email_aluno}</p>
+                          <span className="text-xs text-gray-400 shrink-0">
+                            {format(new Date(p.criado_em), "dd/MM/yy HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        {p.alternativa_texto && (
+                          <p className="text-gray-500 text-xs mt-0.5">Escolheu: {p.alternativa_texto}</p>
+                        )}
+                        {p.resposta_texto && (
+                          <p className="text-gray-600 text-xs mt-0.5 italic">"{p.resposta_texto}"</p>
+                        )}
                       </div>
-                      {p.alternativa_texto && (
-                        <p className="text-gray-500 text-xs mt-0.5">Escolheu: {p.alternativa_texto}</p>
-                      )}
-                      {p.resposta_texto && (
-                        <p className="text-gray-600 text-xs mt-0.5 italic">"{p.resposta_texto}"</p>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-gray-300 hover:text-destructive"
+                        title="Remover participação"
+                        onClick={() => setRemovendoId(p.resposta_id)}
+                      >
+                        <UserX className="w-4 h-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -552,6 +566,31 @@ const ResultadoView = ({ interacao, onVoltar }: { interacao: Interacao; onVoltar
           )}
         </>
       )}
+
+      <AlertDialog open={!!removendoId} onOpenChange={open => { if (!open) setRemovendoId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover participação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A resposta deste aluno será apagada. Ele poderá responder novamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (removendoId) {
+                  removerMutation.mutate({ id: removendoId, interacao_id: interacao.id });
+                  setRemovendoId(null);
+                }
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
