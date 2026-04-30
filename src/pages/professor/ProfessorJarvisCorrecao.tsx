@@ -98,7 +98,11 @@ export const ProfessorJarvisCorrecao = () => {
             </div>
 
             {correcaoResultado ? (
-              <DetalhesCorrecao correcao={correcaoResultado} />
+              <DetalhesCorrecao
+                correcao={correcaoResultado}
+                professorEmail={professor.email}
+                onReprocessado={(id) => setResultadoId(id)}
+              />
             ) : (
               <div className="flex items-center justify-center py-12 text-[#78668e]">
                 <span className="animate-pulse">Carregando resultado...</span>

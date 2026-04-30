@@ -1,13 +1,27 @@
 import { useState } from "react";
-import { JarvisCorrecao } from "@/hooks/useJarvisCorrecao";
+import { JarvisCorrecao, useJarvisCorrecaoVersoes, useReprocessarCorrecao } from "@/hooks/useJarvisCorrecao";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, XCircle, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertCircle, CheckCircle2, XCircle, FileText,
+  ChevronDown, ChevronUp, RefreshCw, History, Loader2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface Props {
   correcao: JarvisCorrecao;
+  professorEmail?: string;
+  onReprocessado?: (novaCorrecaoId: string) => void;
 }
 
 const COMPETENCIAS = [
@@ -32,21 +46,41 @@ const NOTA_BG = (nota: number, max = 200) => {
   return "bg-red-50 border-red-200";
 };
 
-// Compatibilidade retroativa: se os erros não têm competencia_relacionada (correções v1),
-// infere a competência pelo tipo do erro para manter o comportamento anterior.
 function inferirCompetencia(tipo: string): string {
   if (["coesão", "coerência"].includes(tipo)) return "c4";
   return "c1";
 }
 
-export const DetalhesCorrecao = ({ correcao }: Props) => {
+export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: Props) => {
   const correcaoIA = correcao.correcao_ia;
   const [secaoAtiva, setSecaoAtiva] = useState<string | null>("c1");
   const [showTexto, setShowTexto] = useState(false);
+  const [showRevisaoDialog, setShowRevisaoDialog] = useState(false);
+  const [observacaoRevisao, setObservacaoRevisao] = useState("");
+
+  const reprocessar = useReprocessarCorrecao(professorEmail || "");
+  const { data: versoes } = useJarvisCorrecaoVersoes(correcao.grupo_id ?? null);
+
+  const podeRevisar = !!professorEmail && correcao.status === "corrigida";
+  const temVersoes = (versoes?.length ?? 0) > 1;
 
   const textoOriginal = correcao.transcricao_confirmada || correcao.transcricao_ocr_original;
-
   const competenciaAtiva = secaoAtiva && secaoAtiva !== "nota_final" ? secaoAtiva : null;
+
+  const handleSolicitarRevisao = async () => {
+    try {
+      const result = await reprocessar.mutateAsync({
+        correcaoId: correcao.id,
+        observacao: observacaoRevisao.trim() || undefined,
+      });
+      toast.success(`Revisão concluída! Nova nota: ${result.nota_total}/1000`);
+      setShowRevisaoDialog(false);
+      setObservacaoRevisao("");
+      onReprocessado?.(result.novaCorrecaoId);
+    } catch (error: any) {
+      toast.error(`Erro ao solicitar revisão: ${error.message}`);
+    }
+  };
 
   if (correcao.status !== "corrigida" || !correcaoIA) {
     return (
@@ -73,28 +107,17 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
   const estrutura = correcaoIA.estrutura;
   const erros: any[] = correcaoIA.erros || [];
 
-  // Detecta se a correção usa o novo campo competencia_relacionada (v2+)
   const errosComClassificacao = erros.filter((e: any) => !!e.competencia_relacionada);
   const usaClassificacaoPorComp = errosComClassificacao.length === erros.length && erros.length > 0;
 
-  // Retorna os erros relevantes para a competência ativa.
-  // Se a correção for v2+ (todos têm competencia_relacionada), filtra pelo campo.
-  // Se for v1 (sem o campo), aplica fallback por tipo.
   const getErrosDaComp = (comp: string): any[] => {
-    if (usaClassificacaoPorComp) {
-      return erros.filter((e: any) => e.competencia_relacionada === comp);
-    }
-    // Fallback para correções v1: usa tipo para inferir a competência
+    if (usaClassificacaoPorComp) return erros.filter((e: any) => e.competencia_relacionada === comp);
     return erros.filter((e: any) => inferirCompetencia(e.tipo ?? "") === comp);
   };
 
   const COMP_LABELS_ORIENTACOES: Record<string, string> = {
-    geral: "Orientações Gerais",
-    c1: "Competência 1",
-    c2: "Competência 2",
-    c3: "Competência 3",
-    c4: "Competência 4",
-    c5: "Competência 5",
+    geral: "Orientações Gerais", c1: "Competência 1", c2: "Competência 2",
+    c3: "Competência 3", c4: "Competência 4", c5: "Competência 5",
   };
   const COMP_ORDER = ["geral", "c1", "c2", "c3", "c4", "c5"];
 
@@ -108,7 +131,7 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
   return (
     <div className="space-y-5">
       {/* Cabeçalho */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-0.5">
           <h3 className="text-xl font-black text-zinc-900">{correcao.autor_nome}</h3>
           <p className="text-sm font-medium text-zinc-600">{correcao.tema}</p>
@@ -116,21 +139,40 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
             <p className="text-xs text-zinc-400">
               Corrigida em{" "}
               {format(new Date(correcao.corrigida_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              {correcao.tipo_correcao === "recorrecao" && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                  <RefreshCw className="h-2.5 w-2.5" />
+                  Revisão #{correcao.numero_versao ?? ""}
+                </span>
+              )}
             </p>
           )}
         </div>
-        {textoOriginal && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowTexto((v) => !v)}
-            className="shrink-0 gap-1.5 text-xs"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            Texto da redação
-            {showTexto ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          </Button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {podeRevisar && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRevisaoDialog(true)}
+              className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Solicitar revisão da correção IA
+            </Button>
+          )}
+          {textoOriginal && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTexto((v) => !v)}
+              className="shrink-0 gap-1.5 text-xs"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Texto da redação
+              {showTexto ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Texto original da redação */}
@@ -141,9 +183,8 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
         </div>
       )}
 
-      {/* Nota final + Cards de competência — grid de 6 colunas iguais */}
+      {/* Nota final + Cards de competência */}
       <div className="grid grid-cols-6 gap-2">
-        {/* Nota final — clicável */}
         <button
           type="button"
           onClick={() => setSecaoAtiva(secaoAtiva === "nota_final" ? null : "nota_final")}
@@ -158,7 +199,6 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
           <p className="mt-1 text-[10px] opacity-60">/1000</p>
         </button>
 
-        {/* Cards de competência */}
         {COMPETENCIAS.map((comp) => {
           const nota = notasComp[comp.key] ?? 0;
           const isAtiva = secaoAtiva === comp.key;
@@ -176,11 +216,7 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
               <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-500">
                 C{comp.num}
               </span>
-              <span
-                className={`text-2xl font-black leading-none ${
-                  isAtiva ? "text-[#4B0082]" : NOTA_COLOR(nota)
-                }`}
-              >
+              <span className={`text-2xl font-black leading-none ${isAtiva ? "text-[#4B0082]" : NOTA_COLOR(nota)}`}>
                 {nota}
               </span>
               <span className="text-[10px] font-medium text-zinc-400">/200</span>
@@ -192,42 +228,30 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
       {/* Detalhe da competência selecionada */}
       {competenciaAtiva && compIA && (
         <div className="rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] p-5 space-y-4">
-
-          {/* Justificativa da competência */}
           {compIA.justificativa && (
             <div>
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-zinc-500">
-                Comentário
-              </p>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-zinc-500">Comentário</p>
               <p className="text-sm leading-relaxed text-zinc-700">{compIA.justificativa}</p>
             </div>
           )}
 
-          {/* C1 — Norma padrão: erros gramaticais, ortográficos etc. */}
           {competenciaAtiva === "c1" && (() => {
             const errosDaComp = getErrosDaComp("c1");
             if (!errosDaComp.length) return null;
-            return (
-              <ErrosBlock erros={errosDaComp} />
-            );
+            return <ErrosBlock erros={errosDaComp} />;
           })()}
 
-          {/* C2 — Tema, tese e repertório */}
           {competenciaAtiva === "c2" && (
             <div className="space-y-3">
               {estrutura?.tese_identificada && (
                 <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    {estrutura.possui_tese ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-500" />
-                    )}
+                    {estrutura.possui_tese
+                      ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      : <XCircle className="h-4 w-4 text-red-500" />}
                     <p className="text-xs font-bold text-zinc-500">Tese identificada</p>
                   </div>
-                  <p className="text-sm italic text-zinc-700">
-                    "{estrutura.tese_identificada}"
-                  </p>
+                  <p className="text-sm italic text-zinc-700">"{estrutura.tese_identificada}"</p>
                 </div>
               )}
               {estrutura?.uso_repertorio && (
@@ -244,7 +268,6 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
             </div>
           )}
 
-          {/* C3 — Desenvolvimento argumentativo */}
           {competenciaAtiva === "c3" && (
             <div className="space-y-3">
               {estrutura?.argumentos?.length > 0 && (
@@ -268,14 +291,12 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
             </div>
           )}
 
-          {/* C4 — Coesão e coerência */}
           {competenciaAtiva === "c4" && (() => {
             const errosDaComp = getErrosDaComp("c4");
             if (!errosDaComp.length) return null;
             return <ErrosBlock erros={errosDaComp} />;
           })()}
 
-          {/* C5 — Proposta de intervenção */}
           {competenciaAtiva === "c5" && estrutura?.proposta_intervencao && (
             <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
               <p className="mb-1 text-xs font-bold text-zinc-500">Elementos da Proposta</p>
@@ -283,7 +304,6 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
             </div>
           )}
 
-          {/* Sugestões da competência (campo opcional) */}
           {compIA.sugestoes && compIA.sugestoes.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">
@@ -302,10 +322,9 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
         </div>
       )}
 
-      {/* Seção Nota Final — orientações pedagógicas + comentário final */}
+      {/* Seção Nota Final */}
       {secaoAtiva === "nota_final" && (
         <div className="rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] p-5 space-y-4">
-          {/* Orientações do banco (campo orientacoes_selecionadas) */}
           {orientacoesAgrupadas.length > 0 && (
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
@@ -329,7 +348,6 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
             </div>
           )}
 
-          {/* Fallback: sugestoes_objetivas para correções sem banco de comentários ativo */}
           {orientacoesAgrupadas.length === 0 && correcaoIA.sugestoes_objetivas?.length > 0 && (
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
@@ -360,12 +378,152 @@ export const DetalhesCorrecao = ({ correcao }: Props) => {
           )}
         </div>
       )}
+
+      {/* Histórico de versões (só aparece quando há 2+ versões) */}
+      {temVersoes && (
+        <div className="rounded-2xl border border-[#dcc8f5] bg-white p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-[#4B0082]" />
+            <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">
+              Versões desta correção ({versoes!.length})
+            </p>
+          </div>
+          <div className="space-y-2">
+            {versoes!.map((v) => (
+              <div
+                key={v.id}
+                className={`rounded-xl border px-4 py-3 ${
+                  v.is_versao_principal
+                    ? "border-[#4B0082] bg-[#fbf8ff]"
+                    : "border-zinc-200 bg-zinc-50"
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className={`text-xs font-extrabold px-2 py-0.5 rounded-full ${
+                    v.is_versao_principal
+                      ? "bg-[#4B0082] text-white"
+                      : "bg-zinc-200 text-zinc-600"
+                  }`}>
+                    v{v.numero_versao}
+                    {v.is_versao_principal && " — atual"}
+                  </span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    v.tipo_correcao === "recorrecao"
+                      ? "bg-violet-100 text-violet-700"
+                      : "bg-zinc-100 text-zinc-500"
+                  }`}>
+                    {v.tipo_correcao === "recorrecao" ? "Revisão solicitada" : "Correção original"}
+                  </span>
+                  {v.nota_total !== null && (
+                    <span className="text-xs font-bold text-zinc-700">
+                      {v.nota_total} pts
+                    </span>
+                  )}
+                  <span className="ml-auto text-xs text-zinc-400">
+                    {v.corrigida_em
+                      ? format(new Date(v.corrigida_em), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                      : "–"}
+                  </span>
+                </div>
+
+                {/* Notas por competência */}
+                {v.nota_total !== null && (
+                  <div className="flex gap-3 mt-1.5 flex-wrap">
+                    {(["c1","c2","c3","c4","c5"] as const).map((c) => {
+                      const nota = (v as any)[`nota_${c}`] ?? null;
+                      return (
+                        <span key={c} className="text-xs text-zinc-500">
+                          <span className="font-bold text-zinc-700">{c.toUpperCase()}:</span>{" "}
+                          {nota ?? "–"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {v.solicitada_por && (
+                  <p className="mt-1.5 text-xs text-zinc-500">
+                    Solicitada por: <span className="font-medium">{v.solicitada_por}</span>
+                  </p>
+                )}
+                {v.motivo_recorrecao && (
+                  <p className="mt-1 text-xs text-zinc-600 italic">
+                    "{v.motivo_recorrecao}"
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dialog: Solicitar revisão da correção IA */}
+      <Dialog open={showRevisaoDialog} onOpenChange={setShowRevisaoDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-violet-600" />
+              Solicitar revisão da correção IA
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-zinc-600">
+              A IA irá reler a redação e gerar uma nova correção, preservando a versão anterior no histórico.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">
+                Observação para a revisão{" "}
+                <span className="font-normal normal-case text-zinc-400">(opcional)</span>
+              </label>
+              <Textarea
+                value={observacaoRevisao}
+                onChange={(e) => setObservacaoRevisao(e.target.value)}
+                placeholder={
+                  "Ex.: Acredito que o uso de repertório na introdução merece nota maior, pois o aluno cita dado estatístico concreto.\n\nEx.: Questiono a nota de C3 — os argumentos parecem mais desenvolvidos do que foi considerado."
+                }
+                className="min-h-[110px] text-sm resize-none"
+                disabled={reprocessar.isPending}
+              />
+              <p className="text-xs text-zinc-400">
+                Se vazia, a revisão acontece normalmente sem orientação adicional.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setShowRevisaoDialog(false); setObservacaoRevisao(""); }}
+              disabled={reprocessar.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSolicitarRevisao}
+              disabled={reprocessar.isPending}
+              className="bg-gradient-to-r from-[#4B0082] to-[#8a25d9] text-white hover:brightness-105"
+            >
+              {reprocessar.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Revisando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Solicitar revisão
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-// ─────────────────────────────────────────────────────────────────
-// Componente reutilizável para bloco de erros (usado em todas as abas)
 // ─────────────────────────────────────────────────────────────────
 function ErrosBlock({ erros }: { erros: any[] }) {
   return (
@@ -375,25 +533,14 @@ function ErrosBlock({ erros }: { erros: any[] }) {
       </p>
       <div className="space-y-2">
         {erros.map((erro: any, i: number) => (
-          <div
-            key={i}
-            className="rounded-xl border-l-4 border-red-400 bg-white pl-4 pr-3 py-3"
-          >
-            <p className="text-xs font-bold text-red-700">
-              {erro.tipo || `Erro ${i + 1}`}
-            </p>
+          <div key={i} className="rounded-xl border-l-4 border-red-400 bg-white pl-4 pr-3 py-3">
+            <p className="text-xs font-bold text-red-700">{erro.tipo || `Erro ${i + 1}`}</p>
             {erro.trecho_original && (
-              <p className="mt-1 text-xs italic text-zinc-500">
-                "{erro.trecho_original}"
-              </p>
+              <p className="mt-1 text-xs italic text-zinc-500">"{erro.trecho_original}"</p>
             )}
-            {erro.descricao && (
-              <p className="mt-1 text-sm text-zinc-700">{erro.descricao}</p>
-            )}
+            {erro.descricao && <p className="mt-1 text-sm text-zinc-700">{erro.descricao}</p>}
             {erro.sugestao && (
-              <p className="mt-1.5 text-xs font-medium text-emerald-700">
-                ✓ {erro.sugestao}
-              </p>
+              <p className="mt-1.5 text-xs font-medium text-emerald-700">✓ {erro.sugestao}</p>
             )}
           </div>
         ))}

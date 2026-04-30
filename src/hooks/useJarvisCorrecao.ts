@@ -26,6 +26,34 @@ export interface JarvisCorrecao {
   tempo_processamento_ms: number | null;
   criado_em: string;
   corrigida_em: string | null;
+  // Versionamento (adicionado em 20260430000002)
+  grupo_id: string | null;
+  numero_versao: number;
+  is_versao_principal: boolean;
+  tipo_correcao: string;
+  motivo_recorrecao: string | null;
+  solicitada_por: string | null;
+}
+
+export interface JarvisCorrecaoVersao {
+  id: string;
+  grupo_id: string;
+  numero_versao: number;
+  is_versao_principal: boolean;
+  tipo_correcao: string;
+  motivo_recorrecao: string | null;
+  solicitada_por: string | null;
+  nota_total: number | null;
+  nota_c1: number | null;
+  nota_c2: number | null;
+  nota_c3: number | null;
+  nota_c4: number | null;
+  nota_c5: number | null;
+  config_versao: number | null;
+  modelo_ia: string | null;
+  corrigida_em: string | null;
+  criado_em: string;
+  status: string;
 }
 
 export interface EnviarRedacaoData {
@@ -43,11 +71,10 @@ export interface ProcessarCorrecaoData {
 export const useJarvisCorrecao = (professorEmail: string) => {
   const queryClient = useQueryClient();
 
-  // Listar correções do professor
+  // Listar apenas versões principais (uma linha por redação)
   const { data: correcoes, isLoading, error } = useQuery({
     queryKey: ["jarvis-correcoes", professorEmail],
     queryFn: async () => {
-      // Buscar professor_id pelo email
       const { data: professor } = await supabase
         .from("professores")
         .select("id")
@@ -60,6 +87,7 @@ export const useJarvisCorrecao = (professorEmail: string) => {
         .from("jarvis_correcoes")
         .select("*")
         .eq("professor_id", professor.id)
+        .eq("is_versao_principal", true)
         .order("criado_em", { ascending: false });
 
       if (error) throw error;
@@ -68,7 +96,6 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     enabled: !!professorEmail,
   });
 
-  // Buscar créditos do professor
   const { data: creditos } = useQuery({
     queryKey: ["professor-creditos", professorEmail],
     queryFn: async () => {
@@ -77,14 +104,12 @@ export const useJarvisCorrecao = (professorEmail: string) => {
         .select("jarvis_correcao_creditos")
         .eq("email", professorEmail)
         .single();
-
       if (error) throw error;
       return data.jarvis_correcao_creditos as number;
     },
     enabled: !!professorEmail,
   });
 
-  // Buscar turmas do professor
   const { data: turmas } = useQuery({
     queryKey: ["professor-turmas", professorEmail],
     queryFn: async () => {
@@ -102,13 +127,11 @@ export const useJarvisCorrecao = (professorEmail: string) => {
         .eq("professor_id", professor.id);
 
       if (error) throw error;
-
       return data.map((item: any) => item.turmas_professores);
     },
     enabled: !!professorEmail,
   });
 
-  // Enviar redação (upload + OCR)
   const enviarRedacao = useMutation({
     mutationFn: async (data: EnviarRedacaoData) => {
       const { data: result, error } = await supabase.functions.invoke(
@@ -123,10 +146,8 @@ export const useJarvisCorrecao = (professorEmail: string) => {
           },
         }
       );
-
       if (error) throw error;
       if (!result.success) throw new Error(result.error);
-
       return result;
     },
     onSuccess: (data) => {
@@ -138,7 +159,6 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     },
   });
 
-  // Processar correção (após revisão do OCR)
   const processarCorrecao = useMutation({
     mutationFn: async (data: ProcessarCorrecaoData) => {
       const { data: result, error } = await supabase.functions.invoke(
@@ -151,10 +171,8 @@ export const useJarvisCorrecao = (professorEmail: string) => {
           },
         }
       );
-
       if (error) throw error;
       if (!result.success) throw new Error(result.error);
-
       return result;
     },
     onSuccess: (data) => {
@@ -169,7 +187,33 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     },
   });
 
-  // Deletar correção individual
+  const reprocessarCorrecao = useMutation({
+    mutationFn: async (data: { correcaoId: string; observacao?: string }) => {
+      const { data: result, error } = await supabase.functions.invoke(
+        "jarvis-correcao-reprocessar",
+        {
+          body: {
+            correcaoId: data.correcaoId,
+            professorEmail,
+            observacao: data.observacao || undefined,
+          },
+        }
+      );
+      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
+      queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
+      queryClient.invalidateQueries({ queryKey: ["jarvis-versoes"] });
+      toast.success(`Revisão concluída! Nova nota: ${data.nota_total}/1000`);
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao solicitar revisão: ${error.message}`);
+    },
+  });
+
   const deletarCorrecao = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.rpc("deletar_jarvis_correcao", {
@@ -187,7 +231,6 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     },
   });
 
-  // Deletar todas as correções de um aluno (por nome + professor)
   const deletarPorAluno = useMutation({
     mutationFn: async (autorNome: string) => {
       const { error } = await supabase.rpc("deletar_jarvis_correcoes_aluno", {
@@ -205,7 +248,6 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     },
   });
 
-  // Criar turma nova
   const criarTurma = useMutation({
     mutationFn: async (nome: string) => {
       const { data: professor } = await supabase
@@ -216,7 +258,6 @@ export const useJarvisCorrecao = (professorEmail: string) => {
 
       if (!professor) throw new Error("Professor não encontrado");
 
-      // Gerar código único
       const codigo = `TURMA-${Date.now().toString(36).toUpperCase()}`;
 
       const { data: novaTurma, error: turmaError } = await supabase
@@ -227,16 +268,11 @@ export const useJarvisCorrecao = (professorEmail: string) => {
 
       if (turmaError) throw turmaError;
 
-      // Associar professor à turma
       const { error: assocError } = await supabase
         .from("professor_turmas")
-        .insert({
-          professor_id: professor.id,
-          turma_id: novaTurma.id,
-        });
+        .insert({ professor_id: professor.id, turma_id: novaTurma.id });
 
       if (assocError) throw assocError;
-
       return novaTurma;
     },
     onSuccess: () => {
@@ -256,8 +292,56 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     error,
     enviarRedacao,
     processarCorrecao,
+    reprocessarCorrecao,
     deletarCorrecao,
     deletarPorAluno,
     criarTurma,
   };
+};
+
+// Hook standalone para buscar todas as versões de um grupo
+export const useJarvisCorrecaoVersoes = (grupoId: string | null) => {
+  return useQuery({
+    queryKey: ["jarvis-versoes", grupoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("jarvis_correcoes")
+        .select(
+          "id, grupo_id, numero_versao, is_versao_principal, tipo_correcao, motivo_recorrecao, solicitada_por, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, config_versao, modelo_ia, corrigida_em, criado_em, status"
+        )
+        .eq("grupo_id", grupoId!)
+        .order("numero_versao", { ascending: true });
+
+      if (error) throw error;
+      return data as JarvisCorrecaoVersao[];
+    },
+    enabled: !!grupoId,
+  });
+};
+
+// Hook standalone para mutação de reprocessamento (para uso em componentes filhos)
+export const useReprocessarCorrecao = (professorEmail: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { correcaoId: string; observacao?: string }) => {
+      const { data: result, error } = await supabase.functions.invoke(
+        "jarvis-correcao-reprocessar",
+        {
+          body: {
+            correcaoId: data.correcaoId,
+            professorEmail,
+            observacao: data.observacao || undefined,
+          },
+        }
+      );
+      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
+      queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
+      queryClient.invalidateQueries({ queryKey: ["jarvis-versoes"] });
+    },
+  });
 };

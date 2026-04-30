@@ -257,7 +257,11 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
             <DialogHeader>
               <DialogTitle className="text-lg font-bold">Correção pedagógica detalhada</DialogTitle>
             </DialogHeader>
-            <DetalhesCorrecao correcao={correcaoSelecionada} />
+            <DetalhesCorrecao
+                correcao={correcaoSelecionada}
+                professorEmail={professorEmail}
+                onReprocessado={() => setShowDetalhes(false)}
+              />
           </DialogContent>
         </Dialog>
       )}
