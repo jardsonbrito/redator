@@ -288,7 +288,41 @@ Deno.serve(async (req) => {
     console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | ${geminiData.usageMetadata?.totalTokenCount ?? "?"} tokens`);
 
     // ══════════════════════════════════════════════════════════════
-    // 6. CALCULAR CUSTO
+    // 6. TENTAR PARSEAR JSON (com ou sem fences)
+    // ══════════════════════════════════════════════════════════════
+    let correcaoIA: CorrecaoIA | null = null;
+    {
+      let jsonText = geminiText.trim();
+      if (jsonText.startsWith("```")) {
+        const nl = jsonText.indexOf("\n");
+        if (nl !== -1) {
+          jsonText = jsonText.slice(nl + 1).trim();
+          const lastFence = jsonText.lastIndexOf("```");
+          if (lastFence !== -1) jsonText = jsonText.slice(0, lastFence).trim();
+        }
+      }
+      try { correcaoIA = JSON.parse(jsonText); } catch { /* try brace extraction */ }
+      if (!correcaoIA) {
+        const fb = geminiText.indexOf("{"), lb = geminiText.lastIndexOf("}");
+        if (fb !== -1 && lb > fb) {
+          try { correcaoIA = JSON.parse(geminiText.slice(fb, lb + 1)); } catch { /* raw */ }
+        }
+      }
+    }
+
+    const isEstruturado = !!(correcaoIA?.competencias);
+    if (isEstruturado && correcaoIA!.competencias) {
+      const soma =
+        (correcaoIA!.competencias.c1?.nota ?? 0) + (correcaoIA!.competencias.c2?.nota ?? 0) +
+        (correcaoIA!.competencias.c3?.nota ?? 0) + (correcaoIA!.competencias.c4?.nota ?? 0) +
+        (correcaoIA!.competencias.c5?.nota ?? 0);
+      correcaoIA!.nota_total = soma;
+    }
+
+    console.log(isEstruturado ? `📊 JSON estruturado | Nota: ${correcaoIA!.nota_total}` : "📄 Salvando como texto bruto");
+
+    // ══════════════════════════════════════════════════════════════
+    // 7. CALCULAR CUSTO
     // ══════════════════════════════════════════════════════════════
     const custoEstimado = calcularCusto(
       geminiModel,
@@ -297,7 +331,7 @@ Deno.serve(async (req) => {
     );
 
     // ══════════════════════════════════════════════════════════════
-    // 7. SALVAR CORREÇÃO (texto bruto)
+    // 8. SALVAR CORREÇÃO
     // ══════════════════════════════════════════════════════════════
     console.log("💾 Salvando correção...");
 
@@ -305,7 +339,15 @@ Deno.serve(async (req) => {
       .from("jarvis_correcoes")
       .update({
         transcricao_confirmada: transcricaoConfirmada,
-        correcao_ia: { resposta_bruta: geminiText },
+        correcao_ia: isEstruturado ? correcaoIA! : { resposta_bruta: geminiText },
+        ...(isEstruturado && {
+          nota_total: correcaoIA!.nota_total,
+          nota_c1: correcaoIA!.competencias!.c1.nota,
+          nota_c2: correcaoIA!.competencias!.c2.nota,
+          nota_c3: correcaoIA!.competencias!.c3.nota,
+          nota_c4: correcaoIA!.competencias!.c4.nota,
+          nota_c5: correcaoIA!.competencias!.c5.nota,
+        }),
 
         config_id: config.id,
         config_versao: config.versao,
@@ -336,7 +378,7 @@ Deno.serve(async (req) => {
     console.log("✅ Correção salva!");
 
     // ══════════════════════════════════════════════════════════════
-    // 8. RETORNAR RESULTADO
+    // 9. RETORNAR RESULTADO
     // ══════════════════════════════════════════════════════════════
     return new Response(
       JSON.stringify({
