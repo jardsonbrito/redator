@@ -265,12 +265,11 @@ Deno.serve(async (req) => {
     const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
 
-    const supportsThinking = /2\.[5-9]|[3-9]\./.test(geminiModel);
     const generationConfig: Record<string, any> = {
       temperature: parseFloat(String(config.temperatura)),
       maxOutputTokens: config.max_tokens,
+      responseMimeType: "application/json",
     };
-    if (supportsThinking) generationConfig.thinkingConfig = { thinkingBudget: -1 };
 
     const geminiResponse = await fetch(geminiUrl, {
       method: "POST",
@@ -292,108 +291,31 @@ Deno.serve(async (req) => {
     }
 
     const geminiData = await geminiResponse.json();
-    // Modelos com thinking retornam múltiplas parts; a de conteúdo não tem `thought: true`
     const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
-    const geminiText = parts.find((p) => !p.thought)?.text;
-    if (!geminiText) {
-      throw new Error("Resposta vazia ou inválida do Gemini");
-    }
-    const thoughtsTokens = geminiData.usageMetadata?.thoughtsTokenCount ?? 0;
-    console.log("✅ Resposta do Gemini recebida");
-    console.log(`⏱️ Tempo: ${tempoProcessamento}ms`);
-    console.log(`📊 Tokens: total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} | pensamento=${thoughtsTokens}`);
+    const geminiText = parts[0]?.text;
+    if (!geminiText) throw new Error("Resposta vazia ou inválida do Gemini");
+    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} tokens`);
 
-    // Extrair JSON da resposta (com ou sem markdown fences)
-    let correcaoIA: CorrecaoIA | null = null;
-    let isRawResponse = false;
-    {
-      // Estratégia 1: strip de fences se presentes
-      let jsonText = geminiText.trim();
-      if (jsonText.startsWith("```")) {
-        const firstNewline = jsonText.indexOf("\n");
-        if (firstNewline !== -1) {
-          jsonText = jsonText.slice(firstNewline + 1);
-          const lastFence = jsonText.lastIndexOf("```");
-          if (lastFence !== -1) jsonText = jsonText.slice(0, lastFence);
-          jsonText = jsonText.trim();
-        }
-      }
-
-      try {
-        correcaoIA = JSON.parse(jsonText);
-        console.log("✅ JSON parseado (estratégia 1 — fence strip)");
-      } catch {
-        // Estratégia 2 (fallback): extrair pelo primeiro { e último }
-        const firstBrace = geminiText.indexOf("{");
-        const lastBrace = geminiText.lastIndexOf("}");
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-          try {
-            correcaoIA = JSON.parse(geminiText.slice(firstBrace, lastBrace + 1));
-            console.log("✅ JSON parseado (estratégia 2 — brace extraction)");
-          } catch {
-            // fallthrough para raw
-          }
-        }
-      }
-
-      if (!correcaoIA) {
-        isRawResponse = true;
-        console.log("⚠️ Resposta não é JSON — salvando como texto bruto");
-        console.log("Prévia (800 chars):", geminiText.substring(0, 800));
-      }
+    let correcaoIA: CorrecaoIA;
+    try {
+      correcaoIA = JSON.parse(geminiText);
+    } catch (e) {
+      console.error("❌ JSON inválido:", (e as Error).message);
+      console.error("Prévia (500 chars):", geminiText?.substring(0, 500));
+      throw new Error("Resposta da IA não está em formato JSON válido");
     }
 
-    // ── Modo texto bruto: salva e retorna para inspeção ──────────
-    if (isRawResponse) {
-      const custoEstimado = calcularCusto(
-        geminiModel,
-        geminiData.usageMetadata?.promptTokenCount ?? 0,
-        geminiData.usageMetadata?.candidatesTokenCount ?? 0
-      );
-      await supabaseClient
-        .from("jarvis_correcoes")
-        .update({
-          transcricao_confirmada: transcricaoConfirmada,
-          correcao_ia: { resposta_bruta: geminiText },
-          config_id: config.id,
-          config_versao: config.versao,
-          modelo_ia: config.model,
-          tokens_total: geminiData.usageMetadata?.totalTokenCount ?? 0,
-          tempo_processamento_ms: tempoProcessamento,
-          custo_estimado: custoEstimado,
-          grupo_id: correcaoId,
-          numero_versao: 1,
-          is_versao_principal: true,
-          tipo_correcao: "original",
-          status: "corrigida",
-          corrigida_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString(),
-        })
-        .eq("id", correcaoId);
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          is_raw: true,
-          resposta_ia: geminiText,
-          creditos_restantes: creditResult.creditos_atuais,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ── Modo JSON estruturado ─────────────────────────────────────
     // Recalcular nota_total a partir das competências (o modelo às vezes erra a soma)
-    if (correcaoIA!.competencias) {
+    if (correcaoIA.competencias) {
       const soma =
-        (correcaoIA!.competencias.c1?.nota ?? 0) +
-        (correcaoIA!.competencias.c2?.nota ?? 0) +
-        (correcaoIA!.competencias.c3?.nota ?? 0) +
-        (correcaoIA!.competencias.c4?.nota ?? 0) +
-        (correcaoIA!.competencias.c5?.nota ?? 0);
-      if (typeof correcaoIA!.nota_total !== "number" || correcaoIA!.nota_total !== soma) {
-        console.log(`⚠️ nota_total corrigida: ${correcaoIA!.nota_total} → ${soma}`);
-        correcaoIA!.nota_total = soma;
+        (correcaoIA.competencias.c1?.nota ?? 0) +
+        (correcaoIA.competencias.c2?.nota ?? 0) +
+        (correcaoIA.competencias.c3?.nota ?? 0) +
+        (correcaoIA.competencias.c4?.nota ?? 0) +
+        (correcaoIA.competencias.c5?.nota ?? 0);
+      if (typeof correcaoIA.nota_total !== "number" || correcaoIA.nota_total !== soma) {
+        console.log(`⚠️ nota_total corrigida: ${correcaoIA.nota_total} → ${soma}`);
+        correcaoIA.nota_total = soma;
       }
     }
 
@@ -411,7 +333,7 @@ Deno.serve(async (req) => {
     }
 
     console.log("✅ Resposta válida");
-    console.log(`📊 Nota total: ${correcaoIA!.nota_total}`);
+    console.log(`📊 Nota total: ${correcaoIA.nota_total}`);
 
     // ══════════════════════════════════════════════════════════════
     // 7. CALCULAR CUSTO
@@ -434,12 +356,12 @@ Deno.serve(async (req) => {
       .update({
         transcricao_confirmada: transcricaoConfirmada,
         correcao_ia: correcaoIA!,
-        nota_total: correcaoIA!.nota_total,
-        nota_c1: correcaoIA!.competencias.c1.nota,
-        nota_c2: correcaoIA!.competencias.c2.nota,
-        nota_c3: correcaoIA!.competencias.c3.nota,
-        nota_c4: correcaoIA!.competencias.c4.nota,
-        nota_c5: correcaoIA!.competencias.c5.nota,
+        nota_total: correcaoIA.nota_total,
+        nota_c1: correcaoIA.competencias.c1.nota,
+        nota_c2: correcaoIA.competencias.c2.nota,
+        nota_c3: correcaoIA.competencias.c3.nota,
+        nota_c4: correcaoIA.competencias.c4.nota,
+        nota_c5: correcaoIA.competencias.c5.nota,
 
         config_id: config.id,
         config_versao: config.versao,
@@ -484,7 +406,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         correcaoId,
-        nota_total: correcaoIA!.nota_total,
+        nota_total: correcaoIA.nota_total,
         config_versao: config.versao,
         tokens_usados: geminiData.usageMetadata?.totalTokenCount ?? 0,
         tempo_processamento_ms: tempoProcessamento,
