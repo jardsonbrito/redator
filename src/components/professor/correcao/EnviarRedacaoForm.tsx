@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useJarvisCorrecao } from "@/hooks/useJarvisCorrecao";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -244,8 +245,8 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
           {/* Ícone animado */}
           <div className="relative mb-6">
             <div className="absolute inset-0 animate-ping rounded-full bg-[#8624d6]/20" style={{ animationDuration: "1.5s" }} />
-            <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#efe4ff] to-[#dcc8f5] text-4xl shadow-[0_0_0_6px_rgba(134,36,214,0.08)]">
-              🤖
+            <div className="relative animate-pulse">
+              <JarvisIcon size={80} />
             </div>
           </div>
 
