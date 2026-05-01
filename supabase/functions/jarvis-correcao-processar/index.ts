@@ -305,9 +305,14 @@ Deno.serve(async (req) => {
 
     let correcaoIA: CorrecaoIA;
     try {
-      correcaoIA = JSON.parse(geminiText);
+      let jsonText = geminiText.trim();
+      // Modelos com thinking retornam JSON embrulhado em ```json ... ```
+      const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) jsonText = fenceMatch[1].trim();
+      correcaoIA = JSON.parse(jsonText);
     } catch (e) {
       console.error("❌ Erro ao parsear JSON da IA:", e);
+      console.error("Texto recebido (500 chars):", geminiText?.substring(0, 500));
       throw new Error("Resposta da IA não está em formato JSON válido");
     }
 
