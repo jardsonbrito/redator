@@ -58,6 +58,8 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
   const [transcricaoOCR, setTranscricaoOCR] = useState("");
   const [correcaoIdEmRevisao, setCorrecaoIdEmRevisao] = useState<string | null>(null);
   const [showImagemAmpliada, setShowImagemAmpliada] = useState(false);
+  const [showProcessando, setShowProcessando] = useState(false);
+  const dismissedRef = useRef(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,7 +73,6 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
   } = useForm<FormData>({ defaultValues: { turmaId: "", autorNome: "", tema: "" } });
 
   const turmaIdSelecionada = watch("turmaId");
-  const isProcessing = enviarRedacao.isPending || processarCorrecao.isPending;
 
   const handleSelecionarManuscrita = () => {
     setModo("manuscrita");
@@ -125,7 +126,13 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
     setArquivoNome(null);
     setImagemBase64(null);
     setTextoDigitado("");
+    setShowProcessando(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDismissProcessando = () => {
+    dismissedRef.current = true;
+    resetForm();
   };
 
   const onSubmit = async (data: FormData) => {
@@ -139,12 +146,21 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
       return;
     }
 
+    if (modo === "digitada" && !textoDigitado.trim()) {
+      toast.error("Digite ou cole o texto da redação");
+      return;
+    }
+
+    if (modo === "manuscrita" && !imagemBase64) {
+      toast.error("Selecione uma imagem da redação");
+      return;
+    }
+
+    dismissedRef.current = false;
+    setShowProcessando(true);
+
     try {
       if (modo === "digitada") {
-        if (!textoDigitado.trim()) {
-          toast.error("Digite ou cole o texto da redação");
-          return;
-        }
         const result = await enviarRedacao.mutateAsync({
           turmaId: data.turmaId || null,
           autorNome: data.autorNome,
@@ -155,12 +171,9 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
           transcricaoConfirmada: textoDigitado,
         });
         resetForm();
-        onConcluida?.(correcao.correcaoId);
+        if (!dismissedRef.current) onConcluida?.(correcao.correcaoId);
+        dismissedRef.current = false;
       } else {
-        if (!imagemBase64) {
-          toast.error("Selecione uma imagem da redação");
-          return;
-        }
         const result = await enviarRedacao.mutateAsync({
           turmaId: data.turmaId || null,
           autorNome: data.autorNome,
@@ -168,13 +181,14 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
           imagemBase64,
         });
         if (result.status === "revisao_ocr" && result.transcricaoOCR) {
+          setShowProcessando(false);
           setTranscricaoOCR(result.transcricaoOCR);
           setCorrecaoIdEmRevisao(result.correcaoId);
           setShowRevisaoOCR(true);
         }
       }
     } catch {
-      // Erros tratados nos hooks
+      setShowProcessando(false);
     }
   };
 
@@ -183,24 +197,79 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
       toast.error("A transcrição não pode estar vazia");
       return;
     }
+    dismissedRef.current = false;
+    setShowRevisaoOCR(false);
+    setShowProcessando(true);
     try {
       await processarCorrecao.mutateAsync({
         correcaoId: correcaoIdEmRevisao,
         transcricaoConfirmada: transcricaoOCR,
       });
-      setShowRevisaoOCR(false);
       setTranscricaoOCR("");
       const idConcluido = correcaoIdEmRevisao;
       resetForm();
       setCorrecaoIdEmRevisao(null);
-      if (idConcluido) onConcluida?.(idConcluido);
+      if (!dismissedRef.current && idConcluido) onConcluida?.(idConcluido);
+      dismissedRef.current = false;
     } catch {
-      // tratado no hook
+      setShowProcessando(false);
     }
   };
 
+  const mensagemProcessando = processarCorrecao.isPending
+    ? "Jarvis está corrigindo sua redação..."
+    : modo === "manuscrita"
+    ? "Jarvis está lendo a redação manuscrita..."
+    : "Jarvis está preparando a correção...";
+
+  const submensagemProcessando = processarCorrecao.isPending
+    ? "A IA está avaliando as 5 competências do ENEM. Isso pode levar alguns segundos."
+    : modo === "manuscrita"
+    ? "O Jarvis está realizando o OCR da imagem. Aguarde um instante."
+    : "Registrando sua redação e iniciando a correção...";
+
   return (
     <>
+      {showProcessando && (
+        <div className="relative flex flex-col items-center justify-center rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] px-8 py-16 text-center">
+          <button
+            type="button"
+            onClick={handleDismissProcessando}
+            className="absolute right-4 top-4 rounded-xl p-1.5 text-[#b09cc8] transition hover:bg-[#efe4ff] hover:text-[#4B0082]"
+            title="Voltar ao formulário"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          {/* Ícone animado */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 animate-ping rounded-full bg-[#8624d6]/20" style={{ animationDuration: "1.5s" }} />
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#efe4ff] to-[#dcc8f5] text-4xl shadow-[0_0_0_6px_rgba(134,36,214,0.08)]">
+              🤖
+            </div>
+          </div>
+
+          {/* Dots */}
+          <div className="mb-5 flex gap-2">
+            {[0, 0.15, 0.3].map((delay, i) => (
+              <div
+                key={i}
+                className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8624d6]"
+                style={{ animationDelay: `${delay}s` }}
+              />
+            ))}
+          </div>
+
+          <p className="text-base font-bold text-[#4B0082]">{mensagemProcessando}</p>
+          <p className="mt-2 max-w-xs text-sm text-[#78668e]">{submensagemProcessando}</p>
+          <p className="mt-4 text-xs text-[#b09cc8]">
+            Clique no <strong>✕</strong> para enviar outra redação.<br />
+            Esta já foi registrada e aparecerá no histórico.
+          </p>
+        </div>
+      )}
+
+      {!showProcessando && (
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Campos principais */}
         <div className="rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] p-5">
@@ -397,20 +466,14 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={isProcessing || creditos === 0}
+            disabled={creditos === 0}
             className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#4B0082] to-[#8624d6] px-8 py-4 text-base font-black text-white shadow-[0_12px_24px_rgba(75,0,130,0.22)] transition hover:brightness-105 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processando...
-              </>
-            ) : (
-              "Enviar redação"
-            )}
+            Enviar redação
           </button>
         </div>
       </form>
+      )}
 
       {/* AlertDialog: Deletar Turma */}
       <AlertDialog open={showDeleteTurma} onOpenChange={setShowDeleteTurma}>
