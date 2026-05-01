@@ -308,10 +308,19 @@ Deno.serve(async (req) => {
     let isRawResponse = false;
     {
       let jsonText = geminiText.trim();
-      const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (fenceMatch) jsonText = fenceMatch[1].trim();
+      // Strip markdown fences: remove primeira linha (```json) e última linha (```)
+      if (jsonText.startsWith("```")) {
+        const firstNewline = jsonText.indexOf("\n");
+        if (firstNewline !== -1) {
+          jsonText = jsonText.slice(firstNewline + 1);
+          const lastFence = jsonText.lastIndexOf("```");
+          if (lastFence !== -1) jsonText = jsonText.slice(0, lastFence);
+          jsonText = jsonText.trim();
+        }
+      }
       try {
         correcaoIA = JSON.parse(jsonText);
+        console.log("✅ JSON extraído e parseado com sucesso");
       } catch {
         isRawResponse = true;
         console.log("⚠️ Resposta não é JSON — salvando como texto bruto");
