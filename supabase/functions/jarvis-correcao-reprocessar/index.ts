@@ -206,9 +206,47 @@ Deno.serve(async (req) => {
         "\n\nConsidere essa observação ao revisar a correção anterior, mas mantenha a avaliação baseada nos critérios do Laboratório do Redator e na matriz ENEM.\n---";
     }
 
-    const systemPromptFinal = fewShotBloco
+    const JSON_SCHEMA_INSTRUCTION = `
+
+---
+## ⚠️ FORMATO DE SAÍDA OBRIGATÓRIO — JSON
+
+Retorne EXCLUSIVAMENTE um objeto JSON válido com a estrutura abaixo.
+Coloque toda a análise textual (erros, justificativas, comentários) dentro dos campos de texto.
+Não inclua markdown, texto livre ou comentários fora do JSON.
+
+{
+  "competencias": {
+    "c1": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C1>" },
+    "c2": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C2>" },
+    "c3": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C3>" },
+    "c4": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C4>" },
+    "c5": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C5>" }
+  },
+  "nota_total": <soma das 5 notas>,
+  "erros": [
+    {
+      "numero": <sequencial>,
+      "tipo": "<tipo do erro>",
+      "competencia_relacionada": "<c1|c2|c3|c4|c5>",
+      "descricao": "<descrição pedagógica>",
+      "trecho_original": "<trecho exato>",
+      "sugestao": "<correção sugerida>"
+    }
+  ],
+  "estrutura": {
+    "possui_tese": <true|false>,
+    "tese_identificada": "<tese identificada ou vazio>",
+    "argumentos": ["<argumento 1>", "<argumento 2>"],
+    "uso_repertorio": "<descrição do uso do repertório>",
+    "proposta_intervencao": "<descrição da proposta de intervenção>"
+  },
+  "resumo_geral": "<comentário final ao redator — motivador e pedagógico, destacando pontos fortes e sugestões>"
+}`;
+
+    const systemPromptFinal = (fewShotBloco
       ? config.system_prompt + "\n\n" + fewShotBloco
-      : config.system_prompt;
+      : config.system_prompt) + JSON_SCHEMA_INSTRUCTION;
 
     console.log(
       "✅ Prompt montado" +
