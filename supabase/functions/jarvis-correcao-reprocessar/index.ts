@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
         contents: [{ role: "user", parts: [{ text: userPrompt }] }],
         generationConfig: {
           temperature: parseFloat(String(config.temperatura)),
-          maxOutputTokens: config.max_tokens,
+          maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
         },
       }),
     });
