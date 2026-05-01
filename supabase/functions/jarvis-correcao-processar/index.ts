@@ -303,30 +303,73 @@ Deno.serve(async (req) => {
     console.log(`⏱️ Tempo: ${tempoProcessamento}ms`);
     console.log(`📊 Tokens: total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} | pensamento=${thoughtsTokens}`);
 
-    let correcaoIA: CorrecaoIA;
-    try {
+    // Tentar extrair JSON (com ou sem markdown fences)
+    let correcaoIA: CorrecaoIA | null = null;
+    let isRawResponse = false;
+    {
       let jsonText = geminiText.trim();
-      // Modelos com thinking retornam JSON embrulhado em ```json ... ```
       const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (fenceMatch) jsonText = fenceMatch[1].trim();
-      correcaoIA = JSON.parse(jsonText);
-    } catch (e) {
-      console.error("❌ Erro ao parsear JSON da IA:", e);
-      console.error("Texto recebido (500 chars):", geminiText?.substring(0, 500));
-      throw new Error("Resposta da IA não está em formato JSON válido");
+      try {
+        correcaoIA = JSON.parse(jsonText);
+      } catch {
+        isRawResponse = true;
+        console.log("⚠️ Resposta não é JSON — salvando como texto bruto");
+        console.log("Prévia (800 chars):", geminiText.substring(0, 800));
+      }
     }
 
+    // ── Modo texto bruto: salva e retorna para inspeção ──────────
+    if (isRawResponse) {
+      const custoEstimado = calcularCusto(
+        geminiModel,
+        geminiData.usageMetadata?.promptTokenCount ?? 0,
+        geminiData.usageMetadata?.candidatesTokenCount ?? 0
+      );
+      await supabaseClient
+        .from("jarvis_correcoes")
+        .update({
+          transcricao_confirmada: transcricaoConfirmada,
+          correcao_ia: { resposta_bruta: geminiText },
+          config_id: config.id,
+          config_versao: config.versao,
+          modelo_ia: config.model,
+          tokens_total: geminiData.usageMetadata?.totalTokenCount ?? 0,
+          tempo_processamento_ms: tempoProcessamento,
+          custo_estimado: custoEstimado,
+          grupo_id: correcaoId,
+          numero_versao: 1,
+          is_versao_principal: true,
+          tipo_correcao: "original",
+          status: "corrigida",
+          corrigida_em: new Date().toISOString(),
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq("id", correcaoId);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          is_raw: true,
+          resposta_ia: geminiText,
+          creditos_restantes: creditResult.creditos_atuais,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Modo JSON estruturado ─────────────────────────────────────
     // Recalcular nota_total a partir das competências (o modelo às vezes erra a soma)
-    if (correcaoIA.competencias) {
+    if (correcaoIA!.competencias) {
       const soma =
-        (correcaoIA.competencias.c1?.nota ?? 0) +
-        (correcaoIA.competencias.c2?.nota ?? 0) +
-        (correcaoIA.competencias.c3?.nota ?? 0) +
-        (correcaoIA.competencias.c4?.nota ?? 0) +
-        (correcaoIA.competencias.c5?.nota ?? 0);
-      if (typeof correcaoIA.nota_total !== "number" || correcaoIA.nota_total !== soma) {
-        console.log(`⚠️ nota_total corrigida: ${correcaoIA.nota_total} → ${soma}`);
-        correcaoIA.nota_total = soma;
+        (correcaoIA!.competencias.c1?.nota ?? 0) +
+        (correcaoIA!.competencias.c2?.nota ?? 0) +
+        (correcaoIA!.competencias.c3?.nota ?? 0) +
+        (correcaoIA!.competencias.c4?.nota ?? 0) +
+        (correcaoIA!.competencias.c5?.nota ?? 0);
+      if (typeof correcaoIA!.nota_total !== "number" || correcaoIA!.nota_total !== soma) {
+        console.log(`⚠️ nota_total corrigida: ${correcaoIA!.nota_total} → ${soma}`);
+        correcaoIA!.nota_total = soma;
       }
     }
 
@@ -335,7 +378,7 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════
     console.log("🔍 Validando resposta da IA...");
 
-    const validationErrors = validateCorrecaoIA(correcaoIA, config.versao);
+    const validationErrors = validateCorrecaoIA(correcaoIA!, config.versao);
     if (validationErrors.length > 0) {
       console.error("❌ Validação falhou:", validationErrors);
       throw new Error(
@@ -344,7 +387,7 @@ Deno.serve(async (req) => {
     }
 
     console.log("✅ Resposta válida");
-    console.log(`📊 Nota total: ${correcaoIA.nota_total}`);
+    console.log(`📊 Nota total: ${correcaoIA!.nota_total}`);
 
     // ══════════════════════════════════════════════════════════════
     // 7. CALCULAR CUSTO
@@ -366,13 +409,13 @@ Deno.serve(async (req) => {
       .from("jarvis_correcoes")
       .update({
         transcricao_confirmada: transcricaoConfirmada,
-        correcao_ia: correcaoIA,
-        nota_total: correcaoIA.nota_total,
-        nota_c1: correcaoIA.competencias.c1.nota,
-        nota_c2: correcaoIA.competencias.c2.nota,
-        nota_c3: correcaoIA.competencias.c3.nota,
-        nota_c4: correcaoIA.competencias.c4.nota,
-        nota_c5: correcaoIA.competencias.c5.nota,
+        correcao_ia: correcaoIA!,
+        nota_total: correcaoIA!.nota_total,
+        nota_c1: correcaoIA!.competencias.c1.nota,
+        nota_c2: correcaoIA!.competencias.c2.nota,
+        nota_c3: correcaoIA!.competencias.c3.nota,
+        nota_c4: correcaoIA!.competencias.c4.nota,
+        nota_c5: correcaoIA!.competencias.c5.nota,
 
         config_id: config.id,
         config_versao: config.versao,
@@ -417,7 +460,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         correcaoId,
-        nota_total: correcaoIA.nota_total,
+        nota_total: correcaoIA!.nota_total,
         config_versao: config.versao,
         tokens_usados: geminiData.usageMetadata?.totalTokenCount ?? 0,
         tempo_processamento_ms: tempoProcessamento,

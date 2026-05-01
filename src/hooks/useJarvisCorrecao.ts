@@ -186,9 +186,13 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
       queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
-      toast.success(
-        `Correção concluída! Nota: ${data.nota_total}/1000 | Créditos restantes: ${data.creditos_restantes}`
-      );
+      if (data.is_raw) {
+        toast.info(`Resposta bruta salva. Prévia: ${String(data.resposta_ia ?? "").substring(0, 200)}`);
+      } else {
+        toast.success(
+          `Correção concluída! Nota: ${data.nota_total}/1000 | Créditos restantes: ${data.creditos_restantes}`
+        );
+      }
     },
     onError: (error: any) => {
       toast.error(`Erro ao processar correção: ${error.message}`);
