@@ -42,7 +42,10 @@ import {
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
-const altSchema = z.object({ texto: z.string().min(1, 'Texto obrigatório') });
+const altSchema = z.object({
+  id: z.string().optional(), // UUID da alternativa existente (preserva votos ao editar)
+  texto: z.string().min(1, 'Texto obrigatório'),
+});
 
 const schema = z.object({
   titulo: z.string().min(1, 'Título obrigatório'),
@@ -129,7 +132,7 @@ export const InteracoesAdmin = () => {
       ativa: item.ativa,
       mostrar_resultado_aluno: item.mostrar_resultado_aluno,
       encerramento_em: item.encerramento_em ? item.encerramento_em.slice(0, 16) : '',
-      alternativas: item.alternativas.sort((a, b) => a.ordem - b.ordem).map(a => ({ texto: a.texto })),
+      alternativas: item.alternativas.sort((a, b) => a.ordem - b.ordem).map(a => ({ id: a.id, texto: a.texto })),
     });
     setTela('form');
   };
@@ -150,7 +153,7 @@ export const InteracoesAdmin = () => {
     };
 
     const alts = usaAlternativas
-      ? data.alternativas.map((a, i) => ({ texto: a.texto, ordem: i }))
+      ? data.alternativas.map((a, i) => ({ id: a.id, texto: a.texto, ordem: i }))
       : [];
 
     if (editando) {

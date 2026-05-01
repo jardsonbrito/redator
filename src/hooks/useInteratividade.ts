@@ -257,7 +257,8 @@ export const useUpdateInteracao = () => {
     }: {
       id: string;
       interacao: Partial<Omit<Interacao, 'id' | 'criado_em' | 'atualizado_em' | 'alternativas'>>;
-      alternativas: { texto: string; ordem: number }[];
+      // id opcional: se presente, preserva o UUID existente (evita ON DELETE SET NULL nos votos)
+      alternativas: { id?: string; texto: string; ordem: number }[];
     }) => {
       const { error: errI } = await supabase
         .from('interacoes')
@@ -265,15 +266,38 @@ export const useUpdateInteracao = () => {
         .eq('id', id);
       if (errI) throw errI;
 
-      const { error: errD } = await supabase
+      // Busca alternativas atuais para saber quais remover
+      const { data: atuais } = await supabase
         .from('interacoes_alternativas')
-        .delete()
+        .select('id')
         .eq('interacao_id', id);
-      if (errD) throw errD;
 
-      if (alternativas.length > 0) {
-        const alts = alternativas.map(a => ({ ...a, interacao_id: id }));
-        const { error: errA } = await supabase.from('interacoes_alternativas').insert(alts);
+      const idsAtuais = new Set((atuais ?? []).map((a: { id: string }) => a.id));
+      const idsNovos = new Set(alternativas.filter(a => a.id).map(a => a.id!));
+
+      // Deleta apenas as alternativas removidas (preserva votos dos existentes)
+      const idsRemover = [...idsAtuais].filter(cid => !idsNovos.has(cid));
+      if (idsRemover.length > 0) {
+        const { error: errD } = await supabase
+          .from('interacoes_alternativas')
+          .delete()
+          .in('id', idsRemover);
+        if (errD) throw errD;
+      }
+
+      // Atualiza alternativas existentes (mantém UUID → votos preservados)
+      for (const alt of alternativas.filter(a => a.id)) {
+        const { error: errU } = await supabase
+          .from('interacoes_alternativas')
+          .update({ texto: alt.texto, ordem: alt.ordem })
+          .eq('id', alt.id!);
+        if (errU) throw errU;
+      }
+
+      // Insere novas alternativas
+      const novas = alternativas.filter(a => !a.id).map(a => ({ ...a, interacao_id: id }));
+      if (novas.length > 0) {
+        const { error: errA } = await supabase.from('interacoes_alternativas').insert(novas);
         if (errA) throw errA;
       }
     },
