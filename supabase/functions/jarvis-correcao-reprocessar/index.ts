@@ -79,9 +79,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
-
     const { correcaoId, professorEmail, observacao }: ReprocessarRequest = await req.json();
 
     if (!correcaoId || !professorEmail) {
@@ -213,47 +210,99 @@ Deno.serve(async (req) => {
     console.log("✅ Prompt montado" + (observacaoTrimmed ? " (+ observação)" : "") + (fewShotBloco ? " (+ few-shot)" : ""));
 
     // ══════════════════════════════════════════════════════════════
-    // 5. CHAMAR IA (Gemini) — modo texto livre
+    // 5. CHAMAR IA (provider configurável via config.provider)
     // ══════════════════════════════════════════════════════════════
-    console.log("🚀 Chamando Gemini...");
+    const provider = config.provider ?? "openai";
+    console.log(`🚀 Chamando IA [${provider}] modelo: ${config.model}`);
 
     const startTime = Date.now();
-    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
+    let aiText: string;
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let totalTokens = 0;
+    let modeloUsado = config.model;
 
-    const geminiResponse = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPromptFinal }] },
-        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          temperature: parseFloat(String(config.temperatura)),
-          maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
+    if (provider === "anthropic") {
+      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
+
+      const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
         },
-      }),
-    });
+        body: JSON.stringify({
+          model: config.model,
+          system: systemPromptFinal,
+          messages: [{ role: "user", content: userPrompt }],
+          max_tokens: Math.max(config.max_tokens ?? 16000, 8000),
+          temperature: parseFloat(String(config.temperatura)),
+        }),
+      });
+
+      if (!anthropicResponse.ok) {
+        const errorData = await anthropicResponse.text();
+        console.error("❌ Erro na Anthropic:", errorData);
+        throw new Error(`Erro na API da Anthropic: ${errorData}`);
+      }
+
+      const anthropicData = await anthropicResponse.json();
+      aiText = anthropicData.content?.[0]?.text;
+      if (!aiText) throw new Error("Resposta vazia ou inválida da Anthropic");
+
+      inputTokens = anthropicData.usage?.input_tokens ?? 0;
+      outputTokens = anthropicData.usage?.output_tokens ?? 0;
+      totalTokens = inputTokens + outputTokens;
+    } else {
+      // Gemini (padrão — retrocompatível com configs existentes)
+      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+      if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
+
+      const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
+      modeloUsado = geminiModel;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
+
+      const geminiResponse = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPromptFinal }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: {
+            temperature: parseFloat(String(config.temperatura)),
+            maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
+          },
+        }),
+      });
+
+      if (!geminiResponse.ok) {
+        const errorData = await geminiResponse.text();
+        console.error("❌ Erro no Gemini:", errorData);
+        throw new Error(`Erro no Gemini: ${errorData}`);
+      }
+
+      const geminiData = await geminiResponse.json();
+      const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
+      aiText = parts[0]?.text;
+      if (!aiText) throw new Error("Resposta vazia ou inválida do Gemini");
+
+      inputTokens = geminiData.usageMetadata?.promptTokenCount ?? 0;
+      outputTokens = geminiData.usageMetadata?.candidatesTokenCount ?? 0;
+      totalTokens = geminiData.usageMetadata?.totalTokenCount ?? 0;
+    }
 
     const endTime = Date.now();
     const tempoProcessamento = endTime - startTime;
-
-    if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.text();
-      throw new Error(`Erro no Gemini: ${errorData}`);
-    }
-
-    const geminiData = await geminiResponse.json();
-    const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
-    const geminiText = parts[0]?.text;
-    if (!geminiText) throw new Error("Resposta vazia ou inválida do Gemini");
-    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | ${geminiData.usageMetadata?.totalTokenCount ?? "?"} tokens`);
+    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | ${totalTokens} tokens`);
 
     // ══════════════════════════════════════════════════════════════
     // 6. TENTAR PARSEAR JSON (com ou sem fences)
     // ══════════════════════════════════════════════════════════════
     let correcaoIA: CorrecaoIA | null = null;
     {
-      let jsonText = geminiText.trim();
+      let jsonText = aiText.trim();
       if (jsonText.startsWith("```")) {
         const nl = jsonText.indexOf("\n");
         if (nl !== -1) {
@@ -264,9 +313,9 @@ Deno.serve(async (req) => {
       }
       try { correcaoIA = JSON.parse(jsonText); } catch { /* try brace extraction */ }
       if (!correcaoIA) {
-        const fb = geminiText.indexOf("{"), lb = geminiText.lastIndexOf("}");
+        const fb = aiText.indexOf("{"), lb = aiText.lastIndexOf("}");
         if (fb !== -1 && lb > fb) {
-          try { correcaoIA = JSON.parse(geminiText.slice(fb, lb + 1)); } catch { /* raw */ }
+          try { correcaoIA = JSON.parse(aiText.slice(fb, lb + 1)); } catch { /* raw */ }
         }
       }
     }
@@ -284,11 +333,7 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════
     // 7. CALCULAR CUSTO + VERSÃO
     // ══════════════════════════════════════════════════════════════
-    const custoEstimado = calcularCusto(
-      geminiModel,
-      geminiData.usageMetadata?.promptTokenCount ?? 0,
-      geminiData.usageMetadata?.candidatesTokenCount ?? 0
-    );
+    const custoEstimado = calcularCusto(modeloUsado, inputTokens, outputTokens);
 
     const grupoId = original.grupo_id ?? original.id;
 
@@ -331,7 +376,7 @@ Deno.serve(async (req) => {
         motivo_recorrecao: observacaoTrimmed || null,
         solicitada_por: professorEmail,
 
-        correcao_ia: isEstruturado ? correcaoIA! : { resposta_bruta: geminiText },
+        correcao_ia: isEstruturado ? correcaoIA! : { resposta_bruta: aiText },
         ...(isEstruturado && {
           nota_total: correcaoIA!.nota_total,
           nota_c1: correcaoIA!.competencias!.c1.nota,
@@ -343,11 +388,11 @@ Deno.serve(async (req) => {
 
         config_id: config.id,
         config_versao: config.versao,
-        modelo_ia: config.model,
+        modelo_ia: modeloUsado,
 
-        tokens_input: geminiData.usageMetadata?.promptTokenCount ?? 0,
-        tokens_output: geminiData.usageMetadata?.candidatesTokenCount ?? 0,
-        tokens_total: geminiData.usageMetadata?.totalTokenCount ?? 0,
+        tokens_input: inputTokens,
+        tokens_output: outputTokens,
+        tokens_total: totalTokens,
         tempo_processamento_ms: tempoProcessamento,
         custo_estimado: custoEstimado,
 
@@ -471,14 +516,23 @@ function validateCorrecaoIA(correcao: CorrecaoIA, configVersao?: number): string
 
 function calcularCusto(model: string, inputTokens: number, outputTokens: number): number {
   const custos: Record<string, { input: number; output: number }> = {
+    // Gemini (preço por 1M tokens, USD)
     "gemini-2.5-flash-preview-04-17": { input: 0.15, output: 0.60 },
     "gemini-2.5-flash-preview": { input: 0.15, output: 0.60 },
+    "gemini-2.5-flash": { input: 0.15, output: 0.60 },
     "gemini-2.5-pro-preview-03-25": { input: 1.25, output: 10.0 },
     "gemini-2.5-pro-preview": { input: 1.25, output: 10.0 },
     "gemini-2.0-flash": { input: 0.10, output: 0.40 },
     "gemini-1.5-flash": { input: 0.075, output: 0.30 },
     "gemini-1.5-pro": { input: 3.5, output: 10.5 },
+    // Anthropic Claude (preço por 1M tokens, USD)
+    "claude-3-5-sonnet-20241022": { input: 3.0, output: 15.0 },
+    "claude-3-5-sonnet-20240620": { input: 3.0, output: 15.0 },
+    "claude-3-5-haiku-20241022": { input: 0.8, output: 4.0 },
+    "claude-3-opus-20240229": { input: 15.0, output: 75.0 },
+    "claude-3-haiku-20240307": { input: 0.25, output: 1.25 },
+    "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
   };
-  const modelCost = custos[model] || custos["gemini-1.5-flash"];
+  const modelCost = custos[model] || { input: 0.15, output: 0.60 };
   return (inputTokens / 1_000_000) * modelCost.input + (outputTokens / 1_000_000) * modelCost.output;
 }

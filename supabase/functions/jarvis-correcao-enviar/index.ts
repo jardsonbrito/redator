@@ -28,11 +28,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY não configurada");
-    }
-
     const {
       professorEmail,
       turmaId,
@@ -147,34 +142,40 @@ Deno.serve(async (req) => {
       console.log("✅ Imagem salva:", imagemUrl);
 
       // ─────────────────────────────────────────────────────────
-      // 3.2. OCR com Gemini Vision
+      // 3.2. OCR com OpenAI Vision
       // ─────────────────────────────────────────────────────────
-      console.log("🔍 Realizando OCR com Gemini Vision...");
+      console.log("🔍 Realizando OCR com OpenAI Vision...");
 
-      const ocrResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              role: "user",
-              parts: [
-                {
-                  text: "Extraia TODO o texto desta imagem de redação manuscrita. Transcreva EXATAMENTE como está escrito, mantendo parágrafos e quebras de linha. Retorne APENAS o texto transcrito, sem comentários ou análises.",
+      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+      if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
+
+      const ocrResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extraia TODO o texto desta imagem de redação manuscrita. Transcreva EXATAMENTE como está escrito, mantendo parágrafos e quebras de linha. Retorne APENAS o texto transcrito, sem comentários ou análises.",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Data}`,
+                  detail: "high",
                 },
-                {
-                  inlineData: {
-                    mimeType: "image/jpeg",
-                    data: base64Data,
-                  },
-                },
-              ],
-            }],
-            generationConfig: { maxOutputTokens: 2000 },
-          }),
-        }
-      );
+              },
+            ],
+          }],
+          max_tokens: 2000,
+        }),
+      });
 
       if (!ocrResponse.ok) {
         const errorData = await ocrResponse.text();
@@ -183,7 +184,7 @@ Deno.serve(async (req) => {
       }
 
       const ocrData = await ocrResponse.json();
-      transcricaoOCR = ocrData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+      transcricaoOCR = ocrData.choices?.[0]?.message?.content?.trim() ?? "";
 
       console.log("✅ OCR concluído");
       console.log(`📝 Texto extraído: ${transcricaoOCR.substring(0, 100)}...`);
