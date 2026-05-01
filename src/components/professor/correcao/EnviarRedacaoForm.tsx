@@ -19,7 +19,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, AlertCircle, Check } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Plus, Trash2, AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -34,7 +44,7 @@ interface FormData {
 }
 
 export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
-  const { turmas, creditos, enviarRedacao, processarCorrecao, criarTurma } =
+  const { turmas, creditos, enviarRedacao, processarCorrecao, criarTurma, deletarTurma } =
     useJarvisCorrecao(professorEmail);
 
   const [modo, setModo] = useState<"manuscrita" | "digitada" | null>(null);
@@ -43,6 +53,7 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
   const [textoDigitado, setTextoDigitado] = useState("");
   const [showCriarTurma, setShowCriarTurma] = useState(false);
   const [novaTurmaNome, setNovaTurmaNome] = useState("");
+  const [showDeleteTurma, setShowDeleteTurma] = useState(false);
   const [showRevisaoOCR, setShowRevisaoOCR] = useState(false);
   const [transcricaoOCR, setTranscricaoOCR] = useState("");
   const [correcaoIdEmRevisao, setCorrecaoIdEmRevisao] = useState<string | null>(null);
@@ -214,6 +225,16 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
                 >
                   <Plus className="h-5 w-5" />
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 shrink-0 rounded-xl border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-30"
+                  disabled={!turmaIdSelecionada}
+                  onClick={() => setShowDeleteTurma(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
@@ -341,6 +362,34 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
           </button>
         </div>
       </form>
+
+      {/* AlertDialog: Deletar Turma */}
+      <AlertDialog open={showDeleteTurma} onOpenChange={setShowDeleteTurma}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover turma?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso removerá a turma da sua lista. As redações associadas a ela não serão excluídas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={async () => {
+                await deletarTurma.mutateAsync(turmaIdSelecionada);
+                setValue("turmaId", "");
+              }}
+            >
+              {deletarTurma.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Remover"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog: Criar Turma */}
       <Dialog open={showCriarTurma} onOpenChange={setShowCriarTurma}>

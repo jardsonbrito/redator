@@ -37,8 +37,8 @@ export const ProfessorJarvisCorrecao = () => {
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#d9c5f3] text-[#4B0082]">
               <Bot className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-zinc-950 md:text-3xl">
-              Jarvis — Correção por Inteligência Artificial
+            <h1 className="text-xl font-bold tracking-tight text-zinc-950">
+              O corretor oficial do Laboratório do Professor de Redação
             </h1>
           </div>
 

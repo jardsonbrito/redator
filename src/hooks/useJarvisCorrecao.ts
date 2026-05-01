@@ -284,6 +284,33 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     },
   });
 
+  const deletarTurma = useMutation({
+    mutationFn: async (turmaId: string) => {
+      const { data: professor } = await supabase
+        .from("professores")
+        .select("id")
+        .eq("email", professorEmail)
+        .single();
+
+      if (!professor) throw new Error("Professor não encontrado");
+
+      const { error } = await supabase
+        .from("professor_turmas")
+        .delete()
+        .eq("professor_id", professor.id)
+        .eq("turma_id", turmaId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["professor-turmas"] });
+      toast.success("Turma removida com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao remover turma: ${error.message}`);
+    },
+  });
+
   return {
     correcoes,
     creditos,
@@ -296,6 +323,7 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     deletarCorrecao,
     deletarPorAluno,
     criarTurma,
+    deletarTurma,
   };
 };
 

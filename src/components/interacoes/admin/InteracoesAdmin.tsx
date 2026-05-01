@@ -530,7 +530,7 @@ const ResultadoView = ({ interacao, onVoltar }: { interacao: Interacao; onVoltar
                     <div key={i} className="py-2.5 text-sm flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-800 truncate">{p.email_aluno}</p>
+                          <p className="font-medium text-gray-800 truncate">{p.nome_aluno}</p>
                           <span className="text-xs text-gray-400 shrink-0">
                             {format(new Date(p.criado_em), "dd/MM/yy HH:mm", { locale: ptBR })}
                           </span>

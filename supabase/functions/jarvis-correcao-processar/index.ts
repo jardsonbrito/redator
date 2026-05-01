@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
     console.log("🚀 Chamando Gemini...");
 
     const startTime = Date.now();
-    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-3-flash-preview";
+    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash-preview-04-17";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
 
     const geminiResponse = await fetch(geminiUrl, {
@@ -274,8 +274,7 @@ Deno.serve(async (req) => {
         generationConfig: {
           temperature: parseFloat(String(config.temperatura)),
           maxOutputTokens: config.max_tokens,
-          responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 24576 }, // thinking_level="HIGH"
+          thinkingConfig: { thinkingBudget: 24576 }, // thinking_level="HIGH" — incompatível com responseMimeType
         },
       }),
     });
@@ -587,8 +586,9 @@ function calcularCusto(
   outputTokens: number
 ): number {
   const custos: Record<string, { input: number; output: number }> = {
-    "gemini-3-flash-preview": { input: 0.10, output: 0.40 },
+    "gemini-2.5-flash-preview-04-17": { input: 0.15, output: 0.60 },
     "gemini-2.5-flash-preview": { input: 0.15, output: 0.60 },
+    "gemini-2.5-pro-preview-03-25": { input: 1.25, output: 10.0 },
     "gemini-2.5-pro-preview": { input: 1.25, output: 10.0 },
     "gemini-2.0-flash": { input: 0.10, output: 0.40 },
     "gemini-1.5-flash": { input: 0.075, output: 0.30 },

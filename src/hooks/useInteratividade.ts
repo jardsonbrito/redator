@@ -47,6 +47,7 @@ export interface ResultadoAlternativa {
 export interface ResultadoParticipante {
   resposta_id: string;
   email_aluno: string;
+  nome_aluno: string;
   alternativa_id: string | null;
   alternativa_texto: string;
   resposta_texto: string | null;
@@ -165,6 +166,19 @@ export const useResultadoInteracao = (interacaoId: string) =>
       const alternativas = alternativasRes.data as InteracaoAlternativa[];
       const total = respostas.length;
 
+      // Busca nomes dos participantes via tabela profiles
+      const emails = [...new Set(respostas.map(r => r.email_aluno).filter(Boolean))];
+      const nomePorEmail: Record<string, string> = {};
+      if (emails.length > 0) {
+        const { data: perfis } = await supabase
+          .from('profiles')
+          .select('email, nome, sobrenome')
+          .in('email', emails);
+        (perfis ?? []).forEach((p: { email: string; nome: string; sobrenome: string }) => {
+          nomePorEmail[p.email] = [p.nome, p.sobrenome].filter(Boolean).join(' ').trim();
+        });
+      }
+
       const contagem: Record<string, number> = {};
       alternativas.forEach(a => { contagem[a.id] = 0; });
       respostas.forEach(r => {
@@ -183,6 +197,7 @@ export const useResultadoInteracao = (interacaoId: string) =>
       const participantes: ResultadoParticipante[] = respostas.map(r => ({
         resposta_id: r.id,
         email_aluno: r.email_aluno,
+        nome_aluno: nomePorEmail[r.email_aluno] || r.email_aluno,
         alternativa_id: r.alternativa_id,
         alternativa_texto: alternativas.find(a => a.id === r.alternativa_id)?.texto ?? '',
         resposta_texto: r.resposta_texto,
