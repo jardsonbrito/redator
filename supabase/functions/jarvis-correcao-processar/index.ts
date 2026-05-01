@@ -303,12 +303,12 @@ Deno.serve(async (req) => {
     console.log(`⏱️ Tempo: ${tempoProcessamento}ms`);
     console.log(`📊 Tokens: total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} | pensamento=${thoughtsTokens}`);
 
-    // Tentar extrair JSON (com ou sem markdown fences)
+    // Extrair JSON da resposta (com ou sem markdown fences)
     let correcaoIA: CorrecaoIA | null = null;
     let isRawResponse = false;
     {
+      // Estratégia 1: strip de fences se presentes
       let jsonText = geminiText.trim();
-      // Strip markdown fences: remove primeira linha (```json) e última linha (```)
       if (jsonText.startsWith("```")) {
         const firstNewline = jsonText.indexOf("\n");
         if (firstNewline !== -1) {
@@ -318,10 +318,25 @@ Deno.serve(async (req) => {
           jsonText = jsonText.trim();
         }
       }
+
       try {
         correcaoIA = JSON.parse(jsonText);
-        console.log("✅ JSON extraído e parseado com sucesso");
+        console.log("✅ JSON parseado (estratégia 1 — fence strip)");
       } catch {
+        // Estratégia 2 (fallback): extrair pelo primeiro { e último }
+        const firstBrace = geminiText.indexOf("{");
+        const lastBrace = geminiText.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          try {
+            correcaoIA = JSON.parse(geminiText.slice(firstBrace, lastBrace + 1));
+            console.log("✅ JSON parseado (estratégia 2 — brace extraction)");
+          } catch {
+            // fallthrough para raw
+          }
+        }
+      }
+
+      if (!correcaoIA) {
         isRawResponse = true;
         console.log("⚠️ Resposta não é JSON — salvando como texto bruto");
         console.log("Prévia (800 chars):", geminiText.substring(0, 800));

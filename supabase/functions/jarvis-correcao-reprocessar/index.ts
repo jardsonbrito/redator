@@ -259,10 +259,9 @@ Deno.serve(async (req) => {
     const thoughtsTokens = geminiData.usageMetadata?.thoughtsTokenCount ?? 0;
     console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} tokens | pensamento=${thoughtsTokens}`);
 
-    let correcaoIA: CorrecaoIA;
-    try {
+    let correcaoIA: CorrecaoIA | null = null;
+    {
       let jsonText = geminiText.trim();
-      // Strip markdown fences: remove primeira linha (```json) e última linha (```)
       if (jsonText.startsWith("```")) {
         const firstNewline = jsonText.indexOf("\n");
         if (firstNewline !== -1) {
@@ -272,24 +271,36 @@ Deno.serve(async (req) => {
           jsonText = jsonText.trim();
         }
       }
-      correcaoIA = JSON.parse(jsonText);
-    } catch (e) {
-      console.error("❌ Erro ao parsear JSON da IA:", e);
-      console.error("Texto recebido (500 chars):", geminiText?.substring(0, 500));
+      try {
+        correcaoIA = JSON.parse(jsonText);
+        console.log("✅ JSON parseado (estratégia 1)");
+      } catch {
+        const firstBrace = geminiText.indexOf("{");
+        const lastBrace = geminiText.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          try {
+            correcaoIA = JSON.parse(geminiText.slice(firstBrace, lastBrace + 1));
+            console.log("✅ JSON parseado (estratégia 2 — brace extraction)");
+          } catch { /* fallthrough */ }
+        }
+      }
+    }
+    if (!correcaoIA) {
+      console.error("❌ JSON inválido. Prévia:", geminiText?.substring(0, 500));
       throw new Error("Resposta da IA não está em formato JSON válido");
     }
 
     // Recalcular nota_total a partir das competências
-    if (correcaoIA.competencias) {
+    if (correcaoIA!.competencias) {
       const soma =
-        (correcaoIA.competencias.c1?.nota ?? 0) +
-        (correcaoIA.competencias.c2?.nota ?? 0) +
-        (correcaoIA.competencias.c3?.nota ?? 0) +
-        (correcaoIA.competencias.c4?.nota ?? 0) +
-        (correcaoIA.competencias.c5?.nota ?? 0);
-      if (typeof correcaoIA.nota_total !== "number" || correcaoIA.nota_total !== soma) {
-        console.log(`⚠️ nota_total corrigida: ${correcaoIA.nota_total} → ${soma}`);
-        correcaoIA.nota_total = soma;
+        (correcaoIA!.competencias.c1?.nota ?? 0) +
+        (correcaoIA!.competencias.c2?.nota ?? 0) +
+        (correcaoIA!.competencias.c3?.nota ?? 0) +
+        (correcaoIA!.competencias.c4?.nota ?? 0) +
+        (correcaoIA!.competencias.c5?.nota ?? 0);
+      if (typeof correcaoIA!.nota_total !== "number" || correcaoIA!.nota_total !== soma) {
+        console.log(`⚠️ nota_total corrigida: ${correcaoIA!.nota_total} → ${soma}`);
+        correcaoIA!.nota_total = soma;
       }
     }
 
@@ -301,7 +312,7 @@ Deno.serve(async (req) => {
       throw new Error(`Resposta da IA não passou na validação: ${validationErrors.join(", ")}`);
     }
 
-    console.log(`✅ Válida | Nota: ${correcaoIA.nota_total}`);
+    console.log(`✅ Válida | Nota: ${correcaoIA!.nota_total}`);
 
     // ══════════════════════════════════════════════════════════════
     // 7. CALCULAR CUSTO
@@ -364,12 +375,12 @@ Deno.serve(async (req) => {
         solicitada_por: professorEmail,
 
         correcao_ia: correcaoIA,
-        nota_total: correcaoIA.nota_total,
-        nota_c1: correcaoIA.competencias.c1.nota,
-        nota_c2: correcaoIA.competencias.c2.nota,
-        nota_c3: correcaoIA.competencias.c3.nota,
-        nota_c4: correcaoIA.competencias.c4.nota,
-        nota_c5: correcaoIA.competencias.c5.nota,
+        nota_total: correcaoIA!.nota_total,
+        nota_c1: correcaoIA!.competencias.c1.nota,
+        nota_c2: correcaoIA!.competencias.c2.nota,
+        nota_c3: correcaoIA!.competencias.c3.nota,
+        nota_c4: correcaoIA!.competencias.c4.nota,
+        nota_c5: correcaoIA!.competencias.c5.nota,
 
         config_id: config.id,
         config_versao: config.versao,
@@ -404,7 +415,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         novaCorrecaoId: novaCorrecao.id,
-        nota_total: correcaoIA.nota_total,
+        nota_total: correcaoIA!.nota_total,
         numero_versao: proximaVersao,
         config_versao: config.versao,
         tokens_usados: geminiData.usageMetadata?.totalTokenCount ?? 0,
