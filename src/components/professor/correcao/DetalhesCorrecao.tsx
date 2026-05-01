@@ -95,6 +95,110 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     );
   }
 
+  // Modo texto bruto — exibe como documento markdown simples
+  if (correcaoIA.resposta_bruta) {
+    return (
+      <div className="space-y-5">
+        {/* Cabeçalho */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-0.5">
+            <h3 className="text-xl font-black text-zinc-900">{correcao.autor_nome}</h3>
+            <p className="text-sm font-medium text-zinc-600">{correcao.tema}</p>
+            {correcao.corrigida_em && (
+              <p className="text-xs text-zinc-400">
+                Corrigida em{" "}
+                {format(new Date(correcao.corrigida_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                {correcao.tipo_correcao === "recorrecao" && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                    <RefreshCw className="h-2.5 w-2.5" />
+                    Revisão #{correcao.numero_versao ?? ""}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {podeRevisar && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRevisaoDialog(true)}
+                className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Solicitar revisão da correção IA
+              </Button>
+            )}
+            {textoOriginal && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTexto((v) => !v)}
+                className="shrink-0 gap-1.5 text-xs"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Texto da redação
+                {showTexto ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {textoOriginal && showTexto && (
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Texto da redação</p>
+            <p className="text-sm leading-relaxed text-zinc-800 whitespace-pre-wrap">{textoOriginal}</p>
+          </div>
+        )}
+
+        {/* Correção em texto corrido */}
+        <div className="rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] p-6">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800">
+            {correcaoIA.resposta_bruta}
+          </p>
+        </div>
+
+        {/* Dialog: Solicitar revisão */}
+        <Dialog open={showRevisaoDialog} onOpenChange={setShowRevisaoDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-violet-600" />
+                Solicitar revisão da correção IA
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-zinc-600">
+                A IA irá reler a redação e gerar uma nova correção, preservando a versão anterior no histórico.
+              </p>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">
+                  Observação para a revisão{" "}
+                  <span className="font-normal normal-case text-zinc-400">(opcional)</span>
+                </label>
+                <Textarea
+                  value={observacaoRevisao}
+                  onChange={(e) => setObservacaoRevisao(e.target.value)}
+                  placeholder=""
+                  className="min-h-[110px] text-sm resize-none"
+                  disabled={reprocessar.isPending}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setShowRevisaoDialog(false); setObservacaoRevisao(""); }} disabled={reprocessar.isPending}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSolicitarRevisao} disabled={reprocessar.isPending} className="bg-gradient-to-r from-[#4B0082] to-[#8a25d9] text-white hover:brightness-105">
+                {reprocessar.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Revisando...</> : <><RefreshCw className="h-4 w-4 mr-2" />Solicitar revisão</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   const notasComp: Record<string, number> = {
     c1: correcao.nota_c1 ?? correcaoIA.competencias?.c1?.nota ?? 0,
     c2: correcao.nota_c2 ?? correcaoIA.competencias?.c2?.nota ?? 0,

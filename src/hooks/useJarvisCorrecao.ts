@@ -186,13 +186,7 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
       queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
-      if (data.is_raw) {
-        toast.info(`Resposta bruta salva. Prévia: ${String(data.resposta_ia ?? "").substring(0, 200)}`);
-      } else {
-        toast.success(
-          `Correção concluída! Nota: ${data.nota_total}/1000 | Créditos restantes: ${data.creditos_restantes}`
-        );
-      }
+      toast.success(`Correção concluída! Créditos restantes: ${data.creditos_restantes}`);
     },
     onError: (error: any) => {
       toast.error(`Erro ao processar correção: ${error.message}`);
@@ -215,11 +209,11 @@ export const useJarvisCorrecao = (professorEmail: string) => {
       if (!result.success) throw new Error(result.error);
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
       queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
       queryClient.invalidateQueries({ queryKey: ["jarvis-versoes"] });
-      toast.success(`Revisão concluída! Nova nota: ${data.nota_total}/1000`);
+      toast.success("Revisão concluída!");
     },
     onError: (error: any) => {
       toast.error(`Erro ao solicitar revisão: ${error.message}`);

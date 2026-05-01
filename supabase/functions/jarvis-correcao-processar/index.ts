@@ -244,60 +244,14 @@ Deno.serve(async (req) => {
     }
 
     // Modelos de referência são concatenados ao system_prompt (calibração few-shot)
-    // Schema JSON é sempre acrescentado ao final — o system_prompt do banco descreve
-    // COMO analisar; este bloco diz em QUAL FORMATO retornar o resultado.
-    const JSON_SCHEMA_INSTRUCTION = `
-
----
-## ⚠️ FORMATO DE SAÍDA OBRIGATÓRIO — JSON
-
-Retorne EXCLUSIVAMENTE um objeto JSON válido com a estrutura abaixo.
-Coloque toda a análise textual (erros, justificativas, comentários) dentro dos campos de texto.
-Não inclua markdown, texto livre ou comentários fora do JSON.
-
-{
-  "competencias": {
-    "c1": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C1>" },
-    "c2": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C2>" },
-    "c3": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C3>" },
-    "c4": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C4>" },
-    "c5": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C5>" }
-  },
-  "nota_total": <soma das 5 notas>,
-  "erros": [
-    {
-      "numero": <sequencial>,
-      "tipo": "<tipo do erro>",
-      "competencia_relacionada": "<c1|c2|c3|c4|c5>",
-      "descricao": "<descrição pedagógica>",
-      "trecho_original": "<trecho exato>",
-      "sugestao": "<correção sugerida>"
-    }
-  ],
-  "estrutura": {
-    "possui_tese": <true|false>,
-    "tese_identificada": "<tese identificada ou vazio>",
-    "argumentos": ["<argumento 1>", "<argumento 2>"],
-    "uso_repertorio": "<descrição do uso do repertório>",
-    "proposta_intervencao": "<descrição da proposta de intervenção>"
-  },
-  "resumo_geral": "<comentário final ao redator — motivador e pedagógico, destacando pontos fortes e sugestões>"
-}`;
-
-    const systemPromptFinal = (fewShotBloco
+    const systemPromptFinal = fewShotBloco
       ? config.system_prompt + "\n\n" + fewShotBloco
-      : config.system_prompt) + JSON_SCHEMA_INSTRUCTION;
+      : config.system_prompt;
 
-    const temFewShot = !!fewShotBloco;
-    const temBanco = !!bancoBlocoPrompt;
-    console.log(
-      `✅ Prompt montado` +
-      (temBanco ? " (+ banco de comentários)" : "") +
-      (temFewShot ? " (+ few-shot de referência)" : "")
-    );
+    console.log(`✅ Prompt montado` + (fewShotBloco ? " (+ few-shot)" : "") + (bancoBlocoPrompt ? " (+ banco)" : ""));
 
     // ══════════════════════════════════════════════════════════════
-    // 5. CHAMAR IA (Gemini)
+    // 5. CHAMAR IA (Gemini) — modo texto livre
     // ══════════════════════════════════════════════════════════════
     console.log("🚀 Chamando Gemini...");
 
@@ -305,19 +259,16 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
     const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
 
-    const generationConfig: Record<string, any> = {
-      temperature: parseFloat(String(config.temperatura)),
-      maxOutputTokens: config.max_tokens,
-      responseMimeType: "application/json",
-    };
-
     const geminiResponse = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPromptFinal }] },
         contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-        generationConfig,
+        generationConfig: {
+          temperature: parseFloat(String(config.temperatura)),
+          maxOutputTokens: config.max_tokens,
+        },
       }),
     });
 
@@ -334,49 +285,10 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
     const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
     const geminiText = parts[0]?.text;
     if (!geminiText) throw new Error("Resposta vazia ou inválida do Gemini");
-    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} tokens`);
-
-    let correcaoIA: CorrecaoIA;
-    try {
-      correcaoIA = JSON.parse(geminiText);
-    } catch (e) {
-      console.error("❌ JSON inválido:", (e as Error).message);
-      console.error("Prévia (500 chars):", geminiText?.substring(0, 500));
-      throw new Error("Resposta da IA não está em formato JSON válido");
-    }
-
-    // Recalcular nota_total a partir das competências (o modelo às vezes erra a soma)
-    if (correcaoIA.competencias) {
-      const soma =
-        (correcaoIA.competencias.c1?.nota ?? 0) +
-        (correcaoIA.competencias.c2?.nota ?? 0) +
-        (correcaoIA.competencias.c3?.nota ?? 0) +
-        (correcaoIA.competencias.c4?.nota ?? 0) +
-        (correcaoIA.competencias.c5?.nota ?? 0);
-      if (typeof correcaoIA.nota_total !== "number" || correcaoIA.nota_total !== soma) {
-        console.log(`⚠️ nota_total corrigida: ${correcaoIA.nota_total} → ${soma}`);
-        correcaoIA.nota_total = soma;
-      }
-    }
+    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | ${geminiData.usageMetadata?.totalTokenCount ?? "?"} tokens`);
 
     // ══════════════════════════════════════════════════════════════
-    // 6. VALIDAR RESPOSTA
-    // ══════════════════════════════════════════════════════════════
-    console.log("🔍 Validando resposta da IA...");
-
-    const validationErrors = validateCorrecaoIA(correcaoIA!, config.versao);
-    if (validationErrors.length > 0) {
-      console.error("❌ Validação falhou:", validationErrors);
-      throw new Error(
-        `Resposta da IA não passou na validação: ${validationErrors.join(", ")}`
-      );
-    }
-
-    console.log("✅ Resposta válida");
-    console.log(`📊 Nota total: ${correcaoIA.nota_total}`);
-
-    // ══════════════════════════════════════════════════════════════
-    // 7. CALCULAR CUSTO
+    // 6. CALCULAR CUSTO
     // ══════════════════════════════════════════════════════════════
     const custoEstimado = calcularCusto(
       geminiModel,
@@ -384,10 +296,8 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
       geminiData.usageMetadata?.candidatesTokenCount ?? 0
     );
 
-    console.log(`💰 Custo estimado: $${custoEstimado.toFixed(6)}`);
-
     // ══════════════════════════════════════════════════════════════
-    // 8. SALVAR CORREÇÃO COM RASTREABILIDADE COMPLETA
+    // 7. SALVAR CORREÇÃO (texto bruto)
     // ══════════════════════════════════════════════════════════════
     console.log("💾 Salvando correção...");
 
@@ -395,24 +305,11 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
       .from("jarvis_correcoes")
       .update({
         transcricao_confirmada: transcricaoConfirmada,
-        correcao_ia: correcaoIA!,
-        nota_total: correcaoIA.nota_total,
-        nota_c1: correcaoIA.competencias.c1.nota,
-        nota_c2: correcaoIA.competencias.c2.nota,
-        nota_c3: correcaoIA.competencias.c3.nota,
-        nota_c4: correcaoIA.competencias.c4.nota,
-        nota_c5: correcaoIA.competencias.c5.nota,
+        correcao_ia: { resposta_bruta: geminiText },
 
         config_id: config.id,
         config_versao: config.versao,
-        provider: config.provider,
         modelo_ia: config.model,
-        temperatura: config.temperatura,
-        max_tokens: config.max_tokens,
-
-        // Snapshot dos prompts efetivamente enviados (inclui few-shot se houver)
-        prompt_system_usado: systemPromptFinal,
-        prompt_user_usado: userPrompt,
 
         tokens_input: geminiData.usageMetadata?.promptTokenCount ?? 0,
         tokens_output: geminiData.usageMetadata?.candidatesTokenCount ?? 0,
@@ -420,7 +317,6 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
         tempo_processamento_ms: tempoProcessamento,
         custo_estimado: custoEstimado,
 
-        // Campos de versionamento: correção original é sempre versão 1 do seu próprio grupo
         grupo_id: correcaoId,
         numero_versao: 1,
         is_versao_principal: true,
@@ -433,24 +329,19 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
       .eq("id", correcaoId);
 
     if (updateError) {
-      console.error("❌ Erro ao salvar correção:", updateError);
+      console.error("❌ Erro ao salvar:", updateError);
       throw new Error("Erro ao salvar correção no banco de dados");
     }
 
-    console.log("✅ Correção salva com sucesso!");
+    console.log("✅ Correção salva!");
 
     // ══════════════════════════════════════════════════════════════
-    // 9. RETORNAR RESULTADO
+    // 8. RETORNAR RESULTADO
     // ══════════════════════════════════════════════════════════════
     return new Response(
       JSON.stringify({
         success: true,
         correcaoId,
-        nota_total: correcaoIA.nota_total,
-        config_versao: config.versao,
-        tokens_usados: geminiData.usageMetadata?.totalTokenCount ?? 0,
-        tempo_processamento_ms: tempoProcessamento,
-        custo_estimado: custoEstimado,
         creditos_restantes: creditResult.creditos_atuais,
       }),
       {

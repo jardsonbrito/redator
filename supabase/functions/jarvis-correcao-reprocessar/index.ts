@@ -206,57 +206,14 @@ Deno.serve(async (req) => {
         "\n\nConsidere essa observação ao revisar a correção anterior, mas mantenha a avaliação baseada nos critérios do Laboratório do Redator e na matriz ENEM.\n---";
     }
 
-    const JSON_SCHEMA_INSTRUCTION = `
-
----
-## ⚠️ FORMATO DE SAÍDA OBRIGATÓRIO — JSON
-
-Retorne EXCLUSIVAMENTE um objeto JSON válido com a estrutura abaixo.
-Coloque toda a análise textual (erros, justificativas, comentários) dentro dos campos de texto.
-Não inclua markdown, texto livre ou comentários fora do JSON.
-
-{
-  "competencias": {
-    "c1": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C1>" },
-    "c2": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C2>" },
-    "c3": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C3>" },
-    "c4": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C4>" },
-    "c5": { "nota": <0|40|80|120|160|200>, "justificativa": "<análise completa da C5>" }
-  },
-  "nota_total": <soma das 5 notas>,
-  "erros": [
-    {
-      "numero": <sequencial>,
-      "tipo": "<tipo do erro>",
-      "competencia_relacionada": "<c1|c2|c3|c4|c5>",
-      "descricao": "<descrição pedagógica>",
-      "trecho_original": "<trecho exato>",
-      "sugestao": "<correção sugerida>"
-    }
-  ],
-  "estrutura": {
-    "possui_tese": <true|false>,
-    "tese_identificada": "<tese identificada ou vazio>",
-    "argumentos": ["<argumento 1>", "<argumento 2>"],
-    "uso_repertorio": "<descrição do uso do repertório>",
-    "proposta_intervencao": "<descrição da proposta de intervenção>"
-  },
-  "resumo_geral": "<comentário final ao redator — motivador e pedagógico, destacando pontos fortes e sugestões>"
-}`;
-
-    const systemPromptFinal = (fewShotBloco
+    const systemPromptFinal = fewShotBloco
       ? config.system_prompt + "\n\n" + fewShotBloco
-      : config.system_prompt) + JSON_SCHEMA_INSTRUCTION;
+      : config.system_prompt;
 
-    console.log(
-      "✅ Prompt montado" +
-      (observacaoTrimmed ? " (+ observação do professor)" : "") +
-      (bancoBlocoPrompt ? " (+ banco)" : "") +
-      (fewShotBloco ? " (+ few-shot)" : "")
-    );
+    console.log("✅ Prompt montado" + (observacaoTrimmed ? " (+ observação)" : "") + (fewShotBloco ? " (+ few-shot)" : ""));
 
     // ══════════════════════════════════════════════════════════════
-    // 5. CHAMAR IA (Gemini)
+    // 5. CHAMAR IA (Gemini) — modo texto livre
     // ══════════════════════════════════════════════════════════════
     console.log("🚀 Chamando Gemini...");
 
@@ -264,19 +221,16 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
     const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
 
-    const generationConfig: Record<string, any> = {
-      temperature: parseFloat(String(config.temperatura)),
-      maxOutputTokens: config.max_tokens,
-      responseMimeType: "application/json",
-    };
-
     const geminiResponse = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPromptFinal }] },
         contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-        generationConfig,
+        generationConfig: {
+          temperature: parseFloat(String(config.temperatura)),
+          maxOutputTokens: config.max_tokens,
+        },
       }),
     });
 
@@ -292,43 +246,10 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
     const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
     const geminiText = parts[0]?.text;
     if (!geminiText) throw new Error("Resposta vazia ou inválida do Gemini");
-    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | total=${geminiData.usageMetadata?.totalTokenCount ?? "N/A"} tokens`);
-
-    let correcaoIA: CorrecaoIA;
-    try {
-      correcaoIA = JSON.parse(geminiText);
-    } catch (e) {
-      console.error("❌ JSON inválido:", (e as Error).message);
-      console.error("Prévia (500 chars):", geminiText?.substring(0, 500));
-      throw new Error("Resposta da IA não está em formato JSON válido");
-    }
-
-    // Recalcular nota_total a partir das competências
-    if (correcaoIA.competencias) {
-      const soma =
-        (correcaoIA.competencias.c1?.nota ?? 0) +
-        (correcaoIA.competencias.c2?.nota ?? 0) +
-        (correcaoIA.competencias.c3?.nota ?? 0) +
-        (correcaoIA.competencias.c4?.nota ?? 0) +
-        (correcaoIA.competencias.c5?.nota ?? 0);
-      if (typeof correcaoIA.nota_total !== "number" || correcaoIA.nota_total !== soma) {
-        console.log(`⚠️ nota_total corrigida: ${correcaoIA.nota_total} → ${soma}`);
-        correcaoIA.nota_total = soma;
-      }
-    }
+    console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | ${geminiData.usageMetadata?.totalTokenCount ?? "?"} tokens`);
 
     // ══════════════════════════════════════════════════════════════
-    // 6. VALIDAR RESPOSTA
-    // ══════════════════════════════════════════════════════════════
-    const validationErrors = validateCorrecaoIA(correcaoIA, config.versao);
-    if (validationErrors.length > 0) {
-      throw new Error(`Resposta da IA não passou na validação: ${validationErrors.join(", ")}`);
-    }
-
-    console.log(`✅ Válida | Nota: ${correcaoIA.nota_total}`);
-
-    // ══════════════════════════════════════════════════════════════
-    // 7. CALCULAR CUSTO
+    // 6. CALCULAR CUSTO + VERSÃO
     // ══════════════════════════════════════════════════════════════
     const custoEstimado = calcularCusto(
       geminiModel,
@@ -336,9 +257,6 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
       geminiData.usageMetadata?.candidatesTokenCount ?? 0
     );
 
-    // ══════════════════════════════════════════════════════════════
-    // 8. DETERMINAR PRÓXIMO NÚMERO DE VERSÃO
-    // ══════════════════════════════════════════════════════════════
     const grupoId = original.grupo_id ?? original.id;
 
     const { data: ultimaVersao } = await supabaseClient
@@ -352,20 +270,13 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
     const proximaVersao = (ultimaVersao?.numero_versao ?? 1) + 1;
     console.log(`📋 Versão: ${proximaVersao} (grupo ${grupoId})`);
 
-    // ══════════════════════════════════════════════════════════════
-    // 9. MARCAR TODAS AS VERSÕES ANTERIORES COMO NÃO-PRINCIPAL
-    // ══════════════════════════════════════════════════════════════
-    const { error: updatePrincipalError } = await supabaseClient
+    await supabaseClient
       .from("jarvis_correcoes")
       .update({ is_versao_principal: false })
       .eq("grupo_id", grupoId);
 
-    if (updatePrincipalError) {
-      throw new Error("Erro ao atualizar versões anteriores");
-    }
-
     // ══════════════════════════════════════════════════════════════
-    // 10. INSERIR NOVA VERSÃO
+    // 7. INSERIR NOVA VERSÃO (texto bruto)
     // ══════════════════════════════════════════════════════════════
     const agora = new Date().toISOString();
 
@@ -387,23 +298,11 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
         motivo_recorrecao: observacaoTrimmed || null,
         solicitada_por: professorEmail,
 
-        correcao_ia: correcaoIA,
-        nota_total: correcaoIA.nota_total,
-        nota_c1: correcaoIA.competencias.c1.nota,
-        nota_c2: correcaoIA.competencias.c2.nota,
-        nota_c3: correcaoIA.competencias.c3.nota,
-        nota_c4: correcaoIA.competencias.c4.nota,
-        nota_c5: correcaoIA.competencias.c5.nota,
+        correcao_ia: { resposta_bruta: geminiText },
 
         config_id: config.id,
         config_versao: config.versao,
-        provider: config.provider,
         modelo_ia: config.model,
-        temperatura: config.temperatura,
-        max_tokens: config.max_tokens,
-
-        prompt_system_usado: systemPromptFinal,
-        prompt_user_usado: userPrompt,
 
         tokens_input: geminiData.usageMetadata?.promptTokenCount ?? 0,
         tokens_output: geminiData.usageMetadata?.candidatesTokenCount ?? 0,
@@ -428,12 +327,7 @@ Não inclua markdown, texto livre ou comentários fora do JSON.
       JSON.stringify({
         success: true,
         novaCorrecaoId: novaCorrecao.id,
-        nota_total: correcaoIA.nota_total,
         numero_versao: proximaVersao,
-        config_versao: config.versao,
-        tokens_usados: geminiData.usageMetadata?.totalTokenCount ?? 0,
-        tempo_processamento_ms: tempoProcessamento,
-        custo_estimado: custoEstimado,
         creditos_restantes: creditResult.creditos_atuais,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
