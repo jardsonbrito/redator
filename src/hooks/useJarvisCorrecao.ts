@@ -171,7 +171,15 @@ export const useJarvisCorrecao = (professorEmail: string) => {
           },
         }
       );
-      if (error) throw error;
+      if (error) {
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) throw new Error(body.error);
+        } catch (parseErr) {
+          if (parseErr instanceof Error && parseErr.message !== error.message) throw parseErr;
+        }
+        throw error;
+      }
       if (!result.success) throw new Error(result.error);
       return result;
     },

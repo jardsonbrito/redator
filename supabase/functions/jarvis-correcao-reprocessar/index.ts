@@ -223,8 +223,15 @@ Deno.serve(async (req) => {
     console.log("🚀 Chamando Gemini...");
 
     const startTime = Date.now();
-    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash-preview-04-17";
+    const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
+
+    const supportsThinking = /2\.[5-9]|[3-9]\./.test(geminiModel);
+    const generationConfig: Record<string, any> = {
+      temperature: parseFloat(String(config.temperatura)),
+      maxOutputTokens: config.max_tokens,
+    };
+    if (supportsThinking) generationConfig.thinkingConfig = { thinkingBudget: -1 };
 
     const geminiResponse = await fetch(geminiUrl, {
       method: "POST",
@@ -232,11 +239,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPromptFinal }] },
         contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          temperature: parseFloat(String(config.temperatura)),
-          maxOutputTokens: config.max_tokens,
-          thinkingConfig: { thinkingBudget: 24576 }, // thinking_level="HIGH" — incompatível com responseMimeType
-        },
+        generationConfig,
       }),
     });
 
