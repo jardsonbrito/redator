@@ -187,11 +187,13 @@ export const useResultadoInteracao = (interacaoId: string) =>
         }
       });
 
+      const totalVotos = respostas.filter(r => r.alternativa_id).length;
+
       const resultados: ResultadoAlternativa[] = alternativas.map(a => ({
         alternativa_id: a.id,
         texto: a.texto,
         votos: contagem[a.id] ?? 0,
-        percentual: total > 0 ? Math.round(((contagem[a.id] ?? 0) / total) * 100) : 0,
+        percentual: totalVotos > 0 ? Math.round(((contagem[a.id] ?? 0) / totalVotos) * 100) : 0,
       }));
 
       const participantes: ResultadoParticipante[] = respostas.map(r => ({
@@ -204,7 +206,7 @@ export const useResultadoInteracao = (interacaoId: string) =>
         criado_em: r.criado_em,
       }));
 
-      return { resultados, participantes, total };
+      return { resultados, participantes, total, totalVotos };
     },
   });
 

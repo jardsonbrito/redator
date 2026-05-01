@@ -284,8 +284,8 @@ const InteratividadeResposta = () => {
                   <div className="flex items-center gap-2 text-[#4b0082]">
                     <BarChart2 className="w-5 h-5" />
                     <h3 className="font-bold">
-                      Resultado parcial — {resultado.total}{' '}
-                      {resultado.total === 1 ? 'participação' : 'participações'}
+                      Resultado parcial — {resultado.totalVotos}{' '}
+                      {resultado.totalVotos === 1 ? 'voto' : 'votos'}
                     </h3>
                   </div>
                   <div className="space-y-4">

@@ -482,7 +482,7 @@ const ResultadoView = ({ interacao, onVoltar }: { interacao: Interacao; onVoltar
       ) : !data ? null : (
         <>
           <Card>
-            <CardContent className="p-4 flex items-center gap-4">
+            <CardContent className="p-4 flex items-center gap-4 flex-wrap gap-y-2">
               <div className="flex items-center gap-2 text-primary">
                 <Users className="w-5 h-5" />
                 <span className="text-2xl font-bold">{data.total}</span>
@@ -490,6 +490,11 @@ const ResultadoView = ({ interacao, onVoltar }: { interacao: Interacao; onVoltar
               <p className="text-sm text-gray-600">
                 {data.total === 1 ? 'participação registrada' : 'participações registradas'}
               </p>
+              {data.resultados.length > 0 && data.totalVotos !== data.total && (
+                <p className="text-xs text-gray-400 ml-auto">
+                  {data.totalVotos} {data.totalVotos === 1 ? 'votou' : 'votaram'} em uma opção
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -535,8 +540,10 @@ const ResultadoView = ({ interacao, onVoltar }: { interacao: Interacao; onVoltar
                             {format(new Date(p.criado_em), "dd/MM/yy HH:mm", { locale: ptBR })}
                           </span>
                         </div>
-                        {p.alternativa_texto && (
+                        {p.alternativa_texto ? (
                           <p className="text-gray-500 text-xs mt-0.5">Escolheu: {p.alternativa_texto}</p>
+                        ) : !p.resposta_texto && (
+                          <p className="text-gray-400 text-xs mt-0.5 italic">Participou sem votar</p>
                         )}
                         {p.resposta_texto && (
                           <p className="text-gray-600 text-xs mt-0.5 italic">"{p.resposta_texto}"</p>
