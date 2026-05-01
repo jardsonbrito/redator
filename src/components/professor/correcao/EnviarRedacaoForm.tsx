@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Trash2, AlertCircle, Check } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertCircle, Check, X, ZoomIn } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -57,6 +57,7 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
   const [showRevisaoOCR, setShowRevisaoOCR] = useState(false);
   const [transcricaoOCR, setTranscricaoOCR] = useState("");
   const [correcaoIdEmRevisao, setCorrecaoIdEmRevisao] = useState<string | null>(null);
+  const [showImagemAmpliada, setShowImagemAmpliada] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,6 +76,13 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
   const handleSelecionarManuscrita = () => {
     setModo("manuscrita");
     fileInputRef.current?.click();
+  };
+
+  const handleRemoverImagem = () => {
+    setImagemBase64(null);
+    setArquivoNome(null);
+    setModo(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleArquivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,8 +299,9 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
               </div>
               <p className="mt-1.5 text-sm text-[#78668e]">Upload da imagem com OCR</p>
               {arquivoNome && modo === "manuscrita" && (
-                <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-[#4f3a68] truncate">
-                  {arquivoNome}
+                <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#4B0082]">
+                  <Check className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{arquivoNome}</span>
                 </p>
               )}
             </button>
@@ -325,6 +334,46 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
             className="hidden"
             onChange={handleArquivoChange}
           />
+
+          {/* Prévia da imagem manuscrita */}
+          {modo === "manuscrita" && imagemBase64 && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-[#c9a6ed] bg-white p-3">
+              <button
+                type="button"
+                onClick={() => setShowImagemAmpliada(true)}
+                className="group relative flex-shrink-0"
+                title="Clique para ampliar"
+              >
+                <img
+                  src={imagemBase64}
+                  alt="Prévia da redação"
+                  className="h-20 w-20 rounded-xl border border-[#dcc8f5] object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30 opacity-0 transition group-hover:opacity-100">
+                  <ZoomIn className="h-5 w-5 text-white" />
+                </div>
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[#4f3a68]">{arquivoNome}</p>
+                <p className="mt-0.5 text-xs text-[#78668e]">Clique na imagem para ampliar</p>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-1.5 text-xs font-medium text-[#6B3294] underline underline-offset-2 hover:text-[#4B0082]"
+                >
+                  Substituir imagem
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoverImagem}
+                className="flex-shrink-0 rounded-xl p-1.5 text-[#78668e] transition hover:bg-[#f0e6ff] hover:text-[#4B0082]"
+                title="Remover imagem"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           {/* Textarea para modo digitada */}
           {modo === "digitada" && (
@@ -472,6 +521,25 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Ampliar imagem da redação manuscrita */}
+      <Dialog open={showImagemAmpliada} onOpenChange={setShowImagemAmpliada}>
+        <DialogContent className="max-w-3xl p-3">
+          <DialogHeader className="pb-1">
+            <DialogTitle className="truncate text-sm font-semibold text-[#4f3a68]">
+              {arquivoNome}
+            </DialogTitle>
+            <DialogDescription className="sr-only">Visualização da redação manuscrita</DialogDescription>
+          </DialogHeader>
+          {imagemBase64 && (
+            <img
+              src={imagemBase64}
+              alt="Redação manuscrita"
+              className="max-h-[80vh] w-full rounded-xl object-contain"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>
