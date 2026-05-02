@@ -190,7 +190,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                   <TableHead>Turma</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Nota</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
