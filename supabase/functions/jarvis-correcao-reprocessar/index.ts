@@ -255,8 +255,42 @@ Deno.serve(async (req) => {
       inputTokens = anthropicData.usage?.input_tokens ?? 0;
       outputTokens = anthropicData.usage?.output_tokens ?? 0;
       totalTokens = inputTokens + outputTokens;
+    } else if (provider === "openai") {
+      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+      if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
+
+      const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [
+            { role: "system", content: systemPromptFinal },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: Math.max(config.max_tokens ?? 16000, 8000),
+          temperature: parseFloat(String(config.temperatura)),
+        }),
+      });
+
+      if (!openaiResponse.ok) {
+        const errorData = await openaiResponse.text();
+        console.error("❌ Erro na OpenAI:", errorData);
+        throw new Error(`Erro na API da OpenAI: ${errorData}`);
+      }
+
+      const openaiData = await openaiResponse.json();
+      aiText = openaiData.choices?.[0]?.message?.content;
+      if (!aiText) throw new Error("Resposta vazia ou inválida da OpenAI");
+
+      inputTokens = openaiData.usage?.prompt_tokens ?? 0;
+      outputTokens = openaiData.usage?.completion_tokens ?? 0;
+      totalTokens = openaiData.usage?.total_tokens ?? 0;
     } else {
-      // Gemini (padrão — retrocompatível com configs existentes)
+      // Gemini
       const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
       if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
 
@@ -516,6 +550,11 @@ function validateCorrecaoIA(correcao: CorrecaoIA, configVersao?: number): string
 
 function calcularCusto(model: string, inputTokens: number, outputTokens: number): number {
   const custos: Record<string, { input: number; output: number }> = {
+    // OpenAI (preço por 1M tokens, USD)
+    "gpt-4o": { input: 2.50, output: 10.0 },
+    "gpt-4o-mini": { input: 0.15, output: 0.60 },
+    "gpt-4": { input: 30.0, output: 60.0 },
+    "gpt-3.5-turbo": { input: 0.50, output: 1.50 },
     // Gemini (preço por 1M tokens, USD)
     "gemini-2.5-flash-preview-04-17": { input: 0.15, output: 0.60 },
     "gemini-2.5-flash-preview": { input: 0.15, output: 0.60 },
