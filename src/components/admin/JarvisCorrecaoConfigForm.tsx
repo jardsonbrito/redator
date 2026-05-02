@@ -216,8 +216,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
                     </>
                   ) : selectedProvider === "gemini" ? (
                     <>
-                      <SelectItem value="gemini-2.5-flash">gemini-2.5-flash (recomendado)</SelectItem>
-                      <SelectItem value="gemini-1.5-flash">gemini-1.5-flash (econômico)</SelectItem>
+                      <SelectItem value="gemini-2.5-flash">gemini-2.5-flash</SelectItem>
                     </>
                   ) : (
                     <>
