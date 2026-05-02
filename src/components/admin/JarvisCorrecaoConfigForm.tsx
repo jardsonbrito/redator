@@ -192,6 +192,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
                 <SelectContent>
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -212,6 +213,13 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
                       <SelectItem value="gpt-4o">gpt-4o (premium)</SelectItem>
                       <SelectItem value="gpt-4">gpt-4 (legacy)</SelectItem>
                       <SelectItem value="gpt-3.5-turbo">gpt-3.5-turbo (legacy)</SelectItem>
+                    </>
+                  ) : selectedProvider === "gemini" ? (
+                    <>
+                      <SelectItem value="gemini-2.5-flash">gemini-2.5-flash (recomendado)</SelectItem>
+                      <SelectItem value="gemini-2.0-flash">gemini-2.0-flash</SelectItem>
+                      <SelectItem value="gemini-1.5-pro">gemini-1.5-pro</SelectItem>
+                      <SelectItem value="gemini-1.5-flash">gemini-1.5-flash (econômico)</SelectItem>
                     </>
                   ) : (
                     <>
