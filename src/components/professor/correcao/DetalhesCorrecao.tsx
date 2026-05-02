@@ -540,15 +540,11 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
                   </div>
                 )}
 
-                {v.solicitada_por && (
-                  <p className="mt-1.5 text-xs text-zinc-500">
-                    Solicitada por: <span className="font-medium">{v.solicitada_por}</span>
-                  </p>
-                )}
                 {v.motivo_recorrecao && (
-                  <p className="mt-1 text-xs text-zinc-600 italic">
-                    "{v.motivo_recorrecao}"
-                  </p>
+                  <div className="mt-1.5 space-y-0.5">
+                    <p className="text-xs font-semibold text-zinc-500">Justificativa</p>
+                    <p className="text-xs text-zinc-600 italic">"{v.motivo_recorrecao}"</p>
+                  </div>
                 )}
               </div>
             ))}
