@@ -309,6 +309,7 @@ Deno.serve(async (req) => {
           ],
           max_tokens: Math.max(config.max_tokens ?? 16000, 8000),
           temperature: parseFloat(String(config.temperatura)),
+          response_format: { type: "json_object" },
         }),
       });
 
