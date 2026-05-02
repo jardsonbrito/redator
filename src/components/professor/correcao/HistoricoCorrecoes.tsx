@@ -3,7 +3,6 @@ import { useJarvisCorrecao, JarvisCorrecao } from "@/hooks/useJarvisCorrecao";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -20,6 +19,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -35,7 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Search, Eye, Filter, Trash2, UserX } from "lucide-react";
+import { Loader2, Search, Eye, Filter, Trash2, UserX, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DetalhesCorrecao } from "./DetalhesCorrecao";
@@ -59,6 +65,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [correcaoSelecionada, setCorrecaoSelecionada] = useState<JarvisCorrecao | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const correcoesFiltradas = useMemo(() => {
     if (!correcoes) return [];
@@ -183,7 +190,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                   <TableHead>Turma</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Nota</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -212,34 +219,66 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleVisualizar(correcao)}
-                            title="Ver detalhes"
+                        <DropdownMenu
+                          open={openDropdownId === correcao.id}
+                          onOpenChange={(open) =>
+                            setOpenDropdownId(open ? correcao.id : null)
+                          }
+                        >
+                          <DropdownMenuTrigger asChild>
+                            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            onCloseAutoFocus={(e) => e.preventDefault()}
                           >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDialog({ tipo: "individual", correcao })}
-                            title="Remover esta correção"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setDialog({ tipo: "aluno", autorNome: correcao.autor_nome })
-                            }
-                            title={`Remover todas as correções de ${correcao.autor_nome}`}
-                          >
-                            <UserX className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                handleVisualizar(correcao);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver detalhes
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                setTimeout(
+                                  () => setDialog({ tipo: "individual", correcao }),
+                                  100
+                                );
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remover esta correção
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                setTimeout(
+                                  () =>
+                                    setDialog({
+                                      tipo: "aluno",
+                                      autorNome: correcao.autor_nome,
+                                    }),
+                                  100
+                                );
+                              }}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Remover todas de {correcao.autor_nome}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
@@ -258,10 +297,10 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
               <DialogTitle className="text-lg font-bold">Correção pedagógica detalhada</DialogTitle>
             </DialogHeader>
             <DetalhesCorrecao
-                correcao={correcaoSelecionada}
-                professorEmail={professorEmail}
-                onReprocessado={() => setShowDetalhes(false)}
-              />
+              correcao={correcaoSelecionada}
+              professorEmail={professorEmail}
+              onReprocessado={() => setShowDetalhes(false)}
+            />
           </DialogContent>
         </Dialog>
       )}
