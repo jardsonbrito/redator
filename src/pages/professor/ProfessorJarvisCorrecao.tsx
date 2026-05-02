@@ -15,8 +15,9 @@ export const ProfessorJarvisCorrecao = () => {
 
   const correcaoResultado = resultadoId ? correcoes?.find((c) => c.id === resultadoId) ?? null : null;
 
-  const handleConcluida = (id: string) => {
-    setResultadoId(id);
+  const handleConcluida = (_id: string) => {
+    setResultadoId(null);
+    setActiveTab("historico");
   };
 
   const handleNovaCorrecao = () => {
@@ -101,7 +102,7 @@ export const ProfessorJarvisCorrecao = () => {
               <DetalhesCorrecao
                 correcao={correcaoResultado}
                 professorEmail={professor.email}
-                onReprocessado={(id) => setResultadoId(id)}
+                onReprocessado={() => { setResultadoId(null); setActiveTab("historico"); }}
               />
             ) : (
               <div className="flex items-center justify-center py-12 text-[#78668e]">

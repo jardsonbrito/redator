@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertCircle, CheckCircle2, XCircle, FileText,
-  ChevronDown, ChevronUp, RefreshCw, History, Loader2,
+  ChevronDown, ChevronUp, RefreshCw, History,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -67,19 +67,19 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
   const textoOriginal = correcao.transcricao_confirmada || correcao.transcricao_ocr_original;
   const competenciaAtiva = secaoAtiva && secaoAtiva !== "nota_final" ? secaoAtiva : null;
 
-  const handleSolicitarRevisao = async () => {
-    try {
-      const result = await reprocessar.mutateAsync({
-        correcaoId: correcao.id,
-        observacao: observacaoRevisao.trim() || undefined,
-      });
-      toast.success(`Revisão concluída! Nova nota: ${result.nota_total}/1000`);
-      setShowRevisaoDialog(false);
-      setObservacaoRevisao("");
+  const handleSolicitarRevisao = () => {
+    const justificativa = observacaoRevisao.trim();
+    setShowRevisaoDialog(false);
+    setObservacaoRevisao("");
+    // Dispara em background — onReprocessado é chamado quando concluir
+    reprocessar.mutateAsync({
+      correcaoId: correcao.id,
+      observacao: justificativa || undefined,
+    }).then((result) => {
       onReprocessado?.(result.novaCorrecaoId);
-    } catch (error: any) {
+    }).catch((error: any) => {
       toast.error(`Erro ao solicitar revisão: ${error.message}`);
-    }
+    });
   };
 
   if (correcao.status !== "corrigida" || !correcaoIA) {
@@ -158,39 +158,34 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
           </p>
         </div>
 
-        {/* Dialog: Solicitar revisão */}
+        {/* Dialog: Solicitação de revisão da correção */}
         <Dialog open={showRevisaoDialog} onOpenChange={setShowRevisaoDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 text-violet-600" />
-                Solicitar revisão da correção IA
+                Solicitação de revisão da correção
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
-              <p className="text-sm text-zinc-600">
-                A IA irá reler a redação e gerar uma nova correção, preservando a versão anterior no histórico.
-              </p>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">
-                  Observação para a revisão{" "}
-                  <span className="font-normal normal-case text-zinc-400">(opcional)</span>
+                  Justificativa
                 </label>
                 <Textarea
                   value={observacaoRevisao}
                   onChange={(e) => setObservacaoRevisao(e.target.value)}
-                  placeholder=""
                   className="min-h-[110px] text-sm resize-none"
-                  disabled={reprocessar.isPending}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setShowRevisaoDialog(false); setObservacaoRevisao(""); }} disabled={reprocessar.isPending}>
+              <Button variant="outline" onClick={() => { setShowRevisaoDialog(false); setObservacaoRevisao(""); }}>
                 Cancelar
               </Button>
-              <Button onClick={handleSolicitarRevisao} disabled={reprocessar.isPending} className="bg-gradient-to-r from-[#4B0082] to-[#8a25d9] text-white hover:brightness-105">
-                {reprocessar.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Revisando...</> : <><RefreshCw className="h-4 w-4 mr-2" />Solicitar revisão</>}
+              <Button onClick={handleSolicitarRevisao} className="bg-gradient-to-r from-[#4B0082] to-[#8a25d9] text-white hover:brightness-105">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Solicitar revisão
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -298,9 +293,9 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
               : "bg-gradient-to-b from-[#6B3294] to-[#9a3fe8] text-white opacity-80 hover:opacity-100"
           }`}
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider opacity-75">Nota Final</p>
-          <p className="mt-0.5 text-3xl font-black leading-none">{correcao.nota_total}</p>
-          <p className="mt-1 text-[10px] opacity-60">/1000</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider opacity-75 sm:text-[10px]">Nota Final</p>
+          <p className="mt-0.5 text-xl font-black leading-none sm:text-3xl">{correcao.nota_total}</p>
+          <p className="mt-1 text-[9px] opacity-60 sm:text-[10px]">/1000</p>
         </button>
 
         {COMPETENCIAS.map((comp) => {
@@ -317,13 +312,13 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
                   : `${NOTA_BG(nota)} hover:shadow-sm`
               }`}
             >
-              <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-500">
+              <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-500 sm:text-[10px]">
                 C{comp.num}
               </span>
-              <span className={`text-2xl font-black leading-none ${isAtiva ? "text-[#4B0082]" : NOTA_COLOR(nota)}`}>
+              <span className={`text-lg font-black leading-none sm:text-2xl ${isAtiva ? "text-[#4B0082]" : NOTA_COLOR(nota)}`}>
                 {nota}
               </span>
-              <span className="text-[10px] font-medium text-zinc-400">/200</span>
+              <span className="text-[9px] font-medium text-zinc-400 sm:text-[10px]">/200</span>
             </button>
           );
         })}
@@ -561,36 +556,26 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
         </div>
       )}
 
-      {/* Dialog: Solicitar revisão da correção IA */}
+      {/* Dialog: Solicitação de revisão da correção */}
       <Dialog open={showRevisaoDialog} onOpenChange={setShowRevisaoDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4 text-violet-600" />
-              Solicitar revisão da correção IA
+              Solicitação de revisão da correção
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <p className="text-sm text-zinc-600">
-              A IA irá reler a redação e gerar uma nova correção, preservando a versão anterior no histórico.
-            </p>
-
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">
-                Observação para a revisão{" "}
-                <span className="font-normal normal-case text-zinc-400">(opcional)</span>
+                Justificativa
               </label>
               <Textarea
                 value={observacaoRevisao}
                 onChange={(e) => setObservacaoRevisao(e.target.value)}
-                placeholder=""
                 className="min-h-[110px] text-sm resize-none"
-                disabled={reprocessar.isPending}
               />
-              <p className="text-xs text-zinc-400">
-                Se vazia, a revisão acontece normalmente sem orientação adicional.
-              </p>
             </div>
           </div>
 
@@ -598,26 +583,15 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
             <Button
               variant="outline"
               onClick={() => { setShowRevisaoDialog(false); setObservacaoRevisao(""); }}
-              disabled={reprocessar.isPending}
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSolicitarRevisao}
-              disabled={reprocessar.isPending}
               className="bg-gradient-to-r from-[#4B0082] to-[#8a25d9] text-white hover:brightness-105"
             >
-              {reprocessar.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Revisando...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Solicitar revisão
-                </>
-              )}
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Solicitar revisão
             </Button>
           </DialogFooter>
         </DialogContent>

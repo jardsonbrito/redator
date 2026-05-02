@@ -171,6 +171,7 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
           correcaoId: result.correcaoId,
           transcricaoConfirmada: textoDigitado,
         });
+        await new Promise((r) => setTimeout(r, 2000));
         resetForm();
         if (!dismissedRef.current) onConcluida?.(correcao.correcaoId);
         dismissedRef.current = false;
@@ -193,6 +194,12 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
     }
   };
 
+  const handleCancelarOCR = () => {
+    setShowRevisaoOCR(false);
+    setTranscricaoOCR("");
+    setCorrecaoIdEmRevisao(null);
+  };
+
   const handleConfirmarOCR = async () => {
     if (!correcaoIdEmRevisao || !transcricaoOCR.trim()) {
       toast.error("A transcrição não pode estar vazia");
@@ -206,6 +213,7 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
         correcaoId: correcaoIdEmRevisao,
         transcricaoConfirmada: transcricaoOCR,
       });
+      await new Promise((r) => setTimeout(r, 2000));
       setTranscricaoOCR("");
       const idConcluido = correcaoIdEmRevisao;
       resetForm();
@@ -218,16 +226,10 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
   };
 
   const mensagemProcessando = processarCorrecao.isPending
-    ? "Jarvis está corrigindo sua redação..."
+    ? "Redação recebida. Em até 3 minutos, sua correção estará disponível."
     : modo === "manuscrita"
     ? "Jarvis está lendo a redação manuscrita..."
-    : "Jarvis está preparando a correção...";
-
-  const submensagemProcessando = processarCorrecao.isPending
-    ? "A IA está avaliando as 5 competências do ENEM. Isso pode levar alguns segundos."
-    : modo === "manuscrita"
-    ? "O Jarvis está realizando o OCR da imagem. Aguarde um instante."
-    : "Registrando sua redação e iniciando a correção...";
+    : "Enviando redação...";
 
   return (
     <>
@@ -261,16 +263,56 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
             ))}
           </div>
 
-          <p className="text-base font-bold text-[#4B0082]">{mensagemProcessando}</p>
-          <p className="mt-2 max-w-xs text-sm text-[#78668e]">{submensagemProcessando}</p>
-          <p className="mt-4 text-xs text-[#b09cc8]">
-            Clique no <strong>✕</strong> para enviar outra redação.<br />
-            Esta já foi registrada e aparecerá no histórico.
-          </p>
+          <p className="max-w-xs text-base font-bold text-[#4B0082]">{mensagemProcessando}</p>
         </div>
       )}
 
-      {!showProcessando && (
+      {/* Tela: Revisão da transcrição OCR */}
+      {showRevisaoOCR && (
+        <div className="space-y-4 rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] p-5">
+          <div>
+            <h3 className="text-base font-black text-zinc-900">Revisar transcrição da redação</h3>
+            <p className="mt-1 text-sm text-[#78668e]">
+              Confirme se o texto abaixo corresponde à redação manuscrita. Corrija erros de OCR antes de enviar para correção.
+            </p>
+          </div>
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Revise com atenção. Erros no OCR podem afetar a qualidade da correção.</span>
+          </div>
+          <div>
+            <Label className="mb-1.5 block text-sm font-extrabold">Texto transcrito</Label>
+            <Textarea
+              rows={18}
+              value={transcricaoOCR}
+              onChange={(e) => setTranscricaoOCR(e.target.value)}
+              className="rounded-2xl border-[#c9a6ed] font-mono text-sm focus-visible:border-[#6B3294] focus-visible:ring-[#a463f2]/15"
+            />
+            <p className="mt-1.5 text-xs text-[#78668e]">
+              {transcricaoOCR.split(/\s+/).filter(Boolean).length} palavras
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleCancelarOCR}
+              className="rounded-xl border border-[#c9a6ed] bg-white px-5 py-2.5 text-sm font-bold text-[#4f3a68] transition hover:bg-[#f7f0ff]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmarOCR}
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#4B0082] to-[#8624d6] px-6 py-2.5 text-sm font-black text-white shadow-[0_8px_18px_rgba(75,0,130,0.20)] transition hover:brightness-105"
+            >
+              <Check className="h-4 w-4" />
+              Confirmar e corrigir
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showProcessando && !showRevisaoOCR && (
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Campos principais */}
         <div className="rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] p-5">
@@ -474,7 +516,7 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
           </button>
         </div>
       </form>
-      )}
+      )} {/* fim !showProcessando && !showRevisaoOCR */}
 
       {/* AlertDialog: Deletar Turma */}
       <AlertDialog open={showDeleteTurma} onOpenChange={setShowDeleteTurma}>
@@ -527,61 +569,6 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
               <Button onClick={handleCriarTurma} disabled={criarTurma.isPending}>
                 {criarTurma.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Criar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog: Revisão do OCR */}
-      <Dialog open={showRevisaoOCR} onOpenChange={setShowRevisaoOCR}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Revisar Transcrição do OCR</DialogTitle>
-            <DialogDescription>
-              O sistema extraiu o texto da imagem. Revise e corrija se necessário antes de enviar para correção.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Revise o texto com atenção. Erros no OCR podem afetar a qualidade da correção.</span>
-            </div>
-            <div>
-              <Label>Texto Transcrito</Label>
-              <Textarea
-                rows={20}
-                value={transcricaoOCR}
-                onChange={(e) => setTranscricaoOCR(e.target.value)}
-                className="font-mono text-sm"
-              />
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                {transcricaoOCR.split(/\s+/).filter(Boolean).length} palavras
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRevisaoOCR(false);
-                  setTranscricaoOCR("");
-                  setCorrecaoIdEmRevisao(null);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirmarOCR} disabled={processarCorrecao.isPending}>
-                {processarCorrecao.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processando Correção...
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Confirmar e Corrigir
-                  </>
-                )}
               </Button>
             </div>
           </div>
