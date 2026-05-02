@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { JarvisCorrecao, useJarvisCorrecaoVersoes, useReprocessarCorrecao } from "@/hooks/useJarvisCorrecao";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -59,6 +60,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
   const [showRevisaoDialog, setShowRevisaoDialog] = useState(false);
   const [observacaoRevisao, setObservacaoRevisao] = useState("");
 
+  const queryClient = useQueryClient();
   const reprocessar = useReprocessarCorrecao(professorEmail || "");
   const { data: versoes } = useJarvisCorrecaoVersoes(correcao.grupo_id ?? null);
 
@@ -72,8 +74,9 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     const justificativa = observacaoRevisao.trim();
     setShowRevisaoDialog(false);
     setObservacaoRevisao("");
-    // Marca como "em revisão" imediatamente para refletir no histórico
-    supabase.from("jarvis_correcoes").update({ status: "em_revisao" }).eq("id", correcao.id);
+    // Marca como "em revisão" imediatamente e invalida cache para refletir no histórico
+    supabase.from("jarvis_correcoes").update({ status: "em_revisao" }).eq("id", correcao.id)
+      .then(() => queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] }));
     // Dispara em background — onReprocessado é chamado quando concluir
     reprocessar.mutateAsync({
       correcaoId: correcao.id,
