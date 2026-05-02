@@ -210,21 +210,21 @@ Deno.serve(async (req) => {
     console.log("✅ Prompt montado" + (observacaoTrimmed ? " (+ observação)" : "") + (fewShotBloco ? " (+ few-shot)" : ""));
 
     // ══════════════════════════════════════════════════════════════
-    // 5. CHAMAR IA (provider configurável via config.provider)
+    // 5. CHAMAR IA — revisões SEMPRE usam Anthropic
     // ══════════════════════════════════════════════════════════════
-    const provider = config.provider ?? "openai";
-    console.log(`🚀 Chamando IA [${provider}] modelo: ${config.model}`);
+    const modeloRevisao = config.model.startsWith("claude-") ? config.model : "claude-sonnet-4-6";
+    console.log(`🚀 Revisão sempre via Anthropic | modelo: ${modeloRevisao}`);
 
     const startTime = Date.now();
     let aiText: string;
     let inputTokens = 0;
     let outputTokens = 0;
     let totalTokens = 0;
-    let modeloUsado = config.model;
+    let modeloUsado = modeloRevisao;
 
-    if (provider === "anthropic") {
+    {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
+      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada para revisões");
 
       const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: config.model,
+          model: modeloRevisao,
           system: systemPromptFinal,
           messages: [{ role: "user", content: userPrompt }],
           max_tokens: Math.max(config.max_tokens ?? 16000, 8000),
@@ -255,79 +255,8 @@ Deno.serve(async (req) => {
       inputTokens = anthropicData.usage?.input_tokens ?? 0;
       outputTokens = anthropicData.usage?.output_tokens ?? 0;
       totalTokens = inputTokens + outputTokens;
-    } else if (provider === "openai") {
-      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-      if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
-
-      const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          messages: [
-            { role: "system", content: systemPromptFinal },
-            { role: "user", content: userPrompt },
-          ],
-          max_tokens: Math.max(config.max_tokens ?? 16000, 8000),
-          temperature: parseFloat(String(config.temperatura)),
-          response_format: { type: "json_object" },
-        }),
-      });
-
-      if (!openaiResponse.ok) {
-        const errorData = await openaiResponse.text();
-        console.error("❌ Erro na OpenAI:", errorData);
-        throw new Error(`Erro na API da OpenAI: ${errorData}`);
-      }
-
-      const openaiData = await openaiResponse.json();
-      aiText = openaiData.choices?.[0]?.message?.content;
-      if (!aiText) throw new Error("Resposta vazia ou inválida da OpenAI");
-
-      inputTokens = openaiData.usage?.prompt_tokens ?? 0;
-      outputTokens = openaiData.usage?.completion_tokens ?? 0;
-      totalTokens = openaiData.usage?.total_tokens ?? 0;
-    } else {
-      // Gemini
-      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-      if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
-
-      const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
-      modeloUsado = geminiModel;
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
-
-      const geminiResponse = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPromptFinal }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            temperature: parseFloat(String(config.temperatura)),
-            maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
-            responseMimeType: "application/json",
-          },
-        }),
-      });
-
-      if (!geminiResponse.ok) {
-        const errorData = await geminiResponse.text();
-        console.error("❌ Erro no Gemini:", errorData);
-        throw new Error(`Erro no Gemini: ${errorData}`);
-      }
-
-      const geminiData = await geminiResponse.json();
-      const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
-      aiText = parts[0]?.text;
-      if (!aiText) throw new Error("Resposta vazia ou inválida do Gemini");
-
-      inputTokens = geminiData.usageMetadata?.promptTokenCount ?? 0;
-      outputTokens = geminiData.usageMetadata?.candidatesTokenCount ?? 0;
-      totalTokens = geminiData.usageMetadata?.totalTokenCount ?? 0;
     }
+
 
     const endTime = Date.now();
     const tempoProcessamento = endTime - startTime;
