@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { JarvisCorrecao, useJarvisCorrecaoVersoes, useReprocessarCorrecao } from "@/hooks/useJarvisCorrecao";
+import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +72,8 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     const justificativa = observacaoRevisao.trim();
     setShowRevisaoDialog(false);
     setObservacaoRevisao("");
+    // Marca como "em revisão" imediatamente para refletir no histórico
+    supabase.from("jarvis_correcoes").update({ status: "em_revisao" }).eq("id", correcao.id);
     // Dispara em background — onReprocessado é chamado quando concluir
     reprocessar.mutateAsync({
       correcaoId: correcao.id,

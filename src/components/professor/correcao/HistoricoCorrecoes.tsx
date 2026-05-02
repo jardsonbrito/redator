@@ -95,8 +95,18 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
 
   const isPending = deletarCorrecao.isPending || deletarPorAluno.isPending;
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (correcao: JarvisCorrecao) => {
+    if (correcao.status === "em_revisao") {
+      return <Badge className="bg-amber-500 animate-pulse">Em revisão...</Badge>;
+    }
+    if (correcao.status === "corrigida" && correcao.tipo_correcao === "recorrecao") {
+      return (
+        <Badge className="bg-indigo-500">
+          Revisada{correcao.numero_versao > 1 ? ` v${correcao.numero_versao}` : ""}
+        </Badge>
+      );
+    }
+    switch (correcao.status) {
       case "corrigida":
         return <Badge className="bg-green-500">Corrigida</Badge>;
       case "revisao_ocr":
@@ -106,7 +116,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
       case "erro":
         return <Badge variant="destructive">Erro</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{correcao.status}</Badge>;
     }
   };
 
@@ -158,7 +168,8 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="corrigida">Corrigida</SelectItem>
-                <SelectItem value="revisao_ocr">Aguardando Revisão</SelectItem>
+                <SelectItem value="em_revisao">Em revisão</SelectItem>
+                <SelectItem value="revisao_ocr">Aguardando Revisão OCR</SelectItem>
                 <SelectItem value="aguardando_correcao">Aguardando Correção</SelectItem>
                 <SelectItem value="erro">Erro</SelectItem>
               </SelectContent>
@@ -210,7 +221,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                           <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(correcao.status)}</TableCell>
+                      <TableCell>{getStatusBadge(correcao)}</TableCell>
                       <TableCell>
                         {correcao.nota_total !== null ? (
                           <span className="font-bold text-lg">{correcao.nota_total}</span>
