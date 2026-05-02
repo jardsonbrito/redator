@@ -606,7 +606,14 @@ function ErrosBlock({ erros }: { erros: any[] }) {
       <div className="space-y-2">
         {erros.map((erro: any, i: number) => (
           <div key={i} className="rounded-xl border-l-4 border-red-400 bg-white pl-4 pr-3 py-3">
-            <p className="text-xs font-bold text-red-700">{erro.tipo || `Erro ${i + 1}`}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs font-bold text-red-700">{erro.tipo || `Erro ${i + 1}`}</p>
+              {erro.paragrafo && (
+                <span className="text-[10px] font-semibold uppercase tracking-wide bg-zinc-100 text-zinc-500 rounded px-1.5 py-0.5">
+                  {erro.paragrafo}
+                </span>
+              )}
+            </div>
             {erro.trecho_original && (
               <p className="mt-1 text-xs italic text-zinc-500">"{erro.trecho_original}"</p>
             )}
