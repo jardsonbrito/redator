@@ -1,12 +1,13 @@
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Home, Bot, BookOpen, Grid3x3 } from "lucide-react";
+import { Home, BookOpen, Grid3x3 } from "lucide-react";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
 
 const navItems = [
-  { path: "/professor",                 label: "Início", icon: Home },
-  { path: "/professor/jarvis-correcao", label: "Jarvis", icon: Bot },
-  { path: "/professor/temas",           label: "Temas",  icon: BookOpen },
-  { path: "/professor/mais",            label: "Mais",   icon: Grid3x3 },
+  { path: "/professor",                 label: "Início", icon: Home,     isJarvis: false },
+  { path: "/professor/jarvis-correcao", label: "Jarvis", icon: null,     isJarvis: true  },
+  { path: "/professor/temas",           label: "Temas",  icon: BookOpen, isJarvis: false },
+  { path: "/professor/mais",            label: "Mais",   icon: Grid3x3,  isJarvis: false },
 ];
 
 export const ProfessorBottomNavigation = () => {
@@ -30,7 +31,11 @@ export const ProfessorBottomNavigation = () => {
                 isActive ? "text-primary" : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <Icon className={`w-6 h-6 mb-1 ${isActive ? "stroke-[2.5]" : ""}`} />
+              {item.isJarvis ? (
+                <JarvisIcon size={24} className="mb-1" />
+              ) : (
+                Icon && <Icon className={`w-6 h-6 mb-1 ${isActive ? "stroke-[2.5]" : ""}`} />
+              )}
               <span className={`text-xs ${isActive ? "font-semibold" : "font-medium"}`}>
                 {item.label}
               </span>

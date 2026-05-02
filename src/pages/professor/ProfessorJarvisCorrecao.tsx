@@ -5,7 +5,8 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { EnviarRedacaoForm } from "@/components/professor/correcao/EnviarRedacaoForm";
 import { HistoricoCorrecoes } from "@/components/professor/correcao/HistoricoCorrecoes";
 import { DetalhesCorrecao } from "@/components/professor/correcao/DetalhesCorrecao";
-import { ArrowLeft, PlusCircle, Bot } from "lucide-react";
+import { ArrowLeft, PlusCircle } from "lucide-react";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
 
 export const ProfessorJarvisCorrecao = () => {
   const { professor } = useProfessorAuth();
@@ -35,8 +36,8 @@ export const ProfessorJarvisCorrecao = () => {
         {/* Cabeçalho */}
         <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#d9c5f3] text-[#4B0082]">
-              <Bot className="w-6 h-6" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#d9c5f3]">
+              <JarvisIcon size={28} />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-zinc-950">
               O corretor oficial do Laboratório do Professor de Redação
