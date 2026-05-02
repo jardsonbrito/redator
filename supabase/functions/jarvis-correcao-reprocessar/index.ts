@@ -492,6 +492,7 @@ function calcularCusto(model: string, inputTokens: number, outputTokens: number)
     "gemini-2.5-flash": { input: 0.15, output: 0.60 },
     "gemini-2.5-pro-preview-03-25": { input: 1.25, output: 10.0 },
     "gemini-2.5-pro-preview": { input: 1.25, output: 10.0 },
+    "gemini-pro-latest": { input: 1.25, output: 10.0 },
     "gemini-2.0-flash": { input: 0.10, output: 0.40 },
     "gemini-1.5-flash": { input: 0.075, output: 0.30 },
     "gemini-1.5-pro": { input: 3.5, output: 10.5 },

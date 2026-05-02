@@ -333,20 +333,26 @@ Deno.serve(async (req) => {
 
       const geminiModel = config.model.startsWith("gemini-") ? config.model : "gemini-2.5-flash";
       modeloUsado = geminiModel;
+      const isProLatest = geminiModel === "gemini-pro-latest";
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
+
+      const geminiBody: Record<string, unknown> = {
+        systemInstruction: { parts: [{ text: systemPromptFinal }] },
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          temperature: parseFloat(String(config.temperatura)),
+          maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
+          ...(isProLatest
+            ? { thinkingConfig: { thinkingBudget: -1 } }
+            : { responseMimeType: "application/json" }),
+        },
+        ...(isProLatest && { tools: [{ googleSearch: {} }] }),
+      };
 
       const geminiResponse = await fetch(geminiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPromptFinal }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            temperature: parseFloat(String(config.temperatura)),
-            maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
-            responseMimeType: "application/json",
-          },
-        }),
+        body: JSON.stringify(geminiBody),
       });
 
       if (!geminiResponse.ok) {
@@ -356,7 +362,10 @@ Deno.serve(async (req) => {
       }
 
       const geminiData = await geminiResponse.json();
-      const parts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
+      const allParts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
+      // Thinking models retornam partes com thought:true — filtrar para pegar só o texto
+      const textParts = allParts.filter((p: any) => !p.thought && p.text);
+      const parts = textParts.length > 0 ? textParts : allParts;
       aiText = parts[0]?.text;
       if (!aiText) throw new Error("Resposta vazia ou inválida do Gemini");
 
@@ -645,6 +654,7 @@ function calcularCusto(
     "gemini-2.5-flash": { input: 0.15, output: 0.60 },
     "gemini-2.5-pro-preview-03-25": { input: 1.25, output: 10.0 },
     "gemini-2.5-pro-preview": { input: 1.25, output: 10.0 },
+    "gemini-pro-latest": { input: 1.25, output: 10.0 },
     "gemini-2.0-flash": { input: 0.10, output: 0.40 },
     "gemini-1.5-flash": { input: 0.075, output: 0.30 },
     "gemini-1.5-pro": { input: 3.5, output: 10.5 },
