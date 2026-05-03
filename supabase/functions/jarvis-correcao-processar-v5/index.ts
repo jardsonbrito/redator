@@ -1375,6 +1375,7 @@ async function callAI(
   maxTokens: number,
   systemPrompt: string,
   userPrompt: string,
+  thinkingBudget?: number,
 ): Promise<AICallResult> {
   if (provider === "anthropic") {
     const key = Deno.env.get("ANTHROPIC_API_KEY");
@@ -1417,23 +1418,45 @@ async function callAI(
   if (!key) throw new Error("GEMINI_API_KEY não configurada");
   const geminiModel = model.startsWith("gemini-") ? model : "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`;
+
+  // Controla thinking budget em modelos 2.5 Pro para não consumir tokens de output
+  // O thinkingBudget limita o thinking interno, preservando espaço para o JSON final
+  const isProThinking = geminiModel.includes("pro") || geminiModel === "gemini-pro-latest";
+  const budget = thinkingBudget ?? (isProThinking ? Math.floor(maxTokens * 0.25) : undefined);
+  const generationConfig: Record<string, unknown> = {
+    temperature,
+    maxOutputTokens: maxTokens,
+    responseMimeType: "application/json",
+  };
+  if (budget !== undefined) generationConfig.thinkingConfig = { thinkingBudget: budget };
+
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      generationConfig: { temperature, maxOutputTokens: maxTokens, responseMimeType: "application/json" },
+      generationConfig,
     }),
   });
   if (!res.ok) throw new Error(`Gemini API error: ${await res.text()}`);
   const data = await res.json();
+
+  // Log de diagnóstico: tokens de thinking vs output e finish_reason
+  const finishReason = data.candidates?.[0]?.finishReason;
+  const thoughtTokens = data.usageMetadata?.thoughtsTokenCount ?? 0;
+  const outputTokens = data.usageMetadata?.candidatesTokenCount ?? 0;
+  console.log(`  🧠 Gemini finish=${finishReason} | thinking=${thoughtTokens} output=${outputTokens} budget=${budget ?? "auto"}`);
+  if (finishReason === "MAX_TOKENS") {
+    console.error(`  ⚠️ MAX_TOKENS atingido! thinking=${thoughtTokens} output=${outputTokens} maxOutputTokens=${maxTokens}`);
+  }
+
   const allParts: any[] = data.candidates?.[0]?.content?.parts ?? [];
   const textParts = allParts.filter((p: any) => !p.thought && p.text);
   // Junta TODAS as partes de texto (modelos com thinking podem dividir o output em múltiplas partes)
   const text = (textParts.length > 0 ? textParts : allParts).map((p: any) => p.text ?? "").join("");
   if (!text) throw new Error("Resposta vazia do Gemini");
-  return { text, tokens_input: data.usageMetadata?.promptTokenCount ?? 0, tokens_output: data.usageMetadata?.candidatesTokenCount ?? 0 };
+  return { text, tokens_input: data.usageMetadata?.promptTokenCount ?? 0, tokens_output: outputTokens };
 }
 
 // ──────────────────────────────────────────────────────────────────
