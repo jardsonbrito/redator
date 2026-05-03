@@ -23,6 +23,7 @@ export interface JarvisCorrecaoConfig {
   ativado_em: string | null;
   ativado_por: string | null;
   notas: string | null;
+  usar_pipeline_v5: boolean;
 }
 
 export interface CreateConfigData {
@@ -282,6 +283,25 @@ export const useJarvisCorrecaoConfig = () => {
     },
   });
 
+  const togglePipelineV5 = useMutation({
+    mutationFn: async ({ configId, ativar }: { configId: string; ativar: boolean }) => {
+      const { error } = await supabase
+        .from("jarvis_correcao_config")
+        .update({ usar_pipeline_v5: ativar })
+        .eq("id", configId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { ativar }) => {
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcao-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcao-config-ativa"] });
+      queryClient.invalidateQueries({ queryKey: ["jarvis-config-pipeline-v5"] });
+      toast.success(ativar ? "Pipeline V5 ativado!" : "Pipeline V4 ativado!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao alternar pipeline: ${error.message}`);
+    },
+  });
+
   return {
     configs,
     configAtiva,
@@ -294,5 +314,6 @@ export const useJarvisCorrecaoConfig = () => {
     duplicarConfig,
     editarConfig,
     deletarConfig,
+    togglePipelineV5,
   };
 };

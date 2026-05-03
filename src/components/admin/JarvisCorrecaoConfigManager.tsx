@@ -45,6 +45,7 @@ export const JarvisCorrecaoConfigManager = () => {
     ativarConfig,
     duplicarConfig,
     deletarConfig,
+    togglePipelineV5,
   } = useJarvisCorrecaoConfig();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -174,7 +175,7 @@ export const JarvisCorrecaoConfigManager = () => {
                 <p className="font-medium">{configAtiva.temperatura}</p>
               </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -183,6 +184,32 @@ export const JarvisCorrecaoConfigManager = () => {
                 <Eye className="h-4 w-4 mr-2" />
                 Ver Detalhes
               </Button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Pipeline:</span>
+                <Button
+                  size="sm"
+                  variant={configAtiva.usar_pipeline_v5 ? "default" : "outline"}
+                  className={configAtiva.usar_pipeline_v5 ? "bg-[#8624d6] hover:bg-[#6B3294] text-white" : ""}
+                  disabled={togglePipelineV5.isPending}
+                  onClick={() =>
+                    togglePipelineV5.mutate({
+                      configId: configAtiva.id,
+                      ativar: !configAtiva.usar_pipeline_v5,
+                    })
+                  }
+                >
+                  {togglePipelineV5.isPending && (
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  )}
+                  {configAtiva.usar_pipeline_v5 ? "V5 — ativo" : "V4 — padrão"}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {configAtiva.usar_pipeline_v5
+                    ? "6 chamadas paralelas por competência"
+                    : "1 chamada unificada"}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>

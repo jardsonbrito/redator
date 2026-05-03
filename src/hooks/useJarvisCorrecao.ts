@@ -159,10 +159,29 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     },
   });
 
+  // Lê o flag da config ativa para roteamento automático de pipeline
+  useQuery({
+    queryKey: ["jarvis-config-pipeline-v5"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("jarvis_correcao_config")
+        .select("usar_pipeline_v5")
+        .eq("ativo", true)
+        .single();
+      return data?.usar_pipeline_v5 ?? false;
+    },
+    staleTime: 60_000,
+  });
+
   const processarCorrecao = useMutation({
     mutationFn: async (data: ProcessarCorrecaoData) => {
+      const usarV5 = queryClient.getQueryData<boolean>(["jarvis-config-pipeline-v5"]) === true;
+      const functionName = usarV5
+        ? "jarvis-correcao-processar-v5"
+        : "jarvis-correcao-processar";
+
       const { data: result, error } = await supabase.functions.invoke(
-        "jarvis-correcao-processar",
+        functionName,
         {
           body: {
             correcaoId: data.correcaoId,
@@ -186,7 +205,8 @@ export const useJarvisCorrecao = (professorEmail: string) => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
       queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
-      toast.success(`Correção concluída! Créditos restantes: ${data.creditos_restantes}`);
+      const versao = data.pipeline?.versao === "v5" ? " [Pipeline V5]" : "";
+      toast.success(`Correção concluída!${versao} Créditos restantes: ${data.creditos_restantes}`);
     },
     onError: (error: any) => {
       toast.error(`Erro ao processar correção: ${error.message}`);
