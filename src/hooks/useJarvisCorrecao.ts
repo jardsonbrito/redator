@@ -94,6 +94,15 @@ export const useJarvisCorrecao = (professorEmail: string) => {
       return data as JarvisCorrecao[];
     },
     enabled: !!professorEmail,
+    // Faz polling a cada 8s enquanto houver correções em processamento (V5 pode demorar ~2min)
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return false;
+      const temPendente = data.some(
+        (c) => c.status === "aguardando_correcao" || c.status === "aguardando_ocr"
+      );
+      return temPendente ? 8000 : false;
+    },
   });
 
   const { data: creditos } = useQuery({

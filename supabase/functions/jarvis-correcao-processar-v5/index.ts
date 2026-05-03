@@ -1136,7 +1136,6 @@ FORMATO FINAL — JSON OBRIGATÓRIO
     "c5": { "nota": <numero>, "justificativa": "<texto>" }
   },
   "nota_total": <numero>,
-  "erros": <lista completa de erros da C1>,
   "estrutura": {
     "possui_tese": <true|false>,
     "tese_identificada": "<texto>",
@@ -1223,6 +1222,7 @@ function normalizarErros(resultados: PipelineResultado[]): any[] {
   for (const e of (c1raw?.erros_c1 ?? [])) {
     erros.push({
       numero: num++,
+      paragrafo: e.paragrafo,
       tipo: `C1 — ${e.tipo}`,
       competencia_relacionada: "c1",
       descricao: `Parágrafo ${e.paragrafo}: ${e.descricao}`,
@@ -1631,9 +1631,9 @@ Deno.serve(async (req) => {
     const notaC5 = notaFinal("c5");
     const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
 
-    // Normaliza erros para garantir compatibilidade V4
-    // O consolidador produz "erros" como lista de C1; garantimos o campo competencia_relacionada
-    const errosRaw: any[] = consolResult.erros ?? normalizarErros(resultadosPipeline);
+    // Sempre usa erros do pipeline (C1 erros_c1, C3 lacunas, C4 problemas, C5 elementos ausentes)
+    // O consolidador retorna erros em formato incompleto — ignoramos e usamos a fonte original
+    const errosRaw: any[] = normalizarErros(resultadosPipeline);
     const erros = errosRaw.map((e: any, idx: number) => ({
       numero: e.numero ?? idx + 1,
       paragrafo: e.paragrafo,              // exibido como badge no frontend
