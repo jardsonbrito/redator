@@ -72,12 +72,14 @@ export const useJarvisCorrecaoConfig = () => {
     },
   });
 
-  // Buscar configuração ativa
+  // Buscar configuração ativa (SELECT * garante todas as colunas, incluindo usar_pipeline_v5)
   const { data: configAtiva } = useQuery({
     queryKey: ["jarvis-correcao-config-ativa"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .rpc("get_active_correcao_config")
+        .from("jarvis_correcao_config")
+        .select("*")
+        .eq("ativo", true)
         .single();
 
       if (error) throw error;
