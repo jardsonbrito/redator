@@ -72,6 +72,9 @@ Deno.serve(async (req) => {
   }
 
   let correcaoId: string | undefined;
+  let professorId: string | undefined;
+  let custoCreditos = 1;
+  let creditoConsumido = false;
 
   try {
     console.log("🤖 Jarvis Correção - Processando correção");
@@ -212,6 +215,10 @@ Deno.serve(async (req) => {
         creditResult?.error || "Erro ao consumir créditos. Verifique seu saldo."
       );
     }
+
+    professorId = professor.id;
+    custoCreditos = config.custo_creditos;
+    creditoConsumido = true;
 
     console.log(
       `💳 Crédito consumido: ${creditResult.creditos_anteriores} → ${creditResult.creditos_atuais}`
@@ -490,6 +497,19 @@ Deno.serve(async (req) => {
           .from("jarvis_correcoes")
           .update({ status: "erro", erro_mensagem: error.message || "Erro desconhecido" })
           .eq("id", correcaoId);
+
+        if (creditoConsumido && professorId) {
+          const { error: refundErr } = await supabaseClient.rpc("devolver_credito_professor", {
+            professor_id_param: professorId,
+            quantidade: custoCreditos,
+            motivo: `Falha na correção ${correcaoId}: ${error.message ?? "Erro desconhecido"}`,
+          });
+          if (refundErr) {
+            console.error("❌ Falha ao devolver crédito:", refundErr);
+          } else {
+            console.log(`💳 Crédito devolvido ao professor ${professorId}: ${custoCreditos}`);
+          }
+        }
       } catch { /* silencia falha no log de erro */ }
     }
 
