@@ -230,7 +230,6 @@ export const JarvisCorrecaoConfigManager = () => {
                 <TableHead>Temp.</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Correções</TableHead>
-                <TableHead>Média Nota</TableHead>
                 <TableHead>Custo Total</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
@@ -269,15 +268,6 @@ export const JarvisCorrecaoConfigManager = () => {
                     <TableCell>
                       {analise?.total_correcoes ? (
                         <span className="font-medium">{analise.total_correcoes}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {analise?.media_nota ? (
-                        <span className="font-medium">
-                          {Number(analise.media_nota).toFixed(0)}
-                        </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
