@@ -99,7 +99,7 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
 
   const getStatusBadge = (correcao: JarvisCorrecao) => {
     if (correcao.status === "em_revisao") {
-      return <Badge className="bg-amber-500 animate-pulse">Em revisão...</Badge>;
+      return <Badge className="bg-amber-500 animate-pulse">Em recorreção...</Badge>;
     }
     if (correcao.status === "corrigida" && correcao.tipo_correcao === "recorrecao") {
       return (

@@ -106,7 +106,14 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     const justificativa = observacaoRevisao.trim();
     setShowRevisaoDialog(false);
     setObservacaoRevisao("");
-    // Marca como "em revisão" imediatamente e invalida cache para refletir no histórico
+    // Atualiza cache otimisticamente para badge mudar imediatamente
+    queryClient.setQueryData<JarvisCorrecao[]>(
+      ["jarvis-correcoes", professorEmail],
+      (old) => old?.map((c) =>
+        c.id === correcao.id ? { ...c, status: "em_revisao" as const } : c
+      )
+    );
+    // Persiste no banco e refaz a query ao terminar
     supabase.from("jarvis_correcoes").update({ status: "em_revisao" }).eq("id", correcao.id)
       .then(() => queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] }));
     // Dispara em background — onReprocessado é chamado quando concluir
