@@ -41,7 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Search, Eye, Filter, Trash2, UserX, MoreVertical } from "lucide-react";
+import { Loader2, Search, Eye, Filter, Trash2, UserX, MoreVertical, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DetalhesCorrecao } from "./DetalhesCorrecao";
@@ -56,7 +56,7 @@ type DialogState =
   | null;
 
 export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
-  const { correcoes, turmas, isLoading, deletarCorrecao, deletarPorAluno } =
+  const { correcoes, turmas, isLoading, deletarCorrecao, deletarPorAluno, processarCorrecao } =
     useJarvisCorrecao(professorEmail);
 
   const [filtroAluno, setFiltroAluno] = useState("");
@@ -254,6 +254,29 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                               <Eye className="h-4 w-4 mr-2" />
                               Ver detalhes
                             </DropdownMenuItem>
+
+                            {correcao.status === "erro" &&
+                              (correcao.transcricao_confirmada || correcao.transcricao_ocr_original) && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    processarCorrecao.mutate({
+                                      correcaoId: correcao.id,
+                                      transcricaoConfirmada:
+                                        (correcao.transcricao_confirmada ||
+                                          correcao.transcricao_ocr_original) as string,
+                                    });
+                                  }}
+                                  disabled={processarCorrecao.isPending}
+                                >
+                                  {processarCorrecao.isPending ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                  )}
+                                  Reenviar para correção
+                                </DropdownMenuItem>
+                              )}
 
                             <DropdownMenuSeparator />
 
