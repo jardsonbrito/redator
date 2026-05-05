@@ -294,7 +294,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
               className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              Solicitar revisão da correção IA
+              Solicitar recorreção
             </Button>
           )}
           {textoOriginal && (
