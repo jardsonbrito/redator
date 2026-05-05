@@ -190,10 +190,10 @@ export const JarvisCorrecaoConfigDetalhes = ({ configId }: Props) => {
         </Card>
       )}
 
-      {/* Prompts */}
+      {/* Prompts V4 */}
       <Card>
         <CardHeader>
-          <CardTitle>Prompts</CardTitle>
+          <CardTitle>Prompts (Pipeline V4)</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="system">
@@ -221,6 +221,49 @@ export const JarvisCorrecaoConfigDetalhes = ({ configId }: Props) => {
               </pre>
             </TabsContent>
           </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Prompts V5 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Prompts do Pipeline V5</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!config.pipeline_v5_prompts ? (
+            <p className="text-sm text-muted-foreground italic">
+              Nenhum prompt customizado — usando prompts padrão internos do V5.
+            </p>
+          ) : (
+            <Tabs defaultValue="c1">
+              <TabsList className="grid w-full grid-cols-6">
+                {(["c1", "c2", "c3", "c4", "c5", "consolidacao"] as const).map((comp) => (
+                  <TabsTrigger key={comp} value={comp} className="text-xs uppercase">
+                    {comp === "consolidacao" ? "Final" : comp.toUpperCase()}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {(["c1", "c2", "c3", "c4", "c5", "consolidacao"] as const).map((comp) => {
+                const p = (config.pipeline_v5_prompts as any)?.[comp];
+                return (
+                  <TabsContent key={comp} value={comp} className="space-y-3 mt-4">
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">System Prompt</p>
+                      <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-72 whitespace-pre-wrap">
+                        {p?.system?.trim() || <span className="italic text-muted-foreground">padrão interno</span>}
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">User Template</p>
+                      <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-40 whitespace-pre-wrap">
+                        {p?.user_template?.trim() || <span className="italic text-muted-foreground">padrão interno</span>}
+                      </pre>
+                    </div>
+                  </TabsContent>
+                );
+              })}
+            </Tabs>
+          )}
         </CardContent>
       </Card>
 

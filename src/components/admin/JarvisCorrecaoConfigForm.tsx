@@ -35,6 +35,19 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
   );
   const [schemaError, setSchemaError] = useState<string | null>(null);
 
+  const initV5Prompts = (src?: JarvisCorrecaoConfig | null) => {
+    const base = (src?.pipeline_v5_prompts ?? {}) as Record<string, { system?: string; user_template?: string }>;
+    return {
+      c1: { system: base.c1?.system ?? "", user_template: base.c1?.user_template ?? "" },
+      c2: { system: base.c2?.system ?? "", user_template: base.c2?.user_template ?? "" },
+      c3: { system: base.c3?.system ?? "", user_template: base.c3?.user_template ?? "" },
+      c4: { system: base.c4?.system ?? "", user_template: base.c4?.user_template ?? "" },
+      c5: { system: base.c5?.system ?? "", user_template: base.c5?.user_template ?? "" },
+      consolidacao: { system: base.consolidacao?.system ?? "", user_template: base.consolidacao?.user_template ?? "" },
+    };
+  };
+  const [v5Prompts, setV5Prompts] = useState(() => initV5Prompts(initialData));
+
   const {
     register,
     handleSubmit,
@@ -97,6 +110,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
         recorrecao_model: initialData.recorrecao_model || "gemini-pro-latest",
       });
       setResponseSchemaText(JSON.stringify(initialData.response_schema, null, 2));
+      setV5Prompts(initV5Prompts(initialData));
     }
   }, [initialData, reset]);
 
@@ -118,9 +132,13 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
   const onSubmit = async (data: CreateConfigData) => {
     if (!validateResponseSchema(responseSchemaText)) return;
 
+    const hasAnyV5Prompt = Object.values(v5Prompts).some(
+      (p) => p.system.trim() || p.user_template.trim()
+    );
     const payload = {
       ...data,
       response_schema: JSON.parse(responseSchemaText),
+      pipeline_v5_prompts: hasAnyV5Prompt ? v5Prompts : null,
     };
 
     if (isEditMode) {
@@ -443,6 +461,80 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
                 <p className="text-sm text-destructive">{errors.user_prompt_template.message}</p>
               )}
             </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Prompts do Pipeline V5 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Prompts do Pipeline V5</CardTitle>
+          <CardDescription>
+            Usados apenas quando o Pipeline V5 está ativo. Cada competência é avaliada por um agente independente, seguido de uma etapa de consolidação.
+            Deixe vazio para usar o prompt padrão interno do V5.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="c1">
+            <TabsList className="grid w-full grid-cols-6">
+              {(["c1", "c2", "c3", "c4", "c5", "consolidacao"] as const).map((comp) => (
+                <TabsTrigger key={comp} value={comp} className="uppercase text-xs">
+                  {comp === "consolidacao" ? "Final" : comp.toUpperCase()}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {(["c1", "c2", "c3", "c4", "c5", "consolidacao"] as const).map((comp) => (
+              <TabsContent key={comp} value={comp} className="space-y-4 mt-4">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Variáveis disponíveis:{" "}
+                    <code className="text-xs">{"{tema}"}</code>{" "}
+                    <code className="text-xs">{"{texto}"}</code>
+                    {comp !== "consolidacao" && (
+                      <> <code className="text-xs">{"{banco_block}"}</code></>
+                    )}
+                    {comp === "consolidacao" && (
+                      <>
+                        {" "}<code className="text-xs">{"{resultado_c1}"}</code>{" "}
+                        <code className="text-xs">...{"{resultado_c5}"}</code>
+                      </>
+                    )}
+                  </AlertDescription>
+                </Alert>
+                <div>
+                  <Label>System Prompt — {comp === "consolidacao" ? "Consolidação Final" : comp.toUpperCase()}</Label>
+                  <Textarea
+                    rows={20}
+                    className="font-mono text-xs mt-1"
+                    placeholder="Vazio = usa o prompt padrão interno do V5"
+                    value={v5Prompts[comp].system}
+                    onChange={(e) =>
+                      setV5Prompts((prev) => ({
+                        ...prev,
+                        [comp]: { ...prev[comp], system: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>User Template — {comp === "consolidacao" ? "Consolidação Final" : comp.toUpperCase()}</Label>
+                  <Textarea
+                    rows={8}
+                    className="font-mono text-xs mt-1"
+                    placeholder="Vazio = usa o template padrão interno do V5"
+                    value={v5Prompts[comp].user_template}
+                    onChange={(e) =>
+                      setV5Prompts((prev) => ({
+                        ...prev,
+                        [comp]: { ...prev[comp], user_template: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+              </TabsContent>
+            ))}
           </Tabs>
         </CardContent>
       </Card>

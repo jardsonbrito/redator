@@ -26,6 +26,7 @@ export interface JarvisCorrecaoConfig {
   usar_pipeline_v5: boolean;
   recorrecao_provider: string;
   recorrecao_model: string;
+  pipeline_v5_prompts: Record<string, { system?: string; user_template?: string }> | null;
 }
 
 export interface CreateConfigData {
@@ -44,6 +45,7 @@ export interface CreateConfigData {
   notas?: string;
   recorrecao_provider?: string;
   recorrecao_model?: string;
+  pipeline_v5_prompts?: Record<string, { system?: string; user_template?: string }> | null;
 }
 
 const getAdminId = async (): Promise<string> => {
@@ -142,6 +144,7 @@ export const useJarvisCorrecaoConfig = () => {
           notas: data.notas,
           recorrecao_provider: data.recorrecao_provider ?? "gemini",
           recorrecao_model: data.recorrecao_model ?? "gemini-pro-latest",
+          pipeline_v5_prompts: data.pipeline_v5_prompts ?? null,
         })
         .select()
         .single();

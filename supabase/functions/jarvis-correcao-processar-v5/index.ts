@@ -1624,14 +1624,22 @@ Deno.serve(async (req) => {
     if (configError || !config) throw new Error("SISTEMA BLOQUEADO: Nenhuma configuração ativa encontrada.");
     console.log(`✅ Config: v${config.versao} — ${config.nome} | ${config.model} | provider: ${config.provider ?? "openai"}`);
 
-    const dbPrompts = config.pipeline_v5_prompts ?? {};
+    const dbPrompts = (config.pipeline_v5_prompts ?? {}) as Partial<V5Prompts>;
+    const resolvePromptPair = (key: keyof V5Prompts): V5PromptPair => {
+      const db = dbPrompts[key];
+      const def = DEFAULT_V5_PROMPTS[key];
+      return {
+        system: db?.system?.trim() ? db.system : def.system,
+        user_template: db?.user_template?.trim() ? db.user_template : def.user_template,
+      };
+    };
     const v5Prompts: V5Prompts = {
-      c1: dbPrompts.c1 ?? DEFAULT_V5_PROMPTS.c1,
-      c2: dbPrompts.c2 ?? DEFAULT_V5_PROMPTS.c2,
-      c3: dbPrompts.c3 ?? DEFAULT_V5_PROMPTS.c3,
-      c4: dbPrompts.c4 ?? DEFAULT_V5_PROMPTS.c4,
-      c5: dbPrompts.c5 ?? DEFAULT_V5_PROMPTS.c5,
-      consolidacao: dbPrompts.consolidacao ?? DEFAULT_V5_PROMPTS.consolidacao,
+      c1: resolvePromptPair("c1"),
+      c2: resolvePromptPair("c2"),
+      c3: resolvePromptPair("c3"),
+      c4: resolvePromptPair("c4"),
+      c5: resolvePromptPair("c5"),
+      consolidacao: resolvePromptPair("consolidacao"),
     };
 
     // ══════════════════════════════════════════════════════════════
