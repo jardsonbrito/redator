@@ -1784,11 +1784,36 @@ Deno.serve(async (req) => {
       return arredondarNotaEnem(typeof n === "number" ? n : byComp.get(comp as Competencia)!.nota);
     };
 
-    const notaC1 = notaFinal("c1");
+    let notaC1 = notaFinal("c1");
     const notaC2 = notaFinal("c2");
     const notaC3 = notaFinal("c3");
     const notaC4 = notaFinal("c4");
     const notaC5 = notaFinal("c5");
+
+    // ══════════════════════════════════════════════════════════════
+    // 7.1 CORREÇÃO DE COERÊNCIA C1
+    // Se o pipeline confirmou inversão sintática + ≤2 desvios + ≤1 falha
+    // sintática + ≥300 palavras, a nota deve ser 200, independente do
+    // que o consolidador retornou.
+    // ══════════════════════════════════════════════════════════════
+    const c1rawData = byComp.get("c1")!.raw as C1Response;
+    const totalPalavras = transcricaoConfirmada.trim().split(/\s+/).length;
+    const falhasSintaticasC1 = (c1rawData.erros_c1 ?? []).filter((e: any) => e.tipo === "sintatico").length;
+    let justificativaC1Override: string | undefined;
+
+    if (
+      c1rawData.c1?.possui_inversao_sintatica === true &&
+      (c1rawData.c1?.total_erros ?? 0) <= 2 &&
+      falhasSintaticasC1 <= 1 &&
+      totalPalavras >= 300 &&
+      notaC1 < 200
+    ) {
+      console.log(`🔧 [C1 COERÊNCIA] Nota corrigida: ${notaC1} → 200 | total_erros=${c1rawData.c1?.total_erros} | falhas_sin=${falhasSintaticasC1} | palavras=${totalPalavras}`);
+      notaC1 = 200;
+      justificativaC1Override =
+        "O texto apresenta até 2 desvios, no máximo 1 falha sintática e possui inversão sintática bem-sucedida, atendendo aos critérios de 200 pontos na C1.";
+    }
+
     const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
 
     // Sempre usa erros do pipeline (C1 erros_c1, C3 lacunas, C4 problemas, C5 elementos ausentes)
@@ -1811,7 +1836,7 @@ Deno.serve(async (req) => {
     const correcaoIA = {
       // Notas e justificativas finais (do consolidador, com regras aplicadas)
       competencias: {
-        c1: { nota: notaC1, justificativa: consolResult?.competencias?.c1?.justificativa ?? byComp.get("c1")!.justificativa },
+        c1: { nota: notaC1, justificativa: justificativaC1Override ?? consolResult?.competencias?.c1?.justificativa ?? byComp.get("c1")!.justificativa },
         c2: { nota: notaC2, justificativa: consolResult?.competencias?.c2?.justificativa ?? byComp.get("c2")!.justificativa },
         c3: { nota: notaC3, justificativa: consolResult?.competencias?.c3?.justificativa ?? byComp.get("c3")!.justificativa },
         c4: { nota: notaC4, justificativa: consolResult?.competencias?.c4?.justificativa ?? byComp.get("c4")!.justificativa },
