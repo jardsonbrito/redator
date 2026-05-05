@@ -1798,17 +1798,20 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════
     const c1rawData = byComp.get("c1")!.raw as C1Response;
     const totalPalavras = transcricaoConfirmada.trim().split(/\s+/).length;
-    const falhasSintaticasC1 = (c1rawData.erros_c1 ?? []).filter((e: any) => e.tipo === "sintatico").length;
+    const errosC1Lista = c1rawData.erros_c1 ?? [];
+    // Usa erros_c1.length como contagem real — c1.total_erros pode ser inconsistente com a lista
+    const errosC1Count = errosC1Lista.length;
+    const falhasSintaticasC1 = errosC1Lista.filter((e: any) => e.tipo === "sintatico").length;
     let justificativaC1Override: string | undefined;
 
     if (
       c1rawData.c1?.possui_inversao_sintatica === true &&
-      (c1rawData.c1?.total_erros ?? 0) <= 2 &&
+      errosC1Count <= 2 &&
       falhasSintaticasC1 <= 1 &&
       totalPalavras >= 300 &&
       notaC1 < 200
     ) {
-      console.log(`🔧 [C1 COERÊNCIA] Nota corrigida: ${notaC1} → 200 | total_erros=${c1rawData.c1?.total_erros} | falhas_sin=${falhasSintaticasC1} | palavras=${totalPalavras}`);
+      console.log(`🔧 [C1 COERÊNCIA] Nota corrigida: ${notaC1} → 200 | erros_c1.length=${errosC1Count} | falhas_sin=${falhasSintaticasC1} | palavras=${totalPalavras}`);
       notaC1 = 200;
       justificativaC1Override =
         "O texto apresenta até 2 desvios, no máximo 1 falha sintática e possui inversão sintática bem-sucedida, atendendo aos critérios de 200 pontos na C1.";
