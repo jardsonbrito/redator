@@ -210,10 +210,11 @@ Deno.serve(async (req) => {
     console.log("✅ Prompt montado" + (observacaoTrimmed ? " (+ observação)" : "") + (fewShotBloco ? " (+ few-shot)" : ""));
 
     // ══════════════════════════════════════════════════════════════
-    // 5. CHAMAR IA — revisões sempre usam gemini-pro-latest
+    // 5. CHAMAR IA — provider/modelo configuráveis pelo admin
     // ══════════════════════════════════════════════════════════════
-    const modeloRevisao = "gemini-pro-latest";
-    console.log(`🚀 Revisão via Gemini | modelo: ${modeloRevisao}`);
+    const providerRevisao = (config.recorrecao_provider ?? "gemini") as string;
+    const modeloRevisao = (config.recorrecao_model ?? "gemini-pro-latest") as string;
+    console.log(`🚀 Revisão via ${providerRevisao} | modelo: ${modeloRevisao}`);
 
     const startTime = Date.now();
     let aiText: string;
@@ -222,9 +223,14 @@ Deno.serve(async (req) => {
     let totalTokens = 0;
     let modeloUsado = modeloRevisao;
 
-    {
+    if (providerRevisao === "gemini") {
       const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
       if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
+
+      const isThinkingModel =
+        modeloRevisao.includes("pro-latest") ||
+        modeloRevisao.includes("2.5-pro") ||
+        modeloRevisao.includes("2.5-flash");
 
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modeloRevisao}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -237,7 +243,7 @@ Deno.serve(async (req) => {
           generationConfig: {
             temperature: parseFloat(String(config.temperatura)),
             maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
-            thinkingConfig: { thinkingBudget: -1 },
+            ...(isThinkingModel && { thinkingConfig: { thinkingBudget: -1 } }),
           },
         }),
       });
@@ -250,7 +256,6 @@ Deno.serve(async (req) => {
 
       const geminiData = await geminiResponse.json();
       const allParts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
-      // gemini-pro-latest é thinking model: filtrar partes thought:true e juntar as de texto
       const textParts = allParts.filter((p: any) => !p.thought && p.text);
       aiText = (textParts.length > 0 ? textParts : allParts).map((p: any) => p.text ?? "").join("").trim();
       if (!aiText) throw new Error("Resposta vazia ou inválida do Gemini");
@@ -258,6 +263,74 @@ Deno.serve(async (req) => {
       inputTokens = geminiData.usageMetadata?.promptTokenCount ?? 0;
       outputTokens = geminiData.usageMetadata?.candidatesTokenCount ?? 0;
       totalTokens = geminiData.usageMetadata?.totalTokenCount ?? 0;
+    } else if (providerRevisao === "anthropic") {
+      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
+
+      const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: modeloRevisao,
+          max_tokens: Math.max(config.max_tokens ?? 16000, 8000),
+          temperature: parseFloat(String(config.temperatura)),
+          system: systemPromptFinal,
+          messages: [{ role: "user", content: userPrompt }],
+        }),
+      });
+
+      if (!anthropicResponse.ok) {
+        const errorData = await anthropicResponse.text();
+        console.error("❌ Erro no Anthropic:", errorData);
+        throw new Error(`Erro no Anthropic: ${errorData}`);
+      }
+
+      const anthropicData = await anthropicResponse.json();
+      aiText = anthropicData.content?.[0]?.text ?? "";
+      if (!aiText) throw new Error("Resposta vazia ou inválida do Anthropic");
+
+      inputTokens = anthropicData.usage?.input_tokens ?? 0;
+      outputTokens = anthropicData.usage?.output_tokens ?? 0;
+      totalTokens = inputTokens + outputTokens;
+    } else {
+      // openai (default fallback)
+      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+      if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
+
+      const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: modeloRevisao,
+          max_tokens: config.max_tokens ?? 4000,
+          temperature: parseFloat(String(config.temperatura)),
+          messages: [
+            { role: "system", content: systemPromptFinal },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+
+      if (!openaiResponse.ok) {
+        const errorData = await openaiResponse.text();
+        console.error("❌ Erro no OpenAI:", errorData);
+        throw new Error(`Erro no OpenAI: ${errorData}`);
+      }
+
+      const openaiData = await openaiResponse.json();
+      aiText = openaiData.choices?.[0]?.message?.content ?? "";
+      if (!aiText) throw new Error("Resposta vazia ou inválida do OpenAI");
+
+      inputTokens = openaiData.usage?.prompt_tokens ?? 0;
+      outputTokens = openaiData.usage?.completion_tokens ?? 0;
+      totalTokens = openaiData.usage?.total_tokens ?? 0;
     }
 
 

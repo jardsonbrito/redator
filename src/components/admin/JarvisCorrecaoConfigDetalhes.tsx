@@ -164,6 +164,14 @@ export const JarvisCorrecaoConfigDetalhes = ({ configId }: Props) => {
                 ${Number(config.custo_estimado_usd || 0).toFixed(4)}
               </p>
             </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Provider da Recorreção</p>
+              <p className="font-medium">{config.recorrecao_provider ?? "gemini"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Modelo da Recorreção</p>
+              <p className="font-medium font-mono text-sm">{config.recorrecao_model ?? "gemini-pro-latest"}</p>
+            </div>
           </div>
         </CardContent>
       </Card>

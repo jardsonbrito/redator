@@ -24,6 +24,8 @@ export interface JarvisCorrecaoConfig {
   ativado_por: string | null;
   notas: string | null;
   usar_pipeline_v5: boolean;
+  recorrecao_provider: string;
+  recorrecao_model: string;
 }
 
 export interface CreateConfigData {
@@ -40,6 +42,8 @@ export interface CreateConfigData {
   custo_creditos: number;
   custo_estimado_usd?: number;
   notas?: string;
+  recorrecao_provider?: string;
+  recorrecao_model?: string;
 }
 
 const getAdminId = async (): Promise<string> => {
@@ -136,6 +140,8 @@ export const useJarvisCorrecaoConfig = () => {
           custo_estimado_usd: data.custo_estimado_usd,
           criado_por: adminId,
           notas: data.notas,
+          recorrecao_provider: data.recorrecao_provider ?? "gemini",
+          recorrecao_model: data.recorrecao_model ?? "gemini-pro-latest",
         })
         .select()
         .single();

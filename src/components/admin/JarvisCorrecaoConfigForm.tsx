@@ -57,6 +57,8 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
           custo_creditos: initialData.custo_creditos,
           custo_estimado_usd: initialData.custo_estimado_usd || undefined,
           notas: initialData.notas || "",
+          recorrecao_provider: initialData.recorrecao_provider || "gemini",
+          recorrecao_model: initialData.recorrecao_model || "gemini-pro-latest",
         }
       : {
           nome: "",
@@ -71,6 +73,8 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
           custo_creditos: 1,
           custo_estimado_usd: 0.05,
           notas: "",
+          recorrecao_provider: "gemini",
+          recorrecao_model: "gemini-pro-latest",
         },
   });
 
@@ -89,12 +93,15 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
         custo_creditos: initialData.custo_creditos,
         custo_estimado_usd: initialData.custo_estimado_usd || undefined,
         notas: initialData.notas || "",
+        recorrecao_provider: initialData.recorrecao_provider || "gemini",
+        recorrecao_model: initialData.recorrecao_model || "gemini-pro-latest",
       });
       setResponseSchemaText(JSON.stringify(initialData.response_schema, null, 2));
     }
   }, [initialData, reset]);
 
   const selectedProvider = watch("provider");
+  const selectedRecorrecaoProvider = watch("recorrecao_provider");
 
   const validateResponseSchema = (text: string): boolean => {
     try {
@@ -278,6 +285,78 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
                   valueAsNumber: true,
                 })}
               />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Configuração da Recorreção */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recorreção (2ª, 3ª correção...)</CardTitle>
+          <CardDescription>
+            Provider e modelo usados quando o professor solicita uma nova correção de uma redação já corrigida. Independente do provider da 1ª correção.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Provider da Recorreção *</Label>
+              <Select
+                value={watch("recorrecao_provider")}
+                onValueChange={(value) => {
+                  setValue("recorrecao_provider", value);
+                  const defaultModel =
+                    value === "openai"
+                      ? "gpt-4o-mini"
+                      : value === "anthropic"
+                      ? "claude-sonnet-4-6"
+                      : "gemini-pro-latest";
+                  setValue("recorrecao_model", defaultModel);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Modelo da Recorreção *</Label>
+              <Select
+                value={watch("recorrecao_model")}
+                onValueChange={(value) => setValue("recorrecao_model", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedRecorrecaoProvider === "openai" ? (
+                    <>
+                      <SelectItem value="gpt-4o-mini">gpt-4o-mini (barato)</SelectItem>
+                      <SelectItem value="gpt-4o">gpt-4o (premium)</SelectItem>
+                      <SelectItem value="gpt-4">gpt-4 (legacy)</SelectItem>
+                    </>
+                  ) : selectedRecorrecaoProvider === "anthropic" ? (
+                    <>
+                      <SelectItem value="claude-sonnet-4-6">Claude Sonnet 4.6 (recomendado)</SelectItem>
+                      <SelectItem value="claude-opus-4-7">Claude Opus 4.7</SelectItem>
+                      <SelectItem value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (econômico)</SelectItem>
+                      <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (legado)</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="gemini-2.5-flash">gemini-2.5-flash (rápido)</SelectItem>
+                      <SelectItem value="gemini-pro-latest">gemini-pro-latest (Thinking + Search)</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
