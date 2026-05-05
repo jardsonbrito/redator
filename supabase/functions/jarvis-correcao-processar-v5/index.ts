@@ -1210,6 +1210,97 @@ function getJustificativa(comp: Competencia, raw: any): string {
   return raw?.[comp]?.justificativa ?? "";
 }
 
+// ──────────────────────────────────────────────────────────────────
+// PÓS-PROCESSAMENTO: filtro de falsos erros de C1
+// ──────────────────────────────────────────────────────────────────
+
+function _normalizarTexto(s: string): string {
+  return s.trim().replace(/\s+/g, " ").replace(/\s+([,;:.!?])/g, "$1").replace(/([,;:.!?]) +/g, "$1 ");
+}
+
+const PADROES_ORACAO_COMENTATIVA = [
+  ", o que demonstra", ", o que evidencia", ", o que revela",
+  ", o que mostra", ", o que comprova", ", o que indica", ", o que reforça",
+];
+
+const TERMOS_COESAO_C1 = [
+  "repetição de conectivo", "além disso", "portanto", "assim,", "dessa forma",
+  "elo interparagrafal", "progressão referencial", "variedade coesiva", "coesão",
+];
+
+function filtrarErrosC1Falsos(erros: any[], correcaoId: string, etapa: string): any[] {
+  const descartados: Array<{ motivo: string; tipo: string; trecho: string }> = [];
+  const resultado: any[] = [];
+
+  const trchosC4 = new Set(
+    erros
+      .filter(e => e.competencia_relacionada === "c4" && e.trecho_original)
+      .map(e => _normalizarTexto(e.trecho_original.toLowerCase()))
+  );
+
+  for (const erro of erros) {
+    const comp: string = erro.competencia_relacionada ?? "";
+    const desc = (erro.descricao ?? "").toLowerCase();
+    const trecho = (erro.trecho_original ?? "").toLowerCase();
+    const sug = (erro.sugestao ?? "").toLowerCase();
+
+    // Regra 1 — sugestão idêntica ao trecho original
+    if (
+      erro.trecho_original && erro.sugestao &&
+      _normalizarTexto(erro.trecho_original) === _normalizarTexto(erro.sugestao)
+    ) {
+      descartados.push({ motivo: "sugestao_identica_ao_original", tipo: erro.tipo, trecho: erro.trecho_original.slice(0, 80) });
+      continue;
+    }
+
+    if (comp === "c1") {
+      // Regra 2 — vírgula tida como "entre sujeito e verbo" mas introduz oração comentativa
+      if (desc.includes("vírgula entre sujeito e verbo") || desc.includes("separando sujeito do verbo")) {
+        if (PADROES_ORACAO_COMENTATIVA.some(p => trecho.includes(p))) {
+          descartados.push({ motivo: "virgula_oracao_comentativa", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+          continue;
+        }
+      }
+
+      // Regra 3 — problema de coesão/conectivo classificado erroneamente em C1
+      if (TERMOS_COESAO_C1.some(t => desc.includes(t) || trecho.includes(t))) {
+        const trechoNorm = _normalizarTexto(trecho);
+        if (erro.trecho_original && !trchosC4.has(trechoNorm)) {
+          // Reclassificar para C4
+          resultado.push({
+            ...erro,
+            competencia_relacionada: "c4",
+            tipo: (erro.tipo ?? "").replace(/^C1/, "C4"),
+          });
+          trchosC4.add(trechoNorm);
+          descartados.push({ motivo: "reclassificado_c1_para_c4", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+        } else {
+          descartados.push({ motivo: "coesao_c1_descartado_ja_existe_c4", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+        }
+        continue;
+      }
+
+      // Regra 4 — troca estilística de infinitivo flexionado (ambas as formas são aceitas)
+      if (desc.includes("concordância") && trecho.includes("a utilizarem") && sug.includes("a utilizar")) {
+        descartados.push({ motivo: "infinitivo_flexionado_estilistico", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+        continue;
+      }
+    }
+
+    resultado.push(erro);
+  }
+
+  if (descartados.length > 0) {
+    console.log(`🔍 [FILTRO C1] id=${correcaoId} etapa=${etapa} | ${descartados.length} descartado(s):`);
+    for (const d of descartados) {
+      console.log(`   [${d.motivo}] tipo="${d.tipo}" trecho="${d.trecho}"`);
+    }
+  }
+
+  // Renumerar sequencialmente após filtragem
+  return resultado.map((e, i) => ({ ...e, numero: i + 1 }));
+}
+
 // Normaliza erros de todos os formatos V5 para o array compatível com V4
 function normalizarErros(resultados: PipelineResultado[]): any[] {
   let num = 1;
@@ -1699,15 +1790,16 @@ Deno.serve(async (req) => {
     // Sempre usa erros do pipeline (C1 erros_c1, C3 lacunas, C4 problemas, C5 elementos ausentes)
     // O consolidador retorna erros em formato incompleto — ignoramos e usamos a fonte original
     const errosRaw: any[] = normalizarErros(resultadosPipeline);
-    const erros = errosRaw.map((e: any, idx: number) => ({
+    const errosMapeados = errosRaw.map((e: any, idx: number) => ({
       numero: e.numero ?? idx + 1,
-      paragrafo: e.paragrafo,              // exibido como badge no frontend
+      paragrafo: e.paragrafo,
       tipo: e.tipo ?? "C1",
       competencia_relacionada: e.competencia_relacionada ?? "c1",
       descricao: e.descricao ?? "",
       trecho_original: e.trecho_original ?? "",
       sugestao: e.sugestao ?? "",
     }));
+    const erros = filtrarErrosC1Falsos(errosMapeados, correcaoId, "pipeline");
 
     // ══════════════════════════════════════════════════════════════
     // 8. MONTAR CORRECAO_IA (schema compatível com V4)

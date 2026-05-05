@@ -423,6 +423,10 @@ Deno.serve(async (req) => {
       correcaoIA!.nota_total = soma;
     }
 
+    if (isEstruturado && Array.isArray(correcaoIA!.erros)) {
+      correcaoIA!.erros = filtrarErrosC1Falsos(correcaoIA!.erros, correcaoId!, "consolidacao") as typeof correcaoIA.erros;
+    }
+
     console.log(isEstruturado ? `📊 JSON estruturado | Nota: ${correcaoIA!.nota_total}` : "📄 Salvando como texto bruto");
 
     // ══════════════════════════════════════════════════════════════
@@ -534,6 +538,87 @@ Deno.serve(async (req) => {
 // ══════════════════════════════════════════════════════════════════
 // FUNÇÕES AUXILIARES
 // ══════════════════════════════════════════════════════════════════
+
+function _normalizarTexto(s: string): string {
+  return s.trim().replace(/\s+/g, " ").replace(/\s+([,;:.!?])/g, "$1").replace(/([,;:.!?]) +/g, "$1 ");
+}
+
+const PADROES_ORACAO_COMENTATIVA_V4 = [
+  ", o que demonstra", ", o que evidencia", ", o que revela",
+  ", o que mostra", ", o que comprova", ", o que indica", ", o que reforça",
+];
+
+const TERMOS_COESAO_C1_V4 = [
+  "repetição de conectivo", "além disso", "portanto", "assim,", "dessa forma",
+  "elo interparagrafal", "progressão referencial", "variedade coesiva", "coesão",
+];
+
+function filtrarErrosC1Falsos(erros: any[], correcaoId: string, etapa: string): any[] {
+  const descartados: Array<{ motivo: string; tipo: string; trecho: string }> = [];
+  const resultado: any[] = [];
+
+  const trchosC4 = new Set(
+    erros
+      .filter(e => e.competencia_relacionada === "c4" && e.trecho_original)
+      .map(e => _normalizarTexto((e.trecho_original as string).toLowerCase()))
+  );
+
+  for (const erro of erros) {
+    const comp: string = erro.competencia_relacionada ?? "";
+    const desc = (erro.descricao ?? "").toLowerCase();
+    const trecho = (erro.trecho_original ?? "").toLowerCase();
+    const sug = (erro.sugestao ?? "").toLowerCase();
+
+    // Regra 1 — sugestão idêntica ao trecho original
+    if (
+      erro.trecho_original && erro.sugestao &&
+      _normalizarTexto(erro.trecho_original) === _normalizarTexto(erro.sugestao)
+    ) {
+      descartados.push({ motivo: "sugestao_identica_ao_original", tipo: erro.tipo, trecho: (erro.trecho_original as string).slice(0, 80) });
+      continue;
+    }
+
+    if (comp === "c1") {
+      // Regra 2 — vírgula tida como "entre sujeito e verbo" mas introduz oração comentativa
+      if (desc.includes("vírgula entre sujeito e verbo") || desc.includes("separando sujeito do verbo")) {
+        if (PADROES_ORACAO_COMENTATIVA_V4.some(p => trecho.includes(p))) {
+          descartados.push({ motivo: "virgula_oracao_comentativa", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+          continue;
+        }
+      }
+
+      // Regra 3 — problema de coesão/conectivo classificado erroneamente em C1
+      if (TERMOS_COESAO_C1_V4.some(t => desc.includes(t) || trecho.includes(t))) {
+        const trechoNorm = _normalizarTexto(trecho);
+        if (erro.trecho_original && !trchosC4.has(trechoNorm)) {
+          resultado.push({ ...erro, competencia_relacionada: "c4" });
+          trchosC4.add(trechoNorm);
+          descartados.push({ motivo: "reclassificado_c1_para_c4", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+        } else {
+          descartados.push({ motivo: "coesao_c1_descartado_ja_existe_c4", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+        }
+        continue;
+      }
+
+      // Regra 4 — troca estilística de infinitivo flexionado (ambas as formas são aceitas)
+      if (desc.includes("concordância") && trecho.includes("a utilizarem") && sug.includes("a utilizar")) {
+        descartados.push({ motivo: "infinitivo_flexionado_estilistico", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+        continue;
+      }
+    }
+
+    resultado.push(erro);
+  }
+
+  if (descartados.length > 0) {
+    console.log(`🔍 [FILTRO C1] id=${correcaoId} etapa=${etapa} | ${descartados.length} descartado(s):`);
+    for (const d of descartados) {
+      console.log(`   [${d.motivo}] tipo="${d.tipo}" trecho="${d.trecho}"`);
+    }
+  }
+
+  return resultado.map((e, i) => ({ ...e, numero: i + 1 }));
+}
 
 function buildBancoBlock(banco: BancoComentarioRow[]): string {
   if (!banco.length) return "";
