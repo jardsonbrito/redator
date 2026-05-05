@@ -48,6 +48,38 @@ const NOTA_BG = (nota: number, max = 200) => {
   return "bg-red-50 border-red-200";
 };
 
+const TIPO_ERRO_LABELS: Record<string, string> = {
+  // C1 — norma-padrão
+  ortografia: "Ortografia",
+  acentuacao: "Acentuação",
+  pontuacao: "Pontuação",
+  concordancia: "Concordância",
+  regencia: "Regência",
+  crase: "Crase",
+  pronome: "Pronome",
+  verbal: "Verbal",
+  sintatico: "Sintático",
+  vocabulario: "Vocabulário",
+  // C4 — coesão
+  conectivo_inadequado: "Conectivo inadequado",
+  ausencia_de_conectivo: "Ausência de conectivo",
+  ausencia_de_elo: "Ausência de elo interparagrafal",
+  repeticao: "Repetição de conectivos",
+  ambiguidade_referencial: "Ambiguidade referencial",
+  retomada_incorreta: "Retomada incorreta",
+  articulacao_fragil: "Articulação frágil",
+};
+
+function formatarTipoErro(tipo: string): string {
+  if (!tipo) return tipo;
+  const sep = tipo.indexOf(" — ");
+  if (sep === -1) return TIPO_ERRO_LABELS[tipo] ?? tipo;
+  const prefix = tipo.slice(0, sep);
+  const rawSuffix = tipo.slice(sep + 3);
+  const label = TIPO_ERRO_LABELS[rawSuffix] ?? rawSuffix;
+  return `${prefix} — ${label}`;
+}
+
 function inferirCompetencia(tipo: string): string {
   if (["coesão", "coerência"].includes(tipo)) return "c4";
   return "c1";
@@ -613,7 +645,7 @@ function ErrosBlock({ erros }: { erros: any[] }) {
         {erros.map((erro: any, i: number) => (
           <div key={i} className="rounded-xl border-l-4 border-red-400 bg-white pl-4 pr-3 py-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-xs font-bold text-red-700">{erro.tipo || `Erro ${i + 1}`}</p>
+              <p className="text-xs font-bold text-red-700">{formatarTipoErro(erro.tipo) || `Erro ${i + 1}`}</p>
               {erro.paragrafo && (
                 <span className="text-[10px] font-semibold uppercase tracking-wide bg-zinc-100 text-zinc-500 rounded px-1.5 py-0.5">
                   {erro.paragrafo}
