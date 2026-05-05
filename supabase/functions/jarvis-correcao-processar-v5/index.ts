@@ -1341,6 +1341,34 @@ function buildBancoForConsolidacao(banco: BancoComentarioRow[]): string {
   return bloco;
 }
 
+// Limites de saída por modelo (completion tokens)
+const MODEL_OUTPUT_LIMITS: Record<string, number> = {
+  "gpt-4o": 16384,
+  "gpt-4o-mini": 16384,
+  "gpt-4": 8192,
+  "gpt-4-turbo": 4096,
+  "gpt-3.5-turbo": 4096,
+  // Anthropic (conservador — modelos recentes suportam mais, mas cap seguro)
+  "claude-sonnet-4-6": 16000,
+  "claude-opus-4-7": 16000,
+  "claude-haiku-4-5-20251001": 8192,
+  "claude-3-5-sonnet-20241022": 8192,
+  "claude-3-5-haiku-20241022": 8192,
+  "claude-3-opus-20240229": 4096,
+  // Gemini não precisa de entry — sem limite prático no intervalo usado
+};
+
+/**
+ * Retorna o max_tokens efetivo para a chamada à IA.
+ * - Usa `configured` (do banco) se disponível; senão usa `fallback`.
+ * - Nunca ultrapassa o limite do modelo se ele for conhecido.
+ */
+function clampMaxTokens(model: string, configured: number, fallback: number): number {
+  const base = configured > 0 ? configured : fallback;
+  const limit = MODEL_OUTPUT_LIMITS[model] ?? Infinity;
+  return Math.min(Math.max(base, fallback), limit);
+}
+
 function calcularCusto(model: string, inputTokens: number, outputTokens: number): number {
   const custos: Record<string, { input: number; output: number }> = {
     "gpt-4o": { input: 2.50, output: 10.0 },
@@ -1573,11 +1601,10 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════
     const provider = config.provider ?? "openai";
     const temperatura = parseFloat(String(config.temperatura));
-    // V5 usa limites generosos: modelos com thinking consomem boa parte do budget com raciocínio interno
-    const maxTokensComp = Math.max(config.max_tokens ?? 6000, 8000);
+    const maxTokensComp = clampMaxTokens(config.model, config.max_tokens ?? 0, 6000);
     const competencias: Competencia[] = ["c1", "c2", "c3", "c4", "c5"];
 
-    console.log(`🔄 Pipeline C1-C5 em paralelo | ${config.model} | temp: ${temperatura}`);
+    console.log(`🔄 Pipeline C1-C5 em paralelo | ${config.model} | temp: ${temperatura} | maxTokensComp: ${maxTokensComp}`);
     const pipelineStart = Date.now();
 
     const resultadosPipeline: PipelineResultado[] = await Promise.all(
@@ -1622,8 +1649,9 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════
     console.log("🔗 Consolidando resultados...");
     const consolidacaoStart = Date.now();
-    // Consolidação precisa de muito espaço: inclui versao_lapidada + análises de todas as competências
-    const maxTokensConsol = Math.max(config.max_tokens ?? 6000, 24000);
+    // Consolidação usa fallback maior (10000) para comportar versao_lapidada + análises completas
+    const maxTokensConsol = clampMaxTokens(config.model, config.max_tokens ?? 0, 10000);
+    console.log(`  🔗 maxTokensConsol: ${maxTokensConsol}`);
 
     const consolPrompts = v5Prompts.consolidacao;
     // Few-shot no system prompt da consolidação (mesma abordagem do V4)
