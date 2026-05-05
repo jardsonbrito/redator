@@ -1223,9 +1223,13 @@ const PADROES_ORACAO_COMENTATIVA = [
   ", o que mostra", ", o que comprova", ", o que indica", ", o que reforça",
 ];
 
+// Apenas termos técnicos específicos de C4 — evitar "coesão" e conectivos soltos
+// que aparecem naturalmente em descrições de erros legítimos de C1
 const TERMOS_COESAO_C1 = [
-  "repetição de conectivo", "além disso", "portanto", "assim,", "dessa forma",
-  "elo interparagrafal", "progressão referencial", "variedade coesiva", "coesão",
+  "repetição de conectivo",
+  "elo interparagrafal",
+  "progressão referencial",
+  "variedade coesiva",
 ];
 
 function filtrarErrosC1Falsos(erros: any[], correcaoId: string, etapa: string): any[] {

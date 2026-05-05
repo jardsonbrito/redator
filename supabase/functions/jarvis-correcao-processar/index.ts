@@ -549,8 +549,10 @@ const PADROES_ORACAO_COMENTATIVA_V4 = [
 ];
 
 const TERMOS_COESAO_C1_V4 = [
-  "repetição de conectivo", "além disso", "portanto", "assim,", "dessa forma",
-  "elo interparagrafal", "progressão referencial", "variedade coesiva", "coesão",
+  "repetição de conectivo",
+  "elo interparagrafal",
+  "progressão referencial",
+  "variedade coesiva",
 ];
 
 function filtrarErrosC1Falsos(erros: any[], correcaoId: string, etapa: string): any[] {
