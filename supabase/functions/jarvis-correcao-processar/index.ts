@@ -232,6 +232,12 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(1);
 
+    // Persiste texto imediatamente após consumir crédito — permite reenvio em caso de erro
+    await supabaseClient
+      .from("jarvis_correcoes")
+      .update({ transcricao_confirmada: transcricaoConfirmada, status: "aguardando_correcao" })
+      .eq("id", correcaoId);
+
     // ══════════════════════════════════════════════════════════════
     // 4. MONTAR PROMPT DINAMICAMENTE
     // ══════════════════════════════════════════════════════════════
