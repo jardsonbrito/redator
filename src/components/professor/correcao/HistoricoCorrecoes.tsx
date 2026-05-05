@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useJarvisCorrecao, JarvisCorrecao } from "@/hooks/useJarvisCorrecao";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,7 @@ type DialogState =
   | null;
 
 export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
+  const queryClient = useQueryClient();
   const { correcoes, turmas, isLoading, deletarCorrecao, deletarPorAluno, processarCorrecao } =
     useJarvisCorrecao(professorEmail);
 
@@ -260,6 +262,16 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setOpenDropdownId(null);
+                                    // Atualiza cache otimisticamente antes da IA responder
+                                    queryClient.setQueryData<JarvisCorrecao[]>(
+                                      ["jarvis-correcoes", professorEmail],
+                                      (old) =>
+                                        old?.map((c) =>
+                                          c.id === correcao.id
+                                            ? { ...c, status: "aguardando_correcao" as const, erro_mensagem: null }
+                                            : c
+                                        )
+                                    );
                                     processarCorrecao.mutate({
                                       correcaoId: correcao.id,
                                       transcricaoConfirmada:
