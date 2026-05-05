@@ -98,7 +98,9 @@ interface C2Response {
   c2: { nota: number; justificativa: string };
   analise_c2: {
     atendimento_tema: "completo" | "tangenciamento" | "fuga";
-    estrutura: "completa" | "incompleta";
+    estrutura_dissertativo_argumentativa: { status: "completa" | "incompleta"; descricao: string };
+    /** @deprecated use estrutura_dissertativo_argumentativa.status */
+    estrutura?: "completa" | "incompleta";
     possui_tese: boolean;
     tese_identificada: string;
     tipo_tese: string;
@@ -472,7 +474,10 @@ SAÍDA — RETORNE EXCLUSIVAMENTE JSON
   },
   "analise_c2": {
     "atendimento_tema": "<completo|tangenciamento|fuga>",
-    "estrutura": "<completa|incompleta>",
+    "estrutura_dissertativo_argumentativa": {
+      "status": "<completa|incompleta>",
+      "descricao": "<avalie a presença de introdução, desenvolvimento e conclusão e comente a qualidade da estrutura>"
+    },
     "possui_tese": <true|false>,
     "tese_identificada": "<trecho da tese ou string vazia>",
     "tipo_tese": "<causal_com_2_agentes|parcial|ausente>",
@@ -1847,8 +1852,13 @@ Deno.serve(async (req) => {
       },
       nota_total: notaTotal,
       erros,
-      estrutura: consolResult.estrutura ?? {
-        possui_tese: false, tese_identificada: "", argumentos: [], uso_repertorio: "", proposta_intervencao: "",
+      estrutura: {
+        ...(consolResult.estrutura ?? {
+          possui_tese: false, tese_identificada: "", argumentos: [], uso_repertorio: "", proposta_intervencao: "",
+        }),
+        // Campo rico de C2 — vem do pipeline, não do consolidador
+        estrutura_dissertativo_argumentativa:
+          (byComp.get("c2")!.raw as C2Response).analise_c2?.estrutura_dissertativo_argumentativa ?? null,
       },
       versao_lapidada: consolResult.versao_lapidada ?? "",
       sugestoes_objetivas: consolResult.sugestoes_objetivas ?? [],

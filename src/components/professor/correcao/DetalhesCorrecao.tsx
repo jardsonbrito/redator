@@ -380,6 +380,22 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
 
           {competenciaAtiva === "c2" && (
             <div className="space-y-3">
+              {estrutura?.estrutura_dissertativo_argumentativa && (
+                <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    {estrutura.estrutura_dissertativo_argumentativa.status === "completa"
+                      ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      : <XCircle className="h-4 w-4 text-red-500" />}
+                    <p className="text-xs font-bold text-zinc-500">
+                      Estrutura dissertativo-argumentativa
+                      <span className="ml-2 font-normal text-zinc-400">
+                        ({estrutura.estrutura_dissertativo_argumentativa.status})
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-sm text-zinc-700">{estrutura.estrutura_dissertativo_argumentativa.descricao}</p>
+                </div>
+              )}
               {estrutura?.tese_identificada && (
                 <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
                   <div className="flex items-center gap-2 mb-1">
