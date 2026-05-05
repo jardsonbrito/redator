@@ -210,10 +210,10 @@ Deno.serve(async (req) => {
     console.log("✅ Prompt montado" + (observacaoTrimmed ? " (+ observação)" : "") + (fewShotBloco ? " (+ few-shot)" : ""));
 
     // ══════════════════════════════════════════════════════════════
-    // 5. CHAMAR IA — revisões SEMPRE usam Anthropic
+    // 5. CHAMAR IA — revisões sempre usam gemini-pro-latest
     // ══════════════════════════════════════════════════════════════
-    const modeloRevisao = config.model.startsWith("claude-") ? config.model : "claude-sonnet-4-6";
-    console.log(`🚀 Revisão sempre via Anthropic | modelo: ${modeloRevisao}`);
+    const modeloRevisao = "gemini-pro-latest";
+    console.log(`🚀 Revisão via Gemini | modelo: ${modeloRevisao}`);
 
     const startTime = Date.now();
     let aiText: string;
@@ -223,38 +223,41 @@ Deno.serve(async (req) => {
     let modeloUsado = modeloRevisao;
 
     {
-      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada para revisões");
+      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+      if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
 
-      const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modeloRevisao}:generateContent?key=${GEMINI_API_KEY}`;
+
+      const geminiResponse = await fetch(geminiUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: modeloRevisao,
-          system: systemPromptFinal,
-          messages: [{ role: "user", content: userPrompt }],
-          max_tokens: Math.max(config.max_tokens ?? 16000, 8000),
-          temperature: parseFloat(String(config.temperatura)),
+          systemInstruction: { parts: [{ text: systemPromptFinal }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: {
+            temperature: parseFloat(String(config.temperatura)),
+            maxOutputTokens: Math.max(config.max_tokens ?? 16000, 8000),
+            thinkingConfig: { thinkingBudget: -1 },
+          },
         }),
       });
 
-      if (!anthropicResponse.ok) {
-        const errorData = await anthropicResponse.text();
-        console.error("❌ Erro na Anthropic:", errorData);
-        throw new Error(`Erro na API da Anthropic: ${errorData}`);
+      if (!geminiResponse.ok) {
+        const errorData = await geminiResponse.text();
+        console.error("❌ Erro no Gemini:", errorData);
+        throw new Error(`Erro no Gemini: ${errorData}`);
       }
 
-      const anthropicData = await anthropicResponse.json();
-      aiText = anthropicData.content?.[0]?.text;
-      if (!aiText) throw new Error("Resposta vazia ou inválida da Anthropic");
+      const geminiData = await geminiResponse.json();
+      const allParts: any[] = geminiData.candidates?.[0]?.content?.parts ?? [];
+      // gemini-pro-latest é thinking model: filtrar partes thought:true e juntar as de texto
+      const textParts = allParts.filter((p: any) => !p.thought && p.text);
+      aiText = (textParts.length > 0 ? textParts : allParts).map((p: any) => p.text ?? "").join("").trim();
+      if (!aiText) throw new Error("Resposta vazia ou inválida do Gemini");
 
-      inputTokens = anthropicData.usage?.input_tokens ?? 0;
-      outputTokens = anthropicData.usage?.output_tokens ?? 0;
-      totalTokens = inputTokens + outputTokens;
+      inputTokens = geminiData.usageMetadata?.promptTokenCount ?? 0;
+      outputTokens = geminiData.usageMetadata?.candidatesTokenCount ?? 0;
+      totalTokens = geminiData.usageMetadata?.totalTokenCount ?? 0;
     }
 
 
