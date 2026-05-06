@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useJarvisCorrecao, JarvisCorrecao } from "@/hooks/useJarvisCorrecao";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +49,8 @@ import { DetalhesCorrecao } from "./DetalhesCorrecao";
 
 interface Props {
   professorEmail: string;
+  autoOpenCorrecaoId?: string | null;
+  onAutoOpenCleared?: () => void;
 }
 
 type DialogState =
@@ -56,7 +58,7 @@ type DialogState =
   | { tipo: "aluno"; autorNome: string }
   | null;
 
-export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
+export const HistoricoCorrecoes = ({ professorEmail, autoOpenCorrecaoId, onAutoOpenCleared }: Props) => {
   const queryClient = useQueryClient();
   const { correcoes, turmas, isLoading, deletarCorrecao, deletarPorAluno, processarCorrecao } =
     useJarvisCorrecao(professorEmail);
@@ -68,6 +70,17 @@ export const HistoricoCorrecoes = ({ professorEmail }: Props) => {
   const [correcaoSelecionada, setCorrecaoSelecionada] = useState<JarvisCorrecao | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  // Auto-abre o dialog de revisão OCR quando a correção detectada aparece na lista
+  useEffect(() => {
+    if (!autoOpenCorrecaoId || !correcoes) return;
+    const correcao = correcoes.find((c) => c.id === autoOpenCorrecaoId);
+    if (correcao) {
+      setCorrecaoSelecionada(correcao);
+      setShowDetalhes(true);
+      onAutoOpenCleared?.();
+    }
+  }, [correcoes, autoOpenCorrecaoId, onAutoOpenCleared]);
 
   const correcoesFiltradas = useMemo(() => {
     if (!correcoes) return [];

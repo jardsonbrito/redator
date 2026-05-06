@@ -36,6 +36,7 @@ import { toast } from "sonner";
 interface Props {
   professorEmail: string;
   onConcluida?: (correcaoId: string) => void;
+  onOcrDetectado?: (correcaoId: string) => void;
 }
 
 interface FormData {
@@ -44,7 +45,7 @@ interface FormData {
   tema: string;
 }
 
-export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
+export const EnviarRedacaoForm = ({ professorEmail, onConcluida, onOcrDetectado }: Props) => {
   const { turmas, creditos, enviarRedacao, processarCorrecao, criarTurma, deletarTurma } =
     useJarvisCorrecao(professorEmail);
 
@@ -184,9 +185,15 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida }: Props) => {
         });
         if (result.status === "revisao_ocr" && result.transcricaoOCR) {
           setShowProcessando(false);
-          setTranscricaoOCR(result.transcricaoOCR);
-          setCorrecaoIdEmRevisao(result.correcaoId);
-          setShowRevisaoOCR(true);
+          if (onOcrDetectado) {
+            // Delega revisão OCR ao histórico (abre dialog automaticamente)
+            resetForm();
+            onOcrDetectado(result.correcaoId);
+          } else {
+            setTranscricaoOCR(result.transcricaoOCR);
+            setCorrecaoIdEmRevisao(result.correcaoId);
+            setShowRevisaoOCR(true);
+          }
         }
       }
     } catch {

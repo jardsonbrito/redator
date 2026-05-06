@@ -119,7 +119,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
       queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
       queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
       toast.success(`Enviado para correção! Créditos restantes: ${result.creditos_restantes}`);
-      onReprocessado?.(correcao.id);
+      // dialog já foi fechado no onClick do botão
     },
     onError: (err: any) => {
       toast.error(`Erro ao enviar para correção: ${err.message}`);
@@ -143,15 +143,12 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
         c.id === correcao.id ? { ...c, status: "em_revisao" as const } : c
       )
     );
-    // Persiste no banco e refaz a query ao terminar
-    supabase.from("jarvis_correcoes").update({ status: "em_revisao" }).eq("id", correcao.id)
-      .then(() => queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] }));
-    // Dispara em background — onReprocessado é chamado quando concluir
+    // Fecha o dialog imediatamente para que o badge fique visível na tabela
+    onReprocessado?.(correcao.id);
+    // Dispara edge function em background — invalidateQueries roda no onSuccess do hook
     reprocessar.mutateAsync({
       correcaoId: correcao.id,
       observacao: justificativa || undefined,
-    }).then((result) => {
-      onReprocessado?.(result.novaCorrecaoId);
     }).catch((error: any) => {
       toast.error(`Erro ao solicitar revisão: ${error.message}`);
     });
@@ -182,7 +179,11 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
         />
         <div className="flex justify-end">
           <Button
-            onClick={() => confirmarOcr.mutate()}
+            onClick={() => {
+              if (!transcricaoEditada.trim()) return;
+              onReprocessado?.(correcao.id); // fecha dialog imediatamente
+              confirmarOcr.mutate();
+            }}
             disabled={confirmarOcr.isPending || !transcricaoEditada.trim()}
           >
             {confirmarOcr.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

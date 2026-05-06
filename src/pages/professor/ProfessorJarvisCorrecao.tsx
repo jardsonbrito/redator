@@ -13,6 +13,7 @@ export const ProfessorJarvisCorrecao = () => {
   const { creditos, correcoes } = useJarvisCorrecao(professor?.email || "");
   const [activeTab, setActiveTab] = useState<"enviar" | "historico">("enviar");
   const [resultadoId, setResultadoId] = useState<string | null>(null);
+  const [autoOcrId, setAutoOcrId] = useState<string | null>(null);
 
   const correcaoResultado = resultadoId ? correcoes?.find((c) => c.id === resultadoId) ?? null : null;
 
@@ -112,9 +113,20 @@ export const ProfessorJarvisCorrecao = () => {
             )}
           </div>
         ) : activeTab === "enviar" ? (
-          <EnviarRedacaoForm professorEmail={professor.email} onConcluida={handleConcluida} />
+          <EnviarRedacaoForm
+            professorEmail={professor.email}
+            onConcluida={handleConcluida}
+            onOcrDetectado={(id) => {
+              setAutoOcrId(id);
+              setActiveTab("historico");
+            }}
+          />
         ) : (
-          <HistoricoCorrecoes professorEmail={professor.email} />
+          <HistoricoCorrecoes
+            professorEmail={professor.email}
+            autoOpenCorrecaoId={autoOcrId}
+            onAutoOpenCleared={() => setAutoOcrId(null)}
+          />
         )}
       </div>
       </div>

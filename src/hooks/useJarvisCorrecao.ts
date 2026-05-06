@@ -11,7 +11,7 @@ export interface JarvisCorrecao {
   imagem_url: string | null;
   transcricao_ocr_original: string | null;
   transcricao_confirmada: string | null;
-  status: "aguardando_ocr" | "revisao_ocr" | "aguardando_correcao" | "corrigida" | "erro";
+  status: "aguardando_ocr" | "revisao_ocr" | "aguardando_correcao" | "em_revisao" | "corrigida" | "erro";
   erro_mensagem: string | null;
   config_id: string | null;
   config_versao: number | null;
@@ -99,7 +99,10 @@ export const useJarvisCorrecao = (professorEmail: string) => {
       const data = query.state.data;
       if (!data) return false;
       const temPendente = data.some(
-        (c) => c.status === "aguardando_correcao" || c.status === "aguardando_ocr"
+        (c) =>
+          c.status === "aguardando_correcao" ||
+          c.status === "aguardando_ocr" ||
+          c.status === "em_revisao"
       );
       return temPendente ? 8000 : false;
     },
