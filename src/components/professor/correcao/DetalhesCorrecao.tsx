@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { JarvisCorrecao, useJarvisCorrecaoVersoes, useReprocessarCorrecao } from "@/hooks/useJarvisCorrecao";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertCircle, CheckCircle2, XCircle, FileText,
-  ChevronDown, ChevronUp, RefreshCw, History,
+  ChevronDown, ChevronUp, RefreshCw, History, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -96,6 +96,36 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
   const reprocessar = useReprocessarCorrecao(professorEmail || "");
   const { data: versoes } = useJarvisCorrecaoVersoes(correcao.grupo_id ?? null);
 
+  const [transcricaoEditada, setTranscricaoEditada] = useState(
+    correcao.transcricao_ocr_original ?? ""
+  );
+
+  const confirmarOcr = useMutation({
+    mutationFn: async () => {
+      const usarV5 = queryClient.getQueryData<boolean>(["jarvis-config-pipeline-v5"]) === true;
+      const functionName = usarV5 ? "jarvis-correcao-processar-v5" : "jarvis-correcao-processar";
+      const { data: result, error } = await supabase.functions.invoke(functionName, {
+        body: {
+          correcaoId: correcao.id,
+          transcricaoConfirmada: transcricaoEditada.trim(),
+          professorEmail: professorEmail ?? "",
+        },
+      });
+      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
+      queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
+      toast.success(`Enviado para correção! Créditos restantes: ${result.creditos_restantes}`);
+      onReprocessado?.(correcao.id);
+    },
+    onError: (err: any) => {
+      toast.error(`Erro ao enviar para correção: ${err.message}`);
+    },
+  });
+
   const podeRevisar = !!professorEmail && correcao.status === "corrigida";
   const temVersoes = (versoes?.length ?? 0) > 1;
 
@@ -126,6 +156,42 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
       toast.error(`Erro ao solicitar revisão: ${error.message}`);
     });
   };
+
+  // Tela de revisão OCR — aluno/professor revisa a transcrição antes de enviar para correção
+  if (correcao.status === "revisao_ocr") {
+    return (
+      <div className="space-y-4">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Revise a transcrição feita pelo OCR. Corrija qualquer erro de leitura e clique em{" "}
+            <strong>Confirmar e enviar para correção</strong>.
+          </AlertDescription>
+        </Alert>
+        <div className="text-sm text-muted-foreground">
+          <span className="font-medium text-zinc-700">{correcao.autor_nome}</span>
+          {" — "}
+          {correcao.tema}
+        </div>
+        <Textarea
+          rows={22}
+          className="font-mono text-sm"
+          value={transcricaoEditada}
+          onChange={(e) => setTranscricaoEditada(e.target.value)}
+          placeholder="Transcrição OCR aparecerá aqui..."
+        />
+        <div className="flex justify-end">
+          <Button
+            onClick={() => confirmarOcr.mutate()}
+            disabled={confirmarOcr.isPending || !transcricaoEditada.trim()}
+          >
+            {confirmarOcr.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Confirmar e enviar para correção
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (correcao.status !== "corrigida" || !correcaoIA) {
     return (
