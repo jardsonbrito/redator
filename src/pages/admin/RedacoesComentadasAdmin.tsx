@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import {
@@ -19,8 +19,18 @@ import { RedacaoComentadaForm } from '@/components/admin/redacoes-comentadas/Red
 const RedacoesComentadasAdmin = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Abre o formulário de edição diretamente se ?editId=<id> estiver na URL
+  useEffect(() => {
+    const editId = searchParams.get('editId');
+    if (editId) {
+      setEditingId(editId);
+      setView('form');
+    }
+  }, [searchParams]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
