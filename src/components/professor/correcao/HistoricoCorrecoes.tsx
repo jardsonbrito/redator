@@ -445,6 +445,49 @@ export const HistoricoCorrecoes = ({
   );
 };
 
+// ─── Helper: cor dominante do chip baseada no status das correções ────────────
+
+const getChipStyle = (correcoes: JarvisCorrecao[]) => {
+  const ss = correcoes.map((c) => c.status);
+  // Prioridade: erro > revisao_ocr (ação humana urgente) > em_revisao > aguardando_correcao > corrigida
+  if (ss.includes("erro"))
+    return {
+      badge:  "bg-red-500 text-white",
+      border: "border-red-200",
+      hover:  "hover:bg-red-50 hover:border-red-300",
+    };
+  if (ss.includes("revisao_ocr"))
+    return {
+      badge:  "bg-orange-500 text-white",
+      border: "border-orange-200",
+      hover:  "hover:bg-orange-50 hover:border-orange-300",
+    };
+  if (ss.includes("em_revisao"))
+    return {
+      badge:  "bg-amber-400 text-white",
+      border: "border-amber-200",
+      hover:  "hover:bg-amber-50 hover:border-amber-300",
+    };
+  if (ss.includes("aguardando_correcao"))
+    return {
+      badge:  "bg-sky-400 text-white",
+      border: "border-sky-200",
+      hover:  "hover:bg-sky-50 hover:border-sky-300",
+    };
+  if (ss.every((s) => s === "corrigida"))
+    return {
+      badge:  "bg-emerald-500 text-white",
+      border: "border-emerald-200",
+      hover:  "hover:bg-emerald-50 hover:border-emerald-300",
+    };
+  // Misto (parcialmente corrigida)
+  return {
+    badge:  "bg-violet-100 text-violet-600",
+    border: "border-[#dcc8f5]",
+    hover:  "hover:bg-[#ede9fe] hover:border-[#4B0082]/30",
+  };
+};
+
 // ─── PastaCard — folder visual de uma turma ───────────────────────────────────
 
 const PastaCard = ({
@@ -473,18 +516,21 @@ const PastaCard = ({
           <p className="text-[#9c7dc0] text-xs">Nenhum aluno</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {alunos.map(([nome, corrs]) => (
-              <button
-                key={nome}
-                onClick={() => onChipClick(nome, pasta.turmaId, pasta.turmaNome)}
-                className="group flex items-center gap-1.5 bg-white hover:bg-[#ede9fe] active:bg-[#dcc8f5] border border-[#dcc8f5] hover:border-[#4B0082]/30 transition-all rounded-full pl-3 pr-2 py-1.5 text-sm text-[#4f3a68] shadow-sm"
-              >
-                <span className="font-medium leading-none">{nome}</span>
-                <span className="flex items-center justify-center bg-violet-100 text-violet-600 font-semibold text-[11px] rounded-full w-5 h-5 leading-none shrink-0">
-                  {corrs.length}
-                </span>
-              </button>
-            ))}
+            {alunos.map(([nome, corrs]) => {
+              const chipStyle = getChipStyle(corrs);
+              return (
+                <button
+                  key={nome}
+                  onClick={() => onChipClick(nome, pasta.turmaId, pasta.turmaNome)}
+                  className={`flex items-center gap-1.5 bg-white border transition-all rounded-full pl-3 pr-2 py-1.5 text-sm text-[#4f3a68] shadow-sm ${chipStyle.border} ${chipStyle.hover}`}
+                >
+                  <span className="font-medium leading-none">{nome}</span>
+                  <span className={`flex items-center justify-center font-semibold text-[11px] rounded-full w-5 h-5 leading-none shrink-0 ${chipStyle.badge}`}>
+                    {corrs.length}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
