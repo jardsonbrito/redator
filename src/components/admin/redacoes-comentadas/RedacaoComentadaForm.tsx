@@ -860,7 +860,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
 // ─── Formulário principal ─────────────────────────────────────────────────────
 
 export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) => {
-  const { turmasDinamicas } = useTurmasAtivas();
+  const { turmasDinamicas, turmasProfessores } = useTurmasAtivas();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!editingId);
@@ -1123,8 +1123,6 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
     );
   }
 
-  const turmasAlunos = turmasDinamicas;
-
   return (
     <div className="space-y-4">
       {/* Cabeçalho */}
@@ -1207,20 +1205,46 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
           </div>
 
           <div>
-            <Label>Turmas Autorizadas *</Label>
+            <Label>Destinatários *</Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Selecione quais turmas podem visualizar esta redação.
+              Selecione as turmas que poderão visualizar esta redação.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {turmasAlunos.map(({ valor, label }) => (
-                <label key={valor} className="flex items-center gap-2 cursor-pointer text-sm">
-                  <Checkbox
-                    checked={turmasAutorizadas.includes(valor)}
-                    onCheckedChange={() => handleToggleTurma(valor)}
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
+            <div className="space-y-3 border rounded-lg p-3">
+              {turmasDinamicas.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Turmas de Alunos</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {turmasDinamicas.map(({ valor, label }) => (
+                      <label key={`aluno-${valor}`} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <Checkbox
+                          checked={turmasAutorizadas.includes(valor)}
+                          onCheckedChange={() => handleToggleTurma(valor)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {turmasProfessores.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Turmas de Professores</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {turmasProfessores.map(({ valor, label }) => (
+                      <label key={`prof-${valor}`} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <Checkbox
+                          checked={turmasAutorizadas.includes(valor)}
+                          onCheckedChange={() => handleToggleTurma(valor)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {turmasDinamicas.length === 0 && turmasProfessores.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma turma ativa encontrada.</p>
+              )}
             </div>
           </div>
 

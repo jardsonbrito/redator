@@ -185,7 +185,7 @@ function contarBlocosPrevios(correcao: JarvisCorrecaoAdmin): number {
 export const JarvisCorrecaoHistoricoGeral = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { turmasDinamicas } = useTurmasAtivas();
+  const { turmasDinamicas, turmasProfessores } = useTurmasAtivas();
 
   const [correcoes, setCorrecoes] = useState<JarvisCorrecaoAdmin[]>([]);
   const [loading, setLoading] = useState(false);
@@ -669,20 +669,43 @@ export const JarvisCorrecaoHistoricoGeral = () => {
 
               {/* Turmas */}
               <div>
-                <Label className="text-sm font-medium">Turmas autorizadas *</Label>
+                <Label className="text-sm font-medium">Destinatários *</Label>
                 <p className="text-xs text-muted-foreground mb-2">
                   Quais turmas poderão ver esta Redação Comentada.
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded-lg p-2">
-                  {turmasDinamicas.map(({ valor, label }) => (
-                    <label key={valor} className="flex items-center gap-2 cursor-pointer text-sm">
-                      <Checkbox
-                        checked={turmasAutorizadas.includes(valor)}
-                        onCheckedChange={() => toggleTurma(valor)}
-                      />
-                      <span>{label}</span>
-                    </label>
-                  ))}
+                <div className="space-y-3 max-h-48 overflow-y-auto border rounded-lg p-2">
+                  {turmasDinamicas.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Alunos</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {turmasDinamicas.map(({ valor, label }) => (
+                          <label key={`aluno-${valor}`} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <Checkbox
+                              checked={turmasAutorizadas.includes(valor)}
+                              onCheckedChange={() => toggleTurma(valor)}
+                            />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {turmasProfessores.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Professores</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {turmasProfessores.map(({ valor, label }) => (
+                          <label key={`prof-${valor}`} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <Checkbox
+                              checked={turmasAutorizadas.includes(valor)}
+                              onCheckedChange={() => toggleTurma(valor)}
+                            />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

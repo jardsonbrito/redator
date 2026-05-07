@@ -145,14 +145,7 @@ import { Top5Widget } from "@/components/shared/Top5Widget";
 import { TemasMetricsPanel } from "@/components/admin/TemasMetricsPanel";
 
 // Import componentes Jarvis
-import { JarvisConfigManagement } from "@/components/admin/JarvisConfigManagement";
-import { JarvisCreditManagementBulk } from "@/components/admin/JarvisCreditManagementBulk";
-import { JarvisModosManagement } from "@/components/admin/JarvisModosManagement";
-import { JarvisHistoricoAdmin } from "@/components/admin/JarvisHistoricoAdmin";
-import { JarvisTutoriaConfiguracao } from "@/components/admin/JarvisTutoriaConfiguracao";
-import { JarvisCorrecaoConfigManager } from "@/components/admin/JarvisCorrecaoConfigManager";
-import { JarvisCorrecaoCreditosProfessores } from "@/components/admin/JarvisCorrecaoCreditosProfessores";
-import { JarvisCorrecaoHistoricoGeral } from "@/components/admin/JarvisCorrecaoHistoricoGeral";
+import { JarvisHub } from "@/components/admin/hub/JarvisHub";
 
 // Import microaprendizagem admin
 import { MicroTopicosAdmin } from "@/components/microaprendizagem/admin/MicroTopicosAdmin";
@@ -1199,46 +1192,7 @@ const Admin = () => {
         return <ProfessoresHub />;
 
       case "jarvis":
-        const subtabJarvis = searchParams.get('subtab');
-
-        return (
-          <Tabs defaultValue={subtabJarvis || "creditos"} className="w-full">
-            <TabsList>
-              <TabsTrigger value="creditos">Créditos Alunos</TabsTrigger>
-              <TabsTrigger value="creditos-professores">Créditos Professores</TabsTrigger>
-              <TabsTrigger value="modos">Modos</TabsTrigger>
-              <TabsTrigger value="configuracoes">Parâmetros</TabsTrigger>
-              <TabsTrigger value="tutoria">Tutoria</TabsTrigger>
-              <TabsTrigger value="correcao">Correção IA</TabsTrigger>
-              <TabsTrigger value="historico">Histórico</TabsTrigger>
-              <TabsTrigger value="correcoes-admin">Correções Geral</TabsTrigger>
-            </TabsList>
-            <TabsContent value="creditos" className="space-y-6">
-              <JarvisCreditManagementBulk />
-            </TabsContent>
-            <TabsContent value="creditos-professores" className="space-y-6">
-              <JarvisCorrecaoCreditosProfessores />
-            </TabsContent>
-            <TabsContent value="modos" className="space-y-6">
-              <JarvisModosManagement />
-            </TabsContent>
-            <TabsContent value="configuracoes" className="space-y-6">
-              <JarvisConfigManagement />
-            </TabsContent>
-            <TabsContent value="tutoria" className="space-y-6">
-              <JarvisTutoriaConfiguracao />
-            </TabsContent>
-            <TabsContent value="correcao" className="space-y-6">
-              <JarvisCorrecaoConfigManager />
-            </TabsContent>
-            <TabsContent value="historico" className="space-y-6">
-              <JarvisHistoricoAdmin />
-            </TabsContent>
-            <TabsContent value="correcoes-admin" className="space-y-6">
-              <JarvisCorrecaoHistoricoGeral />
-            </TabsContent>
-          </Tabs>
-        );
+        return <JarvisHub />;
 
       case "ajuda-rapida":
         navigate('/admin/ajuda-rapida');
