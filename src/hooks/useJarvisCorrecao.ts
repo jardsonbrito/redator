@@ -332,6 +332,18 @@ export const useJarvisCorrecao = (professorEmail: string) => {
 
       if (!professor) throw new Error("Professor não encontrado");
 
+      const { count } = await supabase
+        .from("jarvis_correcoes")
+        .select("*", { count: "exact", head: true })
+        .eq("professor_id", professor.id)
+        .eq("turma_id", turmaId);
+
+      if (count && count > 0) {
+        throw new Error(
+          `Não é possível excluir: esta turma possui ${count} redação(ões). Remova as redações primeiro.`
+        );
+      }
+
       const { error } = await supabase
         .from("professor_turmas")
         .delete()

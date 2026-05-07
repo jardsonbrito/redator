@@ -130,7 +130,7 @@ export const HistoricoCorrecoes = ({
   onAutoOpenCleared,
 }: Props) => {
   const queryClient = useQueryClient();
-  const { correcoes, turmas, isLoading, deletarCorrecao, deletarPorAluno, processarCorrecao } =
+  const { correcoes, turmas, isLoading, deletarCorrecao, deletarPorAluno, processarCorrecao, deletarTurma } =
     useJarvisCorrecao(professorEmail);
 
   const [filtroAluno, setFiltroAluno] = useState("");
@@ -141,6 +141,7 @@ export const HistoricoCorrecoes = ({
   const [correcaoSelecionada, setCorrecaoSelecionada] = useState<JarvisCorrecao | null>(null);
 
   const [dialog, setDialog] = useState<DialogState>(null);
+  const [dialogTurma, setDialogTurma] = useState<{ turmaId: string; turmaNome: string } | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const [studentModal, setStudentModal] = useState<StudentModal>(null);
@@ -205,10 +206,24 @@ export const HistoricoCorrecoes = ({
       pasta.alunos.get(c.autor_nome)!.push(c);
     });
 
+    // Inclui turmas sem nenhuma correção (permitem deleção direta do Histórico)
+    turmas?.forEach((turma: any) => {
+      if (!map.has(turma.id)) {
+        const temCorrecao = correcoes?.some((c) => c.turma_id === turma.id);
+        if (!temCorrecao) {
+          map.set(turma.id, {
+            turmaId: turma.id,
+            turmaNome: turma.nome,
+            alunos: new Map(),
+          });
+        }
+      }
+    });
+
     return Array.from(map.values()).sort((a, b) =>
       a.turmaNome.localeCompare(b.turmaNome)
     );
-  }, [correcoesFiltradas, turmas]);
+  }, [correcoesFiltradas, turmas, correcoes]);
 
   const handleVisualizar = (correcao: JarvisCorrecao) => {
     setCorrecaoSelecionada(correcao);
@@ -304,13 +319,20 @@ export const HistoricoCorrecoes = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-10 pt-2">
-            {pastasPorTurma.map((pasta) => (
-              <PastaCard
-                key={pasta.turmaId ?? "__sem_turma__"}
-                pasta={pasta}
-                onChipClick={abrirStudentModal}
-              />
-            ))}
+            {pastasPorTurma.map((pasta) => {
+              const temCorrecao = correcoes?.some((c) => c.turma_id === pasta.turmaId) ?? false;
+              return (
+                <PastaCard
+                  key={pasta.turmaId ?? "__sem_turma__"}
+                  pasta={pasta}
+                  canDelete={!!pasta.turmaId && !temCorrecao}
+                  onChipClick={abrirStudentModal}
+                  onDeletarTurma={() =>
+                    setDialogTurma({ turmaId: pasta.turmaId!, turmaNome: pasta.turmaNome })
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -394,6 +416,40 @@ export const HistoricoCorrecoes = ({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* ── AlertDialog: Confirmação de exclusão de turma ────────────────────── */}
+      <AlertDialog
+        open={!!dialogTurma}
+        onOpenChange={(open) => { if (!open) setDialogTurma(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir turma "{dialogTurma?.turmaNome}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A turma será removida permanentemente da sua lista. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletarTurma.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletarTurma.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!dialogTurma) return;
+                await deletarTurma.mutateAsync(dialogTurma.turmaId);
+                setDialogTurma(null);
+              }}
+            >
+              {deletarTurma.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1" />
+              )}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── AlertDialog: Confirmação de deleção ───────────────────────────────── */}
       <AlertDialog
@@ -492,10 +548,14 @@ const getChipStyle = (correcoes: JarvisCorrecao[]) => {
 
 const PastaCard = ({
   pasta,
+  canDelete,
   onChipClick,
+  onDeletarTurma,
 }: {
   pasta: PastaTurma;
+  canDelete: boolean;
   onChipClick: (autorNome: string, turmaId: string | null, turmaNome: string) => void;
+  onDeletarTurma: () => void;
 }) => {
   const alunos = Array.from(pasta.alunos.entries()).sort(([a], [b]) =>
     a.localeCompare(b)
@@ -504,10 +564,20 @@ const PastaCard = ({
   return (
     <div className="relative pt-7">
       {/* Aba da pasta */}
-      <div className="absolute top-0 left-0 z-10 px-4 py-1.5 bg-gradient-to-r from-[#4B0082] to-[#8a25d9] rounded-t-lg shadow-sm">
+      <div className="absolute top-0 left-0 z-10 flex items-center gap-1.5 pr-2 pl-4 py-1.5 bg-gradient-to-r from-[#4B0082] to-[#8a25d9] rounded-t-lg shadow-sm">
         <span className="text-xs font-extrabold text-white uppercase tracking-widest">
           {pasta.turmaNome}
         </span>
+        {canDelete && (
+          <button
+            type="button"
+            title="Excluir turma"
+            onClick={onDeletarTurma}
+            className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-white/25 transition-colors"
+          >
+            <Trash2 className="h-2.5 w-2.5 text-white/80" />
+          </button>
+        )}
       </div>
 
       {/* Corpo da pasta */}
