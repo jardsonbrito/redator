@@ -688,11 +688,24 @@ const Admin = () => {
         new Date(i.created_at) >= umDiaAtras
       ).length || 0;
 
+      // Jarvis Corretor (professores) — versões principais
+      const { data: jarvisCorrecoes } = await supabase
+        .from('jarvis_correcoes')
+        .select('id, criado_em')
+        .eq('is_versao_principal', true);
+
+      const totalCorrecoes = jarvisCorrecoes?.length || 0;
+      const correcoesHoje = jarvisCorrecoes?.filter(c =>
+        new Date(c.criado_em) >= umDiaAtras
+      ).length || 0;
+
       data.jarvis = {
         info: `${totalInteracoes} ${totalInteracoes === 1 ? 'análise' : 'análises'} realizadas`,
         badge: configAtiva
           ? `v${configAtiva.versao} ativa • ${interacoesRecentes} hoje • ${totalConfigs} configs`
-          : `${totalConfigs} configurações`
+          : `${totalConfigs} configurações`,
+        secondInfo: `${totalCorrecoes} ${totalCorrecoes === 1 ? 'correção' : 'correções'}`,
+        secondNote: `${correcoesHoje} hoje`,
       };
 
       // Redações Comentadas

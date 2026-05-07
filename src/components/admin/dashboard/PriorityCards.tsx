@@ -1,9 +1,12 @@
 import { AlertCircle, HelpCircle, Video, Bot } from 'lucide-react';
+import { JarvisIcon } from '@/components/icons/JarvisIcon';
 
 interface CardDataEntry {
   info: string;
   badge?: string;
   chips?: string[];
+  secondInfo?: string;  // métrica secundária (ex: Jarvis Corretor)
+  secondNote?: string;  // rótulo da métrica secundária
 }
 
 interface PriorityCardsProps {
@@ -47,10 +50,17 @@ export const PriorityCards = ({
   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
     {PRIORITY_ITEMS.map((item) => {
       const Icon = item.icon;
-      const raw = isLoading ? '...' : (cardData[item.id]?.info || '—');
+      const entry = cardData[item.id];
+      const raw = isLoading ? '...' : (entry?.info || '—');
       const numMatch = raw.match(/^(\d+)/);
       const num = numMatch ? numMatch[1] : null;
       const note = num ? raw.replace(num, '').trim() : '';
+
+      const rawSecond = isLoading ? '...' : (entry?.secondInfo || null);
+      const numSecondMatch = rawSecond?.match(/^(\d+)/);
+      const numSecond = numSecondMatch ? numSecondMatch[1] : rawSecond;
+      const noteSecond = entry?.secondNote || (numSecond && rawSecond ? rawSecond.replace(numSecond, '').trim() : '');
+      const isSplit = !!rawSecond;
 
       return (
         <button
@@ -76,18 +86,60 @@ export const PriorityCards = ({
             <p className="text-[13px] font-semibold text-[#746b80] mb-2 leading-tight">
               {item.label}
             </p>
-            {num ? (
-              <strong
-                className="block font-bold text-[#21122f] leading-none"
-                style={{ fontSize: '31px', letterSpacing: '-.045em' }}
-              >
-                {num}
-              </strong>
+
+            {isSplit ? (
+              /* Layout dividido: duas métricas lado a lado */
+              <div className="flex gap-2.5">
+                {/* Jarvis Alunos */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <Bot size={10} className="text-violet-400 shrink-0" />
+                    <span className="text-[9px] font-semibold text-violet-400 uppercase tracking-wide truncate">Alunos</span>
+                  </div>
+                  <strong
+                    className="block font-bold text-[#21122f] leading-none"
+                    style={{ fontSize: '22px', letterSpacing: '-.04em' }}
+                  >
+                    {num ?? raw}
+                  </strong>
+                  {note && <span className="block mt-1 text-[10px] text-[#8a8096] leading-tight">{note}</span>}
+                </div>
+
+                {/* Divisor */}
+                <div className="w-px bg-zinc-100 self-stretch" />
+
+                {/* Jarvis Corretor (professores) */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <JarvisIcon size={10} className="text-violet-400 shrink-0" />
+                    <span className="text-[9px] font-semibold text-violet-400 uppercase tracking-wide truncate">Professores</span>
+                  </div>
+                  <strong
+                    className="block font-bold text-[#21122f] leading-none"
+                    style={{ fontSize: '22px', letterSpacing: '-.04em' }}
+                  >
+                    {numSecond ?? rawSecond}
+                  </strong>
+                  {noteSecond && <span className="block mt-1 text-[10px] text-[#8a8096] leading-tight">{noteSecond}</span>}
+                </div>
+              </div>
             ) : (
-              <strong className="block text-xl font-bold text-[#21122f]">{raw}</strong>
-            )}
-            {note && (
-              <span className="block mt-2 text-xs text-[#8a8096]">{note}</span>
+              /* Layout padrão: uma métrica */
+              <>
+                {num ? (
+                  <strong
+                    className="block font-bold text-[#21122f] leading-none"
+                    style={{ fontSize: '31px', letterSpacing: '-.045em' }}
+                  >
+                    {num}
+                  </strong>
+                ) : (
+                  <strong className="block text-xl font-bold text-[#21122f]">{raw}</strong>
+                )}
+                {note && (
+                  <span className="block mt-2 text-xs text-[#8a8096]">{note}</span>
+                )}
+              </>
             )}
           </div>
         </button>
