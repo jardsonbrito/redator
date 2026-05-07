@@ -1,13 +1,13 @@
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Home, BookOpen, Grid3x3 } from "lucide-react";
+import { Home, Grid3x3, ClipboardList } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 
 const navItems = [
-  { path: "/professor",                 label: "Início", icon: Home,     isJarvis: false },
-  { path: "/professor/jarvis-correcao", label: "Jarvis", icon: null,     isJarvis: true  },
-  { path: "/professor/temas",           label: "Temas",  icon: BookOpen, isJarvis: false },
-  { path: "/professor/mais",            label: "Mais",   icon: Grid3x3,  isJarvis: false },
+  { path: "/professor",                 label: "Início",         icon: Home,          isJarvis: false },
+  { path: "/professor/jarvis-correcao", label: "Jarvis",         icon: null,          isJarvis: true  },
+  { path: "/interatividade",            label: "Interatividade", icon: ClipboardList, isJarvis: false },
+  { path: "/professor/mais",            label: "Mais",           icon: Grid3x3,       isJarvis: false },
 ];
 
 export const ProfessorBottomNavigation = () => {
