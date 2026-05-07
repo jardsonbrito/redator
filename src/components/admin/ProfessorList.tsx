@@ -38,7 +38,6 @@ interface Professor {
   ultimo_login: string | null;
   ultimo_ip: unknown;
   criado_em: string;
-  professor_turmas?: { turmas_professores: { nome: string } | null }[];
 }
 
 interface ProfessorListProps {
@@ -59,7 +58,7 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
     try {
       const { data, error } = await supabase
         .from('professores')
-        .select('*, professor_turmas(turmas_professores(nome))')
+        .select('*')
         .order('criado_em', { ascending: sortOrder === 'asc' });
 
       if (error) throw error;
@@ -173,7 +172,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
-                  <TableHead>Turma</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="cursor-pointer" onClick={handleSortByDate}>
                     <div className="flex items-center gap-1">
@@ -202,16 +200,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">{professor.email}</TableCell>
-                    <TableCell className="text-sm">
-                      {professor.professor_turmas?.length ? (
-                        professor.professor_turmas
-                          .map((pt) => pt.turmas_professores?.nome)
-                          .filter(Boolean)
-                          .join(', ')
-                      ) : (
-                        <span className="text-muted-foreground">Sem turma</span>
-                      )}
-                    </TableCell>
                     <TableCell>
                       <Badge variant={professor.ativo ? "default" : "secondary"}>
                         {professor.ativo ? "Ativo" : "Inativo"}
