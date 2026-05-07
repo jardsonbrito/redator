@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertCircle, CheckCircle2, XCircle, FileText,
-  ChevronDown, ChevronUp, RefreshCw, History, Loader2,
+  ChevronDown, ChevronUp, RefreshCw, History, Loader2, Mic, MicOff,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 
 interface Props {
   correcao: JarvisCorrecao;
@@ -146,6 +147,11 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     setTranscricaoEditada(correcao.transcricao_ocr_original ?? "");
   }
 
+  const { isRecording, isSupported, toggleRecording, stopRecording } = useVoiceTranscription(
+    setTranscricaoEditada,
+    transcricaoEditada
+  );
+
   // Bug fix #1: a transcrição é passada como variável explícita para não depender de closure
   const confirmarOcr = useMutation({
     mutationFn: async (transcricao: string) => {
@@ -215,16 +221,39 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
           <p className="text-base font-black text-[#4B0082]">{correcao.autor_nome}</p>
           <p className="mt-0.5 text-sm font-medium text-[#78668e]">{correcao.tema}</p>
         </div>
-        <Textarea
-          rows={22}
-          className="font-mono text-sm"
-          value={transcricaoEditada}
-          onChange={(e) => setTranscricaoEditada(e.target.value)}
-          placeholder="Transcrição OCR aparecerá aqui..."
-        />
+        <div className="relative">
+          <Textarea
+            rows={22}
+            className="font-mono text-sm pr-12"
+            value={transcricaoEditada}
+            onChange={(e) => setTranscricaoEditada(e.target.value)}
+            placeholder="Transcrição OCR aparecerá aqui... ou clique no microfone para ditar."
+          />
+          {isSupported && (
+            <button
+              type="button"
+              onClick={toggleRecording}
+              title={isRecording ? "Parar ditado" : "Ditar por voz (pt-BR)"}
+              className={`absolute top-2 right-2 h-8 w-8 rounded-full flex items-center justify-center transition-colors ${
+                isRecording
+                  ? "bg-red-500 text-white shadow-md animate-pulse"
+                  : "bg-[#4B0082]/10 text-[#4B0082] hover:bg-[#4B0082]/20"
+              }`}
+            >
+              {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
+        {isRecording && (
+          <p className="text-xs text-red-500 flex items-center gap-1.5 -mt-2">
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+            Ouvindo... Fale a transcrição da redação.
+          </p>
+        )}
         <div className="flex justify-end">
           <Button
             onClick={() => {
+              stopRecording();
               const textoParaEnviar = transcricaoEditada.trim();
               if (!textoParaEnviar) return;
               // Bug fix #3: atualiza status imediatamente no cache para a badge refletir corretamente
