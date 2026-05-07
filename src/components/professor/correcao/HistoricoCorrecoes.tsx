@@ -103,10 +103,10 @@ const getStatusBadge = (correcao: JarvisCorrecao) => {
 };
 
 const notaColor = (nota: number | null) => {
-  if (nota === null) return "text-slate-400";
-  if (nota >= 800) return "text-emerald-400";
-  if (nota >= 500) return "text-amber-400";
-  return "text-red-400";
+  if (nota === null) return "text-[#9c7dc0]";
+  if (nota >= 800) return "text-emerald-600";
+  if (nota >= 500) return "text-amber-600";
+  return "text-red-500";
 };
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -228,22 +228,22 @@ export const HistoricoCorrecoes = ({
 
   return (
     <>
-      <div className="space-y-6">
-        {/* ── Filtros ────────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="space-y-5">
+        {/* ── Barra de filtros compacta ─────────────────────────────────────── */}
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] px-4 py-3 shadow-[0_4px_12px_rgba(75,0,130,0.06)]">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#9c7dc0]" />
             <Input
-              placeholder="Buscar por aluno..."
+              placeholder="Buscar aluno..."
               value={filtroAluno}
               onChange={(e) => setFiltroAluno(e.target.value)}
-              className="pl-10 bg-white"
+              className="pl-9 h-8 text-sm bg-white border-[#dcc8f5] text-[#4f3a68] placeholder:text-[#9c7dc0] focus-visible:ring-[#4B0082]/30"
             />
           </div>
 
           <Select value={filtroTurma} onValueChange={setFiltroTurma}>
-            <SelectTrigger className="bg-white">
-              <SelectValue placeholder="Todas as turmas" />
+            <SelectTrigger className="h-8 w-auto min-w-32 text-sm bg-white border-[#dcc8f5] text-[#4f3a68]">
+              <SelectValue placeholder="Turma" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as turmas</SelectItem>
@@ -256,8 +256,8 @@ export const HistoricoCorrecoes = ({
           </Select>
 
           <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-            <SelectTrigger className="bg-white">
-              <SelectValue placeholder="Todos os status" />
+            <SelectTrigger className="h-8 w-auto min-w-32 text-sm bg-white border-[#dcc8f5] text-[#4f3a68]">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
@@ -268,12 +268,21 @@ export const HistoricoCorrecoes = ({
               <SelectItem value="erro">Erro</SelectItem>
             </SelectContent>
           </Select>
+
+          {(filtroAluno || filtroTurma !== "all" || filtroStatus !== "all") && (
+            <button
+              onClick={() => { setFiltroAluno(""); setFiltroTurma("all"); setFiltroStatus("all"); }}
+              className="text-xs text-[#4B0082] hover:underline font-medium shrink-0"
+            >
+              Limpar
+            </button>
+          )}
         </div>
 
         {/* ── Grid de pastas ─────────────────────────────────────────────────── */}
         {pastasPorTurma.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-            <FolderOpen className="h-10 w-10 text-slate-300" />
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#9c7dc0]">
+            <FolderOpen className="h-10 w-10 text-[#dcc8f5]" />
             <p className="text-sm">
               {correcoes?.length === 0
                 ? "Nenhuma correção enviada ainda"
@@ -281,7 +290,7 @@ export const HistoricoCorrecoes = ({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-10 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-10 pt-2">
             {pastasPorTurma.map((pasta) => (
               <PastaCard
                 key={pasta.turmaId ?? "__sem_turma__"}
@@ -296,21 +305,21 @@ export const HistoricoCorrecoes = ({
       {/* ── Modal do aluno ────────────────────────────────────────────────────── */}
       <Dialog open={!!studentModal} onOpenChange={(open) => { if (!open) setStudentModal(null); }}>
         <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-3 border-b">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <User className="h-4 w-4 text-violet-500 shrink-0" />
+          <DialogHeader className="px-6 pt-5 pb-4 border-b border-[#dcc8f5] bg-[#fbf8ff]">
+            <DialogTitle className="flex items-center gap-2 text-base text-[#4B0082]">
+              <User className="h-4 w-4 shrink-0" />
               {studentModal?.autorNome}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-[#9c7dc0]">
               {studentModal?.turmaNome} ·{" "}
-              <span className="font-medium text-foreground">
+              <span className="font-semibold text-[#4f3a68]">
                 {studentModalCorrecoes.length}
               </span>{" "}
               redação(ões)
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[calc(85vh-100px)]">
+          <ScrollArea className="max-h-[calc(85vh-100px)] bg-white">
             <div className="px-6 py-4 space-y-3">
               {studentModalCorrecoes.map((correcao) => (
                 <CorrecaoCard
@@ -421,26 +430,26 @@ const PastaCard = ({
   return (
     <div className="relative pt-7">
       {/* Aba da pasta */}
-      <div className="absolute top-0 left-0 z-10 px-4 py-1.5 bg-amber-400 rounded-t-lg">
-        <span className="text-xs font-extrabold text-amber-900 uppercase tracking-widest">
+      <div className="absolute top-0 left-0 z-10 px-4 py-1.5 bg-gradient-to-r from-[#4B0082] to-[#8a25d9] rounded-t-lg shadow-sm">
+        <span className="text-xs font-extrabold text-white uppercase tracking-widest">
           {pasta.turmaNome}
         </span>
       </div>
 
       {/* Corpo da pasta */}
-      <div className="bg-[#1e293b] border border-slate-700 rounded-b-xl rounded-tr-xl min-h-[80px] p-4">
+      <div className="bg-[#fbf8ff] border border-[#dcc8f5] rounded-b-2xl rounded-tr-2xl min-h-[80px] p-4 shadow-[0_4px_14px_rgba(75,0,130,0.08)]">
         {alunos.length === 0 ? (
-          <p className="text-slate-500 text-xs">Nenhum aluno</p>
+          <p className="text-[#9c7dc0] text-xs">Nenhum aluno</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {alunos.map(([nome, corrs]) => (
               <button
                 key={nome}
                 onClick={() => onChipClick(nome, pasta.turmaId, pasta.turmaNome)}
-                className="group flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 transition-colors rounded-full pl-3 pr-2 py-1.5 text-sm text-slate-100"
+                className="group flex items-center gap-1.5 bg-white hover:bg-[#ede9fe] active:bg-[#dcc8f5] border border-[#dcc8f5] hover:border-[#4B0082]/30 transition-all rounded-full pl-3 pr-2 py-1.5 text-sm text-[#4f3a68] shadow-sm"
               >
                 <span className="font-medium leading-none">{nome}</span>
-                <span className="flex items-center justify-center bg-amber-400 group-hover:bg-amber-300 text-amber-900 font-bold text-xs rounded-full w-5 h-5 leading-none shrink-0">
+                <span className="flex items-center justify-center bg-[#4B0082] group-hover:bg-[#8a25d9] text-white font-bold text-xs rounded-full w-5 h-5 leading-none shrink-0 transition-colors">
                   {corrs.length}
                 </span>
               </button>
@@ -485,14 +494,14 @@ const CorrecaoCard = ({
     !!(correcao.transcricao_confirmada || correcao.transcricao_ocr_original);
 
   return (
-    <div className="border rounded-xl p-4 bg-white space-y-2 shadow-sm">
+    <div className="border border-[#dcc8f5] rounded-xl p-4 bg-white space-y-2 shadow-[0_2px_8px_rgba(75,0,130,0.06)]">
       {/* Linha superior: tema + nota + status + 3 pontos */}
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-slate-800 leading-snug line-clamp-2">
+          <p className="font-semibold text-sm text-[#4f3a68] leading-snug line-clamp-2">
             {correcao.tema}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs text-[#9c7dc0] mt-0.5">
             {format(new Date(correcao.criado_em), "dd/MM/yy", { locale: ptBR })}
           </p>
         </div>
@@ -514,8 +523,8 @@ const CorrecaoCard = ({
             onOpenChange={(open) => setOpenDropdownId(open ? correcao.id : null)}
           >
             <DropdownMenuTrigger asChild>
-              <button className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
-                <MoreVertical className="h-4 w-4 text-slate-500" />
+              <button className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[#ede9fe] transition-colors">
+                <MoreVertical className="h-4 w-4 text-[#9c7dc0]" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -583,7 +592,7 @@ const CorrecaoCard = ({
 
       {/* Preview do texto */}
       {textoPreview && (
-        <p className="text-xs text-muted-foreground line-clamp-2 border-t pt-2 leading-relaxed">
+        <p className="text-xs text-[#9c7dc0] line-clamp-2 border-t border-[#ede9fe] pt-2 leading-relaxed">
           {textoPreview}
         </p>
       )}
