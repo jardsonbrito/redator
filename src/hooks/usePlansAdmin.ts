@@ -248,7 +248,7 @@ export const usePlansAdminMutations = () => {
   // Ativar / desativar plano
   const togglePlanActive = useMutation({
     mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
-      const { error } = await supabase.from('planos').update({ ativo }).eq('id', id);
+      const { error } = await supabase.rpc('toggle_plano_active', { p_id: id, p_ativo: ativo });
       if (error) throw error;
       return { id, ativo };
     },
@@ -275,10 +275,12 @@ export const usePlansAdminMutations = () => {
     mutationFn: async ({ id, nome_exibicao, descricao, tipo }: {
       id: string; nome_exibicao: string; descricao?: string; tipo?: 'aluno' | 'professor';
     }) => {
-      const { error } = await supabase
-        .from('planos')
-        .update({ nome_exibicao, descricao: descricao ?? null, ...(tipo ? { tipo } : {}) })
-        .eq('id', id);
+      const { error } = await supabase.rpc('update_plano', {
+        p_id: id,
+        p_nome_exibicao: nome_exibicao,
+        p_descricao: descricao ?? null,
+        p_tipo: tipo ?? null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -293,15 +295,17 @@ export const usePlansAdminMutations = () => {
     mutationFn: async ({ nome, nome_exibicao, descricao, copiar_de_id, tipo }: {
       nome: string; nome_exibicao: string; descricao?: string; copiar_de_id?: string | null; tipo?: 'aluno' | 'professor';
     }) => {
-      const planos = qc.getQueryData<PlanoAdmin[]>(PLANOS_KEY) ?? [];
-      const maxOrdem = planos.length > 0 ? Math.max(...planos.map(p => p.ordem)) : 0;
-
-      const { data: novo, error } = await supabase
-        .from('planos')
-        .insert({ nome, nome_exibicao, descricao: descricao ?? null, ativo: true, ordem: maxOrdem + 1, tipo: tipo ?? 'aluno' })
-        .select('id')
-        .single();
+      const { data: rows, error } = await supabase.rpc('create_plano', {
+        p_nome: nome,
+        p_nome_exibicao: nome_exibicao,
+        p_descricao: descricao ?? null,
+        p_ativo: true,
+        p_ordem: null,
+        p_tipo: tipo ?? 'aluno',
+      });
       if (error) throw error;
+      const novo = Array.isArray(rows) ? rows[0] : rows;
+      if (!novo?.id) throw new Error('RPC não retornou ID do plano');
 
       if (copiar_de_id) {
         const { data: srcFeats } = await supabase
