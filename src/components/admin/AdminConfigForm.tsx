@@ -50,7 +50,7 @@ export const AdminConfigForm = () => {
   // Verificar parâmetro subtab para definir aba ativa
   useEffect(() => {
     const subtab = searchParams.get('subtab');
-    if (subtab && ['account', 'submissions', 'credits', 'alunos', 'professores'].includes(subtab)) {
+    if (subtab && ['account', 'submissions', 'alunos', 'professores'].includes(subtab)) {
       setActiveTab(subtab);
     }
   }, [searchParams]);
@@ -147,7 +147,6 @@ export const AdminConfigForm = () => {
         <TabsList>
           <TabsTrigger value="account">Conta</TabsTrigger>
           <TabsTrigger value="submissions">Envios</TabsTrigger>
-          <TabsTrigger value="credits">Créditos</TabsTrigger>
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
           <TabsTrigger value="professores">Professores</TabsTrigger>
         </TabsList>
@@ -327,16 +326,13 @@ export const AdminConfigForm = () => {
           <AppSettingsForm />
         </TabsContent>
 
-        <TabsContent value="credits" className="space-y-6">
-          <CreditManagement />
-        </TabsContent>
-
         {/* ── Alunos ── */}
         <TabsContent value="alunos">
           <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
               <TabsTrigger value="planos">Planos</TabsTrigger>
+              <TabsTrigger value="creditos">Créditos</TabsTrigger>
             </TabsList>
             <TabsContent value="assinaturas">
               <DatabaseInitializer>
@@ -345,6 +341,9 @@ export const AdminConfigForm = () => {
             </TabsContent>
             <TabsContent value="planos">
               <PlansManager tipo="aluno" />
+            </TabsContent>
+            <TabsContent value="creditos">
+              <CreditManagement />
             </TabsContent>
           </Tabs>
         </TabsContent>
