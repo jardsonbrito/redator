@@ -1,5 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useJarvisCorrecao } from "@/hooks/useJarvisCorrecao";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { Button } from "@/components/ui/button";
@@ -53,6 +55,7 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida, onOcrDetectado 
   const [arquivoNome, setArquivoNome] = useState<string | null>(null);
   const [imagemBase64, setImagemBase64] = useState<string | null>(null);
   const [textoDigitado, setTextoDigitado] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [showCriarTurma, setShowCriarTurma] = useState(false);
   const [novaTurmaNome, setNovaTurmaNome] = useState("");
   const [showDeleteTurma, setShowDeleteTurma] = useState(false);
@@ -75,6 +78,34 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida, onOcrDetectado 
   } = useForm<FormData>({ defaultValues: { turmaId: "", autorNome: "", tema: "" } });
 
   const turmaIdSelecionada = watch("turmaId");
+  const autorNomeValue = watch("autorNome") ?? "";
+
+  const { data: nomesExistentes } = useQuery({
+    queryKey: ["jarvis-nomes-alunos", professorEmail],
+    queryFn: async () => {
+      const { data: prof } = await supabase
+        .from("professores")
+        .select("id")
+        .eq("email", professorEmail.toLowerCase().trim())
+        .single();
+      if (!prof) return [];
+      const { data } = await supabase
+        .from("jarvis_correcoes")
+        .select("autor_nome")
+        .eq("professor_id", prof.id);
+      if (!data) return [];
+      return [...new Set(data.map((r) => r.autor_nome as string))].sort((a, b) =>
+        a.localeCompare(b, "pt-BR")
+      );
+    },
+    staleTime: 60_000,
+  });
+
+  const sugestoesFiltradas = useMemo(() => {
+    if (!showSuggestions || !autorNomeValue.trim() || !nomesExistentes?.length) return [];
+    const lower = autorNomeValue.toLowerCase();
+    return nomesExistentes.filter((nome) => nome.toLowerCase().includes(lower));
+  }, [showSuggestions, autorNomeValue, nomesExistentes]);
 
   const handleSelecionarManuscrita = () => {
     setModo("manuscrita");
@@ -361,12 +392,36 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida, onOcrDetectado 
               <Label htmlFor="autorNome" className="mb-2 block text-sm font-extrabold">
                 Nome do aluno *
               </Label>
-              <Input
-                id="autorNome"
-                className="h-12 rounded-xl border-[#c9a6ed] focus-visible:ring-[#a463f2]/15 focus-visible:border-[#6B3294]"
-                placeholder="Digite o nome completo"
-                {...register("autorNome", { required: "Nome do aluno é obrigatório" })}
-              />
+              <div className="relative">
+                <Input
+                  id="autorNome"
+                  autoComplete="off"
+                  className="h-12 rounded-xl border-[#c9a6ed] focus-visible:ring-[#a463f2]/15 focus-visible:border-[#6B3294]"
+                  placeholder="Digite o nome completo"
+                  {...register("autorNome", { required: "Nome do aluno é obrigatório" })}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                />
+                {sugestoesFiltradas.length > 0 && (
+                  <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-[#c9a6ed] bg-white shadow-lg">
+                    {sugestoesFiltradas.map((nome) => (
+                      <li key={nome}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setValue("autorNome", nome, { shouldValidate: true });
+                            setShowSuggestions(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-[#4f3a68] transition hover:bg-[#f7f0ff] hover:text-[#4B0082]"
+                        >
+                          {nome}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               {errors.autorNome && (
                 <p className="mt-1 text-xs text-destructive">{errors.autorNome.message}</p>
               )}
