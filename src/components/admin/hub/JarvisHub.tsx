@@ -18,7 +18,6 @@ export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
       <TabsList className="mb-4">
         <TabsTrigger value="alunos">Alunos</TabsTrigger>
         <TabsTrigger value="professores">Professores</TabsTrigger>
-        <TabsTrigger value="configuracao">Configuração</TabsTrigger>
       </TabsList>
 
       {/* ── Alunos ─────────────────────────────────────────────────────────── */}
@@ -27,12 +26,31 @@ export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
           <TabsList className="mb-4">
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
             <TabsTrigger value="historico">Histórico de Interações</TabsTrigger>
+            <TabsTrigger value="configuracao">Configuração</TabsTrigger>
           </TabsList>
           <TabsContent value="creditos" className="space-y-6">
             <JarvisCreditManagementBulk />
           </TabsContent>
           <TabsContent value="historico" className="space-y-6">
             <JarvisHistoricoAdmin />
+          </TabsContent>
+          <TabsContent value="configuracao">
+            <Tabs defaultValue="modos" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="modos">Modos</TabsTrigger>
+                <TabsTrigger value="parametros">Parâmetros IA</TabsTrigger>
+                <TabsTrigger value="tutoria">Tutoria</TabsTrigger>
+              </TabsList>
+              <TabsContent value="modos" className="space-y-6">
+                <JarvisModosManagement />
+              </TabsContent>
+              <TabsContent value="parametros" className="space-y-6">
+                <JarvisConfigManagement />
+              </TabsContent>
+              <TabsContent value="tutoria" className="space-y-6">
+                <JarvisTutoriaConfiguracao />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </TabsContent>
@@ -53,26 +71,6 @@ export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
           </TabsContent>
           <TabsContent value="config-correcao" className="space-y-6">
             <JarvisCorrecaoConfigManager />
-          </TabsContent>
-        </Tabs>
-      </TabsContent>
-
-      {/* ── Configuração (Alunos) ───────────────────────────────────────────── */}
-      <TabsContent value="configuracao">
-        <Tabs defaultValue="modos" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="modos">Modos</TabsTrigger>
-            <TabsTrigger value="parametros">Parâmetros IA</TabsTrigger>
-            <TabsTrigger value="tutoria">Tutoria</TabsTrigger>
-          </TabsList>
-          <TabsContent value="modos" className="space-y-6">
-            <JarvisModosManagement />
-          </TabsContent>
-          <TabsContent value="parametros" className="space-y-6">
-            <JarvisConfigManagement />
-          </TabsContent>
-          <TabsContent value="tutoria" className="space-y-6">
-            <JarvisTutoriaConfiguracao />
           </TabsContent>
         </Tabs>
       </TabsContent>
