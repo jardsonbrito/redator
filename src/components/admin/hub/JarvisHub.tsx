@@ -8,9 +8,13 @@ import { JarvisConfigManagement } from '@/components/admin/JarvisConfigManagemen
 import { JarvisTutoriaConfiguracao } from '@/components/admin/JarvisTutoriaConfiguracao';
 import { JarvisCorrecaoConfigManager } from '@/components/admin/JarvisCorrecaoConfigManager';
 
-export function JarvisHub() {
+interface JarvisHubProps {
+  defaultTab?: string;
+}
+
+export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
   return (
-    <Tabs defaultValue="alunos" className="w-full">
+    <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="mb-4">
         <TabsTrigger value="alunos">Alunos</TabsTrigger>
         <TabsTrigger value="professores">Professores</TabsTrigger>
@@ -39,6 +43,7 @@ export function JarvisHub() {
           <TabsList className="mb-4">
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
             <TabsTrigger value="correcoes">Correções</TabsTrigger>
+            <TabsTrigger value="config-correcao">Config. Correção IA</TabsTrigger>
           </TabsList>
           <TabsContent value="creditos" className="space-y-6">
             <JarvisCorrecaoCreditosProfessores />
@@ -46,17 +51,19 @@ export function JarvisHub() {
           <TabsContent value="correcoes" className="space-y-6">
             <JarvisCorrecaoHistoricoGeral />
           </TabsContent>
+          <TabsContent value="config-correcao" className="space-y-6">
+            <JarvisCorrecaoConfigManager />
+          </TabsContent>
         </Tabs>
       </TabsContent>
 
-      {/* ── Configuração ───────────────────────────────────────────────────── */}
+      {/* ── Configuração (Alunos) ───────────────────────────────────────────── */}
       <TabsContent value="configuracao">
         <Tabs defaultValue="modos" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="modos">Modos</TabsTrigger>
             <TabsTrigger value="parametros">Parâmetros IA</TabsTrigger>
             <TabsTrigger value="tutoria">Tutoria</TabsTrigger>
-            <TabsTrigger value="correcao-ia">Config. Correção IA</TabsTrigger>
           </TabsList>
           <TabsContent value="modos" className="space-y-6">
             <JarvisModosManagement />
@@ -66,9 +73,6 @@ export function JarvisHub() {
           </TabsContent>
           <TabsContent value="tutoria" className="space-y-6">
             <JarvisTutoriaConfiguracao />
-          </TabsContent>
-          <TabsContent value="correcao-ia" className="space-y-6">
-            <JarvisCorrecaoConfigManager />
           </TabsContent>
         </Tabs>
       </TabsContent>

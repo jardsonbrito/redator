@@ -172,6 +172,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeView, setActiveView] = useState("dashboard");
+  const [jarvisTab, setJarvisTab] = useState("alunos");
   const [showProfile, setShowProfile] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("visao-geral");
@@ -1205,7 +1206,7 @@ const Admin = () => {
         return <ProfessoresHub />;
 
       case "jarvis":
-        return <JarvisHub />;
+        return <JarvisHub key={jarvisTab} defaultTab={jarvisTab} />;
 
       case "ajuda-rapida":
         navigate('/admin/ajuda-rapida');
@@ -1387,7 +1388,11 @@ const Admin = () => {
             <PriorityCards
               cardData={cardData}
               isLoading={isLoadingCards}
-              onCardClick={setActiveView}
+              onCardClick={(id) => {
+                if (id === 'jarvis') { setJarvisTab('alunos'); setActiveView('jarvis'); }
+                else if (id === 'jarvis_correcao') { setJarvisTab('professores'); setActiveView('jarvis'); }
+                else setActiveView(id);
+              }}
             />
 
             {/* Central de trabalho + Movimento recente */}
