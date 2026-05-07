@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import {
   BookOpen, FileText, Video, GraduationCap, Library,
-  Map, Layers, Bot, ClipboardCheck, NotebookPen, Sparkles,
+  Map, Layers, Bot, ClipboardCheck, NotebookPen,
+  MessageCircle, Trophy, Star, Sparkles,
 } from "lucide-react";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,114 +10,137 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { MenuGrid } from "@/components/MenuGrid";
 import { ProfessorBottomNavigation } from "@/components/professor/ProfessorBottomNavigation";
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import { useProfessorFeatures } from "@/hooks/useProfessorFeatures";
 
-const menuItems = [
-  {
+const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; tooltip: string }> = {
+  jarvis_correcao: {
     title: "Jarvis",
     path: "/professor/jarvis-correcao",
     icon: Bot,
     tooltip: "Correção inteligente de redações com IA.",
-    showAlways: true,
   },
-  {
+  aula_pronta: {
     title: "Aula Pronta",
     path: "/professor/aula-pronta",
     icon: Sparkles,
     tooltip: "Gere planos de aula, quizzes e questões com IA em segundos.",
-    showAlways: true,
   },
-  {
+  temas: {
     title: "Temas",
     path: "/professor/temas",
     icon: BookOpen,
     tooltip: "Explore propostas de redação organizadas por eixo temático.",
-    showAlways: true,
   },
-  {
+  guia_tematico: {
     title: "Guia Temático",
     path: "/professor/guia-tematico",
     icon: Map,
     tooltip: "Percorra um roteiro completo de aprofundamento sobre a frase temática.",
-    showAlways: true,
   },
-  {
+  simulados: {
     title: "Simulados",
     path: "/professor/simulados",
     icon: ClipboardCheck,
     tooltip: "Participe de simulados com horário controlado.",
-    showAlways: true,
   },
-  {
+  exercicios: {
     title: "Exercícios",
     path: "/professor/exercicios",
     icon: NotebookPen,
     tooltip: "Pratique com exercícios direcionados.",
-    showAlways: true,
   },
-  {
+  redacoes_exemplares: {
     title: "Redações Exemplares",
     path: "/professor/redacoes",
     icon: FileText,
     tooltip: "Veja textos nota 1000 e aprenda estratégias eficazes.",
-    showAlways: true,
   },
-  {
+  redacoes_comentadas: {
     title: "Redações Comentadas",
     path: "/professor/redacoes-comentadas",
-    icon: RedacoesComentadasIcon as any,
+    icon: RedacoesComentadasIcon,
     tooltip: "Analise redações com comentários detalhados.",
-    showAlways: true,
   },
-  {
+  videoteca: {
     title: "Videoteca",
     path: "/professor/videoteca",
     icon: Video,
     tooltip: "Acesse vídeos para enriquecer o repertório sociocultural.",
-    showAlways: true,
   },
-  {
+  aulas_gravadas: {
     title: "Aulas Gravadas",
     path: "/professor/aulas",
     icon: GraduationCap,
     tooltip: "Acesse aulas organizadas por competência.",
-    showAlways: true,
   },
-  {
+  aulas_ao_vivo: {
     title: "Aulas ao Vivo",
     path: "/professor/salas-virtuais",
     icon: Video,
     tooltip: "Participe de aulas ao vivo com registro de frequência.",
-    showAlways: true,
   },
-  {
+  microaprendizagem: {
     title: "Microaprendizagem",
     path: "/professor/microaprendizagem",
     icon: Layers,
     tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais.",
-    showAlways: true,
   },
-  {
+  repertorio_orientado: {
     title: "Repertório Orientado",
     path: "/professor/repertorio",
     icon: Library,
     tooltip: "Publique parágrafos com repertório e receba feedback.",
-    showAlways: true,
   },
-  {
+  biblioteca: {
     title: "Biblioteca",
     path: "/professor/biblioteca",
     icon: Library,
     tooltip: "Acesse materiais em PDF organizados por competência.",
-    showAlways: true,
   },
-];
+  diario_online: {
+    title: "Diário Online",
+    path: "/professor/diario-online",
+    icon: MessageCircle,
+    tooltip: "Comunique-se com seus alunos.",
+  },
+  top_5: {
+    title: "TOP 5",
+    path: "/professor/top5",
+    icon: Trophy,
+    tooltip: "Veja os melhores desempenhos da turma.",
+  },
+  gamificacao: {
+    title: "Gamificação",
+    path: "/professor/gamificacao",
+    icon: Star,
+    tooltip: "Acompanhe pontuação e conquistas dos alunos.",
+  },
+};
 
 const ProfessorMais = () => {
+  const { funcionalidadesOrdenadas } = useProfessorFeatures();
+
   const breadcrumbs = useMemo(() => [
     { label: "Início", href: "/professor" },
     { label: "Mais", href: "/professor/mais" },
   ], []);
   useBreadcrumbs(breadcrumbs);
+
+  const menuItems = useMemo(() => {
+    return funcionalidadesOrdenadas
+      .map((f) => {
+        const config = CHAVE_CONFIG[f.chave];
+        if (!config) return null;
+        return {
+          title: config.title,
+          path: config.path,
+          icon: config.icon,
+          tooltip: config.tooltip,
+          showAlways: true as const,
+        };
+      })
+      .filter((item) => item !== null);
+  }, [funcionalidadesOrdenadas]);
 
   return (
     <TooltipProvider>
