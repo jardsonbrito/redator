@@ -124,6 +124,12 @@ const SortablePlanItem = ({
         <p className="text-xs text-muted-foreground truncate">{plano.nome}</p>
       </div>
 
+      {plano.tipo === 'professor' && (
+        <Badge variant="outline" className="text-xs shrink-0 border-violet-400 text-violet-700">
+          Professor
+        </Badge>
+      )}
+
       <Badge variant={plano.ativo ? 'default' : 'secondary'} className="text-xs shrink-0">
         {plano.ativo ? 'Ativo' : 'Inativo'}
       </Badge>
@@ -288,6 +294,7 @@ export const PlansManager = () => {
   const [formNomeExibicao, setFormNomeExibicao] = useState('');
   const [formDescricao, setFormDescricao]   = useState('');
   const [formCopiarDe, setFormCopiarDe]     = useState<string | null>(null);
+  const [formTipo, setFormTipo]             = useState<'aluno' | 'professor'>('aluno');
 
   // ── Sensors dnd-kit ──────────────────────────────────────────────────────
 
@@ -379,6 +386,7 @@ export const PlansManager = () => {
     setTargetPlan(plan);
     setFormNomeExibicao(plan.nome_exibicao);
     setFormDescricao(plan.descricao ?? '');
+    setFormTipo(plan.tipo ?? 'aluno');
     setEditDialog(true);
   };
 
@@ -400,6 +408,7 @@ export const PlansManager = () => {
     setFormNomeExibicao('');
     setFormDescricao('');
     setFormCopiarDe(null);
+    setFormTipo('aluno');
     setCreateDialog(true);
   };
 
@@ -408,7 +417,7 @@ export const PlansManager = () => {
   const handleCreate = () => {
     if (!formNome.trim() || !formNomeExibicao.trim()) return;
     mut.createPlano.mutate(
-      { nome: formNome.trim(), nome_exibicao: formNomeExibicao.trim(), descricao: formDescricao || undefined, copiar_de_id: formCopiarDe },
+      { nome: formNome.trim(), nome_exibicao: formNomeExibicao.trim(), descricao: formDescricao || undefined, copiar_de_id: formCopiarDe, tipo: formTipo },
       { onSuccess: (novo) => {
           setCreateDialog(false);
           if (novo) setSelectedPlanId(novo.id);
@@ -422,7 +431,7 @@ export const PlansManager = () => {
   const handleEdit = () => {
     if (!targetPlan || !formNomeExibicao.trim()) return;
     mut.updatePlano.mutate(
-      { id: targetPlan.id, nome_exibicao: formNomeExibicao.trim(), descricao: formDescricao || undefined },
+      { id: targetPlan.id, nome_exibicao: formNomeExibicao.trim(), descricao: formDescricao || undefined, tipo: formTipo },
       { onSuccess: () => setEditDialog(false) }
     );
   };
@@ -767,6 +776,23 @@ export const PlansManager = () => {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
+              <Label>Tipo de plano</Label>
+              <div className="flex gap-2 mt-1.5">
+                {(['aluno', 'professor'] as const).map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFormTipo(t)}
+                    className={`px-4 py-1.5 text-sm rounded-full border transition-colors ${
+                      formTipo === t ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'
+                    }`}
+                  >
+                    {t === 'aluno' ? 'Aluno' : 'Professor'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <Label htmlFor="create-nome">Chave interna <span className="text-muted-foreground text-xs">(única, usada nos dados)</span></Label>
               <Input
                 id="create-nome"
@@ -846,6 +872,23 @@ export const PlansManager = () => {
                 Chave interna (imutável): <span className="font-mono font-medium">{targetPlan.nome}</span>
               </div>
             )}
+            <div>
+              <Label>Tipo de plano</Label>
+              <div className="flex gap-2 mt-1.5">
+                {(['aluno', 'professor'] as const).map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFormTipo(t)}
+                    className={`px-4 py-1.5 text-sm rounded-full border transition-colors ${
+                      formTipo === t ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'
+                    }`}
+                  >
+                    {t === 'aluno' ? 'Aluno' : 'Professor'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <Label htmlFor="edit-exibicao">Nome de exibição</Label>
               <Input

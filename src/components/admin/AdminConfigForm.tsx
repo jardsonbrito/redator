@@ -12,6 +12,7 @@ import { CreditManagement } from './CreditManagement';
 import { SubscriptionManagementClean } from './SubscriptionManagementClean';
 import { PlansManager } from './PlansManager';
 import { ProfessorFeaturesManager } from './ProfessorFeaturesManager';
+import { ProfessorSubscriptionManagement } from './ProfessorSubscriptionManagement';
 import { DatabaseInitializer } from '../DatabaseInitializer';
 import { Mail, Key, User, Clock, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -55,6 +56,7 @@ export const AdminConfigForm = () => {
   }, [searchParams]);
 
   const [activeSubTab, setActiveSubTab] = useState('alunos');
+  const [activeProfSubTab, setActiveProfSubTab] = useState('assinaturas');
 
   const loadCurrentAdmin = async () => {
     setLoadingAdmin(true);
@@ -344,7 +346,18 @@ export const AdminConfigForm = () => {
               <PlansManager />
             </TabsContent>
             <TabsContent value="professores">
-              <ProfessorFeaturesManager />
+              <Tabs value={activeProfSubTab} onValueChange={setActiveProfSubTab}>
+                <TabsList className="mb-4">
+                  <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
+                  <TabsTrigger value="funcionalidades">Funcionalidades</TabsTrigger>
+                </TabsList>
+                <TabsContent value="assinaturas">
+                  <ProfessorSubscriptionManagement />
+                </TabsContent>
+                <TabsContent value="funcionalidades">
+                  <ProfessorFeaturesManager />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
         </TabsContent>

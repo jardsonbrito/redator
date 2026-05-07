@@ -9,6 +9,7 @@ export interface PlanoAdmin {
   descricao: string | null;
   ativo: boolean;
   ordem: number;
+  tipo: 'aluno' | 'professor';
 }
 
 export interface FuncionalidadeAdmin {
@@ -56,10 +57,10 @@ export const usePlanos = () =>
     queryFn: async (): Promise<PlanoAdmin[]> => {
       const { data, error } = await supabase
         .from('planos')
-        .select('id, nome, nome_exibicao, descricao, ativo, ordem')
+        .select('id, nome, nome_exibicao, descricao, ativo, ordem, tipo')
         .order('ordem');
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map(p => ({ ...p, tipo: p.tipo ?? 'aluno' })) as PlanoAdmin[];
     },
     staleTime: 0,
   });
@@ -269,14 +270,14 @@ export const usePlansAdminMutations = () => {
     },
   });
 
-  // Editar nome de exibição e descrição (nome interno é imutável)
+  // Editar nome de exibição, descrição e tipo (nome interno é imutável)
   const updatePlano = useMutation({
-    mutationFn: async ({ id, nome_exibicao, descricao }: {
-      id: string; nome_exibicao: string; descricao?: string;
+    mutationFn: async ({ id, nome_exibicao, descricao, tipo }: {
+      id: string; nome_exibicao: string; descricao?: string; tipo?: 'aluno' | 'professor';
     }) => {
       const { error } = await supabase
         .from('planos')
-        .update({ nome_exibicao, descricao: descricao ?? null })
+        .update({ nome_exibicao, descricao: descricao ?? null, ...(tipo ? { tipo } : {}) })
         .eq('id', id);
       if (error) throw error;
     },
@@ -289,15 +290,15 @@ export const usePlansAdminMutations = () => {
 
   // Criar novo plano (com ou sem cópia de features)
   const createPlano = useMutation({
-    mutationFn: async ({ nome, nome_exibicao, descricao, copiar_de_id }: {
-      nome: string; nome_exibicao: string; descricao?: string; copiar_de_id?: string | null;
+    mutationFn: async ({ nome, nome_exibicao, descricao, copiar_de_id, tipo }: {
+      nome: string; nome_exibicao: string; descricao?: string; copiar_de_id?: string | null; tipo?: 'aluno' | 'professor';
     }) => {
       const planos = qc.getQueryData<PlanoAdmin[]>(PLANOS_KEY) ?? [];
       const maxOrdem = planos.length > 0 ? Math.max(...planos.map(p => p.ordem)) : 0;
 
       const { data: novo, error } = await supabase
         .from('planos')
-        .insert({ nome, nome_exibicao, descricao: descricao ?? null, ativo: true, ordem: maxOrdem + 1 })
+        .insert({ nome, nome_exibicao, descricao: descricao ?? null, ativo: true, ordem: maxOrdem + 1, tipo: tipo ?? 'aluno' })
         .select('id')
         .single();
       if (error) throw error;

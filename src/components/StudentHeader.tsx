@@ -10,6 +10,7 @@ import { StudentAvatar } from "@/components/StudentAvatar";
 import { ProfessorAvatar } from "@/components/professor/ProfessorAvatar";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useProfessorSubscription } from "@/hooks/useProfessorSubscription";
 import { InboxNotificationIcon } from "@/components/student/InboxNotificationIcon";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -36,6 +37,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   // Subscription só é relevante para alunos
   const userEmail = !professor ? (studentData.email || studentData.emailUsuario || '') : '';
   const { data: subscription } = useSubscription(userEmail);
+  const { data: professorSubscription } = useProfessorSubscription(professor?.id);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -305,14 +307,15 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                       </>
                     )}
 
-                    {/* Seção: Função — apenas para professor */}
+                    {/* Seção: Perfil Profissional — apenas para professor */}
                     {professor && (
                       <>
                         <div className="space-y-3">
-                          <h3 className="font-semibold text-sm text-gray-500 uppercase">Função</h3>
+                          <h3 className="font-semibold text-sm text-gray-500 uppercase">Perfil Profissional</h3>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <GraduationCap className="w-3.5 h-3.5 text-gray-400" />
+                              <span className="text-sm text-muted-foreground">Tipo de usuário:</span>
                               <Badge variant="secondary" className="px-3 py-1">Professor</Badge>
                             </div>
                             {professor.turma_nome && (
@@ -323,6 +326,62 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                               </p>
                             )}
                           </div>
+                        </div>
+                        <Separator />
+
+                        {/* Seção: Assinatura do professor */}
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-sm text-gray-500 uppercase">Assinatura</h3>
+                          {professorSubscription ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Plano:</span>
+                                {professorSubscription.plano
+                                  ? <Badge variant="secondary" className="px-3 py-1">{professorSubscription.plano}</Badge>
+                                  : <span className="text-sm text-gray-400">Sem plano ativo</span>
+                                }
+                              </div>
+                              {professorSubscription.status && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Status:</span>
+                                  <Badge
+                                    variant={professorSubscription.status === 'Ativo' ? 'default' : 'secondary'}
+                                    className="px-3 py-1"
+                                  >
+                                    {professorSubscription.status}
+                                  </Badge>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Créditos:</span>
+                                <Badge variant="outline" className="px-3 py-1 font-semibold">
+                                  {professorSubscription.creditos}
+                                </Badge>
+                              </div>
+                              {professorSubscription.data_validade && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Validade:</span>
+                                  <span className="text-sm font-medium">
+                                    {new Date(professorSubscription.data_validade).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              )}
+                              {professorSubscription.dias_restantes !== undefined && professorSubscription.status === 'Ativo' && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Dias restantes:</span>
+                                  <span className={`text-sm font-semibold ${
+                                    professorSubscription.dias_restantes <= 7 ? 'text-orange-600' :
+                                    professorSubscription.dias_restantes <= 30 ? 'text-yellow-600' :
+                                    'text-green-600'
+                                  }`}>
+                                    {professorSubscription.dias_restantes} {professorSubscription.dias_restantes === 1 ? 'dia' : 'dias'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-400">Sem assinatura configurada</p>
+                          )}
                         </div>
                         <Separator />
                       </>
