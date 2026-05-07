@@ -72,6 +72,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
           notas: initialData.notas || "",
           recorrecao_provider: initialData.recorrecao_provider || "gemini",
           recorrecao_model: initialData.recorrecao_model || "gemini-pro-latest",
+          ocr_model: initialData.ocr_model || "gpt-4o",
         }
       : {
           nome: "",
@@ -88,6 +89,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
           notas: "",
           recorrecao_provider: "gemini",
           recorrecao_model: "gemini-pro-latest",
+          ocr_model: "gpt-4o",
         },
   });
 
@@ -108,6 +110,7 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
         notas: initialData.notas || "",
         recorrecao_provider: initialData.recorrecao_provider || "gemini",
         recorrecao_model: initialData.recorrecao_model || "gemini-pro-latest",
+        ocr_model: initialData.ocr_model || "gpt-4o",
       });
       setResponseSchemaText(JSON.stringify(initialData.response_schema, null, 2));
       setV5Prompts(initV5Prompts(initialData));
@@ -376,6 +379,41 @@ export const JarvisCorrecaoConfigForm = ({ configId, initialData, onSuccess, onC
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modelo OCR */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Modelo de OCR (Transcrição de Imagem)</CardTitle>
+          <CardDescription>
+            Modelo OpenAI Vision usado para transcrever redações enviadas como foto. Afeta qualidade da leitura manuscrita.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-xs">
+            <Label>Modelo OCR *</Label>
+            <Select
+              value={watch("ocr_model") || "gpt-4o"}
+              onValueChange={(value) => setValue("ocr_model", value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gpt-4o">gpt-4o (OpenAI — recomendado)</SelectItem>
+                <SelectItem value="gpt-4o-mini">gpt-4o-mini (OpenAI — mais barato)</SelectItem>
+                <SelectItem value="gpt-4-turbo">gpt-4-turbo (OpenAI — legacy)</SelectItem>
+                <SelectItem value="gemini-2.5-flash">gemini-2.5-flash (Google — rápido)</SelectItem>
+                <SelectItem value="gemini-2.5-pro">gemini-2.5-pro (Google — alta qualidade)</SelectItem>
+                <SelectItem value="gemini-1.5-flash">gemini-1.5-flash (Google — legacy)</SelectItem>
+                <SelectItem value="gemini-1.5-pro">gemini-1.5-pro (Google — legacy)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              gpt-4o segue melhor as regras de transcrição literal.
+            </p>
           </div>
         </CardContent>
       </Card>

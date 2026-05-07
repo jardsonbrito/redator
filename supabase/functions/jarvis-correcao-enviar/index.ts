@@ -101,6 +101,18 @@ Deno.serve(async (req) => {
       console.log(`📚 Turma: ${turma.nome}`);
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // 3-PRE. BUSCAR CONFIG ATIVA (para ocr_model)
+    // ══════════════════════════════════════════════════════════════
+    const { data: configAtiva } = await supabaseClient
+      .from("jarvis_correcao_config")
+      .select("ocr_model")
+      .eq("ativo", true)
+      .single();
+
+    const ocrModel = configAtiva?.ocr_model ?? "gpt-4o";
+    console.log(`🤖 Modelo OCR: ${ocrModel}`);
+
     let imagemUrl: string | null = null;
     let transcricaoOCR: string | null = null;
     let statusInicial = "revisao_ocr"; // Padrão: aguarda revisão
@@ -142,27 +154,11 @@ Deno.serve(async (req) => {
       console.log("✅ Imagem salva:", imagemUrl);
 
       // ─────────────────────────────────────────────────────────
-      // 3.2. OCR com OpenAI Vision
+      // 3.2. OCR com Vision (OpenAI ou Gemini)
       // ─────────────────────────────────────────────────────────
-      console.log("🔍 Realizando OCR com OpenAI Vision...");
+      console.log(`🔍 Realizando OCR com ${ocrModel}...`);
 
-      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-      if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
-
-      const ocrResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [{
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Você é um sistema de OCR literal para redações manuscritas.
+      const ocrPrompt = `Você é um sistema de OCR literal para redações manuscritas.
 
 Sua única tarefa é transcrever exatamente o que está visível na imagem, preservando o texto do aluno como documento original.
 
@@ -207,29 +203,78 @@ Exemplos:
 
 FORMATO DE SAÍDA:
 Retorne somente a transcrição.
-Não inclua comentários, análise, nota, correções ou explicações.`,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Data}`,
-                  detail: "high",
-                },
-              },
-            ],
-          }],
-          max_tokens: 2000,
-        }),
-      });
+Não inclua comentários, análise, nota, correções ou explicações.`;
 
-      if (!ocrResponse.ok) {
-        const errorData = await ocrResponse.text();
-        console.error("❌ Erro no OCR:", errorData);
-        throw new Error("Erro ao processar OCR da imagem");
+      const isGemini = ocrModel.startsWith("gemini");
+
+      let ocrText = "";
+
+      if (isGemini) {
+        const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+        if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurada");
+
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${ocrModel}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: ocrPrompt },
+                  { inline_data: { mime_type: "image/jpeg", data: base64Data } },
+                ],
+              }],
+              generationConfig: { maxOutputTokens: 2000 },
+            }),
+          }
+        );
+
+        if (!geminiResponse.ok) {
+          const errorData = await geminiResponse.text();
+          console.error("❌ Erro no OCR Gemini:", errorData);
+          throw new Error("Erro ao processar OCR com Gemini");
+        }
+
+        const geminiData = await geminiResponse.json();
+        ocrText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+      } else {
+        const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+        if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
+
+        const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: ocrModel,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "text", text: ocrPrompt },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:image/jpeg;base64,${base64Data}`, detail: "high" },
+                },
+              ],
+            }],
+            max_tokens: 2000,
+          }),
+        });
+
+        if (!openaiResponse.ok) {
+          const errorData = await openaiResponse.text();
+          console.error("❌ Erro no OCR OpenAI:", errorData);
+          throw new Error("Erro ao processar OCR com OpenAI");
+        }
+
+        const openaiData = await openaiResponse.json();
+        ocrText = openaiData.choices?.[0]?.message?.content?.trim() ?? "";
       }
 
-      const ocrData = await ocrResponse.json();
-      transcricaoOCR = ocrData.choices?.[0]?.message?.content?.trim() ?? "";
+      transcricaoOCR = ocrText;
 
       console.log("✅ OCR concluído");
       console.log(`📝 Texto extraído: ${transcricaoOCR.substring(0, 100)}...`);
