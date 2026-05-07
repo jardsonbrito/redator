@@ -253,8 +253,13 @@ const SortableFeatureItem = ({ func, enabled, isSaving, onToggle }: SortableFeat
 
 // ── PlansManager (main) ───────────────────────────────────────────────────────
 
-export const PlansManager = () => {
-  const { data: planos = [], isLoading: loadingPlanos } = usePlanos();
+interface PlansManagerProps {
+  tipo?: 'aluno' | 'professor';
+}
+
+export const PlansManager = ({ tipo }: PlansManagerProps = {}) => {
+  const { data: todosPlanos = [], isLoading: loadingPlanos } = usePlanos();
+  const planos = tipo ? todosPlanos.filter(p => p.tipo === tipo) : todosPlanos;
   const { data: funcionalidades = [], isLoading: loadingFuncs } = useFuncionalidades();
   const mut = usePlansAdminMutations();
 
@@ -463,16 +468,19 @@ export const PlansManager = () => {
     );
   }
 
+  const tituloContexto = tipo === 'professor' ? 'Planos de Professor' : tipo === 'aluno' ? 'Planos de Aluno' : 'Gestão de Planos';
+  const descContexto = tipo === 'professor'
+    ? 'Planos exclusivos para professores, com funcionalidades e créditos próprios.'
+    : 'Configure planos, permissões de cards e acesso de visitante.';
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Gestão de Planos</h2>
-          <p className="text-sm text-muted-foreground">
-            Configure planos, permissões de cards e acesso de visitante sem alterar código.
-          </p>
+          <h2 className="text-lg font-semibold">{tituloContexto}</h2>
+          <p className="text-sm text-muted-foreground">{descContexto}</p>
         </div>
-        <Button size="sm" onClick={openCreate}>
+        <Button size="sm" onClick={() => { setFormTipo(tipo ?? 'aluno'); setFormNome(''); setFormNomeExibicao(''); setFormDescricao(''); setFormCopiarDe(null); setCreateDialog(true); }}>
           <Plus className="w-4 h-4 mr-2" /> Novo Plano
         </Button>
       </div>
@@ -525,8 +533,8 @@ export const PlansManager = () => {
               </p>
             )}
 
-            {/* Visitante e Processo Seletivo como itens separados na lista */}
-            <div className="pt-1">
+            {/* Visitante e Processo Seletivo — só para contexto de aluno ou sem filtro */}
+            {tipo !== 'professor' && <div className="pt-1">
               <Separator className="mb-2" />
               <div
                 className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors mb-1.5 ${
@@ -562,7 +570,7 @@ export const PlansManager = () => {
                   <ChevronRight className="w-4 h-4 text-primary shrink-0" />
                 )}
               </div>
-            </div>
+            </div>}
           </CardContent>
         </Card>
 
