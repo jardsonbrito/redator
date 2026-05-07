@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { JarvisCorrecao, useJarvisCorrecaoVersoes, useReprocessarCorrecao } from "@/hooks/useJarvisCorrecao";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,7 +86,46 @@ function inferirCompetencia(tipo: string): string {
 }
 
 export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: Props) => {
-  const correcaoIA = correcao.correcao_ia;
+  // Normaliza correcao_ia: se resposta_bruta contém JSON estruturado (pipeline legado),
+  // extrai os campos para usar a renderização pedagógica normal.
+  const correcaoIA = (() => {
+    const raw = correcao.correcao_ia;
+    if (!raw) return null;
+    if (raw.resposta_bruta && typeof raw.resposta_bruta === "string") {
+      // Tenta extrair JSON estruturado do resposta_bruta
+      const extrairJson = (s: string): object | null => {
+        let text = s.trim();
+        // Remove markdown fences
+        if (text.startsWith("```")) {
+          const nl = text.indexOf("\n");
+          if (nl !== -1) {
+            text = text.slice(nl + 1).trim();
+            const lf = text.lastIndexOf("```");
+            if (lf !== -1) text = text.slice(0, lf).trim();
+          }
+        }
+        if (text.startsWith("{")) {
+          try {
+            const p = JSON.parse(text);
+            if (p && typeof p === "object" && !Array.isArray(p)) return p;
+          } catch {
+            // Tenta extração por chaves
+            const fb = text.indexOf("{"), lb = text.lastIndexOf("}");
+            if (fb !== -1 && lb > fb) {
+              try {
+                const p = JSON.parse(text.slice(fb, lb + 1));
+                if (p && typeof p === "object" && !Array.isArray(p)) return p;
+              } catch {}
+            }
+          }
+        }
+        return null;
+      };
+      const parsed = extrairJson(raw.resposta_bruta);
+      if (parsed) return parsed;
+    }
+    return raw;
+  })();
   const [secaoAtiva, setSecaoAtiva] = useState<string | null>("c1");
   const [showTexto, setShowTexto] = useState(false);
   const [showRevisaoDialog, setShowRevisaoDialog] = useState(false);
@@ -100,14 +139,22 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     correcao.transcricao_ocr_original ?? ""
   );
 
+  // Sincroniza o estado local quando a prop correcao.id mudar (ex: dialog reaproveitado)
+  const correcaoIdRef = useRef(correcao.id);
+  if (correcaoIdRef.current !== correcao.id) {
+    correcaoIdRef.current = correcao.id;
+    setTranscricaoEditada(correcao.transcricao_ocr_original ?? "");
+  }
+
+  // Bug fix #1: a transcrição é passada como variável explícita para não depender de closure
   const confirmarOcr = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (transcricao: string) => {
       const usarV5 = queryClient.getQueryData<boolean>(["jarvis-config-pipeline-v5"]) === true;
       const functionName = usarV5 ? "jarvis-correcao-processar-v5" : "jarvis-correcao-processar";
       const { data: result, error } = await supabase.functions.invoke(functionName, {
         body: {
           correcaoId: correcao.id,
-          transcricaoConfirmada: transcricaoEditada.trim(),
+          transcricaoConfirmada: transcricao,
           professorEmail: professorEmail ?? "",
         },
       });
@@ -118,8 +165,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
       queryClient.invalidateQueries({ queryKey: ["professor-creditos"] });
-      toast.success(`Enviado para correção! Créditos restantes: ${result.creditos_restantes}`);
-      // dialog já foi fechado no onClick do botão
+      toast.success(`Correção em andamento! Créditos restantes: ${result.creditos_restantes}`);
     },
     onError: (err: any) => {
       toast.error(`Erro ao enviar para correção: ${err.message}`);
@@ -179,9 +225,17 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
         <div className="flex justify-end">
           <Button
             onClick={() => {
-              if (!transcricaoEditada.trim()) return;
-              onReprocessado?.(correcao.id); // fecha dialog imediatamente
-              confirmarOcr.mutate();
+              const textoParaEnviar = transcricaoEditada.trim();
+              if (!textoParaEnviar) return;
+              // Bug fix #3: atualiza status imediatamente no cache para a badge refletir corretamente
+              queryClient.setQueryData<JarvisCorrecao[]>(
+                ["jarvis-correcoes", professorEmail],
+                (old) => old?.map((c) =>
+                  c.id === correcao.id ? { ...c, status: "aguardando_correcao" as const } : c
+                )
+              );
+              onReprocessado?.(correcao.id);
+              confirmarOcr.mutate(textoParaEnviar);
             }}
             disabled={confirmarOcr.isPending || !transcricaoEditada.trim()}
           >
@@ -264,9 +318,24 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
 
         {/* Correção em texto corrido */}
         <div className="rounded-2xl border border-[#dcc8f5] bg-[#fbf8ff] p-6">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800">
-            {correcaoIA.resposta_bruta}
-          </p>
+          {(() => {
+            const bruta = String(correcaoIA.resposta_bruta ?? "");
+            const pareceJson = bruta.trimStart().startsWith("{") && bruta.trimEnd().endsWith("}");
+            if (pareceJson) {
+              return (
+                <div className="flex flex-col items-center gap-3 py-4 text-center">
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                  <p className="text-sm text-zinc-600 max-w-sm">
+                    A correção foi processada, mas não pôde ser exibida no formato pedagógico.
+                    Use <strong>Solicitar recorreção</strong> para tentar novamente.
+                  </p>
+                </div>
+              );
+            }
+            return (
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800">{bruta}</p>
+            );
+          })()}
         </div>
 
         {/* Dialog: Solicitação de revisão da correção */}

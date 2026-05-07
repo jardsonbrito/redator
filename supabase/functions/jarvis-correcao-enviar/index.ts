@@ -162,7 +162,52 @@ Deno.serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Extraia TODO o texto desta imagem de redação manuscrita. Transcreva EXATAMENTE como está escrito, mantendo parágrafos e quebras de linha. Retorne APENAS o texto transcrito, sem comentários ou análises.",
+                text: `Você é um sistema de OCR literal para redações manuscritas.
+
+Sua única tarefa é transcrever exatamente o que está visível na imagem, preservando o texto do aluno como documento original.
+
+REGRAS ABSOLUTAS:
+1. Não corrija nada.
+2. Não melhore nada.
+3. Não interprete a intenção do aluno.
+4. Não reconstrua lógica argumentativa.
+5. Não complete frases incompletas.
+6. Não reorganize períodos, parágrafos ou ideias.
+7. Não acrescente conectivos.
+8. Não substitua palavras por sinônimos.
+9. Não corrija ortografia, acentuação, pontuação, concordância, regência, crase ou colocação pronominal.
+10. Não ajuste tese, repertório, argumentação, coesão ou proposta de intervenção.
+11. Não transforme frases truncadas em frases completas.
+12. Não apague repetições, rasuras, informalidades, ambiguidades ou incoerências.
+13. Não suavize trechos confusos.
+14. Não normalize a escrita para a norma-padrão.
+15. Não faça avaliação da redação.
+
+A transcrição deve preservar, na medida do possível:
+- erros ortográficos;
+- ausência ou excesso de pontuação;
+- palavras repetidas;
+- frases incompletas;
+- truncamentos;
+- incoerências;
+- quebras de parágrafo;
+- ordem original das ideias;
+- marcas textuais visíveis.
+
+Se uma palavra estiver ilegível, escreva [ilegível].
+Se uma palavra estiver parcialmente legível, transcreva a parte identificável e use [ilegível] no trecho duvidoso.
+Se houver dúvida entre duas leituras possíveis, use a forma visualmente mais provável seguida de [?].
+
+Exemplos:
+- Se estiver escrito "caza", transcreva "caza", não "casa".
+- Se estiver escrito "concerteza", transcreva "concerteza", não "com certeza".
+- Se estiver escrito "os problema", transcreva "os problema", não "os problemas".
+- Se a frase estiver truncada, mantenha o truncamento.
+- Se o aluno repetir uma palavra, mantenha a repetição.
+
+FORMATO DE SAÍDA:
+Retorne somente a transcrição.
+Não inclua comentários, análise, nota, correções ou explicações.`,
               },
               {
                 type: "image_url",

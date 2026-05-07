@@ -38,7 +38,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
   Search,
-  Eye,
   Trash2,
   UserX,
   MoreVertical,
@@ -79,26 +78,40 @@ interface PastaTurma {
 
 const getStatusBadge = (correcao: JarvisCorrecao) => {
   if (correcao.status === "em_revisao") {
-    return <Badge className="bg-amber-500 text-white animate-pulse">Em recorreção...</Badge>;
+    return (
+      <Badge className="bg-amber-500 text-white animate-pulse text-xs font-semibold">
+        Em recorreção...
+      </Badge>
+    );
   }
   if (correcao.status === "corrigida" && correcao.tipo_correcao === "recorrecao") {
     return (
-      <Badge className="bg-indigo-500 text-white">
+      <Badge className="bg-indigo-500 text-white text-xs font-semibold">
         Revisada{correcao.numero_versao > 1 ? ` v${correcao.numero_versao}` : ""}
       </Badge>
     );
   }
   switch (correcao.status) {
     case "corrigida":
-      return <Badge className="bg-emerald-500 text-white">Corrigida</Badge>;
+      return (
+        <Badge className="bg-emerald-500 text-white text-xs font-semibold">Corrigida</Badge>
+      );
     case "revisao_ocr":
-      return <Badge className="bg-orange-500 text-white">Aguardando Revisão</Badge>;
+      return (
+        <Badge className="bg-orange-500 text-white text-xs font-semibold">
+          Aguardando Revisão
+        </Badge>
+      );
     case "aguardando_correcao":
-      return <Badge variant="outline">Aguardando Correção</Badge>;
+      return (
+        <Badge className="bg-sky-100 text-sky-700 border border-sky-200 text-xs font-medium">
+          Aguardando Correção
+        </Badge>
+      );
     case "erro":
-      return <Badge variant="destructive">Erro</Badge>;
+      return <Badge variant="destructive" className="text-xs">Erro</Badge>;
     default:
-      return <Badge variant="outline">{correcao.status}</Badge>;
+      return <Badge variant="outline" className="text-xs">{correcao.status}</Badge>;
   }
 };
 
@@ -373,6 +386,7 @@ export const HistoricoCorrecoes = ({
               </DialogHeader>
             )}
             <DetalhesCorrecao
+              key={correcaoSelecionada.id}
               correcao={correcaoSelecionada}
               professorEmail={professorEmail}
               onReprocessado={() => setShowDetalhes(false)}
@@ -466,7 +480,7 @@ const PastaCard = ({
                 className="group flex items-center gap-1.5 bg-white hover:bg-[#ede9fe] active:bg-[#dcc8f5] border border-[#dcc8f5] hover:border-[#4B0082]/30 transition-all rounded-full pl-3 pr-2 py-1.5 text-sm text-[#4f3a68] shadow-sm"
               >
                 <span className="font-medium leading-none">{nome}</span>
-                <span className="flex items-center justify-center bg-[#4B0082] group-hover:bg-[#8a25d9] text-white font-bold text-xs rounded-full w-5 h-5 leading-none shrink-0 transition-colors">
+                <span className="flex items-center justify-center bg-violet-100 text-violet-600 font-semibold text-[11px] rounded-full w-5 h-5 leading-none shrink-0">
                   {corrs.length}
                 </span>
               </button>
@@ -511,108 +525,107 @@ const CorrecaoCard = ({
     !!(correcao.transcricao_confirmada || correcao.transcricao_ocr_original);
 
   return (
-    <div className="border border-[#dcc8f5] rounded-xl p-4 bg-white space-y-2 shadow-[0_2px_8px_rgba(75,0,130,0.06)]">
-      {/* Linha superior: tema + nota + status + 3 pontos */}
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-[#4f3a68] leading-snug line-clamp-2">
-            {correcao.tema}
-          </p>
-          <p className="text-xs text-[#9c7dc0] mt-0.5">
-            {format(new Date(correcao.criado_em), "dd/MM/yy", { locale: ptBR })}
-          </p>
-        </div>
+    // Bug fix #6/#8: card inteiro clicável, cursor pointer, hover sutil
+    <div
+      className="border border-[#dcc8f5] rounded-xl bg-white shadow-[0_2px_8px_rgba(75,0,130,0.06)] cursor-pointer hover:border-[#4B0082]/40 hover:shadow-[0_4px_14px_rgba(75,0,130,0.12)] transition-all"
+      onClick={() => onVerDetalhes(correcao)}
+    >
+      <div className="p-4 space-y-2.5">
+        {/* Linha 1: tema + data + três pontos */}
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-[#4f3a68] leading-snug line-clamp-2">
+              {correcao.tema}
+            </p>
+            <p className="text-xs text-[#9c7dc0] mt-0.5">
+              {format(new Date(correcao.criado_em), "dd/MM/yy", { locale: ptBR })}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Nota */}
-          <span
-            className={`text-xl font-black leading-none ${notaColor(correcao.nota_total)}`}
+          {/* Bug fix #7: dropdown para ações secundárias/destrutivas — stopPropagation */}
+          <div
+            className="shrink-0"
+            onClick={(e) => e.stopPropagation()}
           >
-            {correcao.nota_total !== null ? correcao.nota_total : "—"}
-          </span>
-
-          {/* Status */}
-          {getStatusBadge(correcao)}
-
-          {/* 3 pontos */}
-          <DropdownMenu
-            open={openDropdownId === correcao.id}
-            onOpenChange={(open) => setOpenDropdownId(open ? correcao.id : null)}
-          >
-            <DropdownMenuTrigger asChild>
-              <button className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[#ede9fe] transition-colors">
-                <MoreVertical className="h-4 w-4 text-[#9c7dc0]" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
-              <DropdownMenuItem
-                onClick={() => {
-                  setOpenDropdownId(null);
-                  onVerDetalhes(correcao);
-                }}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Ver detalhes
-              </DropdownMenuItem>
-
-              {podeReenviar && (
+            <DropdownMenu
+              open={openDropdownId === correcao.id}
+              onOpenChange={(open) => setOpenDropdownId(open ? correcao.id : null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <button className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-[#ede9fe] transition-colors">
+                  <MoreVertical className="h-3.5 w-3.5 text-[#9c7dc0]" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+                {podeReenviar && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setOpenDropdownId(null);
+                        queryClient.setQueryData<JarvisCorrecao[]>(
+                          ["jarvis-correcoes", professorEmail],
+                          (old) =>
+                            old?.map((c) =>
+                              c.id === correcao.id
+                                ? { ...c, status: "aguardando_correcao" as const, erro_mensagem: null }
+                                : c
+                            )
+                        );
+                        processarCorrecao.mutate({
+                          correcaoId: correcao.id,
+                          transcricaoConfirmada: (correcao.transcricao_confirmada ||
+                            correcao.transcricao_ocr_original) as string,
+                        });
+                      }}
+                      disabled={processarCorrecao.isPending}
+                    >
+                      {processarCorrecao.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Reenviar para correção
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem
-                  onClick={() => {
-                    setOpenDropdownId(null);
-                    queryClient.setQueryData<JarvisCorrecao[]>(
-                      ["jarvis-correcoes", professorEmail],
-                      (old) =>
-                        old?.map((c) =>
-                          c.id === correcao.id
-                            ? { ...c, status: "aguardando_correcao" as const, erro_mensagem: null }
-                            : c
-                        )
-                    );
-                    processarCorrecao.mutate({
-                      correcaoId: correcao.id,
-                      transcricaoConfirmada: (correcao.transcricao_confirmada ||
-                        correcao.transcricao_ocr_original) as string,
-                    });
-                  }}
-                  disabled={processarCorrecao.isPending}
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onRemoverIndividual(correcao)}
                 >
-                  {processarCorrecao.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
-                  Reenviar para correção
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remover esta correção
                 </DropdownMenuItem>
-              )}
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => onRemoverIndividual(correcao)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Remover esta correção
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => onRemoverTodas(correcao.autor_nome)}
-              >
-                <UserX className="h-4 w-4 mr-2" />
-                Remover todas de {correcao.autor_nome}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onRemoverTodas(correcao.autor_nome)}
+                >
+                  <UserX className="h-4 w-4 mr-2" />
+                  Remover todas de {correcao.autor_nome}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
 
-      {/* Preview do texto */}
-      {textoPreview && (
-        <p className="text-xs text-[#9c7dc0] line-clamp-2 border-t border-[#ede9fe] pt-2 leading-relaxed">
-          {textoPreview}
-        </p>
-      )}
+        {/* Bug fix #5: status em destaque + nota ao lado quando corrigida */}
+        <div className="flex items-center gap-2">
+          {getStatusBadge(correcao)}
+          {correcao.nota_total !== null && (
+            <span className={`text-base font-black leading-none ${notaColor(correcao.nota_total)}`}>
+              {correcao.nota_total}
+              <span className="text-[10px] font-normal text-[#9c7dc0] ml-0.5">pts</span>
+            </span>
+          )}
+        </div>
+
+        {/* Preview do texto */}
+        {textoPreview && (
+          <p className="text-xs text-[#9c7dc0] line-clamp-2 border-t border-[#ede9fe] pt-2 leading-relaxed">
+            {textoPreview}
+          </p>
+        )}
+      </div>
     </div>
   );
 };

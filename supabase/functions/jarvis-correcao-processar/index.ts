@@ -392,10 +392,11 @@ Deno.serve(async (req) => {
     console.log(`✅ Resposta recebida | ${tempoProcessamento}ms | ${totalTokens} tokens`);
 
     // ══════════════════════════════════════════════════════════════
-    // 6. TENTAR PARSEAR JSON (com ou sem fences)
+    // 6. PARSEAR JSON (agressivo — nunca deve chegar ao resposta_bruta)
     // ══════════════════════════════════════════════════════════════
     let correcaoIA: CorrecaoIA | null = null;
     {
+      // Tentativa 1: strip de markdown fences (```json ... ```)
       let jsonText = aiText.trim();
       if (jsonText.startsWith("```")) {
         const nl = jsonText.indexOf("\n");
@@ -405,13 +406,25 @@ Deno.serve(async (req) => {
           if (lastFence !== -1) jsonText = jsonText.slice(0, lastFence).trim();
         }
       }
-      try { correcaoIA = JSON.parse(jsonText); } catch { /* try brace extraction */ }
+      try { correcaoIA = JSON.parse(jsonText); } catch { /* passa para tentativa 2 */ }
+
+      // Tentativa 2: extrai entre primeiro { e último } do texto já sem fences
+      if (!correcaoIA) {
+        const fb = jsonText.indexOf("{"), lb = jsonText.lastIndexOf("}");
+        if (fb !== -1 && lb > fb) {
+          try { correcaoIA = JSON.parse(jsonText.slice(fb, lb + 1)); } catch { /* passa para tentativa 3 */ }
+        }
+      }
+
+      // Tentativa 3: extrai entre primeiro { e último } do texto original (fallback)
       if (!correcaoIA) {
         const fb = aiText.indexOf("{"), lb = aiText.lastIndexOf("}");
         if (fb !== -1 && lb > fb) {
           try { correcaoIA = JSON.parse(aiText.slice(fb, lb + 1)); } catch { /* raw */ }
         }
       }
+
+      console.log(correcaoIA ? "✅ JSON parseado com sucesso" : "⚠️ JSON não parseado — será salvo como resposta_bruta");
     }
 
     const isEstruturado = !!(correcaoIA?.competencias);
