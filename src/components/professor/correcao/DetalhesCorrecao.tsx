@@ -86,6 +86,19 @@ function inferirCompetencia(tipo: string): string {
   return "c1";
 }
 
+// Renderiza texto com parágrafos separados por \n\n como blocos distintos
+const TextoParagrafado = ({ texto, className = "text-sm leading-relaxed text-zinc-700" }: { texto: string; className?: string }) => {
+  const paragrafos = texto.split(/\n\n+/).map((p) => p.replace(/\n/g, " ").trim()).filter(Boolean);
+  if (paragrafos.length > 1) {
+    return (
+      <div className="space-y-2">
+        {paragrafos.map((p, i) => <p key={i} className={className}>{p}</p>)}
+      </div>
+    );
+  }
+  return <p className={className}>{texto}</p>;
+};
+
 export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: Props) => {
   // Normaliza correcao_ia: se resposta_bruta contém JSON estruturado (pipeline legado),
   // extrai os campos para usar a renderização pedagógica normal.
@@ -539,7 +552,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
           {compIA.justificativa && (
             <div>
               <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-zinc-500">Comentário</p>
-              <p className="text-sm leading-relaxed text-zinc-700">{compIA.justificativa}</p>
+              <TextoParagrafado texto={compIA.justificativa} />
             </div>
           )}
 
@@ -564,7 +577,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
                       </span>
                     </p>
                   </div>
-                  <p className="text-sm text-zinc-700">{estrutura.estrutura_dissertativo_argumentativa.descricao}</p>
+                  <TextoParagrafado texto={estrutura.estrutura_dissertativo_argumentativa.descricao} />
                 </div>
               )}
               {estrutura?.tese_identificada && (
@@ -581,7 +594,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
               {estrutura?.uso_repertorio && (
                 <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
                   <p className="mb-1 text-xs font-bold text-zinc-500">Uso de Repertório</p>
-                  <p className="text-sm text-zinc-700">{estrutura.uso_repertorio}</p>
+                  <TextoParagrafado texto={estrutura.uso_repertorio} />
                 </div>
               )}
               {(() => {
@@ -624,7 +637,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
           {competenciaAtiva === "c5" && estrutura?.proposta_intervencao && (
             <div className="rounded-xl bg-white border border-[#e8d8f9] p-4">
               <p className="mb-1 text-xs font-bold text-zinc-500">Elementos da Proposta</p>
-              <p className="text-sm text-zinc-700">{estrutura.proposta_intervencao}</p>
+              <TextoParagrafado texto={estrutura.proposta_intervencao} />
             </div>
           )}
 
