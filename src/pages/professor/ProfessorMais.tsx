@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   BookOpen, FileText, Video, GraduationCap, Library,
   Map, Layers, Bot, ClipboardCheck, NotebookPen,
-  MessageCircle, Trophy, Star, Sparkles, ClipboardList,
+  MessageCircle, Trophy, Star, Sparkles,
 } from "lucide-react";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -114,12 +114,6 @@ const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; too
     path: "/professor/gamificacao",
     icon: Star,
     tooltip: "Acompanhe pontuação e conquistas dos alunos.",
-  },
-  interatividade: {
-    title: "Interatividade",
-    path: "/interatividade",
-    icon: ClipboardList,
-    tooltip: "Enquetes e atividades interativas para a turma.",
   },
 };
 
