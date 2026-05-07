@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   BookOpen, FileText, Video, GraduationCap, Library,
   Map, Layers, Bot, ClipboardCheck, NotebookPen,
-  MessageCircle, Trophy, Star,
+  MessageCircle, Trophy, Star, Sparkles,
 } from "lucide-react";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +21,12 @@ const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; too
     path: "/professor/jarvis-correcao",
     icon: Bot,
     tooltip: "Correção inteligente de redações com IA — agrupe seus alunos e analise os textos.",
+  },
+  aula_pronta: {
+    title: "Aula Pronta",
+    path: "/professor/aula-pronta",
+    icon: Sparkles,
+    tooltip: "Gere planos de aula, quizzes e questões com IA em segundos.",
   },
   temas: {
     title: "Temas",

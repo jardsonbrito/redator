@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import {
   BookOpen, FileText, Video, GraduationCap, Library,
-  Map, Layers, Bot, ClipboardCheck, NotebookPen,
+  Map, Layers, Bot, ClipboardCheck, NotebookPen, Sparkles,
 } from "lucide-react";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +16,13 @@ const menuItems = [
     path: "/professor/jarvis-correcao",
     icon: Bot,
     tooltip: "Correção inteligente de redações com IA.",
+    showAlways: true,
+  },
+  {
+    title: "Aula Pronta",
+    path: "/professor/aula-pronta",
+    icon: Sparkles,
+    tooltip: "Gere planos de aula, quizzes e questões com IA em segundos.",
     showAlways: true,
   },
   {

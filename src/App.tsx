@@ -121,6 +121,7 @@ const LaboratorioAulaView  = lazy(() => import("./components/repertorio/laborato
 const LaboratorioRepertorio = lazy(() => import("./pages/LaboratorioRepertorio"));
 const GuiaTematicoView     = lazy(() => import("./components/guia-tematico/GuiaTematicoView").then(m => ({ default: m.GuiaTematicoView })));
 const ProfessorJarvisCorrecao = lazy(() => import("./pages/professor/ProfessorJarvisCorrecao").then(m => ({ default: m.ProfessorJarvisCorrecao })));
+const ProfessorAulasProntas   = lazy(() => import("./pages/professor/ProfessorAulasProntas").then(m => ({ default: m.ProfessorAulasProntas })));
 const ProfessorMais           = lazy(() => import("./pages/professor/ProfessorMais"));
 
 // Fallback de carregamento entre rotas
@@ -308,6 +309,11 @@ function App() {
                     <Route path="/professor/jarvis-correcao" element={
                       <ProfessorProtectedRoute>
                         <ProfessorJarvisCorrecao />
+                      </ProfessorProtectedRoute>
+                    } />
+                    <Route path="/professor/aula-pronta" element={
+                      <ProfessorProtectedRoute>
+                        <ProfessorAulasProntas />
                       </ProfessorProtectedRoute>
                     } />
                     {/* Módulos herdados — mesma tela do aluno, só a rota muda */}
