@@ -25,6 +25,7 @@ export interface Interacao {
   encerramento_em: string | null;
   criado_em: string;
   atualizado_em: string;
+  destinatario: string;
   alternativas?: InteracaoAlternativa[];
 }
 
@@ -69,21 +70,27 @@ export const useInteracoesAdmin = () =>
     },
   });
 
-// ── Aluno: lista interações ativas ──────────────────────────────────────────
-export const useInteracoesAtivas = () =>
-  useQuery({
-    queryKey: ['interacoes-ativas'],
+// ── Lista interações ativas filtradas pela turma do usuário ─────────────────
+export const useInteracoesAtivas = (turmaCode?: string | null) => {
+  const destinatariosVisiveis = turmaCode && turmaCode !== 'todos'
+    ? [turmaCode, 'todos']
+    : ['todos'];
+
+  return useQuery({
+    queryKey: ['interacoes-ativas', turmaCode ?? 'todos'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('interacoes')
         .select('*, alternativas:interacoes_alternativas(id, texto, ordem)')
         .eq('ativa', true)
+        .in('destinatario', destinatariosVisiveis)
         .order('ordem', { ascending: true })
         .order('criado_em', { ascending: false });
       if (error) throw error;
       return data as (Interacao & { alternativas: InteracaoAlternativa[] })[];
     },
   });
+};
 
 // ── Aluno: verifica se já respondeu cada interação ──────────────────────────
 export const useMinhasRespostas = (interacaoIds: string[]) => {

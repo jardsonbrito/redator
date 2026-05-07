@@ -7,7 +7,7 @@ import {
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StudentHeader } from "@/components/StudentHeader";
-import { MenuGrid } from "@/components/MenuGrid";
+import { ProfessorMenuGrid } from "@/components/professor/ProfessorMenuGrid";
 import { ProfessorBottomNavigation } from "@/components/professor/ProfessorBottomNavigation";
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import { useProfessorFeatures } from "@/hooks/useProfessorFeatures";
@@ -153,7 +153,7 @@ const ProfessorMais = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 pb-20">
         <StudentHeader />
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <MenuGrid menuItems={menuItems} showMinhasRedacoes={false} />
+          <ProfessorMenuGrid menuItems={menuItems} />
         </main>
         <ProfessorBottomNavigation />
       </div>

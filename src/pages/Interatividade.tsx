@@ -6,6 +6,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useInteracoesAtivas, useMinhasRespostas, statusInteracao, type Interacao } from '@/hooks/useInteratividade';
+import { useStudentAuth } from '@/hooks/useStudentAuth';
+import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 
 type Filtro = 'todas' | 'abertas' | 'respondidas' | 'encerradas';
 
@@ -19,7 +21,13 @@ const Interatividade = () => {
   const navigate = useNavigate();
   const [filtro, setFiltro] = useState<Filtro>('todas');
 
-  const { data: interacoes = [], isLoading } = useInteracoesAtivas();
+  const { studentData } = useStudentAuth();
+  const { professor } = useProfessorAuth();
+
+  // Determina a turma: professor tem prioridade, depois aluno
+  const turmaCode = professor?.turma_nome ?? studentData.turma ?? null;
+
+  const { data: interacoes = [], isLoading } = useInteracoesAtivas(turmaCode);
   const ids = interacoes.map(i => i.id);
   const { data: minhasRespostas = [] } = useMinhasRespostas(ids);
 

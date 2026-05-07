@@ -7,7 +7,7 @@ import {
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StudentHeader } from "@/components/StudentHeader";
-import { MenuGrid } from "@/components/MenuGrid";
+import { ProfessorMenuGrid } from "@/components/professor/ProfessorMenuGrid";
 import { CalendarioAtividades } from "@/components/CalendarioAtividades";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { ProfessorBottomNavigation } from "@/components/professor/ProfessorBottomNavigation";
@@ -172,7 +172,7 @@ const ProfessorHome = () => {
             <MuralAvisos turmaCode={turmaCode} />
           </div>
 
-          <MenuGrid menuItems={menuItems} showMinhasRedacoes={false} />
+          <ProfessorMenuGrid menuItems={menuItems} />
         </main>
 
         <ProfessorBottomNavigation />

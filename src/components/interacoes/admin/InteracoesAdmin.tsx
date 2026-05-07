@@ -39,6 +39,7 @@ import {
   type InteracaoAlternativa,
   type TipoResposta,
 } from '@/hooks/useInteratividade';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ const schema = z.object({
   descricao: z.string().optional(),
   pergunta: z.string().min(1, 'Pergunta obrigatória'),
   tipo_resposta: z.enum(['alternativas', 'aberta', 'alternativas_com_aberta']),
+  destinatario: z.string().min(1, 'Destinatário obrigatório'),
   ativa: z.boolean(),
   mostrar_resultado_aluno: z.boolean(),
   encerramento_em: z.string().optional(),
@@ -83,6 +85,7 @@ type Tela = 'lista' | 'form' | 'resultado';
 
 export const InteracoesAdmin = () => {
   const { data: interacoes = [], isLoading } = useInteracoesAdmin();
+  const { turmasDinamicas, turmasProfessores } = useTurmasAtivas();
   const [tela, setTela] = useState<Tela>('lista');
   const [editando, setEditando] = useState<(Interacao & { alternativas: InteracaoAlternativa[] }) | null>(null);
   const [visualizando, setVisualizando] = useState<Interacao | null>(null);
@@ -102,6 +105,7 @@ export const InteracoesAdmin = () => {
     defaultValues: {
       titulo: '', descricao: '', pergunta: '',
       tipo_resposta: 'alternativas',
+      destinatario: 'todos',
       ativa: true, mostrar_resultado_aluno: false, encerramento_em: '',
       alternativas: [{ texto: '' }, { texto: '' }],
     },
@@ -116,6 +120,7 @@ export const InteracoesAdmin = () => {
     reset({
       titulo: '', descricao: '', pergunta: '',
       tipo_resposta: 'alternativas',
+      destinatario: 'todos',
       ativa: true, mostrar_resultado_aluno: false, encerramento_em: '',
       alternativas: [{ texto: '' }, { texto: '' }],
     });
@@ -129,6 +134,7 @@ export const InteracoesAdmin = () => {
       descricao: item.descricao ?? '',
       pergunta: item.pergunta,
       tipo_resposta: item.tipo_resposta,
+      destinatario: item.destinatario ?? 'todos',
       ativa: item.ativa,
       mostrar_resultado_aluno: item.mostrar_resultado_aluno,
       encerramento_em: item.encerramento_em ? item.encerramento_em.slice(0, 16) : '',
@@ -146,6 +152,7 @@ export const InteracoesAdmin = () => {
       tipo: 'enquete' as const,
       tipo_resposta: data.tipo_resposta,
       pergunta: data.pergunta,
+      destinatario: data.destinatario,
       ativa: data.ativa,
       mostrar_resultado_aluno: data.mostrar_resultado_aluno,
       ordem: editando?.ordem ?? interacoes.length,
@@ -200,6 +207,39 @@ export const InteracoesAdmin = () => {
             <Textarea id="pergunta" {...register('pergunta')}
               placeholder="Ex: Qual competência você acha mais difícil?" rows={2} />
             {errors.pergunta && <p className="text-xs text-destructive">{errors.pergunta.message}</p>}
+          </div>
+
+          {/* Destinatário */}
+          <div className="space-y-1.5">
+            <Label>Destinatário *</Label>
+            <Select
+              value={watch('destinatario')}
+              onValueChange={v => setValue('destinatario', v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o destinatário" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {turmasDinamicas.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Turmas de alunos</div>
+                    {turmasDinamicas.map(t => (
+                      <SelectItem key={t.id} value={t.valor}>{t.label}</SelectItem>
+                    ))}
+                  </>
+                )}
+                {turmasProfessores.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Turmas de professores</div>
+                    {turmasProfessores.map(t => (
+                      <SelectItem key={t.id} value={t.valor}>{t.label}</SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+            {errors.destinatario && <p className="text-xs text-destructive">{errors.destinatario.message}</p>}
           </div>
 
           {/* Tipo de resposta */}
@@ -406,6 +446,9 @@ const InteracaoCard = ({
                 {item.mostrar_resultado_aluno && (
                   <Badge variant="outline" className="text-xs shrink-0">Resultado visível</Badge>
                 )}
+                <Badge variant="outline" className="text-xs shrink-0 text-slate-600 border-slate-200">
+                  {item.destinatario === 'todos' ? 'Todos' : item.destinatario}
+                </Badge>
               </div>
               <p className="text-sm text-gray-600 mt-1 line-clamp-1">{item.pergunta}</p>
               <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
