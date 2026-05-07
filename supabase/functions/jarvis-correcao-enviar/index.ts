@@ -274,10 +274,17 @@ Não inclua comentários, análise, nota, correções ou explicações.`;
         ocrText = openaiData.choices?.[0]?.message?.content?.trim() ?? "";
       }
 
-      transcricaoOCR = ocrText;
-
-      console.log("✅ OCR concluído");
-      console.log(`📝 Texto extraído: ${transcricaoOCR.substring(0, 100)}...`);
+      // Se o modelo retornou texto vazio (falha silenciosa, filtro de segurança etc.),
+      // trata como digitação manual em vez de mostrar tela de revisão com textarea vazio.
+      if (!ocrText.trim()) {
+        console.warn("⚠️ OCR retornou texto vazio — alternando para digitação manual");
+        transcricaoOCR = null;
+        statusInicial = "aguardando_correcao";
+      } else {
+        transcricaoOCR = ocrText;
+        console.log("✅ OCR concluído");
+        console.log(`📝 Texto extraído: ${transcricaoOCR.substring(0, 100)}...`);
+      }
     } else {
       // Se não tem imagem, status é aguardando transcrição manual
       console.log("⚠️ Sem imagem - redação será digitada manualmente");

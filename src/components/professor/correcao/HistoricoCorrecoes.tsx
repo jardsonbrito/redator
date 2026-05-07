@@ -173,6 +173,17 @@ export const HistoricoCorrecoes = ({
     }
   }, [correcoes, autoOpenCorrecaoId, onAutoOpenCleared]);
 
+  // Mantém correcaoSelecionada sincronizado com o polling — evita que o snapshot fique
+  // travado em "revisao_ocr" após o processamento atualizar o status no banco.
+  useEffect(() => {
+    if (!correcoes) return;
+    setCorrecaoSelecionada((prev) => {
+      if (!prev) return prev;
+      const updated = correcoes.find((c) => c.id === prev.id);
+      return updated && updated.status !== prev.status ? updated : prev;
+    });
+  }, [correcoes]);
+
   // Correções filtradas (para o grid de pastas)
   const correcoesFiltradas = useMemo(() => {
     if (!correcoes) return [];
