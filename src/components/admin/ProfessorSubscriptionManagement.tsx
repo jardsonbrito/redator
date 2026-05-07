@@ -21,6 +21,7 @@ interface Professor {
   nome_completo: string;
   email: string;
   ativo: boolean;
+  jarvis_correcao_creditos: number | null;
 }
 
 interface ProfessorAssinatura {
@@ -75,7 +76,7 @@ export const ProfessorSubscriptionManagement = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('professores')
-        .select('id, nome_completo, email, ativo')
+        .select('id, nome_completo, email, ativo, jarvis_correcao_creditos')
         .order('nome_completo');
       if (error) throw error;
       return data ?? [];
@@ -115,6 +116,8 @@ export const ProfessorSubscriptionManagement = () => {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['professor-assinaturas-all'] });
     queryClient.invalidateQueries({ queryKey: ['professor-subscription', selectedProfessor?.id] });
+    queryClient.invalidateQueries({ queryKey: ['professores-lista-assinatura'] });
+    queryClient.invalidateQueries({ queryKey: ['professores-jarvis-creditos'] });
   };
 
   const saveMutation = useMutation({
@@ -150,6 +153,12 @@ export const ProfessorSubscriptionManagement = () => {
           });
         if (error) throw error;
       }
+
+      const { error: errCreditos } = await supabase
+        .from('professores')
+        .update({ jarvis_correcao_creditos: parseInt(editForm.creditos) || 0 })
+        .eq('id', prof.id);
+      if (errCreditos) throw errCreditos;
 
       await supabase.from('professor_subscription_history').insert({
         professor_id: prof.id,
@@ -190,7 +199,7 @@ export const ProfessorSubscriptionManagement = () => {
       plano: existing?.plano || '',
       data_inscricao: existing?.data_inscricao || new Date().toISOString().split('T')[0],
       data_validade: existing?.data_validade || '',
-      creditos: String(existing?.creditos ?? 0),
+      creditos: String(prof.jarvis_correcao_creditos ?? existing?.creditos ?? 0),
       status: existing ? (isDateActiveOrFuture(existing.data_validade) ? 'ativo' : 'expirado') : 'ativo',
       observacao: existing?.observacao || '',
     });
@@ -278,9 +287,9 @@ export const ProfessorSubscriptionManagement = () => {
                         }
                       </TableCell>
                       <TableCell>
-                        {assinatura ? (
+                        {prof.jarvis_correcao_creditos != null ? (
                           <Badge variant="outline" className="font-semibold">
-                            {assinatura.creditos}
+                            {prof.jarvis_correcao_creditos}
                           </Badge>
                         ) : '-'}
                       </TableCell>
