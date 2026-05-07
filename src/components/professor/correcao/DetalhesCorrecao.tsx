@@ -165,10 +165,9 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
             <strong>Confirmar e enviar para correção</strong>.
           </AlertDescription>
         </Alert>
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium text-zinc-700">{correcao.autor_nome}</span>
-          {" — "}
-          {correcao.tema}
+        <div className="rounded-xl border border-[#dcc8f5] bg-[#fbf8ff] px-4 py-3">
+          <p className="text-base font-black text-[#4B0082]">{correcao.autor_nome}</p>
+          <p className="mt-0.5 text-sm font-medium text-[#78668e]">{correcao.tema}</p>
         </div>
         <Textarea
           rows={22}

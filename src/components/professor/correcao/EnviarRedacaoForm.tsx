@@ -241,16 +241,7 @@ export const EnviarRedacaoForm = ({ professorEmail, onConcluida, onOcrDetectado 
   return (
     <>
       {showProcessando && (
-        <div className="relative flex flex-col items-center justify-center rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] px-8 py-16 text-center">
-          <button
-            type="button"
-            onClick={handleDismissProcessando}
-            className="absolute right-4 top-4 rounded-xl p-1.5 text-[#b09cc8] transition hover:bg-[#efe4ff] hover:text-[#4B0082]"
-            title="Voltar ao formulário"
-          >
-            <X className="h-4 w-4" />
-          </button>
-
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-[#dcc8f5] bg-[#fbf8ff] px-8 py-16 text-center">
           {/* Ícone animado */}
           <div className="relative mb-6">
             <div className="absolute inset-0 animate-ping rounded-full bg-[#8624d6]/20" style={{ animationDuration: "1.5s" }} />

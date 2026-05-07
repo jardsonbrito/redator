@@ -348,13 +348,30 @@ export const HistoricoCorrecoes = ({
 
       {/* ── Dialog: Detalhes da Correção ──────────────────────────────────────── */}
       {correcaoSelecionada && (
-        <Dialog open={showDetalhes} onOpenChange={setShowDetalhes}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold">
-                Correção pedagógica detalhada
-              </DialogTitle>
-            </DialogHeader>
+        <Dialog
+          open={showDetalhes}
+          onOpenChange={(open) => {
+            // Não permite fechar o dialog enquanto aguarda revisão OCR
+            if (!open && correcaoSelecionada.status === "revisao_ocr") return;
+            setShowDetalhes(open);
+          }}
+        >
+          <DialogContent
+            className="max-w-6xl max-h-[90vh] overflow-y-auto"
+            onInteractOutside={(e) => {
+              if (correcaoSelecionada.status === "revisao_ocr") e.preventDefault();
+            }}
+            onEscapeKeyDown={(e) => {
+              if (correcaoSelecionada.status === "revisao_ocr") e.preventDefault();
+            }}
+          >
+            {correcaoSelecionada.status !== "revisao_ocr" && (
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold">
+                  Correção pedagógica detalhada
+                </DialogTitle>
+              </DialogHeader>
+            )}
             <DetalhesCorrecao
               correcao={correcaoSelecionada}
               professorEmail={professorEmail}
