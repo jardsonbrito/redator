@@ -161,7 +161,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Revise a transcrição feita pelo OCR. Corrija qualquer erro de leitura e clique em{" "}
+            Revise a transcrição feita pelo Jarvis. Corrija qualquer erro de leitura e clique em{" "}
             <strong>Confirmar e enviar para correção</strong>.
           </AlertDescription>
         </Alert>
