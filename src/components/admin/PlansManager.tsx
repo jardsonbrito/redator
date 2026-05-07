@@ -121,14 +121,14 @@ const SortablePlanItem = ({
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{plano.nome_exibicao}</p>
-        <p className="text-xs text-muted-foreground truncate">{plano.nome}</p>
+        <p className="text-xs text-muted-foreground truncate">
+          {plano.nome}
+          {' · '}
+          <span className={plano.tipo === 'professor' ? 'text-violet-600 font-medium' : ''}>
+            {plano.tipo === 'professor' ? 'Professor' : 'Aluno'}
+          </span>
+        </p>
       </div>
-
-      {plano.tipo === 'professor' && (
-        <Badge variant="outline" className="text-xs shrink-0 border-violet-400 text-violet-700">
-          Professor
-        </Badge>
-      )}
 
       <Badge variant={plano.ativo ? 'default' : 'secondary'} className="text-xs shrink-0">
         {plano.ativo ? 'Ativo' : 'Inativo'}
@@ -574,8 +574,19 @@ export const PlansManager = () => {
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base">{selectedPlan.nome_exibicao}</h3>
-                    <p className="text-xs text-muted-foreground font-mono">chave interna: {selectedPlan.nome}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-base">{selectedPlan.nome_exibicao}</h3>
+                      <Badge
+                        variant="outline"
+                        className={selectedPlan.tipo === 'professor'
+                          ? 'text-xs border-violet-400 text-violet-700 bg-violet-50'
+                          : 'text-xs border-blue-300 text-blue-700 bg-blue-50'
+                        }
+                      >
+                        {selectedPlan.tipo === 'professor' ? 'Professor' : 'Aluno'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">chave interna: {selectedPlan.nome}</p>
                     {selectedPlan.descricao && (
                       <p className="text-sm text-muted-foreground mt-0.5">{selectedPlan.descricao}</p>
                     )}
