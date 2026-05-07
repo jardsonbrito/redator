@@ -157,7 +157,7 @@ export const ProfessorAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate
         {avatarUrl && (
           <AvatarImage src={avatarUrl} alt="Avatar do professor" className="object-cover" />
         )}
-        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+        <AvatarFallback className="bg-white text-primary font-bold">
           {professor?.nome_completo ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
       </Avatar>

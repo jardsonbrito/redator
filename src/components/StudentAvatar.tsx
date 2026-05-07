@@ -365,7 +365,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
             className="object-cover"
           />
         )}
-        <AvatarFallback className="bg-white/20 text-white font-semibold">
+        <AvatarFallback className="bg-white text-primary font-bold">
           {studentData.nomeUsuario ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
       </Avatar>
