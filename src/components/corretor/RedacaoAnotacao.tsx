@@ -73,16 +73,7 @@ export const RedacaoAnotacao = ({
     useVoiceTranscription(setComentarioTemp, comentarioTemp, comentarioTextareaRef);
 
   useEffect(() => {
-    if (!dialogAberto) {
-      stopMicRecording();
-    } else {
-      setTimeout(() => {
-        if (comentarioTextareaRef.current) {
-          comentarioTextareaRef.current.spellcheck = true;
-          comentarioTextareaRef.current.lang = 'pt-BR';
-        }
-      }, 50);
-    }
+    if (!dialogAberto) stopMicRecording();
   }, [dialogAberto, stopMicRecording]);
 
   // Carregar marcações existentes - apenas do corretor atual
@@ -711,15 +702,16 @@ export const RedacaoAnotacao = ({
                 Digite seu comentário sobre esta marcação...
               </label>
               <div className="relative">
-                <Textarea
+                <textarea
                   ref={comentarioTextareaRef}
                   value={comentarioTemp}
                   onChange={(e) => setComentarioTemp(e.target.value)}
                   placeholder="Digite seu comentário sobre esta marcação..."
-                  className="min-h-[120px] pr-10"
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none min-h-[120px] pr-10"
                   maxLength={500}
                   autoCapitalize="sentences"
                   spellCheck={true}
+                  lang="pt-BR"
                 />
                 <button
                   type="button"

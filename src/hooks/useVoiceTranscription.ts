@@ -81,10 +81,14 @@ export const useVoiceTranscription = (
       const sepAfter = after && !after.startsWith(' ') ? ' ' : '';
 
       if (finalTranscript) {
+        const trimmed = finalTranscript.trim();
         const prev = accumulatedRef.current;
-        accumulatedRef.current = prev
-          ? prev + ' ' + finalTranscript.trim()
-          : finalTranscript.trim();
+        // Capitaliza primeira letra quando campo estava vazio ao iniciar a gravação
+        const shouldCapitalize = !prev && !before.trim();
+        const processed = shouldCapitalize
+          ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+          : trimmed;
+        accumulatedRef.current = prev ? prev + ' ' + processed : processed;
         onTranscript(before + sepBefore + accumulatedRef.current + sepAfter + after);
       } else if (interimTranscript) {
         const prev = accumulatedRef.current;

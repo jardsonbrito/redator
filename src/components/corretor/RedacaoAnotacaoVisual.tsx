@@ -241,19 +241,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const { isRecording: isMicRecording, isSupported: isMicSupported, toggleRecording: toggleMicRecording, stopRecording: stopMicRecording } =
     useVoiceTranscription(setComentarioTemp, comentarioTemp, comentarioTextareaRef);
 
-  // Para gravação quando o dialog fecha; ativa spellcheck no elemento DOM quando abre
+  // Para gravação quando o dialog fecha
   useEffect(() => {
-    if (!dialogAberto) {
-      stopMicRecording();
-    } else {
-      // Força o atributo diretamente no DOM — o shadcn/ui Textarea tem spellCheck="false" padrão
-      setTimeout(() => {
-        if (comentarioTextareaRef.current) {
-          comentarioTextareaRef.current.spellcheck = true;
-          comentarioTextareaRef.current.lang = 'pt-BR';
-        }
-      }, 50);
-    }
+    if (!dialogAberto) stopMicRecording();
   }, [dialogAberto, stopMicRecording]);
 
   // Expor métodos via ref
@@ -1319,7 +1309,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               })()}
             </div>
             <div className="relative">
-              <Textarea
+              <textarea
                 ref={comentarioTextareaRef}
                 placeholder="Digite seu comentário sobre esta marcação..."
                 value={comentarioTemp}
@@ -1328,7 +1318,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 autoFocus
                 autoCapitalize="sentences"
                 spellCheck={true}
-                className="pr-10"
+                lang="pt-BR"
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none pr-10"
               />
               <button
                 type="button"
