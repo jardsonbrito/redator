@@ -5,7 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Eye, Edit3 } from "lucide-react";
+import { Save, Trash2, Eye, Edit3, Mic, MicOff } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -233,6 +235,16 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const [editandoAnotacao, setEditandoAnotacao] = useState<AnotacaoVisual | null>(null);
   
   const [contadorSequencial, setContadorSequencial] = useState(1);
+
+  // Ref e hook de voz para o textarea de comentário no dialog
+  const comentarioTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const { isRecording: isMicRecording, isSupported: isMicSupported, toggleRecording: toggleMicRecording, stopRecording: stopMicRecording } =
+    useVoiceTranscription(setComentarioTemp, comentarioTemp, comentarioTextareaRef);
+
+  // Para gravação quando o dialog fecha
+  useEffect(() => {
+    if (!dialogAberto) stopMicRecording();
+  }, [dialogAberto, stopMicRecording]);
 
   // Expor métodos via ref
   useImperativeHandle(ref, () => ({
@@ -1296,15 +1308,43 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 );
               })()}
             </div>
-            <Textarea
-              placeholder="Digite seu comentário sobre esta marcação..."
-              value={comentarioTemp}
-              onChange={(e) => setComentarioTemp(e.target.value)}
-              rows={4}
-              autoFocus
-              autoCapitalize="sentences"
-              spellCheck={true}
-            />
+            <div className="relative">
+              <Textarea
+                ref={comentarioTextareaRef}
+                placeholder="Digite seu comentário sobre esta marcação..."
+                value={comentarioTemp}
+                onChange={(e) => setComentarioTemp(e.target.value)}
+                rows={4}
+                autoFocus
+                autoCapitalize="sentences"
+                spellCheck={true}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={toggleMicRecording}
+                disabled={!isMicSupported}
+                title={
+                  !isMicSupported
+                    ? "Seu navegador não suporta reconhecimento de voz"
+                    : isMicRecording
+                    ? "Parar gravação"
+                    : "Ditar comentário por voz"
+                }
+                className={cn(
+                  "absolute bottom-2 right-2 p-1.5 rounded-full transition-colors",
+                  isMicRecording
+                    ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                    : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                  !isMicSupported && "opacity-40 cursor-not-allowed"
+                )}
+              >
+                {isMicRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+            </div>
+            {isMicRecording && (
+              <p className="text-xs text-red-500 font-medium animate-pulse">Ouvindo...</p>
+            )}
             
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={cancelarAnotacao}>
