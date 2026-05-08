@@ -118,6 +118,7 @@ const Jarvis = () => {
   const { modos, loading: loadingModos } = useJarvisModos();
 
   const resultRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const showResult = !!currentResponse && !isLoading;
 
   // Seleciona o primeiro modo ao carregar
@@ -189,7 +190,7 @@ const Jarvis = () => {
   };
 
   const { isRecording, isSupported, toggleRecording, stopRecording } =
-    useVoiceTranscription(handleTextoChange, textoInput);
+    useVoiceTranscription(handleTextoChange, textoInput, textareaRef);
 
   const handleLimparTexto = () => {
     stopRecording();
@@ -357,6 +358,7 @@ const Jarvis = () => {
                         {/* Textarea com microfone */}
                         <div className="relative">
                           <Textarea
+                            ref={textareaRef}
                             placeholder="Cole ou digite seu texto aqui..."
                             value={textoInput}
                             onChange={(e) => handleTextoChange(e.target.value)}

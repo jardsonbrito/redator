@@ -9,16 +9,20 @@ interface UseVoiceTranscriptionReturn {
 
 export const useVoiceTranscription = (
   onTranscript: (texto: string) => void,
-  currentText: string
+  currentText: string,
+  textareaRef?: React.RefObject<HTMLTextAreaElement>
 ): UseVoiceTranscriptionReturn => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
 
   const recognitionRef = useRef<any>(null);
-  // Texto confirmado (final) acumulado desde o início da gravação
-  const baseTextRef = useRef<string>('');
-  // Ref sincronizada com currentText para capturar snapshot no momento de start
   const currentTextRef = useRef<string>(currentText);
+
+  // Partes do texto capturadas no momento de iniciar a gravação
+  const beforeCursorRef = useRef<string>('');
+  const afterCursorRef = useRef<string>('');
+  // Texto ditado confirmado (finais) acumulado na sessão atual
+  const accumulatedRef = useRef<string>('');
 
   useEffect(() => {
     currentTextRef.current = currentText;
@@ -41,8 +45,17 @@ export const useVoiceTranscription = (
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return;
 
-    // Captura o texto atual como base — tudo que vier de voz será concatenado
-    baseTextRef.current = currentTextRef.current;
+    // Captura posição do cursor para inserir no lugar certo
+    const text = currentTextRef.current;
+    let cursorStart = text.length;
+    let cursorEnd = text.length;
+    if (textareaRef?.current) {
+      cursorStart = textareaRef.current.selectionStart ?? text.length;
+      cursorEnd = textareaRef.current.selectionEnd ?? text.length;
+    }
+    beforeCursorRef.current = text.slice(0, cursorStart);
+    afterCursorRef.current = text.slice(cursorEnd);
+    accumulatedRef.current = '';
 
     const recognition = new SR();
     recognition.lang = 'pt-BR';
@@ -62,17 +75,21 @@ export const useVoiceTranscription = (
         }
       }
 
+      const before = beforeCursorRef.current;
+      const after = afterCursorRef.current;
+      const sepBefore = before && !before.endsWith(' ') ? ' ' : '';
+      const sepAfter = after && !after.startsWith(' ') ? ' ' : '';
+
       if (finalTranscript) {
-        // Commita o trecho final na base
-        const base = baseTextRef.current;
-        const sep = base && !base.endsWith(' ') ? ' ' : '';
-        baseTextRef.current = base + sep + finalTranscript.trim();
-        onTranscript(baseTextRef.current);
+        const prev = accumulatedRef.current;
+        accumulatedRef.current = prev
+          ? prev + ' ' + finalTranscript.trim()
+          : finalTranscript.trim();
+        onTranscript(before + sepBefore + accumulatedRef.current + sepAfter + after);
       } else if (interimTranscript) {
-        // Mostra ao vivo sem commitar na base
-        const base = baseTextRef.current;
-        const sep = base && !base.endsWith(' ') ? ' ' : '';
-        onTranscript(base + sep + interimTranscript);
+        const prev = accumulatedRef.current;
+        const combined = prev ? prev + ' ' + interimTranscript : interimTranscript;
+        onTranscript(before + sepBefore + combined + sepAfter + after);
       }
     };
 
@@ -90,7 +107,7 @@ export const useVoiceTranscription = (
     recognitionRef.current = recognition;
     recognition.start();
     setIsRecording(true);
-  }, [onTranscript]);
+  }, [onTranscript, textareaRef]);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) {
@@ -100,7 +117,6 @@ export const useVoiceTranscription = (
     }
   }, [isRecording, startRecording, stopRecording]);
 
-  // Limpa ao desmontar
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();

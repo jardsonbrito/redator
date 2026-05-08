@@ -337,7 +337,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Plano:</span>
                                 {professorSubscription.plano
-                                  ? <Badge variant="secondary" className="px-3 py-1">{professorSubscription.plano}</Badge>
+                                  ? <Badge variant="secondary" className="px-3 py-1">{professorSubscription.plano_exibicao ?? professorSubscription.plano}</Badge>
                                   : <span className="text-sm text-gray-400">Sem plano ativo</span>
                                 }
                               </div>
@@ -355,7 +355,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Créditos:</span>
                                 <Badge variant="outline" className="px-3 py-1 font-semibold">
-                                  {professorSubscription.creditos}
+                                  {professorSubscription.creditos_reais}
                                 </Badge>
                               </div>
                               {professorSubscription.data_validade && (

@@ -160,9 +160,12 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     setTranscricaoEditada(correcao.transcricao_ocr_original ?? "");
   }
 
+  const transcricaoTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   const { isRecording, isSupported, toggleRecording, stopRecording } = useVoiceTranscription(
     setTranscricaoEditada,
-    transcricaoEditada
+    transcricaoEditada,
+    transcricaoTextareaRef
   );
 
   // Bug fix #1: a transcrição é passada como variável explícita para não depender de closure
@@ -236,6 +239,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
         </div>
         <div className="relative">
           <Textarea
+            ref={transcricaoTextareaRef}
             rows={22}
             className="font-mono text-sm pr-12"
             value={transcricaoEditada}
