@@ -79,20 +79,19 @@ export const useVoiceTranscription = (
       const after = afterCursorRef.current;
       const sepBefore = before && !before.endsWith(' ') ? ' ' : '';
       const sepAfter = after && !after.startsWith(' ') ? ' ' : '';
+      const prev = accumulatedRef.current;
+      // Capitaliza quando o campo estava vazio ao iniciar a gravação e ainda não há texto acumulado
+      const shouldCapitalize = !prev && !before.trim();
+      const cap = (s: string) =>
+        shouldCapitalize && s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
       if (finalTranscript) {
-        const trimmed = finalTranscript.trim();
-        const prev = accumulatedRef.current;
-        // Capitaliza primeira letra quando campo estava vazio ao iniciar a gravação
-        const shouldCapitalize = !prev && !before.trim();
-        const processed = shouldCapitalize
-          ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
-          : trimmed;
+        const processed = cap(finalTranscript.trim());
         accumulatedRef.current = prev ? prev + ' ' + processed : processed;
         onTranscript(before + sepBefore + accumulatedRef.current + sepAfter + after);
       } else if (interimTranscript) {
-        const prev = accumulatedRef.current;
-        const combined = prev ? prev + ' ' + interimTranscript : interimTranscript;
+        // Aplica capitalização também no interim para o usuário ver imediatamente
+        const combined = prev ? prev + ' ' + interimTranscript : cap(interimTranscript);
         onTranscript(before + sepBefore + combined + sepAfter + after);
       }
     };
