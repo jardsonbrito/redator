@@ -155,7 +155,7 @@ export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardPro
         </div>
 
         {/* Nota (se já corrigida) */}
-        {corrigida && redacao.nota_total && (
+        {corrigida && redacao.nota_total != null && redacao.nota_total > 0 && (
           <div className="mb-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="text-center">
