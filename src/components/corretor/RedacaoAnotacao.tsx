@@ -73,7 +73,16 @@ export const RedacaoAnotacao = ({
     useVoiceTranscription(setComentarioTemp, comentarioTemp, comentarioTextareaRef);
 
   useEffect(() => {
-    if (!dialogAberto) stopMicRecording();
+    if (!dialogAberto) {
+      stopMicRecording();
+    } else {
+      setTimeout(() => {
+        if (comentarioTextareaRef.current) {
+          comentarioTextareaRef.current.spellcheck = true;
+          comentarioTextareaRef.current.lang = 'pt-BR';
+        }
+      }, 50);
+    }
   }, [dialogAberto, stopMicRecording]);
 
   // Carregar marcações existentes - apenas do corretor atual
