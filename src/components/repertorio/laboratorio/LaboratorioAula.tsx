@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LaboratorioAula as AulaType } from '@/hooks/useRepertorioLaboratorio';
@@ -28,6 +28,12 @@ function stepKey(aulaId: string) {
 export function LaboratorioAulaView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isProfessor = location.pathname.startsWith('/professor/');
+  const backRoute = isProfessor
+    ? '/professor/laboratorio-repertorio'
+    : '/repertorio-orientado?tab=laboratorio';
 
   // Persistência do step via sessionStorage
   const savedStep = id ? sessionStorage.getItem(stepKey(id)) : null;
@@ -81,7 +87,7 @@ export function LaboratorioAulaView() {
   const handleConcluir = () => {
     if (id) sessionStorage.removeItem(stepKey(id));
     toast.success('Bom trabalho.', { description: 'Aula concluída.' });
-    navigate('/repertorio-orientado?tab=laboratorio');
+    navigate(backRoute);
   };
 
   if (isLoading) {
@@ -98,7 +104,7 @@ export function LaboratorioAulaView() {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4 text-center space-y-4">
         <p className="text-gray-500">Aula não encontrada.</p>
-        <Button variant="ghost" onClick={() => navigate('/repertorio-orientado?tab=laboratorio')}>
+        <Button variant="ghost" onClick={() => navigate(backRoute)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar ao Laboratório
         </Button>
@@ -114,7 +120,7 @@ export function LaboratorioAulaView() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/repertorio-orientado?tab=laboratorio')}
+            onClick={() => navigate(backRoute)}
             className="gap-2 text-gray-500 hover:text-gray-800 shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
