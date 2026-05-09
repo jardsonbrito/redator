@@ -92,6 +92,12 @@ const SUBTAB_LABELS: Record<string, string> = {
   conclusao: 'Conclusão',
 };
 
+interface TemaConfig {
+  id: string;
+  instrucoes: string;
+  exemplos_temas: string[];
+}
+
 export const JarvisTutoriaConfiguracao = () => {
   const { toast } = useToast();
   const [calibracoes, setCalibracoes] = useState<Calibracao[]>([]);
@@ -110,6 +116,9 @@ export const JarvisTutoriaConfiguracao = () => {
     ordem_prioridade: 100,
     ativo: true
   });
+  const [temaConfig, setTemaConfig] = useState<TemaConfig | null>(null);
+  const [salvandoTemaConfig, setSalvandoTemaConfig] = useState(false);
+  const [novoExemplo, setNovoExemplo] = useState('');
 
   useEffect(() => {
     loadData();
@@ -160,12 +169,62 @@ export const JarvisTutoriaConfiguracao = () => {
       if (subtabsError) throw subtabsError;
       setSubtabs(subtabsData || []);
 
+      const { data: temaConfigData } = await supabase
+        .from('jarvis_tema_config')
+        .select('*')
+        .limit(1)
+        .single();
+
+      if (temaConfigData) setTemaConfig(temaConfigData as TemaConfig);
+
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast({ title: 'Erro', description: 'Erro ao carregar configurações', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
+  };
+
+  const salvarTemaConfig = async () => {
+    if (!temaConfig) return;
+    setSalvandoTemaConfig(true);
+    try {
+      const { error } = await supabase
+        .from('jarvis_tema_config')
+        .update({
+          instrucoes: temaConfig.instrucoes,
+          exemplos_temas: temaConfig.exemplos_temas,
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('id', temaConfig.id);
+
+      if (error) throw error;
+      toast({ title: '✅ Configuração salva', description: 'Instruções e exemplos atualizados.', className: 'border-green-200 bg-green-50 text-green-900' });
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setSalvandoTemaConfig(false);
+    }
+  };
+
+  const adicionarExemplo = () => {
+    if (!novoExemplo.trim() || !temaConfig) return;
+    setTemaConfig({ ...temaConfig, exemplos_temas: [...temaConfig.exemplos_temas, novoExemplo.trim()] });
+    setNovoExemplo('');
+  };
+
+  const removerExemplo = (idx: number) => {
+    if (!temaConfig) return;
+    setTemaConfig({ ...temaConfig, exemplos_temas: temaConfig.exemplos_temas.filter((_, i) => i !== idx) });
+  };
+
+  const moverExemplo = (idx: number, dir: -1 | 1) => {
+    if (!temaConfig) return;
+    const arr = [...temaConfig.exemplos_temas];
+    const novo = idx + dir;
+    if (novo < 0 || novo >= arr.length) return;
+    [arr[idx], arr[novo]] = [arr[novo], arr[idx]];
+    setTemaConfig({ ...temaConfig, exemplos_temas: arr });
   };
 
   const toggleHabilitada = async (calib: Calibracao) => {
@@ -414,6 +473,7 @@ export const JarvisTutoriaConfiguracao = () => {
       <TabsList>
         <TabsTrigger value="calibracao">Calibração Pedagógica</TabsTrigger>
         <TabsTrigger value="modelos">Modelos de Referência</TabsTrigger>
+        <TabsTrigger value="tema">Frase Temática</TabsTrigger>
       </TabsList>
 
       {/* ─── ABA: CALIBRAÇÃO ───────────────────────────────────── */}
@@ -931,6 +991,117 @@ export const JarvisTutoriaConfiguracao = () => {
                   </div>
                 </div>
               ))
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+      {/* ─── ABA: FRASE TEMÁTICA ───────────────────────────────────── */}
+      <TabsContent value="tema" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Como escrever uma frase temática ENEM</CardTitle>
+            <CardDescription>
+              Instruções exibidas aos alunos e exemplos usados pela IA para sugerir temas válidos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {!temaConfig ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : (
+              <>
+                {/* Instruções */}
+                <div className="space-y-2">
+                  <Label>Instruções para os alunos</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Texto exibido como orientação ao aluno no campo de tema. Explique o que é uma frase temática válida no estilo ENEM.
+                  </p>
+                  <Textarea
+                    value={temaConfig.instrucoes}
+                    onChange={(e) => setTemaConfig({ ...temaConfig, instrucoes: e.target.value })}
+                    rows={5}
+                    placeholder="Descreva o que é uma boa frase temática ENEM..."
+                    className="text-sm"
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Exemplos */}
+                <div className="space-y-3">
+                  <div>
+                    <Label>Exemplos de frases temáticas válidas</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Estes exemplos são usados pela IA para sugerir temas ao aluno enquanto ele digita. Você pode reordenar, editar ou remover.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    {temaConfig.exemplos_temas.map((ex, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => moverExemplo(idx, -1)}
+                            disabled={idx === 0}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none"
+                          >▲</button>
+                          <button
+                            type="button"
+                            onClick={() => moverExemplo(idx, 1)}
+                            disabled={idx === temaConfig.exemplos_temas.length - 1}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none"
+                          >▼</button>
+                        </div>
+                        <Input
+                          value={ex}
+                          onChange={(e) => {
+                            const arr = [...temaConfig.exemplos_temas];
+                            arr[idx] = e.target.value;
+                            setTemaConfig({ ...temaConfig, exemplos_temas: arr });
+                          }}
+                          className="flex-1 text-sm"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removerExemplo(idx)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Adicionar novo exemplo */}
+                  <div className="flex gap-2 pt-1">
+                    <Input
+                      value={novoExemplo}
+                      onChange={(e) => setNovoExemplo(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); adicionarExemplo(); } }}
+                      placeholder="Digite um novo exemplo de frase temática..."
+                      className="flex-1 text-sm"
+                    />
+                    <Button type="button" size="sm" variant="outline" onClick={adicionarExemplo}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button onClick={salvarTemaConfig} disabled={salvandoTemaConfig}>
+                    {salvandoTemaConfig ? (
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Salvando...</>
+                    ) : (
+                      <><Save className="h-4 w-4 mr-2" />Salvar configuração</>
+                    )}
+                  </Button>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

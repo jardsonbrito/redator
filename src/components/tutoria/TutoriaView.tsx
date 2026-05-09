@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useJarvisTutoriaSubtabs } from '@/hooks/useJarvisTutoriaSubtabs';
 import { JarvisLoadingScreen } from './JarvisLoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Lock, CheckCircle2, Copy, RefreshCw, Loader2 } from 'lucide-react';
+import { Lock, CheckCircle2, Copy, RefreshCw, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,6 @@ const PARTES: Parte[] = [
   { id: 'redacao_completa',  label: 'Redação completa',  subtabNome: null              },
 ];
 
-
 interface ResultadoGerado {
   texto: string;
   palavras: number;
@@ -34,6 +33,8 @@ interface ResultadoGerado {
   parte: ParteId;
   temaUsado: string;
 }
+
+type AvaliacaoTema = 'valido' | 'parcial' | 'invalido' | null;
 
 interface TutoriaViewProps {
   modo: JarvisModo;
@@ -47,7 +48,47 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
   const [resultado, setResultado] = useState<ResultadoGerado | null>(null);
   const [loading, setLoading] = useState(false);
   const [erroTema, setErroTema] = useState(false);
+  const [sugestoes, setSugestoes] = useState<string[]>([]);
+  const [mensagemAvaliacao, setMensagemAvaliacao] = useState('');
+  const [avaliacaoTema, setAvaliacaoTema] = useState<AvaliacaoTema>(null);
+  const [analisando, setAnalisando] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
+
+  // Análise automática de tema com debounce de 800ms
+  useEffect(() => {
+    const palavras = tema.trim().split(/\s+/).filter(Boolean);
+    if (palavras.length < 2 || tema.trim().length < 8) {
+      setSugestoes([]);
+      setAvaliacaoTema(null);
+      setMensagemAvaliacao('');
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      setAnalisando(true);
+      try {
+        const { data } = await supabase.functions.invoke('jarvis-sugerir-tema', {
+          body: { tema: tema.trim() },
+        });
+        if (data && Array.isArray(data.sugestoes)) {
+          setSugestoes(data.sugestoes);
+          setAvaliacaoTema(data.avaliacao ?? 'parcial');
+          setMensagemAvaliacao(data.mensagem ?? '');
+        }
+      } catch {
+        // falha silenciosa — não interrompe o fluxo do aluno
+      } finally {
+        setAnalisando(false);
+      }
+    }, 800);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [tema]);
 
   if (loadingSubtabs) {
     return (
@@ -203,6 +244,17 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
     setResultado(null);
     setParteId('introducao');
     setErroTema(false);
+    setSugestoes([]);
+    setAvaliacaoTema(null);
+    setMensagemAvaliacao('');
+  };
+
+  const usarSugestao = (s: string) => {
+    setTema(s);
+    setSugestoes([]);
+    setAvaliacaoTema(null);
+    setMensagemAvaliacao('');
+    if (erroTema) setErroTema(false);
   };
 
   if (loading) {
@@ -285,6 +337,48 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
           rows={3}
           className={cn('resize-none', erroTema && 'border-red-400 focus-visible:ring-red-400')}
         />
+
+        {/* Indicador de análise */}
+        {analisando && (
+          <div className="flex items-center gap-1.5 text-xs text-indigo-500">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Analisando tema...
+          </div>
+        )}
+
+        {/* Avaliação + feedback */}
+        {!analisando && avaliacaoTema && mensagemAvaliacao && (
+          <p className={cn(
+            'text-xs',
+            avaliacaoTema === 'valido' ? 'text-green-600' :
+            avaliacaoTema === 'parcial' ? 'text-amber-600' : 'text-red-500'
+          )}>
+            {mensagemAvaliacao}
+          </p>
+        )}
+
+        {/* Sugestões de tema */}
+        {!analisando && sugestoes.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium">
+              <Sparkles className="w-3 h-3" />
+              Sugestões de frase temática ENEM:
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {sugestoes.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => usarSugestao(s)}
+                  className="text-left text-xs px-3 py-2 rounded-lg border border-indigo-100 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {erroTema && (
           <p className="text-xs text-red-500">
             Digite um tema completo com pelo menos 3 palavras. Ex: "Os desafios da educação no Brasil contemporâneo"
