@@ -277,7 +277,7 @@ const Jarvis = () => {
               <JarvisIcon size={56} />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Jarvis</h1>
-                <p className="text-sm text-gray-500">Assistente Pedagógico de Escrita</p>
+                <p className="text-sm text-gray-500">Assistente de escrita</p>
               </div>
             </div>
           </div>

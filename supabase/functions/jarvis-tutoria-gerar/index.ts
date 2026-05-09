@@ -24,8 +24,20 @@ interface ValidationResult {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FUNÇÃO DE VALIDAÇÃO PEDAGÓGICA
+// UTILITÁRIOS DE MÉTRICAS
 // ═══════════════════════════════════════════════════════════════
+function contarPeriodos(texto: string): number {
+  return texto.split(/[.!?]/).filter(p => p.trim().length > 10).length;
+}
+
+function contarPalavras(texto: string): number {
+  return texto.split(/\s+/).filter(p => p.trim()).length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VALIDAÇÃO POR TIPO DE PARÁGRAFO
+// ═══════════════════════════════════════════════════════════════
+
 function validarIntroducao(
   texto: string,
   calibracao: any,
@@ -33,15 +45,41 @@ function validarIntroducao(
 ): ValidationResult {
   const erros: string[] = [];
   const avisos: string[] = [];
+  const periodos = contarPeriodos(texto);
+  const palavras = contarPalavras(texto);
 
-  // 1. Contar períodos (split por . ! ?)
-  const periodos = texto.split(/[.!?]/).filter(p => p.trim().length > 10).length;
   if (calibracao.periodos_exatos && periodos !== calibracao.periodos_exatos) {
     erros.push(`❌ Esperados ${calibracao.periodos_exatos} períodos, encontrados ${periodos}`);
   }
+  if (calibracao.palavras_min && palavras < calibracao.palavras_min) {
+    erros.push(`❌ Muito curto: ${palavras} palavras (mínimo: ${calibracao.palavras_min})`);
+  }
+  if (calibracao.palavras_max && palavras > calibracao.palavras_max) {
+    erros.push(`❌ Muito longo: ${palavras} palavras (máximo: ${calibracao.palavras_max})`);
+  }
+  if (dadosCompletos.aspecto_1 && dadosCompletos.aspecto_2) {
+    const a1 = texto.toLowerCase().includes(dadosCompletos.aspecto_1.toLowerCase().substring(0, 20));
+    const a2 = texto.toLowerCase().includes(dadosCompletos.aspecto_2.toLowerCase().substring(0, 20));
+    if (!a1 || !a2) {
+      avisos.push('⚠️ Tese pode não mencionar claramente os 2 aspectos causais');
+    }
+  }
+  return { valido: erros.length === 0, erros, avisos, metricas: { periodos, palavras } };
+}
 
-  // 2. Contar palavras
-  const palavras = texto.split(/\s+/).filter(p => p.trim()).length;
+function validarDesenvolvimento(
+  texto: string,
+  calibracao: any,
+  dadosCompletos: Record<string, string>
+): ValidationResult {
+  const erros: string[] = [];
+  const avisos: string[] = [];
+  const periodos = contarPeriodos(texto);
+  const palavras = contarPalavras(texto);
+
+  if (calibracao.periodos_exatos && periodos !== calibracao.periodos_exatos) {
+    erros.push(`❌ Esperados ${calibracao.periodos_exatos} períodos, encontrados ${periodos}`);
+  }
   if (calibracao.palavras_min && palavras < calibracao.palavras_min) {
     erros.push(`❌ Muito curto: ${palavras} palavras (mínimo: ${calibracao.palavras_min})`);
   }
@@ -49,40 +87,123 @@ function validarIntroducao(
     erros.push(`❌ Muito longo: ${palavras} palavras (máximo: ${calibracao.palavras_max})`);
   }
 
-  // 3. Verificar se menciona os 2 aspectos causais
-  if (dadosCompletos.aspecto_1 && dadosCompletos.aspecto_2) {
-    const aspecto1Mencionado = texto.toLowerCase().includes(
-      dadosCompletos.aspecto_1.toLowerCase().substring(0, Math.min(20, dadosCompletos.aspecto_1.length))
-    );
-    const aspecto2Mencionado = texto.toLowerCase().includes(
-      dadosCompletos.aspecto_2.toLowerCase().substring(0, Math.min(20, dadosCompletos.aspecto_2.length))
-    );
-
-    if (!aspecto1Mencionado || !aspecto2Mencionado) {
-      avisos.push('⚠️ Tese pode não mencionar claramente os 2 aspectos causais');
+  const criterios = calibracao.criterios_celula_argumentativa;
+  if (criterios) {
+    if (criterios.validar_topico_frasal && dadosCompletos.topico_frasal) {
+      const presente = texto.toLowerCase().includes(
+        dadosCompletos.topico_frasal.toLowerCase().substring(0, 20)
+      );
+      if (!presente) avisos.push('⚠️ Tópico frasal pode não estar claramente presente');
     }
   }
+  return { valido: erros.length === 0, erros, avisos, metricas: { periodos, palavras } };
+}
 
-  return {
-    valido: erros.length === 0,
-    erros,
-    avisos,
-    metricas: { periodos, palavras }
-  };
+function validarConclusao(
+  texto: string,
+  calibracao: any,
+  dadosCompletos: Record<string, string>
+): ValidationResult {
+  const erros: string[] = [];
+  const avisos: string[] = [];
+  const periodos = contarPeriodos(texto);
+  const palavras = contarPalavras(texto);
+
+  if (calibracao.periodos_exatos && periodos !== calibracao.periodos_exatos) {
+    erros.push(`❌ Esperados ${calibracao.periodos_exatos} períodos, encontrados ${periodos}`);
+  }
+  if (calibracao.palavras_min && palavras < calibracao.palavras_min) {
+    erros.push(`❌ Muito curto: ${palavras} palavras (mínimo: ${calibracao.palavras_min})`);
+  }
+  if (calibracao.palavras_max && palavras > calibracao.palavras_max) {
+    erros.push(`❌ Muito longo: ${palavras} palavras (máximo: ${calibracao.palavras_max})`);
+  }
+
+  const criterios = calibracao.criterios_proposta_intervencao;
+  if (criterios?.verificar_c5) {
+    const obrigatorios: string[] = criterios.elementos_obrigatorios || ['agente', 'acao', 'finalidade'];
+    const mapeamento: Record<string, string> = {
+      agente: dadosCompletos.agente || '',
+      acao: dadosCompletos.acao || '',
+      finalidade: dadosCompletos.finalidade || '',
+    };
+    for (const el of obrigatorios) {
+      if (mapeamento[el] && !texto.toLowerCase().includes(mapeamento[el].toLowerCase().substring(0, 15))) {
+        avisos.push(`⚠️ Elemento C5 "${el}" pode não estar presente na proposta`);
+      }
+    }
+  }
+  return { valido: erros.length === 0, erros, avisos, metricas: { periodos, palavras } };
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CONSTRUIR PROMPT COM CALIBRAÇÃO PEDAGÓGICA
+// CONSTRUÇÃO DO PROMPT POR TIPO DE PARÁGRAFO
 // ═══════════════════════════════════════════════════════════════
-function construirPromptCalibrado(
-  promptBase: string,
+
+function secaoRegras(calibracao: any): string {
+  let s = '';
+  const regras = calibracao.regras_composicao;
+  if (!regras) return s;
+  if (regras.nivel_concisao) s += `• Concisão: ${regras.nivel_concisao}\n`;
+  if (regras.tom) s += `• Tom: ${regras.tom}\n`;
+  if (regras.coesivos_sugeridos?.length) s += `• Coesivos sugeridos: ${regras.coesivos_sugeridos.join(', ')}\n`;
+  if (regras.restricoes?.length) {
+    s += `• Restrições:\n`;
+    regras.restricoes.forEach((r: string) => { s += `  - ${r}\n`; });
+  }
+  return s;
+}
+
+function secaoModelos(modelos: any[]): string {
+  if (!modelos || modelos.length === 0) return '';
+  let s = `\n═══════════════════════════════════════════════════════════
+MODELOS DE REFERÊNCIA (siga este padrão):
+═══════════════════════════════════════════════════════════
+
+`;
+  modelos.forEach((m, i) => {
+    s += `EXEMPLO ${i + 1} (${m.palavras} palavras, ${m.periodos} períodos)
+Tema: "${m.tema}"
+
+${m.texto_modelo}
+
+${m.observacoes ? `Observação: ${m.observacoes}\n` : ''}─────────────────────────────────────────────────────────
+
+`;
+  });
+  s += `IMPORTANTE: Use esses exemplos como GUIA de concisão, sintaxe e nível de formalidade.
+NÃO copie o conteúdo — REPRODUZA o padrão estrutural e estilístico.
+
+`;
+  return s;
+}
+
+function construirPromptIntroducao(
   calibracao: any,
   modelos: any[],
   dadosCompletos: Record<string, string>
 ): string {
+  const labels: Record<string, string> = {
+    tema: 'Tema',
+    repertorio: 'Repertório sociocultural',
+    interpretacao: 'Interpretação do repertório',
+    contextualizacao: 'Contextualização no Brasil',
+    aspecto_1: 'Aspecto Causal 1 (tese)',
+    aspecto_2: 'Aspecto Causal 2 (tese)',
+  };
+
+  // Descrições dos períodos: lidas do banco, com fallback para o padrão ENEM
+  const defaultPeriodos = [
+    '1º período: Repertório sociocultural + interpretação integrada ao tema',
+    '2º período: Contextualização problematizada no Brasil',
+    '3º período: Tese por causalidade mencionando EXPLICITAMENTE os 2 aspectos',
+  ];
+  const estruturaPeriodos: string[] =
+    calibracao.regras_composicao?.estrutura_periodos ?? defaultPeriodos;
+
   let prompt = `Você é Jarvis, assistente de redação ENEM do Laboratório do Redator.
 
-Gere uma introdução de redação ENEM seguindo RIGOROSAMENTE estes parâmetros:
+Gere uma INTRODUÇÃO de redação ENEM seguindo RIGOROSAMENTE estes parâmetros:
 
 ═══════════════════════════════════════════════════════════
 PARÂMETROS ESTRUTURAIS OBRIGATÓRIOS:
@@ -91,34 +212,13 @@ PARÂMETROS ESTRUTURAIS OBRIGATÓRIOS:
 • Número EXATO de períodos: ${calibracao.periodos_exatos}
 • Extensão: entre ${calibracao.palavras_min} e ${calibracao.palavras_max} palavras
 • Estrutura OBRIGATÓRIA:
-  1º período: Repertório sociocultural + interpretação integrada
-  2º período: Contextualização problematizada no Brasil
-  3º período: Tese por causalidade mencionando explicitamente os 2 aspectos
+${estruturaPeriodos.map(p => `  ${p}`).join('\n')}
 
 ═══════════════════════════════════════════════════════════
 REGRAS DE COMPOSIÇÃO:
 ═══════════════════════════════════════════════════════════
 
-`;
-
-  if (calibracao.regras_composicao) {
-    const regras = calibracao.regras_composicao;
-    if (regras.nivel_concisao) {
-      prompt += `• Concisão: ${regras.nivel_concisao}\n`;
-    }
-    if (regras.tom) {
-      prompt += `• Tom: ${regras.tom}\n`;
-    }
-    if (regras.coesivos_sugeridos && Array.isArray(regras.coesivos_sugeridos)) {
-      prompt += `• Coesivos sugeridos: ${regras.coesivos_sugeridos.join(', ')}\n`;
-    }
-    if (regras.restricoes && Array.isArray(regras.restricoes)) {
-      prompt += `• Restrições:\n`;
-      regras.restricoes.forEach((r: string) => {
-        prompt += `  - ${r}\n`;
-      });
-    }
-  }
+${secaoRegras(calibracao)}`;
 
   if (calibracao.instrucoes_geracao) {
     prompt += `\n═══════════════════════════════════════════════════════════
@@ -129,63 +229,25 @@ ${calibracao.instrucoes_geracao}
 `;
   }
 
-  // Adicionar modelos de referência (few-shot learning)
-  if (modelos && modelos.length > 0) {
-    prompt += `\n═══════════════════════════════════════════════════════════
-MODELOS DE REFERÊNCIA (siga este padrão):
-═══════════════════════════════════════════════════════════
+  prompt += secaoModelos(modelos);
 
-`;
-    modelos.forEach((modelo, i) => {
-      prompt += `EXEMPLO ${i + 1} (${modelo.palavras} palavras, ${modelo.periodos} períodos)
-Tema: "${modelo.tema}"
-
-${modelo.texto_modelo}
-
-${modelo.observacoes ? `Observação: ${modelo.observacoes}\n` : ''}
-─────────────────────────────────────────────────────────
-
-`;
-    });
-
-    prompt += `IMPORTANTE: Use esses exemplos como GUIA de:
-- Concisão e densidade
-- Sintaxe e organização dos períodos
-- Nível de formalidade
-- Integração dos elementos estruturais
-
-NÃO copie o conteúdo. REPRODUZA o padrão estrutural e estilístico.
-
-`;
-  }
-
-  // Adicionar elementos fornecidos pelo aluno
   prompt += `═══════════════════════════════════════════════════════════
 ELEMENTOS FORNECIDOS PELO ALUNO:
 ═══════════════════════════════════════════════════════════
 
 `;
   Object.entries(dadosCompletos).forEach(([campo, valor]) => {
-    const labels: Record<string, string> = {
-      tema: 'Tema',
-      repertorio: 'Repertório',
-      interpretacao: 'Interpretação',
-      contextualizacao: 'Contextualização no Brasil',
-      aspecto_1: 'Aspecto Causal 1',
-      aspecto_2: 'Aspecto Causal 2'
-    };
-    prompt += `${labels[campo] || campo}: ${valor}\n`;
+    if (valor) prompt += `${labels[campo] || campo}: ${valor}\n`;
   });
 
-  // Adicionar validação interna
   prompt += `\n═══════════════════════════════════════════════════════════
 VALIDAÇÃO INTERNA (faça antes de retornar):
 ═══════════════════════════════════════════════════════════
 
-Antes de finalizar, CONTE:
-1. Quantos períodos você gerou? Deve ser EXATAMENTE ${calibracao.periodos_exatos}
-2. Quantas palavras tem o texto? Deve estar entre ${calibracao.palavras_min} e ${calibracao.palavras_max}
-3. Você mencionou claramente "${dadosCompletos.aspecto_1}" E "${dadosCompletos.aspecto_2}" na tese?
+Antes de finalizar, VERIFIQUE:
+1. O texto tem EXATAMENTE ${calibracao.periodos_exatos} períodos?
+2. O texto tem entre ${calibracao.palavras_min} e ${calibracao.palavras_max} palavras?
+3. A tese menciona claramente "${dadosCompletos.aspecto_1 || 'aspecto 1'}" E "${dadosCompletos.aspecto_2 || 'aspecto 2'}"?
 
 Se qualquer resposta for NÃO, REFAÇA antes de retornar.
 
@@ -197,6 +259,271 @@ Retorne JSON:
 }`;
 
   return prompt;
+}
+
+function construirPromptDesenvolvimento(
+  calibracao: any,
+  modelos: any[],
+  dadosCompletos: Record<string, string>
+): string {
+  const criterios = calibracao.criterios_celula_argumentativa;
+  const labels: Record<string, string> = {
+    tema: 'Tema da redação',
+    topico_frasal: 'Tópico frasal (argumento central)',
+    argumento: 'Argumento principal',
+    explicacao: 'Explicação do argumento',
+    embasamento: 'Embasamento (dado/citação/exemplo)',
+    aplicacao_tema: 'Aplicação ao tema',
+    causalidade: 'Relação causal a explorar',
+    aprofundamento: 'Aprofundamento crítico',
+  };
+
+  let prompt = `Você é Jarvis, assistente de redação ENEM do Laboratório do Redator.
+
+Gere um PARÁGRAFO DE DESENVOLVIMENTO de redação ENEM seguindo RIGOROSAMENTE estes parâmetros:
+
+═══════════════════════════════════════════════════════════
+PARÂMETROS ESTRUTURAIS OBRIGATÓRIOS:
+═══════════════════════════════════════════════════════════
+
+• Número EXATO de períodos: ${calibracao.periodos_exatos}
+• Extensão: entre ${calibracao.palavras_min} e ${calibracao.palavras_max} palavras
+• Estrutura OBRIGATÓRIA da célula argumentativa:`;
+
+  // Mapeamento de chave de validação → chave em descricoes
+  const chaveParaDesc: Record<string, string> = {
+    validar_topico_frasal: 'topico_frasal',
+    validar_explicacao: 'explicacao',
+    validar_embasamento: 'embasamento',
+    validar_aplicacao_tema: 'aplicacao_tema',
+    validar_causalidade: 'causalidade',
+    validar_aprofundamento: 'aprofundamento',
+  };
+  // Fallback caso o banco não tenha descricoes
+  const descricoesPadrao: Record<string, string> = {
+    topico_frasal: 'Tópico frasal: sentença de abertura que apresenta o argumento central',
+    explicacao: 'Explicação: desenvolvimento e elucidação do argumento',
+    embasamento: 'Embasamento: dado, citação ou exemplo que sustenta o argumento',
+    aplicacao_tema: 'Aplicação ao tema: conexão explícita do argumento com o tema proposto',
+    causalidade: 'Causalidade: relação causa-efeito entre os elementos apresentados',
+    aprofundamento: 'Aprofundamento: análise crítica ou reflexão aprofundada sobre o argumento',
+  };
+
+  if (criterios) {
+    prompt += '\n';
+    Object.entries(chaveParaDesc).forEach(([chaveValidar, chaveDesc]) => {
+      if (criterios[chaveValidar]) {
+        const desc = criterios.descricoes?.[chaveDesc] ?? descricoesPadrao[chaveDesc];
+        prompt += `  • ${desc}\n`;
+      }
+    });
+  } else {
+    prompt += `
+  • Tópico frasal: sentença de abertura com o argumento central
+  • Explicação do argumento
+  • Embasamento com dado ou citação
+  • Aplicação ao tema da redação
+  • Relação de causalidade
+`;
+  }
+
+  prompt += `
+═══════════════════════════════════════════════════════════
+REGRAS DE COMPOSIÇÃO:
+═══════════════════════════════════════════════════════════
+
+${secaoRegras(calibracao)}`;
+
+  if (calibracao.instrucoes_geracao) {
+    prompt += `\n═══════════════════════════════════════════════════════════
+INSTRUÇÕES ADICIONAIS:
+═══════════════════════════════════════════════════════════
+
+${calibracao.instrucoes_geracao}
+`;
+  }
+
+  prompt += secaoModelos(modelos);
+
+  prompt += `═══════════════════════════════════════════════════════════
+ELEMENTOS FORNECIDOS PELO ALUNO:
+═══════════════════════════════════════════════════════════
+
+`;
+  Object.entries(dadosCompletos).forEach(([campo, valor]) => {
+    if (valor) prompt += `${labels[campo] || campo}: ${valor}\n`;
+  });
+
+  prompt += `\n═══════════════════════════════════════════════════════════
+VALIDAÇÃO INTERNA (faça antes de retornar):
+═══════════════════════════════════════════════════════════
+
+Antes de finalizar, VERIFIQUE:
+1. O parágrafo tem EXATAMENTE ${calibracao.periodos_exatos} períodos?
+2. O texto tem entre ${calibracao.palavras_min} e ${calibracao.palavras_max} palavras?
+3. Todos os elementos da célula argumentativa estão presentes?
+4. O tópico frasal abre o parágrafo com clareza?
+
+Se qualquer resposta for NÃO, REFAÇA antes de retornar.
+
+═══════════════════════════════════════════════════════════
+
+Retorne JSON:
+{
+  "desenvolvimento": "Texto completo do parágrafo de desenvolvimento (${calibracao.periodos_exatos} períodos)"
+}`;
+
+  return prompt;
+}
+
+function construirPromptConclusao(
+  calibracao: any,
+  modelos: any[],
+  dadosCompletos: Record<string, string>
+): string {
+  const criterios = calibracao.criterios_proposta_intervencao;
+  const labels: Record<string, string> = {
+    tema: 'Tema da redação',
+    tese: 'Tese (para retomada sintética)',
+    agente: 'Agente responsável',
+    acao: 'Ação proposta',
+    meio_modo: 'Meio/Modo de execução',
+    finalidade: 'Finalidade da proposta',
+    detalhamento: 'Detalhamento adicional',
+  };
+
+  // Descrições dos elementos C5: lidas do banco, com fallback
+  const descricoesPadraoC5: Record<string, string> = {
+    agente: 'Agente: entidade responsável pela proposta (governo, escola, família, sociedade, etc.)',
+    acao: 'Ação: o que deve ser feito — use verbo de ação claro e específico',
+    meio_modo: 'Meio/Modo: como a ação será executada — instrumentos, estratégias, métodos',
+    finalidade: 'Finalidade: para que a ação será executada — objetivo final ou impacto esperado',
+    detalhamento: 'Detalhamento: especificação que torna a proposta mais concreta e viável',
+  };
+
+  let prompt = `Você é Jarvis, assistente de redação ENEM do Laboratório do Redator.
+
+Gere uma CONCLUSÃO de redação ENEM seguindo RIGOROSAMENTE estes parâmetros:
+
+═══════════════════════════════════════════════════════════
+PARÂMETROS ESTRUTURAIS OBRIGATÓRIOS:
+═══════════════════════════════════════════════════════════
+
+• Número EXATO de períodos: ${calibracao.periodos_exatos}
+• Extensão: entre ${calibracao.palavras_min} e ${calibracao.palavras_max} palavras
+• Estrutura OBRIGATÓRIA:`;
+
+  if (criterios?.verificar_retomada_tese) {
+    prompt += `\n  • 1º período: Retomada sintética da tese (sem repetir literalmente)`;
+  }
+
+  prompt += `\n  • Proposta de intervenção com os elementos C5 obrigatórios:\n`;
+
+  const elementosObrigatorios: string[] = criterios?.elementos_obrigatorios || ['agente', 'acao', 'finalidade'];
+  const todosElementos: string[] = criterios?.elementos_c5 || ['agente', 'acao', 'meio_modo', 'finalidade', 'detalhamento'];
+
+  todosElementos.forEach((el: string) => {
+    const obrigatorio = elementosObrigatorios.includes(el);
+    // Lê descrição do banco; cai no padrão se não houver
+    const desc = criterios?.descricoes?.[el] ?? descricoesPadraoC5[el] ?? el;
+    prompt += `    ${obrigatorio ? '✓ OBRIGATÓRIO' : '○ recomendado'} — ${desc}\n`;
+  });
+
+  prompt += `
+═══════════════════════════════════════════════════════════
+REGRAS DE COMPOSIÇÃO:
+═══════════════════════════════════════════════════════════
+
+${secaoRegras(calibracao)}`;
+
+  if (calibracao.instrucoes_geracao) {
+    prompt += `\n═══════════════════════════════════════════════════════════
+INSTRUÇÕES ADICIONAIS:
+═══════════════════════════════════════════════════════════
+
+${calibracao.instrucoes_geracao}
+`;
+  }
+
+  prompt += secaoModelos(modelos);
+
+  prompt += `═══════════════════════════════════════════════════════════
+ELEMENTOS FORNECIDOS PELO ALUNO:
+═══════════════════════════════════════════════════════════
+
+`;
+  Object.entries(dadosCompletos).forEach(([campo, valor]) => {
+    if (valor) prompt += `${labels[campo] || campo}: ${valor}\n`;
+  });
+
+  const listaCinco = elementosObrigatorios.join(', ');
+  prompt += `\n═══════════════════════════════════════════════════════════
+VALIDAÇÃO INTERNA (faça antes de retornar):
+═══════════════════════════════════════════════════════════
+
+Antes de finalizar, VERIFIQUE:
+1. O texto tem EXATAMENTE ${calibracao.periodos_exatos} períodos?
+2. O texto tem entre ${calibracao.palavras_min} e ${calibracao.palavras_max} palavras?
+3. Os elementos obrigatórios estão presentes: ${listaCinco}?
+${criterios?.verificar_retomada_tese ? '4. A tese foi retomada sinteticamente antes da proposta?' : ''}
+
+Se qualquer resposta for NÃO, REFAÇA antes de retornar.
+
+═══════════════════════════════════════════════════════════
+
+Retorne JSON:
+{
+  "conclusao": "Texto completo da conclusão (${calibracao.periodos_exatos} períodos)"
+}`;
+
+  return prompt;
+}
+
+// Dispatcher: seleciona construtor e validador por tipo de subtab
+function construirPrompt(
+  subtabNome: string,
+  calibracao: any,
+  modelos: any[],
+  dadosCompletos: Record<string, string>
+): string {
+  switch (subtabNome) {
+    case 'desenvolvimento':
+      return construirPromptDesenvolvimento(calibracao, modelos, dadosCompletos);
+    case 'conclusao':
+      return construirPromptConclusao(calibracao, modelos, dadosCompletos);
+    default:
+      return construirPromptIntroducao(calibracao, modelos, dadosCompletos);
+  }
+}
+
+function validarTexto(
+  subtabNome: string,
+  texto: string,
+  calibracao: any,
+  dadosCompletos: Record<string, string>
+): ValidationResult {
+  switch (subtabNome) {
+    case 'desenvolvimento':
+      return validarDesenvolvimento(texto, calibracao, dadosCompletos);
+    case 'conclusao':
+      return validarConclusao(texto, calibracao, dadosCompletos);
+    default:
+      return validarIntroducao(texto, calibracao, dadosCompletos);
+  }
+}
+
+// Extrai o texto gerado da resposta JSON (chave varia por tipo)
+function extrairTexto(resultado: any): string {
+  return resultado.introducao || resultado.desenvolvimento || resultado.conclusao || resultado.texto || '';
+}
+
+// Monta o nome da chave de resposta esperada
+function chaveResposta(subtabNome: string): string {
+  switch (subtabNome) {
+    case 'desenvolvimento': return 'desenvolvimento';
+    case 'conclusao': return 'conclusao';
+    default: return 'introducao';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -216,9 +543,7 @@ Deno.serve(async (req) => {
     );
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY não configurada');
-    }
+    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
     const { userEmail, sessaoId, dadosCompletos, creditosNecessarios }: GerarRequest = await req.json();
 
@@ -229,9 +554,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('📧 Email:', userEmail);
-    console.log('🆔 Sessão:', sessaoId);
-    console.log('💳 Créditos necessários:', creditosNecessarios);
+    console.log('📧 Email:', userEmail, '| Sessão:', sessaoId, '| Créditos:', creditosNecessarios);
 
     // ── Buscar usuário ─────────────────────────────────────────────
     const { data: user, error: userError } = await supabaseClient
@@ -242,16 +565,12 @@ Deno.serve(async (req) => {
       .single();
 
     if (userError || !user) {
-      console.error('❌ Usuário não encontrado:', userError);
       return new Response(
         JSON.stringify({ error: 'Usuário não encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('👤 Usuário:', user.nome, '| Créditos:', user.jarvis_creditos);
-
-    // ── Verificar créditos ─────────────────────────────────────────
     if ((user.jarvis_creditos || 0) < creditosNecessarios) {
       return new Response(
         JSON.stringify({
@@ -272,23 +591,24 @@ Deno.serve(async (req) => {
       .single();
 
     if (sessaoError || !sessao) {
-      console.error('❌ Sessão não encontrada:', sessaoError);
       return new Response(
         JSON.stringify({ error: 'Sessão não encontrada' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const subtabNome: string = sessao.subtab_nome;
+    console.log('📄 Tipo de parágrafo:', subtabNome);
+
     // ── Buscar subtab ──────────────────────────────────────────────
     const { data: subtab, error: subtabError } = await supabaseClient
       .from('jarvis_tutoria_subtabs')
       .select('id, nome')
-      .eq('nome', sessao.subtab_nome)
+      .eq('nome', subtabNome)
       .eq('modo_id', sessao.modo_id)
       .single();
 
     if (subtabError || !subtab) {
-      console.error('❌ Subtab não encontrada:', subtabError);
       return new Response(
         JSON.stringify({ error: 'Subtab não encontrada' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -296,30 +616,55 @@ Deno.serve(async (req) => {
     }
 
     // ── Buscar calibração pedagógica ───────────────────────────────
-    console.log('📐 Buscando calibração pedagógica...');
+    console.log('📐 Buscando calibração pedagógica para', subtabNome, '...');
     const { data: calibracaoData } = await supabaseClient
       .rpc('get_calibracao_by_subtab', { p_subtab_id: subtab.id });
 
-    const calibracao = calibracaoData && calibracaoData.length > 0
+    // Defaults por tipo de parágrafo caso não haja calibração cadastrada
+    const defaultsPorTipo: Record<string, any> = {
+      introducao: {
+        periodos_exatos: 3, palavras_min: 80, palavras_max: 120,
+        validacao_automatica: true, max_tentativas_geracao: 3,
+        instrucoes_geracao: 'Use sintaxe concisa. A tese deve integrar os dois aspectos causais.',
+        regras_composicao: {}
+      },
+      desenvolvimento: {
+        periodos_exatos: 5, palavras_min: 100, palavras_max: 150,
+        validacao_automatica: true, max_tentativas_geracao: 3,
+        instrucoes_geracao: 'Construa parágrafo com célula argumentativa completa.',
+        regras_composicao: {},
+        criterios_celula_argumentativa: {
+          validar_topico_frasal: true, validar_explicacao: true,
+          validar_embasamento: true, validar_aplicacao_tema: true,
+          validar_causalidade: true, validar_aprofundamento: false
+        }
+      },
+      conclusao: {
+        periodos_exatos: 3, palavras_min: 80, palavras_max: 120,
+        validacao_automatica: true, max_tentativas_geracao: 3,
+        instrucoes_geracao: 'Construa conclusão com proposta de intervenção C5.',
+        regras_composicao: {},
+        criterios_proposta_intervencao: {
+          elementos_c5: ['agente', 'acao', 'meio_modo', 'finalidade', 'detalhamento'],
+          elementos_obrigatorios: ['agente', 'acao', 'finalidade'],
+          verificar_c5: true, verificar_retomada_tese: true
+        }
+      }
+    };
+
+    const calibracao = (calibracaoData && calibracaoData.length > 0)
       ? calibracaoData[0]
-      : {
-          periodos_exatos: 3,
-          palavras_min: 80,
-          palavras_max: 120,
-          validacao_automatica: true,
-          max_tentativas_geracao: 3,
-          instrucoes_geracao: 'Use sintaxe concisa.',
-          regras_composicao: {}
-        };
+      : (defaultsPorTipo[subtabNome] ?? defaultsPorTipo['introducao']);
 
     console.log('📐 Calibração:', {
+      tipo: subtabNome,
       periodos: calibracao.periodos_exatos,
       palavras: `${calibracao.palavras_min}-${calibracao.palavras_max}`,
       validacao: calibracao.validacao_automatica
     });
 
-    // ── Buscar modelos de referência (top 3) ───────────────────────
-    console.log('📚 Buscando modelos de referência...');
+    // ── Buscar modelos de referência (top 3 por subtab) ────────────
+    console.log('📚 Buscando modelos de referência para', subtabNome, '...');
     const { data: modelos } = await supabaseClient
       .rpc('get_modelos_referencia', {
         p_subtab_id: subtab.id,
@@ -336,8 +681,6 @@ Deno.serve(async (req) => {
       .eq('id', sessao.modo_id)
       .single();
 
-    const promptBase = modo?.config_interativa?.prompts?.geracao || '';
-
     // ── LOOP DE GERAÇÃO COM VALIDAÇÃO ──────────────────────────────
     let textoGerado: string | null = null;
     let tentativas = 0;
@@ -347,23 +690,14 @@ Deno.serve(async (req) => {
     let tokens_output = 0;
     let tokens_total = 0;
 
-    console.log(`🔄 Iniciando loop de geração (max ${maxTentativas} tentativas)...`);
+    console.log(`🔄 Iniciando loop de geração (tipo: ${subtabNome}, max ${maxTentativas} tentativas)...`);
 
     while (!textoGerado && tentativas < maxTentativas) {
       tentativas++;
       console.log(`\n🔄 Tentativa ${tentativas}/${maxTentativas}`);
 
-      const startTime = Date.now();
+      const promptCalibrado = construirPrompt(subtabNome, calibracao, modelos || [], dadosCompletos);
 
-      // Construir prompt calibrado
-      const promptCalibrado = construirPromptCalibrado(
-        promptBase,
-        calibracao,
-        modelos || [],
-        dadosCompletos
-      );
-
-      // Chamar OpenAI
       const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -372,9 +706,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           model: 'gpt-4o',
-          messages: [
-            { role: 'system', content: promptCalibrado }
-          ],
+          messages: [{ role: 'system', content: promptCalibrado }],
           temperature: 0.7,
           max_tokens: 1024,
           response_format: { type: "json_object" }
@@ -383,27 +715,21 @@ Deno.serve(async (req) => {
 
       if (!openaiResponse.ok) {
         const errorData = await openaiResponse.json();
-        console.error('❌ Erro OpenAI:', errorData);
         throw new Error(`OpenAI API Error: ${errorData.error?.message || 'Unknown error'}`);
       }
 
       const openaiData = await openaiResponse.json();
-      const responseTime = Date.now() - startTime;
-
-      // Acumular tokens
       tokens_input += openaiData.usage?.prompt_tokens || 0;
       tokens_output += openaiData.usage?.completion_tokens || 0;
       tokens_total += openaiData.usage?.total_tokens || 0;
 
-      const content = openaiData.choices[0].message.content;
-      const resultado = JSON.parse(content);
-      const textoTentativa = resultado.introducao || resultado.texto || '';
+      const resultado = JSON.parse(openaiData.choices[0].message.content);
+      const textoTentativa = extrairTexto(resultado);
 
-      console.log(`📝 Texto gerado em ${responseTime}ms (${textoTentativa.split(/\s+/).length} palavras)`);
+      console.log(`📝 Texto gerado (${contarPalavras(textoTentativa)} palavras)`);
 
-      // Validar se calibração automática está ativa
       if (calibracao.validacao_automatica) {
-        const validacao = validarIntroducao(textoTentativa, calibracao, dadosCompletos);
+        const validacao = validarTexto(subtabNome, textoTentativa, calibracao, dadosCompletos);
         ultimaValidacao = validacao;
 
         console.log(`🔍 Validação:`, {
@@ -411,34 +737,22 @@ Deno.serve(async (req) => {
           periodos: validacao.metricas.periodos,
           palavras: validacao.metricas.palavras,
           erros: validacao.erros.length,
-          avisos: validacao.avisos.length
         });
 
         if (validacao.valido) {
-          console.log(`✅ Validação passou na tentativa ${tentativas}`);
           textoGerado = textoTentativa;
-
-          if (validacao.avisos.length > 0) {
-            console.log(`⚠️ Avisos:`, validacao.avisos);
-          }
         } else {
           console.log(`❌ Validação falhou:`, validacao.erros);
-          if (tentativas < maxTentativas) {
-            console.log(`🔄 Tentando novamente...`);
-          }
         }
       } else {
-        // Sem validação automática: aceitar primeiro resultado
-        console.log(`✅ Validação automática desativada - aceitando resultado`);
         textoGerado = textoTentativa;
       }
     }
 
     if (!textoGerado) {
-      console.error(`❌ Não foi possível gerar introdução dentro dos parâmetros após ${maxTentativas} tentativas`);
       return new Response(
         JSON.stringify({
-          error: 'Não foi possível gerar introdução dentro dos parâmetros pedagógicos',
+          error: `Não foi possível gerar ${subtabNome} dentro dos parâmetros pedagógicos`,
           detalhes: ultimaValidacao?.erros || [],
           tentativas_realizadas: tentativas
         }),
@@ -446,69 +760,50 @@ Deno.serve(async (req) => {
       );
     }
 
-    const palavrasGeradas = textoGerado.split(/\s+/).length;
-
-    console.log(`\n✅ Introdução gerada com sucesso após ${tentativas} tentativa(s)!`);
-    console.log(`📊 Métricas finais:`, {
-      palavras: palavrasGeradas,
-      periodos: ultimaValidacao?.metricas.periodos,
-      tentativas,
-      tokens_total
-    });
+    const palavrasGeradas = contarPalavras(textoGerado);
+    console.log(`\n✅ ${subtabNome} gerado após ${tentativas} tentativa(s)! (${palavrasGeradas} palavras)`);
 
     // ── Consumir créditos ──────────────────────────────────────────
-    console.log(`💳 Consumindo ${creditosNecessarios} crédito(s) Jarvis...`);
-
     let creditosRestantes = user.jarvis_creditos;
     for (let i = 0; i < creditosNecessarios; i++) {
       const { data: newCredits, error: creditError } = await supabaseClient
         .rpc('consume_jarvis_credit', { target_user_id: user.id });
-
-      if (creditError) {
-        console.error('❌ Erro ao consumir crédito:', creditError);
-        throw new Error('Erro ao consumir créditos');
-      }
+      if (creditError) throw new Error('Erro ao consumir créditos');
       creditosRestantes = newCredits;
     }
 
-    console.log(`✅ Créditos consumidos. Novos créditos: ${creditosRestantes}`);
-
     // ── Salvar interação ───────────────────────────────────────────
-    const { error: saveError } = await supabaseClient
-      .from('jarvis_interactions')
-      .insert({
-        user_id: user.id,
-        modo_id: modo.id,
-        subtab_nome: sessao.subtab_nome,
-        etapa: 'geracao',
-        sessao_id: sessao.id,
-        texto_original: JSON.stringify(dadosCompletos),
-        resposta_json: {
-          introducao: textoGerado,
-          calibracao_aplicada: {
-            periodos_exatos: calibracao.periodos_exatos,
-            palavras_range: [calibracao.palavras_min, calibracao.palavras_max],
-            tentativas,
-            validacao: ultimaValidacao
-          }
-        },
-        versao_melhorada: textoGerado,
-        palavras_original: 0,
-        palavras_melhorada: palavrasGeradas,
-        model_used: 'gpt-4o',
-        tempo_resposta_ms: 0,  // tempo total seria soma de todas tentativas
-        tokens_input,
-        tokens_output,
-        tokens_total,
-        creditos_consumidos: creditosNecessarios
-      });
-
-    if (saveError) {
-      console.error('⚠️ Erro ao salvar interação:', saveError);
-    }
+    const chave = chaveResposta(subtabNome);
+    await supabaseClient.from('jarvis_interactions').insert({
+      user_id: user.id,
+      modo_id: modo?.id,
+      subtab_nome: subtabNome,
+      etapa: 'geracao',
+      sessao_id: sessao.id,
+      texto_original: JSON.stringify(dadosCompletos),
+      resposta_json: {
+        [chave]: textoGerado,
+        calibracao_aplicada: {
+          tipo: subtabNome,
+          periodos_exatos: calibracao.periodos_exatos,
+          palavras_range: [calibracao.palavras_min, calibracao.palavras_max],
+          tentativas,
+          validacao: ultimaValidacao
+        }
+      },
+      versao_melhorada: textoGerado,
+      palavras_original: 0,
+      palavras_melhorada: palavrasGeradas,
+      model_used: 'gpt-4o',
+      tempo_resposta_ms: 0,
+      tokens_input,
+      tokens_output,
+      tokens_total,
+      creditos_consumidos: creditosNecessarios
+    });
 
     // ── Atualizar sessão ───────────────────────────────────────────
-    const { error: updateError } = await supabaseClient
+    await supabaseClient
       .from('jarvis_tutoria_sessoes')
       .update({
         texto_gerado: textoGerado,
@@ -519,10 +814,6 @@ Deno.serve(async (req) => {
       })
       .eq('id', sessao.id);
 
-    if (updateError) {
-      console.error('⚠️ Erro ao atualizar sessão:', updateError);
-    }
-
     // ── Resposta ───────────────────────────────────────────────────
     return new Response(
       JSON.stringify({
@@ -532,8 +823,9 @@ Deno.serve(async (req) => {
         jarvis_creditos_restantes: creditosRestantes,
         creditos_consumidos: creditosNecessarios,
         metricas_calibracao: {
+          tipo_paragrafo: subtabNome,
           tentativas_realizadas: tentativas,
-          validacao_passou: ultimaValidacao?.valido || false,
+          validacao_passou: ultimaValidacao?.valido ?? true,
           periodos_gerados: ultimaValidacao?.metricas.periodos,
           palavras_geradas: ultimaValidacao?.metricas.palavras
         }

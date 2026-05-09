@@ -7,15 +7,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Edit, Trash2, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, CheckSquare, Square } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+
+interface CriteriosCelulaArgumentativa {
+  elementos_obrigatorios: string[];
+  validar_topico_frasal: boolean;
+  validar_explicacao: boolean;
+  validar_embasamento: boolean;
+  validar_aplicacao_tema: boolean;
+  validar_causalidade: boolean;
+  validar_aprofundamento: boolean;
+  descricoes: Record<string, string>;
+}
+
+interface CriteriosPropostaIntervencao {
+  elementos_c5: string[];
+  elementos_obrigatorios: string[];
+  verificar_c5: boolean;
+  verificar_retomada_tese: boolean;
+  descricoes: Record<string, string>;
+}
 
 interface Calibracao {
   id: string;
   subtab_id: string;
   subtab_nome: string;
+  subtab_habilitada: boolean;
   periodos_exatos: number;
   palavras_min: number;
   palavras_max: number;
@@ -24,11 +45,14 @@ interface Calibracao {
   instrucoes_geracao: string;
   validacao_automatica: boolean;
   max_tentativas_geracao: number;
+  criterios_celula_argumentativa: CriteriosCelulaArgumentativa | null;
+  criterios_proposta_intervencao: CriteriosPropostaIntervencao | null;
 }
 
 interface ModeloReferencia {
   id: string;
   subtab_id: string;
+  subtab_nome?: string;
   titulo: string;
   tema: string;
   texto_modelo: string;
@@ -44,6 +68,29 @@ interface Subtab {
   id: string;
   nome: string;
 }
+
+const ELEMENTOS_CELULA = [
+  { chave: 'validar_topico_frasal', label: 'Tópico frasal', desc: 'Sentença que apresenta o argumento central' },
+  { chave: 'validar_explicacao', label: 'Explicação', desc: 'Desenvolvimento e elucidação do argumento' },
+  { chave: 'validar_embasamento', label: 'Embasamento', desc: 'Dado, citação ou exemplo de sustentação' },
+  { chave: 'validar_aplicacao_tema', label: 'Aplicação ao tema', desc: 'Conexão explícita com o tema da redação' },
+  { chave: 'validar_causalidade', label: 'Causalidade', desc: 'Relação causa-efeito entre os elementos' },
+  { chave: 'validar_aprofundamento', label: 'Aprofundamento', desc: 'Análise crítica ou reflexão aprofundada' },
+] as const;
+
+const ELEMENTOS_C5 = [
+  { chave: 'agente', label: 'Agente', desc: 'Entidade responsável por executar a proposta' },
+  { chave: 'acao', label: 'Ação', desc: 'O que deve ser feito — verbo de ação claro' },
+  { chave: 'meio_modo', label: 'Meio/Modo', desc: 'Como a ação será executada' },
+  { chave: 'finalidade', label: 'Finalidade', desc: 'Para que a ação será executada' },
+  { chave: 'detalhamento', label: 'Detalhamento', desc: 'Especificação adicional da proposta' },
+] as const;
+
+const SUBTAB_LABELS: Record<string, string> = {
+  introducao: 'Introdução',
+  desenvolvimento: 'Desenvolvimento',
+  conclusao: 'Conclusão',
+};
 
 export const JarvisTutoriaConfiguracao = () => {
   const { toast } = useToast();
@@ -72,33 +119,39 @@ export const JarvisTutoriaConfiguracao = () => {
     try {
       setLoading(true);
 
-      // Buscar calibrações com nome da subtab
       const { data: calibData, error: calibError } = await supabase
         .from('jarvis_tutoria_calibracao')
-        .select(`
-          *,
-          jarvis_tutoria_subtabs!inner(nome)
-        `);
+        .select(`*, jarvis_tutoria_subtabs!inner(nome, habilitada)`);
 
       if (calibError) throw calibError;
 
       const calibracoesComNome = calibData?.map((c: any) => ({
         ...c,
-        subtab_nome: c.jarvis_tutoria_subtabs.nome
+        subtab_nome: c.jarvis_tutoria_subtabs.nome,
+        subtab_habilitada: c.jarvis_tutoria_subtabs.habilitada,
       })) || [];
+
+      // Ordenar: introdução, desenvolvimento, conclusão
+      const ordem = ['introducao', 'desenvolvimento', 'conclusao'];
+      calibracoesComNome.sort((a: Calibracao, b: Calibracao) => {
+        return (ordem.indexOf(a.subtab_nome) ?? 99) - (ordem.indexOf(b.subtab_nome) ?? 99);
+      });
 
       setCalibracoes(calibracoesComNome);
 
-      // Buscar modelos
       const { data: modelosData, error: modelosError } = await supabase
         .from('jarvis_tutoria_modelos_referencia')
-        .select('*')
+        .select(`*, jarvis_tutoria_subtabs(nome)`)
         .order('ordem_prioridade', { ascending: true });
 
       if (modelosError) throw modelosError;
-      setModelos(modelosData || []);
+      setModelos(
+        (modelosData || []).map((m: any) => ({
+          ...m,
+          subtab_nome: m.jarvis_tutoria_subtabs?.nome || ''
+        }))
+      );
 
-      // Buscar subtabs
       const { data: subtabsData, error: subtabsError } = await supabase
         .from('jarvis_tutoria_subtabs')
         .select('id, nome')
@@ -109,13 +162,29 @@ export const JarvisTutoriaConfiguracao = () => {
 
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao carregar configurações',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: 'Erro ao carregar configurações', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleHabilitada = async (calib: Calibracao) => {
+    const novoValor = !calib.subtab_habilitada;
+    try {
+      const { error } = await supabase
+        .from('jarvis_tutoria_subtabs')
+        .update({ habilitada: novoValor })
+        .eq('id', calib.subtab_id);
+
+      if (error) throw error;
+      toast({
+        title: novoValor ? '🔓 Subtab habilitada' : '🔒 Subtab desabilitada',
+        description: `${SUBTAB_LABELS[calib.subtab_nome] ?? calib.subtab_nome} agora está ${novoValor ? 'disponível' : 'bloqueada'} para os alunos`,
+        className: novoValor ? 'border-green-200 bg-green-50 text-green-900' : undefined
+      });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -131,6 +200,8 @@ export const JarvisTutoriaConfiguracao = () => {
           instrucoes_geracao: calibracao.instrucoes_geracao,
           validacao_automatica: calibracao.validacao_automatica,
           max_tentativas_geracao: calibracao.max_tentativas_geracao,
+          criterios_celula_argumentativa: calibracao.criterios_celula_argumentativa,
+          criterios_proposta_intervencao: calibracao.criterios_proposta_intervencao,
           atualizado_em: new Date().toISOString()
         })
         .eq('id', calibracao.id);
@@ -146,14 +217,37 @@ export const JarvisTutoriaConfiguracao = () => {
       setEditandoCalibracao(null);
       loadData();
     } catch (error: any) {
-      console.error('Erro ao salvar calibração:', error);
-      toast({
-        title: 'Erro',
-        description: error.message || 'Erro ao salvar calibração',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: error.message || 'Erro ao salvar calibração', variant: 'destructive' });
     }
   };
+
+  const toggleCriterioElemento = (chave: string, valor: boolean) => {
+    if (!editandoCalibracao?.criterios_celula_argumentativa) return;
+    setEditandoCalibracao({
+      ...editandoCalibracao,
+      criterios_celula_argumentativa: {
+        ...editandoCalibracao.criterios_celula_argumentativa,
+        [chave]: valor
+      }
+    });
+  };
+
+  const toggleCriterioC5 = (elemento: string, obrigatorio: boolean) => {
+    if (!editandoCalibracao?.criterios_proposta_intervencao) return;
+    const atual = editandoCalibracao.criterios_proposta_intervencao.elementos_obrigatorios || [];
+    const novos = obrigatorio
+      ? [...new Set([...atual, elemento])]
+      : atual.filter((e: string) => e !== elemento);
+    setEditandoCalibracao({
+      ...editandoCalibracao,
+      criterios_proposta_intervencao: {
+        ...editandoCalibracao.criterios_proposta_intervencao,
+        elementos_obrigatorios: novos
+      }
+    });
+  };
+
+  // ─── Modelos de referência ─────────────────────────────────────
 
   const toggleModelo = async (modelo: ModeloReferencia) => {
     try {
@@ -168,20 +262,14 @@ export const JarvisTutoriaConfiguracao = () => {
         title: modelo.ativo ? 'Modelo desativado' : 'Modelo ativado',
         description: `"${modelo.titulo}" ${modelo.ativo ? 'foi desativado' : 'está ativo agora'}`,
       });
-
       loadData();
     } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
 
   const deletarModelo = async (id: string, titulo: string) => {
     if (!confirm(`Deletar modelo "${titulo}"?`)) return;
-
     try {
       const { error } = await supabase
         .from('jarvis_tutoria_modelos_referencia')
@@ -189,28 +277,17 @@ export const JarvisTutoriaConfiguracao = () => {
         .eq('id', id);
 
       if (error) throw error;
-
-      toast({
-        title: 'Modelo deletado',
-        description: `"${titulo}" foi removido`,
-      });
-
+      toast({ title: 'Modelo deletado', description: `"${titulo}" foi removido` });
       loadData();
     } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
 
   const abrirNovoModelo = () => {
-    // Calcular próxima prioridade (maior número + 1)
     const maxPrioridade = modelos.length > 0
       ? Math.max(...modelos.map(m => m.ordem_prioridade))
       : 0;
-
     setFormModelo({
       subtab_id: subtabs[0]?.id || '',
       titulo: '',
@@ -241,30 +318,20 @@ export const JarvisTutoriaConfiguracao = () => {
   const salvarModelo = async () => {
     try {
       if (!formModelo.titulo || !formModelo.tema || !formModelo.texto_modelo || !formModelo.subtab_id) {
-        toast({
-          title: 'Campos obrigatórios',
-          description: 'Preencha título, tema, texto e tipo de parágrafo',
-          variant: 'destructive',
-        });
+        toast({ title: 'Campos obrigatórios', description: 'Preencha título, tema, texto e tipo de parágrafo', variant: 'destructive' });
         return;
       }
 
       const novaPrioridade = formModelo.ordem_prioridade;
 
-      // Reorganizar prioridades se necessário
       if (modeloEditando) {
-        // Ao editar, se mudou de posição
-        const prioridadeAnterior = modeloEditando.ordem_prioridade;
-
-        if (novaPrioridade !== prioridadeAnterior) {
-          // Buscar modelos que precisam ser reorganizados
+        if (novaPrioridade !== modeloEditando.ordem_prioridade) {
           const { data: modelosParaMover } = await supabase
             .from('jarvis_tutoria_modelos_referencia')
             .select('id, ordem_prioridade')
             .gte('ordem_prioridade', novaPrioridade)
             .neq('id', modeloEditando.id);
 
-          // Atualizar cada um incrementando +1
           if (modelosParaMover && modelosParaMover.length > 0) {
             for (const m of modelosParaMover) {
               await supabase
@@ -275,7 +342,6 @@ export const JarvisTutoriaConfiguracao = () => {
           }
         }
 
-        // Atualizar modelo editado
         const { error } = await supabase
           .from('jarvis_tutoria_modelos_referencia')
           .update({
@@ -291,20 +357,13 @@ export const JarvisTutoriaConfiguracao = () => {
           .eq('id', modeloEditando.id);
 
         if (error) throw error;
-
-        toast({
-          title: '✅ Modelo atualizado',
-          description: `"${formModelo.titulo}" foi atualizado com sucesso`,
-          className: 'border-green-200 bg-green-50 text-green-900'
-        });
+        toast({ title: '✅ Modelo atualizado', description: `"${formModelo.titulo}" foi atualizado`, className: 'border-green-200 bg-green-50 text-green-900' });
       } else {
-        // Ao criar novo: empurrar modelos com prioridade >= para baixo
         const { data: modelosParaMover } = await supabase
           .from('jarvis_tutoria_modelos_referencia')
           .select('id, ordem_prioridade')
           .gte('ordem_prioridade', novaPrioridade);
 
-        // Atualizar cada um incrementando +1
         if (modelosParaMover && modelosParaMover.length > 0) {
           for (const m of modelosParaMover) {
             await supabase
@@ -314,7 +373,6 @@ export const JarvisTutoriaConfiguracao = () => {
           }
         }
 
-        // Inserir novo modelo
         const { error } = await supabase
           .from('jarvis_tutoria_modelos_referencia')
           .insert({
@@ -328,22 +386,13 @@ export const JarvisTutoriaConfiguracao = () => {
           });
 
         if (error) throw error;
-
-        toast({
-          title: '✅ Modelo criado',
-          description: `"${formModelo.titulo}" foi criado com sucesso`,
-          className: 'border-green-200 bg-green-50 text-green-900'
-        });
+        toast({ title: '✅ Modelo criado', description: `"${formModelo.titulo}" foi criado`, className: 'border-green-200 bg-green-50 text-green-900' });
       }
 
       setModeloDialog(false);
       loadData();
     } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -367,69 +416,145 @@ export const JarvisTutoriaConfiguracao = () => {
         <TabsTrigger value="modelos">Modelos de Referência</TabsTrigger>
       </TabsList>
 
+      {/* ─── ABA: CALIBRAÇÃO ───────────────────────────────────── */}
       <TabsContent value="calibracao" className="space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Parâmetros Estruturais</CardTitle>
             <CardDescription>
-              Configure períodos, palavras e validação para cada tipo de parágrafo
+              Configure períodos, palavras e critérios de validação para cada tipo de parágrafo.
+              O Jarvis consulta esses parâmetros antes de gerar qualquer resposta ao aluno.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {calibracoes.map((calib) => (
-              <div key={calib.id} className="border rounded-lg p-4 space-y-4">
+              <div key={calib.id} className="border rounded-lg p-5 space-y-4">
+                {/* Cabeçalho do bloco */}
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg capitalize">{calib.subtab_nome}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {calib.periodos_exatos} períodos • {calib.palavras_min}-{calib.palavras_max} palavras
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">
+                          {SUBTAB_LABELS[calib.subtab_nome] ?? calib.subtab_nome}
+                        </h3>
+                        <Badge
+                          variant={calib.subtab_habilitada ? 'default' : 'outline'}
+                          className={calib.subtab_habilitada
+                            ? 'bg-green-100 text-green-800 border-green-200 text-xs'
+                            : 'text-xs text-muted-foreground'}
+                        >
+                          {calib.subtab_habilitada ? '🔓 Disponível' : '🔒 Bloqueada'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {calib.periodos_exatos} períodos • {calib.palavras_min}–{calib.palavras_max} palavras
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEditandoCalibracao(calib)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={calib.subtab_habilitada ? 'outline' : 'default'}
+                      onClick={() => toggleHabilitada(calib)}
+                      title={calib.subtab_habilitada ? 'Bloquear para alunos' : 'Liberar para alunos'}
+                    >
+                      {calib.subtab_habilitada ? '🔒 Bloquear' : '🔓 Liberar'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditandoCalibracao(calib)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  </div>
                 </div>
 
+                {/* Resumo dos critérios específicos (somente leitura) */}
+                {calib.subtab_nome === 'desenvolvimento' && calib.criterios_celula_argumentativa && (
+                  <div className="bg-blue-50 rounded p-3 text-sm">
+                    <p className="font-medium text-blue-800 mb-1">Célula Argumentativa</p>
+                    <div className="flex flex-wrap gap-1">
+                      {ELEMENTOS_CELULA.map(({ chave, label }) => {
+                        const ativo = calib.criterios_celula_argumentativa![chave as keyof CriteriosCelulaArgumentativa];
+                        return (
+                          <Badge
+                            key={chave}
+                            variant={ativo ? 'default' : 'outline'}
+                            className={ativo ? 'bg-blue-600 text-white text-xs' : 'text-xs text-muted-foreground'}
+                          >
+                            {label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {calib.subtab_nome === 'conclusao' && calib.criterios_proposta_intervencao && (
+                  <div className="bg-purple-50 rounded p-3 text-sm">
+                    <p className="font-medium text-purple-800 mb-1">Elementos C5 obrigatórios</p>
+                    <div className="flex flex-wrap gap-1">
+                      {ELEMENTOS_C5.map(({ chave, label }) => {
+                        const obrigatorio = calib.criterios_proposta_intervencao!.elementos_obrigatorios?.includes(chave);
+                        return (
+                          <Badge
+                            key={chave}
+                            variant={obrigatorio ? 'default' : 'outline'}
+                            className={obrigatorio ? 'bg-purple-600 text-white text-xs' : 'text-xs text-muted-foreground'}
+                          >
+                            {label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Formulário inline de edição ─────────────────── */}
                 {editandoCalibracao?.id === calib.id && (
-                  <div className="space-y-4 mt-4 pt-4 border-t">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label>Períodos exatos</Label>
-                        <Input
-                          type="number"
-                          value={editandoCalibracao.periodos_exatos}
-                          onChange={(e) => setEditandoCalibracao({
-                            ...editandoCalibracao,
-                            periodos_exatos: parseInt(e.target.value)
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Palavras mínimo</Label>
-                        <Input
-                          type="number"
-                          value={editandoCalibracao.palavras_min}
-                          onChange={(e) => setEditandoCalibracao({
-                            ...editandoCalibracao,
-                            palavras_min: parseInt(e.target.value)
-                          })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Palavras máximo</Label>
-                        <Input
-                          type="number"
-                          value={editandoCalibracao.palavras_max}
-                          onChange={(e) => setEditandoCalibracao({
-                            ...editandoCalibracao,
-                            palavras_max: parseInt(e.target.value)
-                          })}
-                        />
+                  <div className="space-y-5 mt-4 pt-4 border-t">
+
+                    {/* Parâmetros comuns */}
+                    <div>
+                      <p className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                        Parâmetros estruturais
+                      </p>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label>Períodos exatos</Label>
+                          <Input
+                            type="number"
+                            value={editandoCalibracao.periodos_exatos}
+                            onChange={(e) => setEditandoCalibracao({
+                              ...editandoCalibracao,
+                              periodos_exatos: parseInt(e.target.value)
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Palavras mínimo</Label>
+                          <Input
+                            type="number"
+                            value={editandoCalibracao.palavras_min}
+                            onChange={(e) => setEditandoCalibracao({
+                              ...editandoCalibracao,
+                              palavras_min: parseInt(e.target.value)
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Palavras máximo</Label>
+                          <Input
+                            type="number"
+                            value={editandoCalibracao.palavras_max}
+                            onChange={(e) => setEditandoCalibracao({
+                              ...editandoCalibracao,
+                              palavras_max: parseInt(e.target.value)
+                            })}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -462,8 +587,245 @@ export const JarvisTutoriaConfiguracao = () => {
                       </div>
                     </div>
 
+                    {/* ── INTRODUÇÃO: descrição dos períodos ─────── */}
+                    {editandoCalibracao.subtab_nome === 'introducao' && (
+                      <div>
+                        <Separator className="my-2" />
+                        <p className="text-sm font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
+                          Descrição dos períodos (enviada ao prompt)
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Cada linha descreve o papel de um período da introdução. Edite para ajustar a orientação que a IA recebe.
+                        </p>
+                        <div className="space-y-2">
+                          {(
+                            editandoCalibracao.regras_composicao?.estrutura_periodos ?? [
+                              '1º período: Repertório sociocultural + interpretação integrada ao tema',
+                              '2º período: Contextualização problematizada no Brasil',
+                              '3º período: Tese por causalidade mencionando EXPLICITAMENTE os 2 aspectos',
+                            ]
+                          ).map((desc: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground w-5 shrink-0">{idx + 1}.</span>
+                              <Input
+                                value={desc}
+                                onChange={(e) => {
+                                  const periodos: string[] = [
+                                    ...(editandoCalibracao.regras_composicao?.estrutura_periodos ?? [
+                                      '1º período: Repertório sociocultural + interpretação integrada ao tema',
+                                      '2º período: Contextualização problematizada no Brasil',
+                                      '3º período: Tese por causalidade mencionando EXPLICITAMENTE os 2 aspectos',
+                                    ])
+                                  ];
+                                  periodos[idx] = e.target.value;
+                                  setEditandoCalibracao({
+                                    ...editandoCalibracao,
+                                    regras_composicao: {
+                                      ...editandoCalibracao.regras_composicao,
+                                      estrutura_periodos: periodos
+                                    }
+                                  });
+                                }}
+                                className="text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── DESENVOLVIMENTO: célula argumentativa ───── */}
+                    {editandoCalibracao.subtab_nome === 'desenvolvimento' &&
+                      editandoCalibracao.criterios_celula_argumentativa && (
+                      <div>
+                        <Separator className="my-2" />
+                        <p className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                          Critérios da célula argumentativa
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Ative os critérios que o Jarvis deve validar e exigir em cada parágrafo de desenvolvimento.
+                        </p>
+                        <div className="space-y-3">
+                          {ELEMENTOS_CELULA.map(({ chave, label, desc }) => {
+                            const ativo = editandoCalibracao.criterios_celula_argumentativa![chave as keyof CriteriosCelulaArgumentativa] as boolean;
+                            return (
+                              <div
+                                key={chave}
+                                className={`flex items-start gap-3 rounded-lg p-3 cursor-pointer border transition-colors ${
+                                  ativo ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                                }`}
+                                onClick={() => toggleCriterioElemento(chave, !ativo)}
+                              >
+                                <div className="mt-0.5">
+                                  {ativo
+                                    ? <CheckSquare className="h-4 w-4 text-blue-600" />
+                                    : <Square className="h-4 w-4 text-muted-foreground" />
+                                  }
+                                </div>
+                                <div>
+                                  <p className={`text-sm font-medium ${ativo ? 'text-blue-900' : 'text-muted-foreground'}`}>
+                                    {label}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">{desc}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <Separator className="my-3" />
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                          Descrições enviadas ao prompt
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Edite o texto que a IA recebe para descrever cada elemento ativo.
+                        </p>
+                        <div className="space-y-2">
+                          {ELEMENTOS_CELULA.map(({ chave, label }) => {
+                            const ativo = editandoCalibracao.criterios_celula_argumentativa![chave as keyof CriteriosCelulaArgumentativa] as boolean;
+                            if (!ativo) return null;
+                            const chaveDesc = chave.replace('validar_', '');
+                            const valor = editandoCalibracao.criterios_celula_argumentativa!.descricoes?.[chaveDesc] ?? '';
+                            return (
+                              <div key={chave} className="flex items-center gap-2">
+                                <span className="text-xs text-blue-700 w-28 shrink-0">{label}</span>
+                                <Input
+                                  value={valor}
+                                  onChange={(e) => setEditandoCalibracao({
+                                    ...editandoCalibracao,
+                                    criterios_celula_argumentativa: {
+                                      ...editandoCalibracao.criterios_celula_argumentativa!,
+                                      descricoes: {
+                                        ...editandoCalibracao.criterios_celula_argumentativa!.descricoes,
+                                        [chaveDesc]: e.target.value
+                                      }
+                                    }
+                                  })}
+                                  className="text-sm"
+                                  placeholder={`Descrição de ${label.toLowerCase()}...`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── CONCLUSÃO: proposta de intervenção / C5 ── */}
+                    {editandoCalibracao.subtab_nome === 'conclusao' &&
+                      editandoCalibracao.criterios_proposta_intervencao && (
+                      <div>
+                        <Separator className="my-2" />
+                        <p className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                          Critérios da proposta de intervenção (C5)
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Marque os elementos que devem ser considerados <strong>obrigatórios</strong> na proposta de intervenção.
+                          Elementos não marcados serão incentivados mas não exigidos.
+                        </p>
+
+                        <div className="space-y-3 mb-4">
+                          {ELEMENTOS_C5.map(({ chave, label, desc }) => {
+                            const obrigatorio = editandoCalibracao.criterios_proposta_intervencao!.elementos_obrigatorios?.includes(chave);
+                            return (
+                              <div
+                                key={chave}
+                                className={`flex items-start gap-3 rounded-lg p-3 cursor-pointer border transition-colors ${
+                                  obrigatorio ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'
+                                }`}
+                                onClick={() => toggleCriterioC5(chave, !obrigatorio)}
+                              >
+                                <div className="mt-0.5">
+                                  {obrigatorio
+                                    ? <CheckSquare className="h-4 w-4 text-purple-600" />
+                                    : <Square className="h-4 w-4 text-muted-foreground" />
+                                  }
+                                </div>
+                                <div>
+                                  <p className={`text-sm font-medium ${obrigatorio ? 'text-purple-900' : 'text-muted-foreground'}`}>
+                                    {label}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">{desc}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <Separator className="my-3" />
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                          Descrições dos elementos C5 enviadas ao prompt
+                        </p>
+                        <div className="space-y-2 mb-4">
+                          {ELEMENTOS_C5.map(({ chave, label }) => {
+                            const valor = editandoCalibracao.criterios_proposta_intervencao!.descricoes?.[chave] ?? '';
+                            return (
+                              <div key={chave} className="flex items-center gap-2">
+                                <span className="text-xs text-purple-700 w-24 shrink-0">{label}</span>
+                                <Input
+                                  value={valor}
+                                  onChange={(e) => setEditandoCalibracao({
+                                    ...editandoCalibracao,
+                                    criterios_proposta_intervencao: {
+                                      ...editandoCalibracao.criterios_proposta_intervencao!,
+                                      descricoes: {
+                                        ...editandoCalibracao.criterios_proposta_intervencao!.descricoes,
+                                        [chave]: e.target.value
+                                      }
+                                    }
+                                  })}
+                                  className="text-sm"
+                                  placeholder={`Descrição de ${label.toLowerCase()}...`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="verificar-c5"
+                              checked={editandoCalibracao.criterios_proposta_intervencao.verificar_c5}
+                              onChange={(e) => setEditandoCalibracao({
+                                ...editandoCalibracao,
+                                criterios_proposta_intervencao: {
+                                  ...editandoCalibracao.criterios_proposta_intervencao!,
+                                  verificar_c5: e.target.checked
+                                }
+                              })}
+                              className="h-4 w-4"
+                            />
+                            <Label htmlFor="verificar-c5" className="text-sm">
+                              Validar presença dos elementos C5 na resposta
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="verificar-retomada"
+                              checked={editandoCalibracao.criterios_proposta_intervencao.verificar_retomada_tese}
+                              onChange={(e) => setEditandoCalibracao({
+                                ...editandoCalibracao,
+                                criterios_proposta_intervencao: {
+                                  ...editandoCalibracao.criterios_proposta_intervencao!,
+                                  verificar_retomada_tese: e.target.checked
+                                }
+                              })}
+                              className="h-4 w-4"
+                            />
+                            <Label htmlFor="verificar-retomada" className="text-sm">
+                              Exigir retomada sintética da tese antes da proposta
+                            </Label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Instruções de geração */}
                     <div>
-                      <Label>Instruções de geração</Label>
+                      <Separator className="my-2" />
+                      <Label>Instruções de geração (enviadas ao prompt da IA)</Label>
                       <Textarea
                         value={editandoCalibracao.instrucoes_geracao}
                         onChange={(e) => setEditandoCalibracao({
@@ -471,21 +833,17 @@ export const JarvisTutoriaConfiguracao = () => {
                           instrucoes_geracao: e.target.value
                         })}
                         rows={4}
-                        placeholder="Instruções enviadas ao prompt..."
+                        placeholder="Instruções adicionais para calibrar o estilo e a estrutura da resposta..."
+                        className="mt-1"
                       />
                     </div>
 
                     <div className="flex gap-2">
-                      <Button
-                        onClick={() => salvarCalibracao(editandoCalibracao)}
-                      >
+                      <Button onClick={() => salvarCalibracao(editandoCalibracao)}>
                         <Save className="h-4 w-4 mr-2" />
                         Salvar
                       </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setEditandoCalibracao(null)}
-                      >
+                      <Button variant="outline" onClick={() => setEditandoCalibracao(null)}>
                         Cancelar
                       </Button>
                     </div>
@@ -497,6 +855,7 @@ export const JarvisTutoriaConfiguracao = () => {
         </Card>
       </TabsContent>
 
+      {/* ─── ABA: MODELOS DE REFERÊNCIA ────────────────────────── */}
       <TabsContent value="modelos" className="space-y-4">
         <Card>
           <CardHeader>
@@ -504,7 +863,8 @@ export const JarvisTutoriaConfiguracao = () => {
               <div>
                 <CardTitle>Modelos Exemplares</CardTitle>
                 <CardDescription>
-                  Textos de referência usados para calibrar o estilo da IA (few-shot learning)
+                  Textos de referência usados pelo Jarvis como few-shot learning.
+                  Modelos ativos são incluídos no prompt antes da geração da resposta.
                 </CardDescription>
               </div>
               <Button onClick={abrirNovoModelo}>
@@ -523,10 +883,15 @@ export const JarvisTutoriaConfiguracao = () => {
                 <div key={modelo.id} className="border rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h4 className="font-semibold">{modelo.titulo}</h4>
                         {modelo.ativo && (
                           <Badge className="bg-green-100 text-green-800">Ativo</Badge>
+                        )}
+                        {modelo.subtab_nome && (
+                          <Badge variant="outline" className="text-xs">
+                            {SUBTAB_LABELS[modelo.subtab_nome] ?? modelo.subtab_nome}
+                          </Badge>
                         )}
                         <Badge variant="outline">
                           Prioridade: {modelo.ordem_prioridade}
@@ -539,16 +904,17 @@ export const JarvisTutoriaConfiguracao = () => {
                         <span>{modelo.palavras} palavras</span>
                         <span>{modelo.periodos} períodos</span>
                       </div>
-                      <div className="bg-gray-50 p-3 rounded text-sm">
+                      <div className="bg-gray-50 p-3 rounded text-sm whitespace-pre-wrap">
                         {modelo.texto_modelo}
                       </div>
+                      {modelo.observacoes && (
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          Obs: {modelo.observacoes}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => abrirEditarModelo(modelo)}
-                      >
+                    <div className="flex gap-2 ml-4 shrink-0">
+                      <Button size="sm" variant="outline" onClick={() => abrirEditarModelo(modelo)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -558,11 +924,7 @@ export const JarvisTutoriaConfiguracao = () => {
                       >
                         {modelo.ativo ? 'Ativo' : 'Inativo'}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deletarModelo(modelo.id, modelo.titulo)}
-                      >
+                      <Button size="sm" variant="destructive" onClick={() => deletarModelo(modelo.id, modelo.titulo)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -575,7 +937,7 @@ export const JarvisTutoriaConfiguracao = () => {
       </TabsContent>
     </Tabs>
 
-    {/* Dialog de criar/editar modelo */}
+    {/* ─── Dialog criar/editar modelo ──────────────────────────── */}
     <Dialog open={modeloDialog} onOpenChange={setModeloDialog}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -583,7 +945,7 @@ export const JarvisTutoriaConfiguracao = () => {
             {modeloEditando ? 'Editar Modelo' : 'Novo Modelo de Referência'}
           </DialogTitle>
           <DialogDescription>
-            Texto exemplar usado para calibrar o estilo da IA (few-shot learning)
+            Texto exemplar incluído no prompt da IA para orientar o estilo e a estrutura da resposta (few-shot learning)
           </DialogDescription>
         </DialogHeader>
 
@@ -601,7 +963,7 @@ export const JarvisTutoriaConfiguracao = () => {
                 <SelectContent>
                   {subtabs.map((subtab) => (
                     <SelectItem key={subtab.id} value={subtab.id}>
-                      {subtab.nome.charAt(0).toUpperCase() + subtab.nome.slice(1)}
+                      {SUBTAB_LABELS[subtab.nome] ?? subtab.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -626,7 +988,7 @@ export const JarvisTutoriaConfiguracao = () => {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Escolha a posição na hierarquia. Modelos abaixo serão reorganizados.
+                Modelos abaixo serão reorganizados automaticamente.
               </p>
             </div>
           </div>
@@ -658,7 +1020,7 @@ export const JarvisTutoriaConfiguracao = () => {
               placeholder="Cole aqui o texto exemplar..."
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Períodos e palavras serão calculados automaticamente
+              Períodos e palavras serão calculados automaticamente ao salvar.
             </p>
           </div>
 
@@ -668,7 +1030,7 @@ export const JarvisTutoriaConfiguracao = () => {
               value={formModelo.observacoes}
               onChange={(e) => setFormModelo({ ...formModelo, observacoes: e.target.value })}
               rows={2}
-              placeholder="Notas sobre por que este modelo foi escolhido..."
+              placeholder="Por que este modelo foi escolhido? Que padrão ele demonstra?"
             />
           </div>
 
@@ -681,7 +1043,7 @@ export const JarvisTutoriaConfiguracao = () => {
               className="h-4 w-4"
             />
             <Label htmlFor="ativo-modelo">
-              Modelo ativo (usado na geração)
+              Modelo ativo (incluído no prompt de geração)
             </Label>
           </div>
 
