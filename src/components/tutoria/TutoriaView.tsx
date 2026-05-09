@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useJarvisTutoriaSubtabs } from '@/hooks/useJarvisTutoriaSubtabs';
 import { JarvisLoadingScreen } from './JarvisLoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Lock, CheckCircle2, Copy, RefreshCw, Loader2, Sparkles } from 'lucide-react';
+import { Lock, CheckCircle2, Copy, RefreshCw, Loader2, Sparkles, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,13 @@ interface ResultadoGerado {
   temaUsado: string;
 }
 
-type AvaliacaoTema = 'valido' | 'parcial' | 'invalido' | null;
+type AvaliacaoTema = 'valido' | 'parcial' | 'invalido';
+
+interface ChecagemTema {
+  avaliacao: AvaliacaoTema;
+  mensagem: string;
+  sugestoes: string[];
+}
 
 interface TutoriaViewProps {
   modo: JarvisModo;
@@ -48,47 +54,9 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
   const [resultado, setResultado] = useState<ResultadoGerado | null>(null);
   const [loading, setLoading] = useState(false);
   const [erroTema, setErroTema] = useState(false);
-  const [sugestoes, setSugestoes] = useState<string[]>([]);
-  const [mensagemAvaliacao, setMensagemAvaliacao] = useState('');
-  const [avaliacaoTema, setAvaliacaoTema] = useState<AvaliacaoTema>(null);
-  const [analisando, setAnalisando] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [checagem, setChecagem] = useState<ChecagemTema | null>(null);
+  const [verificando, setVerificando] = useState(false);
   const { toast } = useToast();
-
-  // Análise automática de tema com debounce de 800ms
-  useEffect(() => {
-    const palavras = tema.trim().split(/\s+/).filter(Boolean);
-    if (palavras.length < 2 || tema.trim().length < 8) {
-      setSugestoes([]);
-      setAvaliacaoTema(null);
-      setMensagemAvaliacao('');
-      return;
-    }
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(async () => {
-      setAnalisando(true);
-      try {
-        const { data } = await supabase.functions.invoke('jarvis-sugerir-tema', {
-          body: { tema: tema.trim() },
-        });
-        if (data && Array.isArray(data.sugestoes)) {
-          setSugestoes(data.sugestoes);
-          setAvaliacaoTema(data.avaliacao ?? 'parcial');
-          setMensagemAvaliacao(data.mensagem ?? '');
-        }
-      } catch {
-        // falha silenciosa — não interrompe o fluxo do aluno
-      } finally {
-        setAnalisando(false);
-      }
-    }, 800);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [tema]);
 
   if (loadingSubtabs) {
     return (
@@ -113,6 +81,40 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
     if (!parte?.subtabNome) return 1;
     const subtab = subtabs.find(s => s.nome === parte.subtabNome);
     return subtab?.config.creditos_consumo || 1;
+  };
+
+  const temaValido = (t: string): boolean => {
+    const limpo = t.trim();
+    return limpo.length >= 20 && limpo.split(/\s+/).filter(Boolean).length >= 3;
+  };
+
+  const handleVerificarTema = async () => {
+    const limpo = tema.trim();
+    if (!limpo) return;
+    setVerificando(true);
+    setChecagem(null);
+    try {
+      const { data } = await supabase.functions.invoke('jarvis-sugerir-tema', {
+        body: { tema: limpo },
+      });
+      if (data) {
+        setChecagem({
+          avaliacao: data.avaliacao ?? 'parcial',
+          mensagem: data.mensagem ?? '',
+          sugestoes: Array.isArray(data.sugestoes) ? data.sugestoes : [],
+        });
+      }
+    } catch {
+      toast({ title: 'Não foi possível verificar o tema agora.', variant: 'destructive' });
+    } finally {
+      setVerificando(false);
+    }
+  };
+
+  const usarSugestao = (s: string) => {
+    setTema(s);
+    setChecagem(null);
+    if (erroTema) setErroTema(false);
   };
 
   const executarGeracao = async (temaParam: string, parteParam: ParteId) => {
@@ -178,12 +180,6 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
     } satisfies ResultadoGerado;
   };
 
-  const temaValido = (t: string): boolean => {
-    const limpo = t.trim();
-    const palavras = limpo.split(/\s+/).filter(Boolean);
-    return limpo.length >= 20 && palavras.length >= 3;
-  };
-
   const handleGerar = async () => {
     if (!temaValido(tema)) {
       setErroTema(true);
@@ -244,17 +240,7 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
     setResultado(null);
     setParteId('introducao');
     setErroTema(false);
-    setSugestoes([]);
-    setAvaliacaoTema(null);
-    setMensagemAvaliacao('');
-  };
-
-  const usarSugestao = (s: string) => {
-    setTema(s);
-    setSugestoes([]);
-    setAvaliacaoTema(null);
-    setMensagemAvaliacao('');
-    if (erroTema) setErroTema(false);
+    setChecagem(null);
   };
 
   if (loading) {
@@ -320,8 +306,11 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
   }
 
   // ── Tela de entrada ────────────────────────────────────────────
+  const podeVerificar = tema.trim().split(/\s+/).filter(Boolean).length >= 2;
+
   return (
     <div className="space-y-5">
+      {/* Campo de tema */}
       <div className="space-y-1.5">
         <Label htmlFor="tema" className="text-sm font-medium">
           Tema da redação <span className="text-red-500">*</span>
@@ -332,60 +321,91 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
           onChange={e => {
             setTema(e.target.value);
             if (erroTema) setErroTema(false);
+            if (checagem) setChecagem(null);
           }}
-          placeholder="Ex: Os desafios da educação no Brasil contemporâneo"
+          placeholder=""
           rows={3}
           className={cn('resize-none', erroTema && 'border-red-400 focus-visible:ring-red-400')}
         />
-
-        {/* Indicador de análise */}
-        {analisando && (
-          <div className="flex items-center gap-1.5 text-xs text-indigo-500">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            Analisando tema...
-          </div>
-        )}
-
-        {/* Avaliação + feedback */}
-        {!analisando && avaliacaoTema && mensagemAvaliacao && (
-          <p className={cn(
-            'text-xs',
-            avaliacaoTema === 'valido' ? 'text-green-600' :
-            avaliacaoTema === 'parcial' ? 'text-amber-600' : 'text-red-500'
-          )}>
-            {mensagemAvaliacao}
-          </p>
-        )}
-
-        {/* Sugestões de tema */}
-        {!analisando && sugestoes.length > 0 && (
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium">
-              <Sparkles className="w-3 h-3" />
-              Sugestões de frase temática ENEM:
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {sugestoes.map((s, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => usarSugestao(s)}
-                  className="text-left text-xs px-3 py-2 rounded-lg border border-indigo-100 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 hover:border-indigo-300 transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {erroTema && (
           <p className="text-xs text-red-500">
             Digite um tema completo com pelo menos 3 palavras. Ex: "Os desafios da educação no Brasil contemporâneo"
           </p>
         )}
+
+        {/* Botão de verificação */}
+        {podeVerificar && !checagem && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleVerificarTema}
+            disabled={verificando}
+            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 gap-1.5"
+          >
+            {verificando
+              ? <><Loader2 className="w-3 h-3 animate-spin" />Verificando...</>
+              : <><Sparkles className="w-3 h-3" />Verificar tema</>
+            }
+          </Button>
+        )}
+
+        {/* Resultado da checagem */}
+        {checagem && (
+          <div className={cn(
+            'rounded-lg border p-3 space-y-2.5',
+            checagem.avaliacao === 'valido'
+              ? 'bg-green-50 border-green-200'
+              : checagem.avaliacao === 'parcial'
+              ? 'bg-amber-50 border-amber-200'
+              : 'bg-red-50 border-red-200'
+          )}>
+            <div className="flex items-start gap-2">
+              {checagem.avaliacao === 'valido'
+                ? <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                : <AlertCircle className={cn('w-4 h-4 shrink-0 mt-0.5', checagem.avaliacao === 'parcial' ? 'text-amber-500' : 'text-red-500')} />
+              }
+              <p className={cn(
+                'text-xs font-medium',
+                checagem.avaliacao === 'valido' ? 'text-green-800' :
+                checagem.avaliacao === 'parcial' ? 'text-amber-800' : 'text-red-700'
+              )}>
+                {checagem.mensagem}
+              </p>
+            </div>
+
+            {checagem.sugestoes.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-gray-600 font-medium">Sugestões de frases temáticas ENEM:</p>
+                <div className="flex flex-col gap-1.5">
+                  {checagem.sugestoes.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => usarSugestao(s)}
+                      className="text-left text-xs px-3 py-2 rounded-lg border border-indigo-100 bg-white text-indigo-800 hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botão para reanalisar após edição */}
+            <button
+              type="button"
+              onClick={handleVerificarTema}
+              className="text-xs text-gray-500 hover:text-indigo-600 underline underline-offset-2"
+            >
+              Verificar novamente
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* Seletor de parte */}
       <div className="space-y-2">
         <p className="text-sm font-medium text-gray-700">O que deseja gerar?</p>
         <div className="flex flex-wrap gap-2">
