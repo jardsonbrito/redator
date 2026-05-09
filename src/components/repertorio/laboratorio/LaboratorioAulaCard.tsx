@@ -31,15 +31,15 @@ export function LaboratorioAulaCard({ aula }: LaboratorioAulaCardProps) {
       className="group w-full text-left bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-200 overflow-hidden"
     >
       {/* Imagem do autor */}
-      <div className="aspect-square w-full bg-purple-50 overflow-hidden relative">
+      <div className="relative w-full overflow-hidden bg-purple-50">
         {aula.imagem_autor_url ? (
           <img
             src={aula.imagem_autor_url}
             alt={`Foto de ${aula.nome_autor}`}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full aspect-square object-cover block group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="aspect-square w-full flex items-center justify-center">
             <div className="w-20 h-20 rounded-full bg-purple-200 flex items-center justify-center">
               <User className="h-10 w-10 text-purple-500" />
             </div>
