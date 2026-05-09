@@ -62,15 +62,15 @@ function LaboratorioAdminCard({
   return (
     <div className="group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Imagem do autor */}
-      <div className="aspect-square w-full bg-purple-50 overflow-hidden relative">
+      <div className="relative w-full overflow-hidden bg-purple-50">
         {aula.imagem_autor_url ? (
           <img
             src={aula.imagem_autor_url}
             alt={`Foto de ${aula.nome_autor}`}
-            className="w-full h-full object-cover"
+            className="w-full aspect-square object-cover block"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="aspect-square w-full flex items-center justify-center">
             <div className="w-20 h-20 rounded-full bg-purple-200 flex items-center justify-center">
               <User className="h-10 w-10 text-purple-500" />
             </div>
