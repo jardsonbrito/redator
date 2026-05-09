@@ -206,6 +206,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validar tema da redação
+    const temaLimpo = tema.trim();
+    const temaPalavras = temaLimpo.split(/\s+/).filter(Boolean);
+    if (temaLimpo.length < 20 || temaPalavras.length < 3) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Tema inválido. Digite uma frase temática completa com pelo menos 3 palavras.',
+          tema_invalido: true,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('📧 Email:', userEmail, '| Tema:', tema.substring(0, 50));
 
     // ── Buscar usuário ─────────────────────────────────────────────

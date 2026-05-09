@@ -4,7 +4,7 @@ import { JarvisLoadingScreen } from './JarvisLoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Lock, CheckCircle2, Copy, RefreshCw, FileText, Loader2 } from 'lucide-react';
+import { Lock, CheckCircle2, Copy, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -26,18 +26,6 @@ const PARTES: Parte[] = [
   { id: 'redacao_completa',  label: 'Redação completa',  subtabNome: null              },
 ];
 
-const EXPLICACOES: Record<ParteId, string> = {
-  introducao:
-    'A introdução apresenta o repertório sociocultural, contextualiza o tema no Brasil e expõe a tese causal com os dois aspectos que serão desenvolvidos.',
-  desenvolvimento_1:
-    'O 1º parágrafo de desenvolvimento aprofunda o primeiro aspecto causal da tese usando a célula argumentativa: tópico frasal, explicação, embasamento e aplicação ao tema.',
-  desenvolvimento_2:
-    'O 2º parágrafo de desenvolvimento aprofunda o segundo aspecto causal, seguindo a mesma estrutura da célula argumentativa com argumento, embasamento e relação de causalidade.',
-  conclusao:
-    'A conclusão retoma sinteticamente a tese e apresenta uma proposta de intervenção detalhada com os elementos C5: agente, ação, meio/modo, finalidade e detalhamento.',
-  redacao_completa:
-    'Redação completa com introdução, dois parágrafos de desenvolvimento e conclusão, seguindo a estrutura dissertativo-argumentativa do ENEM.',
-};
 
 interface ResultadoGerado {
   texto: string;
@@ -149,8 +137,14 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
     } satisfies ResultadoGerado;
   };
 
+  const temaValido = (t: string): boolean => {
+    const limpo = t.trim();
+    const palavras = limpo.split(/\s+/).filter(Boolean);
+    return limpo.length >= 20 && palavras.length >= 3;
+  };
+
   const handleGerar = async () => {
-    if (!tema.trim()) {
+    if (!temaValido(tema)) {
       setErroTema(true);
       return;
     }
@@ -262,16 +256,6 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-100 rounded p-3">
-          <div className="flex items-start gap-2">
-            <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-blue-700 mb-1">Sobre a estrutura gerada</p>
-              <p className="text-xs text-blue-800">{EXPLICACOES[resultado.parte]}</p>
-            </div>
-          </div>
-        </div>
-
         <Button
           variant="outline"
           onClick={handleNovaProducao}
@@ -302,7 +286,9 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
           className={cn('resize-none', erroTema && 'border-red-400 focus-visible:ring-red-400')}
         />
         {erroTema && (
-          <p className="text-xs text-red-500">Digite o tema da redação para continuar.</p>
+          <p className="text-xs text-red-500">
+            Digite um tema completo com pelo menos 3 palavras. Ex: "Os desafios da educação no Brasil contemporâneo"
+          </p>
         )}
       </div>
 
