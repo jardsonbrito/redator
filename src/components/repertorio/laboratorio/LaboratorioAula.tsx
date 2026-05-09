@@ -197,6 +197,7 @@ export function LaboratorioAulaView() {
             aula={aula}
             onBack={handleBack}
             onConcluir={handleConcluir}
+            isProfessor={isProfessor}
           />
         )}
       </div>

@@ -8,6 +8,7 @@ interface LaboratorioTela3Props {
   aula: LaboratorioAula;
   onBack: () => void;
   onConcluir: () => void;
+  isProfessor?: boolean;
 }
 
 function contarPalavras(texto: string): number {
@@ -18,7 +19,7 @@ function contarPeriodos(texto: string): number {
   return (texto.match(/[^.!?]*[.!?]+/g) || []).filter((s) => s.trim().length > 0).length;
 }
 
-export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3Props) {
+export function LaboratorioTela3({ aula, onBack, onConcluir, isProfessor = false }: LaboratorioTela3Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const palavras = contarPalavras(aula.paragrafo_modelo);
   const periodos = contarPeriodos(aula.paragrafo_modelo);
@@ -113,14 +114,16 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
           </Button>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button
-              onClick={() => setModalOpen(true)}
-              size="lg"
-              className="gap-2 px-6 w-full sm:w-auto"
-            >
-              <PenLine className="h-4 w-4" />
-              Aplicar em uma redação
-            </Button>
+            {!isProfessor && (
+              <Button
+                onClick={() => setModalOpen(true)}
+                size="lg"
+                className="gap-2 px-6 w-full sm:w-auto"
+              >
+                <PenLine className="h-4 w-4" />
+                Aplicar em uma redação
+              </Button>
+            )}
 
             <Button
               variant="outline"

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { getEixoColors } from '@/utils/eixoTematicoCores';
 import { LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
@@ -16,12 +16,17 @@ interface LaboratorioAulaCardProps {
 
 export function LaboratorioAulaCard({ aula }: LaboratorioAulaCardProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProfessor = location.pathname.startsWith('/professor/');
 
   return (
     <button
       onClick={() => {
         sessionStorage.removeItem(`lab_step_${aula.id}`);
-        navigate(`/repertorio-orientado/laboratorio/${aula.id}`);
+        const base = isProfessor
+          ? '/professor/repertorio-orientado/laboratorio'
+          : '/repertorio-orientado/laboratorio';
+        navigate(`${base}/${aula.id}`);
       }}
       className="group w-full text-left bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-200 overflow-hidden"
     >
