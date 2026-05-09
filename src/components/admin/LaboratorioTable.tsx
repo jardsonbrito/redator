@@ -63,14 +63,15 @@ function LaboratorioAdminCard({
     <div className="group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Imagem do autor */}
       <div className="relative w-full overflow-hidden bg-purple-50">
+        <div className="pb-[100%]" />
         {aula.imagem_autor_url ? (
           <img
             src={aula.imagem_autor_url}
             alt={`Foto de ${aula.nome_autor}`}
-            className="w-full aspect-square object-cover block"
+            className="absolute inset-0 w-full h-full object-cover block"
           />
         ) : (
-          <div className="aspect-square w-full flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-20 h-20 rounded-full bg-purple-200 flex items-center justify-center">
               <User className="h-10 w-10 text-purple-500" />
             </div>
