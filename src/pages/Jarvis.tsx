@@ -347,7 +347,7 @@ const Jarvis = () => {
                   <>
                     {/* RENDERIZAÇÃO CONDICIONAL: Modo Simples vs Modo Interativo */}
                     {modoAtivo.tipo_modo === 'interativo' ? (
-                      <TutoriaView modo={modoAtivo} userEmail={studentData?.email || ''} />
+                      <TutoriaView modo={modoAtivo} userEmail={studentData?.email || ''} onGerou={refreshHistorico} />
                     ) : (
                       /* Modo Simples (comportamento atual - INTOCADO) */
                       <div className="space-y-4">
@@ -525,9 +525,16 @@ const Jarvis = () => {
                             ? item.versao_melhorada
                             : item.texto_original;
 
-                          // Label da etapa de tutoria
+                          // Label da seção de tutoria
+                          const SUBTAB_LABELS: Record<string, string> = {
+                            introducao: 'Introdução',
+                            desenvolvimento: 'Desenvolvimento',
+                            conclusao: 'Conclusão',
+                            redacao_completa: 'Redação Completa',
+                          };
                           const etapaLabel = isTutoria
-                            ? item.etapa === 'geracao' ? '📝 Texto Gerado'
+                            ? item.etapa === 'geracao'
+                              ? (SUBTAB_LABELS[item.subtab_nome!] ?? item.subtab_nome)
                               : item.etapa === 'validacao' ? '✓ Validação'
                               : item.etapa === 'sugestoes' ? '💡 Sugestões'
                               : item.etapa

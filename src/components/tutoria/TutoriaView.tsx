@@ -45,9 +45,10 @@ interface ChecagemTema {
 interface TutoriaViewProps {
   modo: JarvisModo;
   userEmail: string;
+  onGerou?: () => void;
 }
 
-export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
+export const TutoriaView = ({ modo, userEmail, onGerou }: TutoriaViewProps) => {
   const { subtabs, loading: loadingSubtabs } = useJarvisTutoriaSubtabs(modo.id);
   const [tema, setTema] = useState('');
   const [parteId, setParteId] = useState<ParteId>('introducao');
@@ -191,7 +192,10 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
 
     try {
       const res = await executarGeracao(tema, parteId);
-      if (res) setResultado(res);
+      if (res) {
+        setResultado(res);
+        onGerou?.();
+      }
     } catch (err) {
       console.error('Erro ao gerar:', err);
       toast({
@@ -211,7 +215,10 @@ export const TutoriaView = ({ modo, userEmail }: TutoriaViewProps) => {
 
     try {
       const res = await executarGeracao(resultado.temaUsado, resultado.parte);
-      if (res) setResultado(res);
+      if (res) {
+        setResultado(res);
+        onGerou?.();
+      }
     } catch (err) {
       console.error('Erro ao gerar novamente:', err);
       toast({
