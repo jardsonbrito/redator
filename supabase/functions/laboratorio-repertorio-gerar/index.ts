@@ -12,6 +12,7 @@ const corsHeaders = {
 
 interface GerarRequest {
   tema_id: string;
+  adminEmail: string;
 }
 
 interface LaboratorioGerado {
@@ -58,7 +59,7 @@ async function callAI(
         model,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
-        max_tokens: maxTokens,
+        max_tokens: Math.min(maxTokens, 8192),
         temperature: temperatura,
       }),
     });
@@ -264,24 +265,18 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    // Autenticação
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autenticado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase    = createClient(supabaseUrl, serviceKey);
+    // Parse do body
+    const body: GerarRequest = await req.json();
+    const { tema_id, adminEmail } = body;
 
-    // Verifica usuário via JWT
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Token inválido" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!adminEmail || !tema_id) {
+      return new Response(JSON.stringify({ error: "adminEmail e tema_id são obrigatórios" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -289,21 +284,12 @@ Deno.serve(async (req) => {
     const { data: adminData } = await supabase
       .from("admin_users")
       .select("id")
-      .eq("email", user.email)
+      .eq("email", adminEmail.toLowerCase().trim())
       .maybeSingle();
 
     if (!adminData) {
       return new Response(JSON.stringify({ error: "Acesso restrito a administradores" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Parse do body
-    const body: GerarRequest = await req.json();
-    const { tema_id } = body;
-    if (!tema_id) {
-      return new Response(JSON.stringify({ error: "tema_id é obrigatório" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

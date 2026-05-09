@@ -908,6 +908,7 @@ const Admin = () => {
         microaprendizagem:     'microaprendizagem',
         interatividade:        'interatividade',
         repertorio_orientado:  'repertorio-orientado',
+        laboratorio_repertorio: 'laboratorio',
         top_5:                 'top5',
       };
       const view = viewMap[id];

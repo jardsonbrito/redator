@@ -507,9 +507,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
       if (gerarLaboratorio && temaIdFinal) {
         setGerandoLaboratorio(true);
         try {
-          const { data: { session } } = await supabase.auth.getSession();
           const res = await supabase.functions.invoke('laboratorio-repertorio-gerar', {
-            body: { tema_id: temaIdFinal },
+            body: { tema_id: temaIdFinal, adminEmail: user?.email ?? '' },
           });
 
           if (res.error) throw new Error(res.error.message);

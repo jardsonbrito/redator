@@ -52,6 +52,9 @@ verify_jwt = false
 [functions.schedule-tema-publisher]
 verify_jwt = false
 
+[functions.laboratorio-repertorio-gerar]
+verify_jwt = false
+
 [analytics]
 enabled = false
 backend = "postgres"

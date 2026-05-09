@@ -5,6 +5,7 @@ import {
   MessageCircle, Trophy, Star, Sparkles,
 } from "lucide-react";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
+import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProfessorMenuGrid } from "@/components/professor/ProfessorMenuGrid";
@@ -84,6 +85,12 @@ const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; too
     path: "/professor/microaprendizagem",
     icon: Layers,
     tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais.",
+  },
+  laboratorio_repertorio: {
+    title: "Laboratório de Repertório",
+    path: "/professor/laboratorio-repertorio",
+    icon: LaboratorioIcon,
+    tooltip: "Aulas em 3 etapas: Contexto → Repertório → Aplicação.",
   },
   repertorio_orientado: {
     title: "Repertório Orientado",
