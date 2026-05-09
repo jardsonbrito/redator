@@ -8,7 +8,7 @@ export function LaboratorioList() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="space-y-3">
             <Skeleton className="aspect-square w-full rounded-xl" />
@@ -36,7 +36,7 @@ export function LaboratorioList() {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
       {aulas.map((aula) => (
         <LaboratorioAulaCard key={aula.id} aula={aula} />
       ))}
