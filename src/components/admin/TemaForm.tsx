@@ -525,7 +525,7 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
             setLaboratorioGeradoId(resultado.aula_id);
             setLaboratorioExistente({ id: resultado.aula_id, titulo: resultado.titulo });
             toast({
-              title: '🤖 Aula gerada com sucesso!',
+              title: 'Aula gerada com sucesso!',
               description: `"${resultado.titulo}" foi criada como rascunho no Laboratório de Repertório.`,
             });
           }

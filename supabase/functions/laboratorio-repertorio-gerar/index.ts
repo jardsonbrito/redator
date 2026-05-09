@@ -129,14 +129,11 @@ async function callAI(
 // ──────────────────────────────────────────────────────────────────
 
 function extrairJSON(texto: string): any {
-  // Tenta parse direto
   try { return JSON.parse(texto); } catch { /* segue */ }
 
-  // Remove blocos de código markdown
   const semMd = texto.replace(/```(?:json)?\n?([\s\S]*?)\n?```/g, "$1").trim();
   try { return JSON.parse(semMd); } catch { /* segue */ }
 
-  // Extrai primeiro objeto JSON encontrado
   const match = texto.match(/\{[\s\S]*\}/);
   if (match) {
     try { return JSON.parse(match[0]); } catch { /* segue */ }
@@ -146,7 +143,61 @@ function extrairJSON(texto: string): any {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// PROMPT SYSTEM
+// SEÇÃO DE MODELOS DE REFERÊNCIA (few-shot calibrado do Jarvis)
+// ──────────────────────────────────────────────────────────────────
+
+interface ModelosPorTipo {
+  introducao: any[];
+  desenvolvimento: any[];
+  conclusao: any[];
+}
+
+const TIPO_LABELS: Record<string, string> = {
+  introducao:    "INTRODUÇÃO",
+  desenvolvimento: "DESENVOLVIMENTO (parágrafo argumentativo)",
+  conclusao:     "CONCLUSÃO",
+};
+
+function secaoModelosReferencia(modelos: ModelosPorTipo): string {
+  const totalModelos = Object.values(modelos).reduce((acc, arr) => acc + arr.length, 0);
+  if (totalModelos === 0) return "";
+
+  let s = `
+═══════════════════════════════════════════════════════════
+MODELOS DE REFERÊNCIA CALIBRADOS (Jarvis — Laboratório do Redator)
+Use esses exemplos como guia OBRIGATÓRIO de nível, sintaxe e estrutura.
+A IA DEVE seguir o padrão estilístico desses textos ao gerar o parágrafo_modelo.
+═══════════════════════════════════════════════════════════
+`;
+
+  for (const [tipo, lista] of Object.entries(modelos) as [string, any[]][]) {
+    if (lista.length === 0) continue;
+    s += `\n── ${TIPO_LABELS[tipo]} ──\n\n`;
+    lista.forEach((m, i) => {
+      const meta = [
+        m.palavras ? `${m.palavras} palavras` : null,
+        m.periodos ? `${m.periodos} períodos` : null,
+      ].filter(Boolean).join(", ");
+
+      s += `Exemplo ${i + 1}${meta ? ` (${meta})` : ""}
+Tema: "${m.tema}"
+
+${m.texto_modelo}
+
+${m.observacoes ? `Nota pedagógica: ${m.observacoes}\n` : ""}─────────────────────────────────────────────────────────
+
+`;
+    });
+  }
+
+  s += `REGRA: O campo "paragrafo_modelo.tipo" deve ser "introducao", "argumentativo" ou "conclusao" — escolha o tipo mais produtivo pedagogicamente para o tema e o repertório escolhido. Reproduza o padrão estrutural e estilístico do modelo de referência correspondente. NÃO copie o conteúdo — reproduza o ESTILO.
+
+`;
+  return s;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// PROMPTS
 // ──────────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(): string {
@@ -159,23 +210,24 @@ REGRAS DE REPERTÓRIO:
 3. Evite repertórios vagos, decorativos ou improdutivos — o repertório precisa contribuir para o argumento.
 4. O repertório deve ser compreensível para alunos do ensino médio.
 
-REGRAS DO PARÁGRAFO MODELO:
-O parágrafo deve conter, nessa ordem:
-1. Tópico frasal (afirmação da tese)
+REGRAS DO PARÁGRAFO ARGUMENTATIVO:
+O parágrafo de desenvolvimento deve conter, nessa ordem:
+1. Tópico frasal (afirmação clara da causa/argumento)
 2. Explicação/contextualização do problema
-3. Repertório legitimado com autoria e obra
-4. Aplicação ao contexto brasileiro
-5. Aprofundamento crítico
-6. Fechamento argumentativo
+3. Repertório legitimado com autoria e obra integrados ao argumento
+4. Interpretação produtiva do repertório — como ele fundamenta o argumento
+5. Aplicação ao contexto brasileiro
+6. Fechamento argumentativo coerente com a tese
 
 O repertório NÃO pode aparecer apenas como citação solta — deve ser efetivamente aplicado ao tema.
+O nível de formalidade, encadeamento e precisão vocabular deve seguir o padrão ENEM nota 1000.
 
 FORMATO DE SAÍDA:
 Responda APENAS com um JSON válido, sem texto adicional, sem markdown, sem comentários.
 O JSON deve seguir exatamente o schema especificado na mensagem do usuário.`;
 }
 
-function buildUserPrompt(tema: any): string {
+function buildUserPrompt(tema: any, modelosReferencia: ModelosPorTipo): string {
   const textos: string[] = [];
   for (let i = 1; i <= 5; i++) {
     const texto = tema[`texto_${i}`];
@@ -185,13 +237,15 @@ function buildUserPrompt(tema: any): string {
     }
   }
 
+  const secaoModelos = secaoModelosReferencia(modelosReferencia);
+
   return `Gere uma aula do Laboratório de Repertório com base no seguinte tema de redação ENEM:
 
 FRASE TEMÁTICA: "${tema.frase_tematica}"
 EIXO TEMÁTICO: "${tema.eixo_tematico || "Não informado"}"
 
 ${textos.length > 0 ? `TEXTOS MOTIVADORES:\n${textos.join("\n\n")}` : ""}
-
+${secaoModelos}
 Responda com um JSON válido neste schema exato:
 {
   "titulo_aula": "Nome do repertório ou autor principal (máx 60 chars)",
@@ -205,8 +259,8 @@ Responda com um JSON válido neste schema exato:
     "ideia_central": "A ideia principal que o aluno deve guardar — 1 frase objetiva e memorável"
   },
   "paragrafo_modelo": {
-    "tipo": "argumentativo",
-    "texto": "Parágrafo ENEM completo (mínimo 8 linhas) aplicando o repertório ao tema, seguindo todas as regras pedagógicas",
+    "tipo": "introducao ou argumentativo ou conclusao — escolha o tipo mais produtivo para este repertório e tema",
+    "texto": "Parágrafo ENEM completo seguindo RIGOROSAMENTE o padrão dos modelos de referência acima para o tipo escolhido",
     "observacao_didatica": "Explicação de 2-3 frases mostrando como o repertório foi conectado ao tema e o que o aluno deve aprender"
   }
 }`;
@@ -270,7 +324,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Parse do body
     const body: GerarRequest = await req.json();
     const { tema_id, adminEmail } = body;
 
@@ -312,7 +365,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar dados completos do tema
+    // Buscar dados do tema
     const { data: tema, error: temaError } = await supabase
       .from("temas")
       .select("id, frase_tematica, eixo_tematico, texto_1, texto_1_fonte, texto_2, texto_2_fonte, texto_3, texto_3_fonte, texto_4, texto_4_fonte, texto_5, texto_5_fonte")
@@ -333,21 +386,52 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const provider   = config?.provider  ?? "anthropic";
-    const model      = config?.model     ?? "claude-3-5-sonnet-20241022";
+    const provider    = config?.provider  ?? "anthropic";
+    const model       = config?.model     ?? "claude-3-5-sonnet-20241022";
     const temperatura = Number(config?.temperatura ?? 0.7);
-    const maxTokens  = config?.max_tokens ?? 2000;
+    const maxTokens   = config?.max_tokens ?? 2000;
+
+    // Buscar modelos de referência do Jarvis para os 3 tipos de parágrafo
+    const modelosReferencia: ModelosPorTipo = { introducao: [], desenvolvimento: [], conclusao: [] };
+    try {
+      const { data: subtabs } = await supabase
+        .from("jarvis_tutoria_subtabs")
+        .select("id, nome")
+        .in("nome", ["introducao", "desenvolvimento", "conclusao"]);
+
+      if (subtabs && subtabs.length > 0) {
+        const subtabIds = subtabs.map((s: any) => s.id);
+        const { data: modelos } = await supabase
+          .from("jarvis_tutoria_modelos_referencia")
+          .select("subtab_id, titulo, tema, texto_modelo, palavras, periodos, observacoes")
+          .in("subtab_id", subtabIds)
+          .eq("ativo", true)
+          .order("ordem_prioridade", { ascending: false });
+
+        if (modelos) {
+          const subtabNomeMap = Object.fromEntries(subtabs.map((s: any) => [s.id, s.nome]));
+          for (const m of modelos) {
+            const tipo = subtabNomeMap[m.subtab_id] as keyof ModelosPorTipo;
+            if (tipo && modelosReferencia[tipo].length < 2) {
+              modelosReferencia[tipo].push(m);
+            }
+          }
+        }
+        const total = Object.values(modelosReferencia).reduce((a, b) => a + b.length, 0);
+        console.log(`📚 ${total} modelos de referência carregados do Jarvis (intro:${modelosReferencia.introducao.length} dev:${modelosReferencia.desenvolvimento.length} conc:${modelosReferencia.conclusao.length})`);
+      }
+    } catch (e) {
+      console.warn("Aviso: não foi possível carregar modelos de referência:", e);
+    }
 
     console.log(`🤖 Gerando aula com ${provider}/${model} para tema: ${tema.frase_tematica}`);
 
-    // Chamar IA
     const systemPrompt = buildSystemPrompt();
-    const userPrompt   = buildUserPrompt(tema);
+    const userPrompt   = buildUserPrompt(tema, modelosReferencia);
     const rawText      = await callAI(provider, model, temperatura, maxTokens, systemPrompt, userPrompt);
 
-    // Parsear e validar JSON
-    const rawObj  = extrairJSON(rawText);
-    const gerado  = validarGerado(rawObj);
+    const rawObj = extrairJSON(rawText);
+    const gerado = validarGerado(rawObj);
 
     // Inserir aula como rascunho
     const { data: novaAula, error: insertError } = await supabase
@@ -366,7 +450,7 @@ Deno.serve(async (req) => {
         observacao_paragrafo:      gerado.paragrafo_modelo.observacao_didatica,
         temas_sugeridos:           [tema_id],
         frases_tematicas_manuais:  [],
-        ativo:                     false,      // rascunho — não visível para alunos
+        ativo:                     false,
         gerado_por_ia:             true,
         tema_origem_id:            tema_id,
         ia_gerado_em:              new Date().toISOString(),
@@ -379,7 +463,8 @@ Deno.serve(async (req) => {
       throw new Error(`Erro ao salvar aula: ${insertError?.message}`);
     }
 
-    console.log(`✅ Aula criada: ${novaAula.id} — "${novaAula.titulo}"`);
+    const totalModelos = Object.values(modelosReferencia).reduce((a, b) => a + b.length, 0);
+    console.log(`✅ Aula criada: ${novaAula.id} — "${novaAula.titulo}" (${totalModelos} modelos usados)`);
 
     return new Response(
       JSON.stringify({
@@ -388,6 +473,7 @@ Deno.serve(async (req) => {
         titulo:   novaAula.titulo,
         provider,
         model,
+        modelos_referencia_usados: totalModelos,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
