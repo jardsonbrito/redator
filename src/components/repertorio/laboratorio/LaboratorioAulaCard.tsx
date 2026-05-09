@@ -36,7 +36,7 @@ export function LaboratorioAulaCard({ aula }: LaboratorioAulaCardProps) {
           <img
             src={aula.imagem_autor_url}
             alt={`Foto de ${aula.nome_autor}`}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
