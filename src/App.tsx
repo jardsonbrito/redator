@@ -327,6 +327,8 @@ function App() {
                     <Route path="/professor/videoteca" element={<ProfessorProtectedRoute><Videoteca /></ProfessorProtectedRoute>} />
                     <Route path="/professor/guia-tematico" element={<ProfessorProtectedRoute><GuiaTematico /></ProfessorProtectedRoute>} />
                     <Route path="/professor/guia-tematico/:id" element={<ProfessorProtectedRoute><GuiaTematicoView /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/laboratorio-repertorio" element={<ProfessorProtectedRoute><LaboratorioRepertorio /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/repertorio-orientado/laboratorio/:id" element={<ProfessorProtectedRoute><LaboratorioAulaView /></ProfessorProtectedRoute>} />
                     <Route path="/professor/repertorio" element={<ProfessorProtectedRoute><RepertorioOrientado /></ProfessorProtectedRoute>} />
                     <Route path="/professor/microaprendizagem" element={<ProfessorProtectedRoute><Microaprendizagem /></ProfessorProtectedRoute>} />
                     <Route path="/professor/microaprendizagem/:topicoId" element={<ProfessorProtectedRoute><MicroaprendizagemTopico /></ProfessorProtectedRoute>} />

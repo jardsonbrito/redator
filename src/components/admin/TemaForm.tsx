@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { ImageSelector } from './ImageSelector';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { syncToBlog } from '@/utils/blogSync';
@@ -71,6 +71,12 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
   const [loadingData, setLoadingData] = useState(mode === 'edit');
   const [activeSection, setActiveSection] = useState<string>('capinha');
   const [actionType, setActionType] = useState<ActionType>('save');
+
+  // Laboratório de Repertório — geração com IA
+  const [gerarLaboratorio, setGerarLaboratorio] = useState(false);
+  const [gerandoLaboratorio, setGerandoLaboratorio] = useState(false);
+  const [laboratorioExistente, setLaboratorioExistente] = useState<{ id: string; titulo: string } | null>(null);
+  const [laboratorioGeradoId, setLaboratorioGeradoId] = useState<string | null>(null);
 
   // Blog sync state
   const [publicarNoBlog, setPublicarNoBlog] = useState(false);
@@ -268,6 +274,19 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
       setActiveSection('capinha');
     }
   }, [mode, loadingData]);
+
+  // Third useEffect: Verificar aula de laboratório existente para este tema
+  useEffect(() => {
+    if (!temaId) return;
+    supabase
+      .from('repertorio_laboratorio')
+      .select('id, titulo')
+      .eq('tema_origem_id', temaId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setLaboratorioExistente({ id: data.id, titulo: data.titulo });
+      });
+  }, [temaId]);
 
   const handleAction = async (action: ActionType) => {
     setActionType(action);
@@ -483,6 +502,46 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
         description: successMessage,
       });
 
+      // Gerar aula de Laboratório de Repertório se toggle ativo
+      const temaIdFinal = mode === 'create' ? data.id : temaId;
+      if (gerarLaboratorio && temaIdFinal) {
+        setGerandoLaboratorio(true);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const res = await supabase.functions.invoke('laboratorio-repertorio-gerar', {
+            body: { tema_id: temaIdFinal },
+          });
+
+          if (res.error) throw new Error(res.error.message);
+
+          const resultado = res.data as { already_exists: boolean; aula_id: string; titulo: string };
+
+          if (resultado.already_exists) {
+            setLaboratorioExistente({ id: resultado.aula_id, titulo: resultado.titulo });
+            toast({
+              title: '⚠️ Aula já existe',
+              description: `Já existe uma aula de repertório vinculada a este tema: "${resultado.titulo}"`,
+            });
+          } else {
+            setLaboratorioGeradoId(resultado.aula_id);
+            setLaboratorioExistente({ id: resultado.aula_id, titulo: resultado.titulo });
+            toast({
+              title: '🤖 Aula gerada com sucesso!',
+              description: `"${resultado.titulo}" foi criada como rascunho no Laboratório de Repertório.`,
+            });
+          }
+        } catch (labErr: any) {
+          toast({
+            title: '❌ Erro ao gerar aula',
+            description: labErr?.message ?? 'Falha na geração com IA. O tema foi salvo normalmente.',
+            variant: 'destructive',
+          });
+        } finally {
+          setGerandoLaboratorio(false);
+          setGerarLaboratorio(false);
+        }
+      }
+
       if (mode === 'create') {
         // Limpar formulário apenas no modo create
         setFormData({
@@ -599,6 +658,7 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
     { id: 'motivador4', label: 'Texto Motivador IV' },
     { id: 'motivador5', label: 'Texto Motivador V' },
     { id: 'blog', label: 'Blog' },
+    { id: 'laboratorio', label: '✦ Gerar Laboratório' },
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -638,27 +698,27 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                 type="button"
                 variant="outline"
                 onClick={() => handleAction('save')}
-                disabled={loading}
+                disabled={loading || gerandoLaboratorio}
                 className="border-[#662F96] text-[#662F96] hover:bg-[#662F96] hover:text-white"
               >
-                {loading && actionType === 'save' ? 'Salvando...' : 'Salvar'}
+                {gerandoLaboratorio ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />IA...</> : loading && actionType === 'save' ? 'Salvando...' : 'Salvar'}
               </Button>
               <Button
                 type="button"
                 onClick={() => handleAction('publish')}
-                disabled={loading}
+                disabled={loading || gerandoLaboratorio}
                 className="bg-[#3F0077] text-white hover:bg-[#662F96]"
               >
-                {loading && actionType === 'publish' ? 'Publicando...' : 'Publicar'}
+                {gerandoLaboratorio ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />IA...</> : loading && actionType === 'publish' ? 'Publicando...' : 'Publicar'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleAction('schedule')}
-                disabled={loading}
+                disabled={loading || gerandoLaboratorio}
                 className="border-[#3F0077] text-[#3F0077] hover:bg-[#3F0077] hover:text-white"
               >
-                {loading && actionType === 'schedule' ? 'Agendando...' : 'Agendar'}
+                {gerandoLaboratorio ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />IA...</> : loading && actionType === 'schedule' ? 'Agendando...' : 'Agendar'}
               </Button>
             </div>
           </div>
@@ -1241,6 +1301,101 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                       <p className="text-sm text-amber-600">Aguardando sincronização...</p>
                     )}
                   </>
+                )}
+              </div>
+            )}
+
+            {/* Seção Laboratório de Repertório */}
+            {activeSection === 'laboratorio' && (
+              <div className="border border-violet-200 rounded-xl p-5 mb-4 space-y-4 bg-violet-50/40">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">Gerar aula no Laboratório de Repertório</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      A IA gera automaticamente uma aula com repertório legitimado a partir dos dados deste tema. A aula fica como rascunho para revisão.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Aviso de aula já existente */}
+                {laboratorioExistente && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-amber-800">Aula de repertório já existe para este tema</p>
+                      <p className="text-xs text-amber-700 mt-0.5 truncate">"{laboratorioExistente.titulo}"</p>
+                      <a
+                        href="/admin/laboratorio"
+                        className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline mt-1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Ver no Laboratório <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Aula gerada com sucesso nesta sessão */}
+                {laboratorioGeradoId && (
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <span className="text-green-600 text-sm">✓</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-green-800">Aula gerada e salva como rascunho</p>
+                      <a
+                        href="/admin/laboratorio"
+                        className="inline-flex items-center gap-1 text-xs text-violet-600 hover:underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Revisar no Laboratório <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Toggle */}
+                {!laboratorioGeradoId && (
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">
+                        {laboratorioExistente ? 'Gerar nova versão da aula' : 'Gerar aula ao salvar'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {laboratorioExistente
+                          ? 'Atenção: criará uma segunda aula de repertório vinculada a este tema'
+                          : 'Ao clicar em Salvar, Publicar ou Agendar, a IA será chamada automaticamente'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGerarLaboratorio((v) => !v)}
+                      disabled={gerandoLaboratorio}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                        gerarLaboratorio ? 'bg-violet-600' : 'bg-gray-200',
+                        gerandoLaboratorio && 'opacity-50 cursor-not-allowed',
+                      )}
+                      aria-pressed={gerarLaboratorio}
+                    >
+                      <span
+                        className={cn(
+                          'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                          gerarLaboratorio ? 'translate-x-5' : 'translate-x-0',
+                        )}
+                      />
+                    </button>
+                  </div>
+                )}
+
+                {gerandoLaboratorio && (
+                  <div className="flex items-center gap-2 text-sm text-violet-600 pt-1">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Gerando aula com IA... isso pode levar alguns segundos.
+                  </div>
                 )}
               </div>
             )}

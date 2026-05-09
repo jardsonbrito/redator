@@ -22,6 +22,9 @@ export interface LaboratorioAula {
   temas_sugeridos: string[];
   frases_tematicas_manuais: string[];
   ativo: boolean;
+  gerado_por_ia: boolean;
+  tema_origem_id: string | null;
+  ia_gerado_em: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LaboratorioForm } from '@/components/admin/LaboratorioForm';
 import { LaboratorioTable } from '@/components/admin/LaboratorioTable';
+import { LaboratorioIAConfig } from '@/components/admin/LaboratorioIAConfig';
 import { LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
 import { Plus } from 'lucide-react';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
@@ -68,6 +69,9 @@ const RepertorioLaboratorio = () => {
             Nova aula
           </Button>
         </div>
+
+        {/* Configuração de IA */}
+        <LaboratorioIAConfig />
 
         {/* Tabela de aulas */}
         <LaboratorioTable onEditar={handleEditar} onNova={handleNovaAula} />
