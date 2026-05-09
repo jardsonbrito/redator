@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Bot, Layers } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Layers } from "lucide-react";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -95,7 +96,7 @@ const Index = () => {
     {
       title: "Jarvis",
       path: "/jarvis",
-      icon: Bot,
+      icon: JarvisIcon as any,
       tooltip: "Assistente pedagógico para melhorar sua escrita - 1 crédito por análise.",
       showAlways: true
     },

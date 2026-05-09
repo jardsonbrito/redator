@@ -8,7 +8,11 @@ const corsHeaders = {
 
 interface GerarRequest {
   userEmail: string;
-  sessaoId: string;
+  // Novo fluxo: passa modoId + subtabNome diretamente
+  modoId?: string;
+  subtabNome?: string;
+  // Fluxo legado: passa sessaoId (ainda suportado)
+  sessaoId?: string;
   dadosCompletos: Record<string, string>;
   creditosNecessarios: number;
 }
@@ -192,7 +196,6 @@ function construirPromptIntroducao(
     aspecto_2: 'Aspecto Causal 2 (tese)',
   };
 
-  // Descrições dos períodos: lidas do banco, com fallback para o padrão ENEM
   const defaultPeriodos = [
     '1º período: Repertório sociocultural + interpretação integrada ao tema',
     '2º período: Contextualização problematizada no Brasil',
@@ -290,7 +293,6 @@ PARÂMETROS ESTRUTURAIS OBRIGATÓRIOS:
 • Extensão: entre ${calibracao.palavras_min} e ${calibracao.palavras_max} palavras
 • Estrutura OBRIGATÓRIA da célula argumentativa:`;
 
-  // Mapeamento de chave de validação → chave em descricoes
   const chaveParaDesc: Record<string, string> = {
     validar_topico_frasal: 'topico_frasal',
     validar_explicacao: 'explicacao',
@@ -299,7 +301,6 @@ PARÂMETROS ESTRUTURAIS OBRIGATÓRIOS:
     validar_causalidade: 'causalidade',
     validar_aprofundamento: 'aprofundamento',
   };
-  // Fallback caso o banco não tenha descricoes
   const descricoesPadrao: Record<string, string> = {
     topico_frasal: 'Tópico frasal: sentença de abertura que apresenta o argumento central',
     explicacao: 'Explicação: desenvolvimento e elucidação do argumento',
@@ -392,7 +393,6 @@ function construirPromptConclusao(
     detalhamento: 'Detalhamento adicional',
   };
 
-  // Descrições dos elementos C5: lidas do banco, com fallback
   const descricoesPadraoC5: Record<string, string> = {
     agente: 'Agente: entidade responsável pela proposta (governo, escola, família, sociedade, etc.)',
     acao: 'Ação: o que deve ser feito — use verbo de ação claro e específico',
@@ -424,7 +424,6 @@ PARÂMETROS ESTRUTURAIS OBRIGATÓRIOS:
 
   todosElementos.forEach((el: string) => {
     const obrigatorio = elementosObrigatorios.includes(el);
-    // Lê descrição do banco; cai no padrão se não houver
     const desc = criterios?.descricoes?.[el] ?? descricoesPadraoC5[el] ?? el;
     prompt += `    ${obrigatorio ? '✓ OBRIGATÓRIO' : '○ recomendado'} — ${desc}\n`;
   });
@@ -479,7 +478,6 @@ Retorne JSON:
   return prompt;
 }
 
-// Dispatcher: seleciona construtor e validador por tipo de subtab
 function construirPrompt(
   subtabNome: string,
   calibracao: any,
@@ -512,12 +510,10 @@ function validarTexto(
   }
 }
 
-// Extrai o texto gerado da resposta JSON (chave varia por tipo)
 function extrairTexto(resultado: any): string {
   return resultado.introducao || resultado.desenvolvimento || resultado.conclusao || resultado.texto || '';
 }
 
-// Monta o nome da chave de resposta esperada
 function chaveResposta(subtabNome: string): string {
   switch (subtabNome) {
     case 'desenvolvimento': return 'desenvolvimento';
@@ -545,16 +541,24 @@ Deno.serve(async (req) => {
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
 
-    const { userEmail, sessaoId, dadosCompletos, creditosNecessarios }: GerarRequest = await req.json();
+    const { userEmail, sessaoId, modoId, subtabNome: subtabNomeParam, dadosCompletos, creditosNecessarios }: GerarRequest = await req.json();
 
-    if (!userEmail || !sessaoId || !dadosCompletos || !creditosNecessarios) {
+    if (!userEmail || !dadosCompletos || !creditosNecessarios) {
       return new Response(
         JSON.stringify({ error: 'Parâmetros obrigatórios faltando' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('📧 Email:', userEmail, '| Sessão:', sessaoId, '| Créditos:', creditosNecessarios);
+    // Deve ter sessaoId OU (modoId + subtabNome)
+    if (!sessaoId && (!modoId || !subtabNomeParam)) {
+      return new Response(
+        JSON.stringify({ error: 'Forneça sessaoId ou (modoId + subtabNome)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('📧 Email:', userEmail, '| Créditos:', creditosNecessarios);
 
     // ── Buscar usuário ─────────────────────────────────────────────
     const { data: user, error: userError } = await supabaseClient
@@ -582,22 +586,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Buscar sessão ──────────────────────────────────────────────
-    const { data: sessao, error: sessaoError } = await supabaseClient
-      .from('jarvis_tutoria_sessoes')
-      .select('id, modo_id, subtab_nome, user_id')
-      .eq('id', sessaoId)
-      .eq('user_id', user.id)
-      .single();
+    // ── Resolver subtabNome e modoId (via sessão ou direto) ────────
+    let resolvedModoId: string;
+    let subtabNome: string;
+    let resolvedSessaoId: string | null = null;
 
-    if (sessaoError || !sessao) {
-      return new Response(
-        JSON.stringify({ error: 'Sessão não encontrada' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (sessaoId) {
+      const { data: sessao, error: sessaoError } = await supabaseClient
+        .from('jarvis_tutoria_sessoes')
+        .select('id, modo_id, subtab_nome, user_id')
+        .eq('id', sessaoId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (sessaoError || !sessao) {
+        return new Response(
+          JSON.stringify({ error: 'Sessão não encontrada' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      resolvedModoId = sessao.modo_id;
+      subtabNome = sessao.subtab_nome;
+      resolvedSessaoId = sessao.id;
+    } else {
+      resolvedModoId = modoId!;
+      subtabNome = subtabNomeParam!;
     }
 
-    const subtabNome: string = sessao.subtab_nome;
     console.log('📄 Tipo de parágrafo:', subtabNome);
 
     // ── Buscar subtab ──────────────────────────────────────────────
@@ -605,7 +621,7 @@ Deno.serve(async (req) => {
       .from('jarvis_tutoria_subtabs')
       .select('id, nome')
       .eq('nome', subtabNome)
-      .eq('modo_id', sessao.modo_id)
+      .eq('modo_id', resolvedModoId)
       .single();
 
     if (subtabError || !subtab) {
@@ -620,7 +636,6 @@ Deno.serve(async (req) => {
     const { data: calibracaoData } = await supabaseClient
       .rpc('get_calibracao_by_subtab', { p_subtab_id: subtab.id });
 
-    // Defaults por tipo de parágrafo caso não haja calibração cadastrada
     const defaultsPorTipo: Record<string, any> = {
       introducao: {
         periodos_exatos: 3, palavras_min: 80, palavras_max: 120,
@@ -663,7 +678,7 @@ Deno.serve(async (req) => {
       validacao: calibracao.validacao_automatica
     });
 
-    // ── Buscar modelos de referência (top 3 por subtab) ────────────
+    // ── Buscar modelos de referência ───────────────────────────────
     console.log('📚 Buscando modelos de referência para', subtabNome, '...');
     const { data: modelos } = await supabaseClient
       .rpc('get_modelos_referencia', {
@@ -677,8 +692,8 @@ Deno.serve(async (req) => {
     // ── Buscar configuração do modo ────────────────────────────────
     const { data: modo } = await supabaseClient
       .from('jarvis_modos')
-      .select('id, nome, config_interativa')
-      .eq('id', sessao.modo_id)
+      .select('id, nome')
+      .eq('id', resolvedModoId)
       .single();
 
     // ── LOOP DE GERAÇÃO COM VALIDAÇÃO ──────────────────────────────
@@ -779,7 +794,7 @@ Deno.serve(async (req) => {
       modo_id: modo?.id,
       subtab_nome: subtabNome,
       etapa: 'geracao',
-      sessao_id: sessao.id,
+      sessao_id: resolvedSessaoId,
       texto_original: JSON.stringify(dadosCompletos),
       resposta_json: {
         [chave]: textoGerado,
@@ -802,17 +817,19 @@ Deno.serve(async (req) => {
       creditos_consumidos: creditosNecessarios
     });
 
-    // ── Atualizar sessão ───────────────────────────────────────────
-    await supabaseClient
-      .from('jarvis_tutoria_sessoes')
-      .update({
-        texto_gerado: textoGerado,
-        etapa_atual: 'gerado',
-        finalizado: true,
-        creditos_consumidos: creditosNecessarios,
-        atualizado_em: new Date().toISOString()
-      })
-      .eq('id', sessao.id);
+    // ── Atualizar sessão (somente no fluxo legado) ─────────────────
+    if (resolvedSessaoId) {
+      await supabaseClient
+        .from('jarvis_tutoria_sessoes')
+        .update({
+          texto_gerado: textoGerado,
+          etapa_atual: 'gerado',
+          finalizado: true,
+          creditos_consumidos: creditosNecessarios,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', resolvedSessaoId);
+    }
 
     // ── Resposta ───────────────────────────────────────────────────
     return new Response(
