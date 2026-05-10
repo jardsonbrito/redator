@@ -224,10 +224,7 @@ export default function CorrecaoPublica() {
             onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
           <div>
-            <p className="text-[11px] font-semibold opacity-80 uppercase tracking-widest">
-              Laboratório do Professor de Redação
-            </p>
-            <h1 className="text-lg font-black leading-tight">Correção Jarvis</h1>
+            <h1 className="text-xl font-black leading-tight tracking-tight">Laboratório do Professor de Redação</h1>
           </div>
         </div>
       </div>
