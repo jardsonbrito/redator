@@ -15,7 +15,7 @@ import {
 import {
   AlertCircle, CheckCircle2, XCircle, FileText,
   ChevronDown, ChevronUp, RefreshCw, History, Loader2, Mic, MicOff,
-  Download, Share2, Copy, ExternalLink, LinkOff,
+  Download, Share2, Copy, ExternalLink, Unlink,
 } from "lucide-react";
 import { useJarvisCorrecaoLink, type JarvisCorrecaoLink } from "@/hooks/useJarvisCorrecaoLink";
 import { generateJarvisCorrecaoPDF } from "@/utils/jarvisCorrecaoPdfUtils";
@@ -961,7 +961,7 @@ function BotoesCompartilhamento({
           >
             {desativandoLink
               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <LinkOff className="h-3.5 w-3.5" />}
+              : <Unlink className="h-3.5 w-3.5" />}
             Desativar link
           </Button>
         </>
