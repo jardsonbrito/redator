@@ -87,6 +87,7 @@ const RedacaoComentadaDetalhes = lazy(() => import("./pages/RedacaoComentadaDeta
 const GuiaTematico            = lazy(() => import("./pages/GuiaTematico"));
 const GuiaTematicoAdmin       = lazy(() => import("./pages/admin/GuiaTematicoAdmin"));
 const Jarvis                  = lazy(() => import("./pages/Jarvis"));
+const CorrecaoPublica         = lazy(() => import("./pages/CorrecaoPublica"));
 const PlanoEstudo             = lazy(() => import("./pages/PlanoEstudo"));
 const PlanoEstudoAdmin        = lazy(() => import("./pages/admin/PlanoEstudoAdmin"));
 const Desempenho              = lazy(() => import("./pages/Desempenho"));
@@ -154,6 +155,7 @@ function App() {
                     <Route path="/aluno/entrar" element={<AlunoAutoAtendimento />} />
                     <Route path="/atualizar-email" element={<AtualizarEmail />} />
                     <Route path="/processo-seletivo/inscricao/:formularioId" element={<ProcessoSeletivoInscricao />} />
+                    <Route path="/correcao-publica/:token" element={<CorrecaoPublica />} />
 
                     <Route path="/app" element={<ProtectedStudentRoute><Index /></ProtectedStudentRoute>} />
                     <Route path="/desempenho" element={<ProtectedStudentRoute><Desempenho /></ProtectedStudentRoute>} />

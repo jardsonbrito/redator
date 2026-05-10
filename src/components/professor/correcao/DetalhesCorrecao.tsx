@@ -15,7 +15,10 @@ import {
 import {
   AlertCircle, CheckCircle2, XCircle, FileText,
   ChevronDown, ChevronUp, RefreshCw, History, Loader2, Mic, MicOff,
+  Download, Share2, Copy, ExternalLink, LinkOff,
 } from "lucide-react";
+import { useJarvisCorrecaoLink, type JarvisCorrecaoLink } from "@/hooks/useJarvisCorrecaoLink";
+import { generateJarvisCorrecaoPDF } from "@/utils/jarvisCorrecaoPdfUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -100,6 +103,27 @@ const TextoParagrafado = ({ texto, className = "text-sm leading-relaxed text-zin
 };
 
 export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: Props) => {
+  const { link: correcaoLink, isLoading: linkLoading, criarLink, desativarLink, buildUrl } =
+    useJarvisCorrecaoLink(correcao.id);
+
+  const handleBaixarPdf = () => {
+    try {
+      const win = window.open("", "_blank");
+      generateJarvisCorrecaoPDF(correcao, win);
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao gerar PDF.");
+    }
+  };
+
+  const handleCopiarLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(buildUrl(token));
+      toast.success("Link copiado com sucesso.");
+    } catch {
+      toast.error("Não foi possível copiar. Copie manualmente: " + buildUrl(token));
+    }
+  };
+
   // Normaliza correcao_ia: se resposta_bruta contém JSON estruturado (pipeline legado),
   // extrai os campos para usar a renderização pedagógica normal.
   const correcaoIA = (() => {
@@ -355,6 +379,19 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
           </div>
         </div>
 
+        <BotoesCompartilhamento
+          correcao={correcao}
+          link={correcaoLink}
+          linkLoading={linkLoading}
+          onBaixarPdf={handleBaixarPdf}
+          onCriarLink={() => criarLink.mutate(correcao.professor_id)}
+          onCopiarLink={handleCopiarLink}
+          onDesativarLink={() => correcaoLink && desativarLink.mutate(correcaoLink.id)}
+          criandoLink={criarLink.isPending}
+          desativandoLink={desativarLink.isPending}
+          buildUrl={buildUrl}
+        />
+
         {textoOriginal && showTexto && (
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 space-y-2">
             <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Texto da redação</p>
@@ -499,6 +536,19 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
           )}
         </div>
       </div>
+
+      <BotoesCompartilhamento
+        correcao={correcao}
+        link={correcaoLink}
+        linkLoading={linkLoading}
+        onBaixarPdf={handleBaixarPdf}
+        onCriarLink={() => criarLink.mutate(correcao.professor_id)}
+        onCopiarLink={handleCopiarLink}
+        onDesativarLink={() => correcaoLink && desativarLink.mutate(correcaoLink.id)}
+        criandoLink={criarLink.isPending}
+        desativandoLink={desativarLink.isPending}
+        buildUrl={buildUrl}
+      />
 
       {/* Texto original da redação */}
       {textoOriginal && showTexto && (
@@ -837,6 +887,101 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────
+interface BotoesCompartilhamentoProps {
+  correcao: JarvisCorrecao;
+  link: JarvisCorrecaoLink | null | undefined;
+  linkLoading: boolean;
+  onBaixarPdf: () => void;
+  onCriarLink: () => void;
+  onCopiarLink: (token: string) => void;
+  onDesativarLink: () => void;
+  criandoLink: boolean;
+  desativandoLink: boolean;
+  buildUrl: (token: string) => string;
+}
+
+function BotoesCompartilhamento({
+  correcao,
+  link,
+  linkLoading,
+  onBaixarPdf,
+  onCriarLink,
+  onCopiarLink,
+  onDesativarLink,
+  criandoLink,
+  desativandoLink,
+  buildUrl,
+}: BotoesCompartilhamentoProps) {
+  if (correcao.status !== "corrigida") return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+      {/* Baixar PDF */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onBaixarPdf}
+        className="shrink-0 gap-1.5 text-xs border-zinc-300 text-zinc-700 hover:bg-zinc-100"
+      >
+        <Download className="h-3.5 w-3.5" />
+        Baixar correção
+      </Button>
+
+      {/* Botões de compartilhamento */}
+      {linkLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+      ) : link ? (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onCopiarLink(link.token)}
+            className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copiar link
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(buildUrl(link.token), "_blank")}
+            className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Abrir visualização
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDesativarLink}
+            disabled={desativandoLink}
+            className="shrink-0 gap-1.5 text-xs text-zinc-400 hover:text-red-600 hover:bg-red-50"
+          >
+            {desativandoLink
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <LinkOff className="h-3.5 w-3.5" />}
+            Desativar link
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCriarLink}
+          disabled={criandoLink}
+          className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
+        >
+          {criandoLink
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <Share2 className="h-3.5 w-3.5" />}
+          Compartilhar correção
+        </Button>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 function ErrosBlock({ erros }: { erros: any[] }) {
