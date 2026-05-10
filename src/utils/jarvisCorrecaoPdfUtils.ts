@@ -354,8 +354,7 @@ body {
   border-radius: 7px; padding: 4px;
 }
 .header-body { flex: 1; }
-.header-title { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
-.header-sub { font-size: 10.5px; opacity: 0.85; margin-top: 2px; }
+.header-title { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.4px; line-height: 1.2; }
 
 /* ── IDENTIFICAÇÃO ── */
 .identificacao {
@@ -635,8 +634,7 @@ body {
   <header class="header">
     <img class="header-logo" src="${logoUrl}" alt="Logo" onerror="this.style.display='none'" />
     <div class="header-body">
-      <h1 class="header-title">CORREÇÃO JARVIS</h1>
-      <div class="header-sub">Laboratório do Professor de Redação · ${year}</div>
+      <h1 class="header-title">Laboratório do Professor de Redação</h1>
     </div>
   </header>
 
@@ -660,7 +658,7 @@ body {
 
   <footer class="footer">
     <div><strong>Laboratório do Professor de Redação</strong></div>
-    <div>Corrigido por Jarvis IA · ${year}</div>
+    <div>${year}</div>
   </footer>
 
 </div>
