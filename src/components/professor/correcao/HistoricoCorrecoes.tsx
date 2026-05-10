@@ -414,7 +414,7 @@ export const HistoricoCorrecoes = ({
             {correcaoSelecionada.status !== "revisao_ocr" && (
               <DialogHeader>
                 <DialogTitle className="text-lg font-bold">
-                  Correção pedagógica detalhada
+                  Correção Pedagógica Detalhada
                 </DialogTitle>
               </DialogHeader>
             )}
