@@ -357,7 +357,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
                 variant="outline"
                 size="sm"
                 onClick={() => setShowRevisaoDialog(true)}
-                className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400"
+                className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400 hover:text-violet-900"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Solicitar recorreção
@@ -515,7 +515,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
               variant="outline"
               size="sm"
               onClick={() => setShowRevisaoDialog(true)}
-              className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400"
+              className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400 hover:text-violet-900"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Solicitar recorreção
@@ -922,7 +922,7 @@ function BotoesCompartilhamento({
         variant="outline"
         size="sm"
         onClick={onBaixarPdf}
-        className="shrink-0 gap-1.5 text-xs border-zinc-300 text-zinc-700 hover:bg-zinc-200 hover:border-zinc-400"
+        className="shrink-0 gap-1.5 text-xs border-zinc-300 text-zinc-700 hover:bg-zinc-200 hover:border-zinc-400 hover:text-zinc-900"
       >
         <Download className="h-3.5 w-3.5" />
         Baixar correção
@@ -937,7 +937,7 @@ function BotoesCompartilhamento({
             variant="outline"
             size="sm"
             onClick={() => onCopiarLink(link.token)}
-            className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400"
+            className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400 hover:text-violet-900"
           >
             <Copy className="h-3.5 w-3.5" />
             Copiar link
@@ -946,7 +946,7 @@ function BotoesCompartilhamento({
             variant="outline"
             size="sm"
             onClick={() => window.open(buildUrl(link.token), "_blank")}
-            className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400"
+            className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400 hover:text-violet-900"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Abrir visualização
@@ -970,7 +970,7 @@ function BotoesCompartilhamento({
           size="sm"
           onClick={onCriarLink}
           disabled={criandoLink}
-          className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400"
+          className="shrink-0 gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-100 hover:border-violet-400 hover:text-violet-900"
         >
           {criandoLink
             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
