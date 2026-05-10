@@ -41,7 +41,7 @@ export const ProfessorJarvisCorrecao = () => {
               <JarvisIcon size={28} />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-zinc-950">
-              O corretor oficial do Laboratório do Professor de Redação
+              O Corretor Oficial do Laboratório do Professor de Redação
             </h1>
           </div>
 
