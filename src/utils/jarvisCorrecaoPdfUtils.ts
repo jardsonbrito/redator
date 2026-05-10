@@ -20,8 +20,8 @@ export interface JarvisCorrecaoPdfData {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function esc(str?: string | null): string {
-  return (str ?? '')
+function esc(str?: unknown): string {
+  return String(str ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
