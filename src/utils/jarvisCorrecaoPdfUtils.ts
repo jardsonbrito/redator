@@ -675,18 +675,16 @@ body {
 
 // ─── Exportação principal ─────────────────────────────────────────────────────
 
-export function generateJarvisCorrecaoPDF(
-  correcao: JarvisCorrecaoPdfData,
-  win?: Window | null
-): void {
+export function generateJarvisCorrecaoPDF(correcao: JarvisCorrecaoPdfData): void {
   const html = buildHtml(correcao);
-  const target = win ?? window.open('', '_blank');
-  if (!target) {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (!win) {
+    URL.revokeObjectURL(url);
     throw new Error('Popup bloqueado. Permita popups para este site e tente novamente.');
   }
-  target.document.open();
-  target.document.write(html);
-  target.document.close();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 export function gerarNomeArquivoPdf(autorNome?: string | null, tema?: string | null): string {

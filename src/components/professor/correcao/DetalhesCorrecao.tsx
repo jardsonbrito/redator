@@ -108,8 +108,7 @@ export const DetalhesCorrecao = ({ correcao, professorEmail, onReprocessado }: P
 
   const handleBaixarPdf = () => {
     try {
-      const win = window.open("", "_blank");
-      generateJarvisCorrecaoPDF(correcao, win);
+      generateJarvisCorrecaoPDF(correcao);
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao gerar PDF.");
     }
