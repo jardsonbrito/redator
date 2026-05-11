@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Eye, Edit3, Mic, MicOff, Sparkles, Loader2, X } from "lucide-react";
+import { Save, Trash2, Eye, Edit3, Mic, MicOff, Loader2, X } from "lucide-react";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { cn } from "@/lib/utils";
 import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 import html2canvas from 'html2canvas';
@@ -1411,11 +1412,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 size="sm"
                 onClick={refinarComentario}
                 disabled={refineLoading || !comentarioTemp.trim()}
-                className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
+                className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-200 hover:border-purple-500 hover:text-purple-900"
               >
                 {refineLoading
                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Sparkles className="w-3.5 h-3.5" />
+                  : <JarvisIcon size={14} />
                 }
                 {refineLoading ? 'Refinando…' : 'Refinar clareza'}
               </Button>
