@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Eye, Edit3, Mic, MicOff } from "lucide-react";
+import { Save, Trash2, Eye, Edit3, Mic, MicOff, Sparkles, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 import html2canvas from 'html2canvas';
@@ -56,8 +56,8 @@ const customStyles = `
     stroke-width: 2px !important;
   }
   .r6o-annotation.competencia-6 .r6o-shape {
-    fill: rgba(156, 163, 175, 0.15) !important;
-    stroke: #9CA3AF !important;
+    fill: rgba(0, 188, 212, 0.15) !important;
+    stroke: #00BCD4 !important;
     stroke-width: 2px !important;
   }
 
@@ -203,7 +203,7 @@ const CORES_COMPETENCIAS = {
   3: { cor: '#2196F3', nome: 'Azul', label: 'Competência 3' },
   4: { cor: '#FF9800', nome: 'Laranja', label: 'Competência 4' },
   5: { cor: '#9C27B0', nome: 'Roxo', label: 'Competência 5' },
-  6: { cor: '#9CA3AF', nome: 'Cinza', label: 'Ponto de Atenção' }
+  6: { cor: '#00BCD4', nome: 'Turquesa', label: 'Ponto de Atenção' }
 } as const;
 
 const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps>(({
@@ -231,8 +231,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   
   // Novos estados para o dialog de 5 bolinhas
   const [competenciaDialog, setCompetenciaDialog] = useState<number | null>(null);
-  const [competenciasExpanded, setCompetenciasExpanded] = useState<boolean>(true);
+  const [competenciasExpanded, setCompetenciasExpanded] = useState<boolean>(false);
   const [editandoAnotacao, setEditandoAnotacao] = useState<AnotacaoVisual | null>(null);
+
+  // Estados para IA de refinamento de comentários
+  const [refineLoading, setRefineLoading] = useState(false);
+  const [refineSugestoes, setRefineSugestoes] = useState<string[]>([]);
   
   const [contadorSequencial, setContadorSequencial] = useState(1);
 
@@ -707,18 +711,19 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 numero: contadorSequencial
               };
 
-              // CRIAÇÃO: abrir sempre com as 5 bolinhas visíveis
+              // CRIAÇÃO: abrir com C1 já selecionada
               setEditandoAnotacao(null);
               setCurrentAnnotation(annotationData);
               setComentarioTemp("");
-              setCompetenciaDialog(null);
-              setCompetenciasExpanded(true);
+              setCompetenciaDialog(1);
+              setCompetenciasExpanded(false);
+              setRefineSugestoes([]);
               setDialogAberto(true);
-              
+
               console.log('CRIAÇÃO -> Dialog aberto', {
                 editandoAnotacao: null,
-                competenciaDialog: null,
-                competenciasExpanded: true
+                competenciaDialog: 1,
+                competenciasExpanded: false
               });
               
             } catch (error) {
@@ -855,13 +860,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   }, [anotacoes, imageDimensions]);
 
-  // Proteção contra efeitos que derrubam o header novo
+  // Ao abrir o dialog em criação, garantir C1 como padrão
   useEffect(() => {
     if (dialogAberto && !editandoAnotacao) {
-      // Em CRIAÇÃO, o header tem que começar expandido SEMPRE
-      setCompetenciasExpanded(true);
-      setCompetenciaDialog(null);
-      console.log('GUARDA-CHUVA: Forçando 5 bolinhas na criação');
+      setCompetenciasExpanded(false);
+      setCompetenciaDialog(1);
     }
   }, [dialogAberto, editandoAnotacao]);
 
@@ -1002,7 +1005,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       setComentarioTemp("");
       setCompetenciaDialog(null);
       setEditandoAnotacao(null);
-      
+      setRefineSugestoes([]);
+
       // Recarregar anotações para sincronizar
       await carregarAnotacoes();
 
@@ -1032,6 +1036,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     setDialogAberto(false);
     setCurrentAnnotation(null);
     setComentarioTemp("");
+    setRefineSugestoes([]);
   };
 
   // Salvar todas as anotações pendentes
@@ -1113,6 +1118,31 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
+  // Refinar comentário com IA
+  const refinarComentario = async () => {
+    if (!comentarioTemp.trim()) {
+      toast({ title: "Atenção", description: "Digite um comentário antes de refinar.", variant: "destructive" });
+      return;
+    }
+    setRefineLoading(true);
+    setRefineSugestoes([]);
+    try {
+      const { data, error } = await supabase.functions.invoke('refinar-comentario-corretor', {
+        body: { comentario: comentarioTemp.trim() }
+      });
+      if (error) throw error;
+      if (data?.sugestoes && Array.isArray(data.sugestoes)) {
+        setRefineSugestoes(data.sugestoes);
+      } else {
+        throw new Error('Resposta inesperada da IA');
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao refinar", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setRefineLoading(false);
+    }
+  };
+
   // Gerar imagem com anotações
   const gerarImagemComAnotacoes = async (): Promise<string> => {
     if (!containerRef.current) {
@@ -1155,24 +1185,24 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       {/* Painel de competências */}
       {!readonly && (
         <div className="mb-4 painel-correcao">
-          <div className="flex gap-4 items-center">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Legenda das competências
+          </p>
+          <div className="flex gap-4 items-end">
             {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
-              <div
-                key={num}
-                className="flex flex-col items-center gap-1"
-              >
+              <div key={num} className="flex flex-col items-center gap-1">
                 <div
                   className="w-8 h-8 rounded-full border-2 border-gray-300"
                   style={{ backgroundColor: info.cor }}
                 />
-                <span className="text-xs font-medium text-muted-foreground">
+                <span className="text-[10px] font-bold text-gray-600">
                   {num === '6' ? 'PA' : `C${num}`}
                 </span>
               </div>
             ))}
-            
+
             {/* Botão para limpar todas as anotações */}
-            {!readonly && anotacoes.length > 0 && (
+            {anotacoes.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
@@ -1219,7 +1249,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                   className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                   style={{ backgroundColor: anotacao.cor_marcacao }}
                 >
-                  C{anotacao.competencia}
+                  {anotacao.competencia === 6 ? 'PA' : `C${anotacao.competencia}`}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -1271,49 +1301,70 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               {editandoAnotacao ? "Editar Comentário" : "Legenda das Competências"}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
-            {/* TOPO DO DIALOG */}
-            <div className="flex items-center gap-2">
+            {/* Seleção de competência */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Legenda das competências
+              </p>
               {(() => {
                 const compAtual = competenciaDialog ?? null;
-                
+
                 return (competenciasExpanded || !compAtual) ? (
-                  // EXPANDIDO → 6 bolinhas
-                  <div className="flex items-center gap-2">
+                  // EXPANDIDO → 6 bolinhas com rótulos
+                  <div className="flex items-end gap-3">
                     {[1,2,3,4,5,6].map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => selecionarCompetencia(num)}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
-                        style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
-                        aria-label={num === 6 ? 'Ponto de Atenção' : `Competência ${num}`}
-                        data-testid={`bolinha-c${num}`}
-                      />
+                      <div key={num} className="flex flex-col items-center gap-1">
+                        <button
+                          onClick={() => selecionarCompetencia(num)}
+                          className={cn(
+                            "w-9 h-9 rounded-full border-2 cursor-pointer transition-all focus:outline-none",
+                            competenciaDialog === num
+                              ? "border-gray-800 ring-2 ring-offset-1 ring-gray-700 scale-110 shadow-md"
+                              : "border-gray-300 hover:border-gray-500 hover:scale-105"
+                          )}
+                          style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
+                          aria-label={num === 6 ? 'Ponto de Atenção' : `Competência ${num}`}
+                          data-testid={`bolinha-c${num}`}
+                        />
+                        <span className="text-[10px] font-bold text-gray-600">
+                          {num === 6 ? 'PA' : `C${num}`}
+                        </span>
+                      </div>
                     ))}
                   </div>
                 ) : (
-                  // COLAPSADO → 1 bolinha + texto
-                  <button
-                    onClick={() => setCompetenciasExpanded(true)}
-                    className="flex items-center gap-2"
-                    data-testid="bolinha-colapsada"
-                  >
+                  // COLAPSADO → 1 bolinha selecionada + opção de trocar
+                  <div className="flex items-center gap-2">
                     <span
-                      className="w-8 h-8 rounded-full border-2 border-gray-300"
-                      style={{ backgroundColor: CORES_COMPETENCIAS[compAtual].cor }}
+                      className="w-9 h-9 rounded-full border-2 border-gray-700 ring-2 ring-offset-1 ring-gray-600 shadow-md flex-shrink-0"
+                      style={{ backgroundColor: CORES_COMPETENCIAS[compAtual as keyof typeof CORES_COMPETENCIAS].cor }}
                     />
-                    <span>{compAtual === 6 ? 'Ponto de Atenção' : `Competência ${compAtual}`}</span>
-                  </button>
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {compAtual === 6 ? 'PA — Ponto de Atenção' : `C${compAtual} — ${CORES_COMPETENCIAS[compAtual as keyof typeof CORES_COMPETENCIAS].label}`}
+                      </p>
+                      <button
+                        onClick={() => setCompetenciasExpanded(true)}
+                        className="text-xs text-blue-600 hover:underline"
+                        data-testid="bolinha-colapsada"
+                      >
+                        Trocar competência
+                      </button>
+                    </div>
+                  </div>
                 );
               })()}
             </div>
+
+            {/* Textarea do comentário */}
             <div className="relative">
               <textarea
                 ref={comentarioTextareaRef}
                 placeholder="Digite seu comentário sobre esta marcação..."
                 value={comentarioTemp}
-                onChange={(e) => setComentarioTemp(e.target.value)}
+                onChange={(e) => { setComentarioTemp(e.target.value); setRefineSugestoes([]); }}
                 rows={4}
                 autoFocus
                 autoCapitalize="sentences"
@@ -1346,7 +1397,53 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             {isMicRecording && (
               <p className="text-xs text-red-500 font-medium animate-pulse">Ouvindo...</p>
             )}
-            
+
+            {/* Botão de refinamento por IA */}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={refinarComentario}
+                disabled={refineLoading || !comentarioTemp.trim()}
+                className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
+              >
+                {refineLoading
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Sparkles className="w-3.5 h-3.5" />
+                }
+                {refineLoading ? 'Refinando…' : 'Refinar clareza'}
+              </Button>
+              {refineSugestoes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRefineSugestoes([])}
+                  className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Ignorar sugestões
+                </button>
+              )}
+            </div>
+
+            {/* Sugestões da IA */}
+            {refineSugestoes.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-purple-700">
+                  Sugestões — clique para usar:
+                </p>
+                {refineSugestoes.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setComentarioTemp(s); setRefineSugestoes([]); }}
+                    className="w-full text-left text-sm p-3 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-400 transition-colors cursor-pointer"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={cancelarAnotacao}>
                 Cancelar

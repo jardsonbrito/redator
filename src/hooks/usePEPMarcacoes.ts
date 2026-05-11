@@ -131,9 +131,10 @@ export function useSalvarMarcacoesPEP() {
         .insert(novasMarcacoes);
       if (errIns) throw errIns;
     },
-    onSuccess: (_, { redacaoId, alunoEmail }) => {
-      qc.invalidateQueries({ queryKey: ['pep-marcacoes-redacao', redacaoId] });
-      // Invalida o plano do aluno para que seja recalculado no próximo acesso
+    onSuccess: async (_, { redacaoId, alunoEmail }) => {
+      // refetchQueries garante que os dados são atualizados imediatamente
+      // antes que o componente pai valide o PEP ao finalizar a correção
+      await qc.refetchQueries({ queryKey: ['pep-marcacoes-redacao', redacaoId] });
       qc.invalidateQueries({ queryKey: ['pep-tasks-aluno', alunoEmail.toLowerCase().trim()] });
       toast.success('Marcações do Plano de Estudo salvas.');
     },

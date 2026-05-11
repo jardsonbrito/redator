@@ -76,7 +76,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [showPEPModal, setShowPEPModal] = useState(false);
 
   // Marcações PEP existentes — usadas para validar antes de finalizar
-  const { data: marcacoesPEP = [] } = useMarcacoesRedacao(redacao.id);
+  const { data: marcacoesPEP = [], refetch: refetchMarcacoesPEP } = useMarcacoesRedacao(redacao.id);
   const [showRedacaoExpandida, setShowRedacaoExpandida] = useState(false);
   const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [loading, setLoading] = useState(false);
@@ -251,15 +251,18 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   };
 
   const salvarCorrecao = useCallback(async (status: 'incompleta' | 'corrigida') => {
-    // Bloqueia finalização sem PEP preenchido
-    if (status === 'corrigida' && marcacoesPEP.length === 0) {
-      toast({
-        title: 'Plano de Estudo não preenchido',
-        description: 'Clique em PEP na Vista Pedagógica e marque os aspectos identificados antes de finalizar.',
-        variant: 'destructive',
-      });
-      setShowPEPModal(true);
-      return;
+    // Bloqueia finalização sem PEP preenchido — força refetch para garantir dado atualizado
+    if (status === 'corrigida') {
+      const { data: marcacoesAtuais } = await refetchMarcacoesPEP();
+      if (!marcacoesAtuais || marcacoesAtuais.length === 0) {
+        toast({
+          title: 'Plano de Estudo não preenchido',
+          description: 'Clique em PEP na Vista Pedagógica e marque os aspectos identificados antes de finalizar.',
+          variant: 'destructive',
+        });
+        setShowPEPModal(true);
+        return;
+      }
     }
 
     setLoading(true);
@@ -364,7 +367,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     } finally {
       setLoading(false);
     }
-  }, [redacao, notas, comentarios, toast, onSucesso, onRefreshList]);
+  }, [redacao, notas, comentarios, toast, onSucesso, onRefreshList, refetchMarcacoesPEP]);
 
   const atualizarNota = (competencia: keyof Omit<NotasCorrecao, 'total'>, valor: number) => {
     setNotas(prev => ({
