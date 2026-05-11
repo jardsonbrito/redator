@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -238,6 +236,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   // Estados para IA de refinamento de comentários
   const [refineLoading, setRefineLoading] = useState(false);
   const [refineSugestoes, setRefineSugestoes] = useState<string[]>([]);
+
+  // Estado e ref para drag do painel de anotação
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
   
   const [contadorSequencial, setContadorSequencial] = useState(1);
 
@@ -250,6 +252,40 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   useEffect(() => {
     if (!dialogAberto) stopMicRecording();
   }, [dialogAberto, stopMicRecording]);
+
+  // Reseta posição do painel ao abrir
+  useEffect(() => {
+    if (dialogAberto) setDragPos({ x: 0, y: 0 });
+  }, [dialogAberto]);
+
+  // Listeners globais de mouse para drag do painel
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragState.current.isDragging) return;
+      setDragPos({
+        x: dragState.current.startPosX + (e.clientX - dragState.current.startX),
+        y: dragState.current.startPosY + (e.clientY - dragState.current.startY),
+      });
+    };
+    const onMouseUp = () => { dragState.current.isDragging = false; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: dragPos.x,
+      startPosY: dragPos.y,
+    };
+  };
 
   // Expor métodos via ref
   useImperativeHandle(ref, () => ({
@@ -1299,16 +1335,47 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         </div>
       )}
 
-      {/* Dialog para adicionar comentário */}
-      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editandoAnotacao ? "Editar Comentário" : "Legenda das Competências"}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Painel de anotação arrastável */}
+      {dialogAberto && (
+        <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
+          {/* Backdrop semitransparente — clique fecha */}
+          <div
+            className="absolute inset-0 bg-black/30"
+            style={{ pointerEvents: 'auto' }}
+            onClick={cancelarAnotacao}
+          />
 
-          <div className="space-y-4">
+          {/* Painel arrastável */}
+          <div
+            style={{
+              position: 'absolute',
+              left: `calc(50% + ${dragPos.x}px)`,
+              top: `calc(50% + ${dragPos.y}px)`,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'auto',
+              width: '28rem',
+              maxWidth: '92vw',
+            }}
+            className="bg-white rounded-lg shadow-2xl border border-gray-200"
+          >
+            {/* Header arrastável */}
+            <div
+              onMouseDown={handleDragStart}
+              className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 rounded-t-lg cursor-grab active:cursor-grabbing select-none"
+            >
+              <h2 className="text-base font-semibold text-gray-800">
+                {editandoAnotacao ? "Editar Comentário" : "Legenda das Competências"}
+              </h2>
+              <button
+                onClick={cancelarAnotacao}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-200"
+                aria-label="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+          <div className="p-4 space-y-4">
             {/* Seleção de competência */}
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
@@ -1460,8 +1527,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
     </div>
   );
 });
