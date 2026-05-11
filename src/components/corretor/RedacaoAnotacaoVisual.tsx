@@ -1245,17 +1245,22 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 className="flex items-start gap-3 p-3 bg-white rounded border transition-all duration-300"
                 data-comentario-id={anotacao.id}
               >
-                <div 
+                <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                  style={{ backgroundColor: anotacao.cor_marcacao }}
+                  style={{ backgroundColor: CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.cor ?? anotacao.cor_marcacao }}
                 >
                   {anotacao.competencia === 6 ? 'PA' : `C${anotacao.competencia}`}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" style={{ color: anotacao.cor_marcacao, borderColor: anotacao.cor_marcacao }}>
-                      {CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.label}
-                    </Badge>
+                    {(() => {
+                      const cor = CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.cor ?? anotacao.cor_marcacao;
+                      return (
+                        <Badge variant="outline" style={{ color: cor, borderColor: cor }}>
+                          {CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.label}
+                        </Badge>
+                      );
+                    })()}
                     {!readonly && (
                       <Button
                         size="sm"
