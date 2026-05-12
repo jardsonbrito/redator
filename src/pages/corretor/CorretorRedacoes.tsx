@@ -50,12 +50,6 @@ const CorretorRedacoes = () => {
   return (
     <CorretorLayout>
       <div className="space-y-4 sm:space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 break-words">
-            Painel de Correção
-          </h1>
-        </div>
-
         {redacaoSelecionada ? (
           redacaoSelecionada.exercicio_tipo === 'Produção Guiada' ? (
             <FormularioCorrecaoProducaoGuiada
