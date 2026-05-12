@@ -528,20 +528,20 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
           {/* Áudio */}
           <Card className="shadow-sm border-red-200">
-            <CardContent className="p-4 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-black text-slate-800 leading-tight">Gravar mensagem</p>
-                <p className="text-xs text-red-500 mt-0.5">Mensagem em áudio para o aluno</p>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-slate-800 leading-tight">Gravar mensagem</p>
+                  <p className="text-xs text-red-500 mt-0.5">Mensagem em áudio para o aluno</p>
+                </div>
               </div>
-              <div className="shrink-0">
-                <AudioRecorder
-                  redacaoId={redacao.id}
-                  tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                  onAudioSaved={(url) => setAudioUrl(url)}
-                  existingAudioUrl={audioUrl}
-                  ehCorretor1={redacao.eh_corretor_1}
-                />
-              </div>
+              <AudioRecorder
+                redacaoId={redacao.id}
+                tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                onAudioSaved={(url) => setAudioUrl(url)}
+                existingAudioUrl={audioUrl}
+                ehCorretor1={redacao.eh_corretor_1}
+              />
             </CardContent>
           </Card>
 
