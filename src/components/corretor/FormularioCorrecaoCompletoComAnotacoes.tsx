@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked } from "lucide-react";
+import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2 } from "lucide-react";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { estaCongelada } from "@/utils/redacaoUtils";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual, RedacaoAnotacaoVisualRef } from "./RedacaoAnotacaoVisual";
@@ -87,6 +88,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [parUtilizado, setParUtilizado] = useState<string | null>(null);
   const [redacaoFinalizada, setRedacaoFinalizada] = useState(false);
   const [anotacoesCounts, setAnotacoesCounts] = useState<Record<number, number>>({});
+  const [refineElogiosLoading, setRefineElogiosLoading] = useState(false);
+  const [refineElogiosSugestoes, setRefineElogiosSugestoes] = useState<string[]>([]);
 
   // Ref para RedacaoAnotacaoVisual — permite triggerLimparTodasAnotacoes
   const anotacaoRef = useRef<RedacaoAnotacaoVisualRef>(null);
@@ -307,6 +310,24 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       () => toast({ title: "Copiado!", description: "Redação copiada para a área de transferência." }),
       () => toast({ title: "Erro", description: "Não foi possível copiar o texto.", variant: "destructive" })
     );
+  };
+
+  const refinarElogios = async () => {
+    if (!comentarios.elogios.trim()) {
+      toast({ title: "Atenção", description: "Digite a mensagem antes de refinar.", variant: "destructive" });
+      return;
+    }
+    setRefineElogiosLoading(true);
+    setRefineElogiosSugestoes([]);
+    try {
+      const { data, error } = await supabase.functions.invoke('refinar-comentario-corretor', { body: { comentario: comentarios.elogios.trim() } });
+      if (error) throw error;
+      if (data?.sugestoes && Array.isArray(data.sugestoes)) setRefineElogiosSugestoes(data.sugestoes);
+    } catch (err: any) {
+      toast({ title: "Erro ao refinar", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setRefineElogiosLoading(false);
+    }
   };
 
   const hasImage = !!(redacao as any).redacao_imagem_gerada_url || !!redacao.redacao_manuscrita_url;
@@ -587,6 +608,36 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 onChange={(e) => atualizarComentario('elogios', e.target.value)}
                 className="w-full min-h-[140px] resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"
               />
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button" variant="outline" size="sm"
+                  onClick={refinarElogios}
+                  disabled={refineElogiosLoading || !comentarios.elogios.trim()}
+                  className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-200 hover:border-purple-500 hover:text-purple-900"
+                >
+                  {refineElogiosLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <JarvisIcon size={14} />}
+                  {refineElogiosLoading ? 'Refinando…' : 'Refinar clareza'}
+                </Button>
+                {refineElogiosSugestoes.length > 0 && (
+                  <button type="button" onClick={() => setRefineElogiosSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                    <X className="w-3 h-3" /> Ignorar
+                  </button>
+                )}
+              </div>
+              {refineElogiosSugestoes.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-purple-700">Sugestões — clique para usar:</p>
+                  {refineElogiosSugestoes.map((s, i) => (
+                    <button
+                      key={i} type="button"
+                      onClick={() => { atualizarComentario('elogios', s); setRefineElogiosSugestoes([]); }}
+                      className="w-full text-left text-sm p-3 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-400 transition-colors cursor-pointer"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
