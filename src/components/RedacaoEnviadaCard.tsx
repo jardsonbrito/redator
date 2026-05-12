@@ -279,7 +279,7 @@ export const RedacaoEnviadaCard = ({
 
       {/* ===== CARDS DE NOTA POR COMPETÊNCIA ===== */}
       {redacao.corrigida && shouldShowScores(redacao) && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
           {[1, 2, 3, 4, 5].map(comp => {
             const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
             const bg = COMP_COLORS[comp];
@@ -297,16 +297,6 @@ export const RedacaoEnviadaCard = ({
               </div>
             );
           })}
-          <div className="bg-gradient-to-br from-violet-700 to-fuchsia-600 text-white rounded-xl p-3 text-center shadow-md">
-            <div className="text-xs font-semibold opacity-80 mb-0.5">Total</div>
-            <div className="text-2xl font-black tabular-nums">{redacao.nota_total ?? '–'}</div>
-            <div className="text-[10px] opacity-55 mt-0.5">/ 1000</div>
-            {redacao.nota_total != null && (
-              <div className="mt-2 h-1.5 bg-black/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white/50 rounded-full transition-all" style={{ width: `${Math.min((redacao.nota_total / 1000) * 100, 100)}%` }} />
-              </div>
-            )}
-          </div>
         </div>
       )}
 
