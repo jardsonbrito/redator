@@ -505,40 +505,46 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         {/* Sidebar */}
         <aside className="space-y-4">
 
-          {/* Plano de Estudo (PEP) */}
-          <Card className={`shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-black text-slate-800">Plano de Estudo (PEP)</p>
-                  {marcacoesPEP.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-0.5">⚠ Preencha antes de finalizar</p>
-                  )}
+          {/* PEP + Áudio — dois cards lado a lado */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card className={`shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-slate-800 leading-tight">Plano de Estudo (PEP)</p>
+                  <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
+                  </p>
                 </div>
                 <Button
                   type="button"
                   onClick={() => setShowPEPModal(true)}
                   size="sm"
-                  className={`gap-1.5 text-xs font-semibold ${marcacoesPEP.length === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'}`}
+                  className={`shrink-0 gap-1.5 text-xs font-semibold ${marcacoesPEP.length === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'}`}
                 >
                   <BookMarked className="w-3.5 h-3.5" />
-                  {marcacoesPEP.length > 0 ? `PEP (${marcacoesPEP.length})` : 'Preencher PEP'}
+                  Preencher
                 </Button>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Áudio */}
-              <div className="pt-1 border-t">
-                <p className="text-xs font-semibold text-slate-500 mb-2">Gravar mensagem para o aluno</p>
-                <AudioRecorder
-                  redacaoId={redacao.id}
-                  tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                  onAudioSaved={(url) => setAudioUrl(url)}
-                  existingAudioUrl={audioUrl}
-                  ehCorretor1={redacao.eh_corretor_1}
-                />
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="shadow-sm border-red-200">
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-slate-800 leading-tight">Gravar mensagem</p>
+                  <p className="text-xs text-red-500 mt-0.5">Mensagem em áudio para o aluno</p>
+                </div>
+                <div className="shrink-0">
+                  <AudioRecorder
+                    redacaoId={redacao.id}
+                    tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                    onAudioSaved={(url) => setAudioUrl(url)}
+                    existingAudioUrl={audioUrl}
+                    ehCorretor1={redacao.eh_corretor_1}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Ações da correção */}
           <Card className="shadow-sm">
