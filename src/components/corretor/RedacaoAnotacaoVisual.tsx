@@ -974,8 +974,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         </div>
       </div>
 
-      {/* Lista de comentários colapsável */}
-      {anotacoes.length > 0 && (
+      {/* Lista de comentários colapsável — apenas para o corretor */}
+      {!readonly && anotacoes.length > 0 && (
         <div className="mt-4 px-4 pb-4">
           <button
             onClick={() => setListaAberta(!listaAberta)}
@@ -1052,67 +1052,73 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               top: `calc(50% + ${dragPos.y}px)`,
               transform: 'translate(-50%, -50%)',
               pointerEvents: 'auto',
-              width: '28rem',
+              width: '26rem',
               maxWidth: '92vw',
+              borderTop: competenciaDialog
+                ? `4px solid ${CORES_COMPETENCIAS[competenciaDialog as keyof typeof CORES_COMPETENCIAS].cor}`
+                : '4px solid #7c3aed',
             }}
-            className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden"
           >
+            {/* Header */}
             <div
               onMouseDown={handleDragStart}
-              className="flex items-center justify-between px-4 py-3 border-b bg-slate-50 cursor-grab active:cursor-grabbing select-none"
+              className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b cursor-grab active:cursor-grabbing select-none"
             >
-              <h2 className="text-sm font-bold text-slate-800">
-                {editandoAnotacao ? "Editar Comentário" : "Nova Marcação"}
-              </h2>
+              <div className="flex items-center gap-2">
+                {competenciaDialog && (() => {
+                  const c = CORES_COMPETENCIAS[competenciaDialog as keyof typeof CORES_COMPETENCIAS];
+                  const lbl = competenciaDialog === 6 ? 'PA' : `C${competenciaDialog}`;
+                  return (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-black"
+                      style={{ backgroundColor: c.cor + '20', color: c.cor, border: `1px solid ${c.cor}55` }}
+                    >
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: c.cor }} />
+                      {lbl}
+                    </span>
+                  );
+                })()}
+                <span className="text-sm font-bold text-slate-800">
+                  {competenciaDialog
+                    ? (competenciaDialog === 6 ? 'Ponto de Atenção' : `Competência ${competenciaDialog}`)
+                    : (editandoAnotacao ? 'Editar Comentário' : 'Nova Marcação')
+                  }
+                </span>
+              </div>
               <button onClick={cancelarAnotacao} className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
-              {/* Seleção de competência */}
+            <div className="p-4 space-y-3">
+              {/* Pills de competência */}
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Competência
-                </p>
-                {(() => {
-                  const compAtual = competenciaDialog ?? null;
-                  return (competenciasExpanded || !compAtual) ? (
-                    <div className="flex items-end gap-3">
-                      {[1,2,3,4,5,6].map((num) => (
-                        <div key={num} className="flex flex-col items-center gap-1">
-                          <button
-                            onClick={() => selecionarCompetencia(num)}
-                            className={cn(
-                              "w-9 h-9 rounded-full border-2 cursor-pointer transition-all focus:outline-none",
-                              competenciaDialog === num
-                                ? "border-gray-800 ring-2 ring-offset-1 ring-gray-700 scale-110 shadow-md"
-                                : "border-gray-300 hover:border-gray-500 hover:scale-105"
-                            )}
-                            style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
-                            aria-label={num === 6 ? 'Ponto de Atenção' : `Competência ${num}`}
-                          />
-                          <span className="text-[10px] font-bold text-gray-600">{num === 6 ? 'PA' : `C${num}`}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-9 h-9 rounded-full border-2 border-gray-700 ring-2 ring-offset-1 ring-gray-600 shadow-md flex-shrink-0"
-                        style={{ backgroundColor: CORES_COMPETENCIAS[compAtual as keyof typeof CORES_COMPETENCIAS].cor }}
-                      />
-                      <div>
-                        <p className="text-sm font-semibold">
-                          {compAtual === 6 ? 'PA — Ponto de Atenção' : `C${compAtual} — ${CORES_COMPETENCIAS[compAtual as keyof typeof CORES_COMPETENCIAS].label}`}
-                        </p>
-                        <button onClick={() => setCompetenciasExpanded(true)} className="text-xs text-blue-600 hover:underline">
-                          Trocar competência
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
+                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Competência</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {([1, 2, 3, 4, 5, 6] as const).map(num => {
+                    const c = CORES_COMPETENCIAS[num];
+                    const lbl = num === 6 ? 'PA' : `C${num}`;
+                    const selected = competenciaDialog === num;
+                    return (
+                      <button
+                        key={num}
+                        onClick={() => selecionarCompetencia(num)}
+                        className={cn(
+                          "rounded-full px-2.5 py-0.5 text-xs font-bold border transition-all",
+                          selected ? "ring-2 ring-offset-1" : "opacity-60 hover:opacity-100"
+                        )}
+                        style={{
+                          backgroundColor: selected ? c.cor + '20' : 'white',
+                          borderColor: c.cor,
+                          color: c.cor,
+                        }}
+                      >
+                        {lbl}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Textarea */}
@@ -1127,7 +1133,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                   autoCapitalize="sentences"
                   spellCheck={true}
                   lang="pt-BR"
-                  className="flex w-full rounded-xl border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none pr-10"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all pr-10"
                 />
                 <button
                   type="button"
@@ -1144,17 +1150,17 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               </div>
               {isMicRecording && <p className="text-xs text-red-500 font-medium animate-pulse">Ouvindo...</p>}
 
-              {/* Refinar */}
+              {/* Refinar clareza */}
               <div className="flex items-center gap-2">
-                <Button
-                  type="button" variant="outline" size="sm"
+                <button
+                  type="button"
                   onClick={refinarComentario}
                   disabled={refineLoading || !comentarioTemp.trim()}
-                  className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-200 hover:border-purple-500 hover:text-purple-900"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors"
                 >
-                  {refineLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <JarvisIcon size={14} />}
+                  {refineLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
                   {refineLoading ? 'Refinando…' : 'Refinar clareza'}
-                </Button>
+                </button>
                 {refineSugestoes.length > 0 && (
                   <button type="button" onClick={() => setRefineSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
                     <X className="w-3 h-3" /> Ignorar
@@ -1163,13 +1169,13 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               </div>
 
               {refineSugestoes.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-purple-700">Sugestões — clique para usar:</p>
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
                   {refineSugestoes.map((s, i) => (
                     <button
                       key={i} type="button"
                       onClick={() => { setComentarioTemp(s); setRefineSugestoes([]); }}
-                      className="w-full text-left text-sm p-3 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-400 transition-colors cursor-pointer"
+                      className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
                     >
                       {s}
                     </button>
@@ -1177,12 +1183,21 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 </div>
               )}
 
+              {/* Footer */}
               <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button variant="outline" onClick={cancelarAnotacao}>Cancelar</Button>
-                <Button onClick={salvarAnotacao}>
-                  <Save className="w-4 h-4 mr-2" />
+                <button
+                  onClick={cancelarAnotacao}
+                  className="text-xs px-3 py-1.5 rounded-xl border font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={salvarAnotacao}
+                  disabled={!comentarioTemp.trim()}
+                  className="text-xs px-3 py-1.5 rounded-xl bg-violet-700 text-white font-semibold hover:bg-violet-800 disabled:opacity-50 transition-colors"
+                >
                   Salvar
-                </Button>
+                </button>
               </div>
             </div>
           </div>
