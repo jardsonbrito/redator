@@ -16,6 +16,7 @@ interface CorretorAuthContextType {
   loginAsCorretor: (email: string, senha?: string) => Promise<{ error?: string }>;
   logout: () => void;
   isCorretor: boolean;
+  updateCorretorNome: (nome: string) => Promise<void>;
 }
 
 const CorretorAuthContext = createContext<CorretorAuthContextType>({
@@ -24,6 +25,7 @@ const CorretorAuthContext = createContext<CorretorAuthContextType>({
   loginAsCorretor: async () => ({ error: "Not implemented" }),
   logout: () => {},
   isCorretor: false,
+  updateCorretorNome: async () => {},
 });
 
 export const useCorretorAuth = () => {
@@ -89,6 +91,18 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
+  const updateCorretorNome = async (nome: string) => {
+    if (!corretor) return;
+    const { error } = await supabase
+      .from('corretores')
+      .update({ nome_completo: nome.trim() })
+      .eq('id', corretor.id);
+    if (error) throw error;
+    const updated = { ...corretor, nome_completo: nome.trim() };
+    setCorretor(updated);
+    localStorage.setItem('corretor_session', JSON.stringify(updated));
+  };
+
   const logout = () => {
     try {
       // Limpar estado local
@@ -123,6 +137,7 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         loginAsCorretor,
         logout,
         isCorretor: !!corretor,
+        updateCorretorNome,
       }}
     >
       {children}

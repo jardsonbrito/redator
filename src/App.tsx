@@ -47,7 +47,9 @@ const CorretorLogin           = lazy(() => import("./pages/CorretorLogin"));
 const CorretorHome            = lazy(() => import("./pages/CorretorHome"));
 const CorretorRedacoes        = lazy(() => import("./pages/corretor/CorretorRedacoes"));
 const CorretorTemas           = lazy(() => import("./pages/corretor/CorretorTemas"));
+const CorretorCriarTema       = lazy(() => import("./pages/corretor/CorretorCriarTema"));
 const CorretorSimulados       = lazy(() => import("./pages/corretor/CorretorSimulados"));
+const CorretorCriarSimulado   = lazy(() => import("./pages/corretor/CorretorCriarSimulado"));
 const CorretorSimuladoRedacoes = lazy(() => import("./pages/corretor/CorretorSimuladoRedacoes"));
 const CorretorRedacaoSimuladoDetalhes = lazy(() => import("./pages/corretor/CorretorRedacaoSimuladoDetalhes"));
 const CorretorAulas           = lazy(() => import("./pages/corretor/CorretorAulas"));
@@ -239,8 +241,10 @@ function App() {
                     <Route path="/corretor" element={<CorretorHome />} />
                     <Route path="/corretor/redacoes-corretor" element={<CorretorRedacoes />} />
                     <Route path="/corretor/temas" element={<CorretorTemas />} />
+                    <Route path="/corretor/temas/novo" element={<CorretorCriarTema />} />
                     <Route path="/corretor/temas/:id" element={<CorretorTemaDetalhes />} />
                     <Route path="/corretor/simulados" element={<CorretorSimulados />} />
+                    <Route path="/corretor/simulados/novo" element={<CorretorCriarSimulado />} />
                     <Route path="/corretor/simulados/:simuladoId/redacoes" element={<CorretorSimuladoRedacoes />} />
                     <Route path="/corretor/simulados/redacao/:id" element={<CorretorRedacaoSimuladoDetalhes />} />
                     <Route path="/corretor/aulas" element={<CorretorAulas />} />

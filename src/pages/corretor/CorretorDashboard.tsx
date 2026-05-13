@@ -121,7 +121,6 @@ const CorretorDashboard = () => {
             <div>
               <p className="text-violet-200 text-sm font-medium">{saudacao},</p>
               <h1 className="text-2xl sm:text-3xl font-bold mt-0.5">{nomeExibido}!</h1>
-              <p className="text-violet-200 text-sm mt-1">Central Operacional do Corretor</p>
             </div>
             <div className="flex gap-3 flex-wrap sm:flex-nowrap">
               <div className="rounded-xl bg-white/10 backdrop-blur px-4 py-3 min-w-[90px] text-center">

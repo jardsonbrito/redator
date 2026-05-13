@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { TemaCardPadrao } from "@/components/shared/TemaCard";
 import { FormattedText } from "@/components/shared/FormattedText";
 import { getTemaMotivatorIVUrl } from "@/utils/temaImageUtils";
@@ -15,6 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
 type TemaRow = Database['public']['Tables']['temas']['Row'];
 
 const CorretorTemas = () => {
+  const navigate = useNavigate();
   const [selectedTema, setSelectedTema] = useState<TemaRow | null>(null);
   const [orderBy, setOrderBy] = useState<'recente' | 'mais_redacoes'>('recente');
 
@@ -83,7 +86,6 @@ const CorretorTemas = () => {
           <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
             <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
             <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
-            <p className="text-sm text-violet-100 mt-1">Visualização dos temas disponíveis</p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <div className="space-y-3">
@@ -149,9 +151,21 @@ const CorretorTemas = () => {
       <div className="space-y-6">
         {/* Hero */}
         <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
-          <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
-          <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
-          <p className="text-sm text-violet-100 mt-1">Visualização dos temas disponíveis</p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
+              <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 gap-1.5 shrink-0"
+              onClick={() => navigate("/corretor/temas/novo")}
+            >
+              <Plus className="w-4 h-4" />
+              Novo Tema
+            </Button>
+          </div>
         </div>
 
         {/* Filtro de ordenação */}

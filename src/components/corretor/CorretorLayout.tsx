@@ -4,24 +4,33 @@ import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { CorretorNavigationProvider } from "@/hooks/useCorretorNavigationContext";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useToast } from "@/hooks/use-toast";
 
 interface CorretorLayoutProps {
   children: React.ReactNode;
 }
 
 export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
-  const { corretor, logout } = useCorretorAuth();
+  const { corretor, logout, updateCorretorNome } = useCorretorAuth();
   const { buscarMensagensNaoLidas } = useAjudaRapida();
+  const { toast } = useToast();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
+  const [perfilOpen, setPerfilOpen] = useState(false);
+  const [editingNome, setEditingNome] = useState(false);
+  const [nomeValue, setNomeValue] = useState("");
+  const [savingNome, setSavingNome] = useState(false);
 
   useEffect(() => {
     if (corretor?.email) {
@@ -80,26 +89,133 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
             </div>
           </div>
           
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            {/* Perfil do corretor com avatar, nome e função */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <CorretorAvatar size="sm" showUpload={true} />
-              {!isMobile && (
-                <div className="flex flex-col">
-                  <span className="text-foreground font-medium text-xs sm:text-sm truncate max-w-32 sm:max-w-none">
-                    {corretor?.nome_completo || 'Corretor'}
-                  </span>
-                  <span className="text-violet-500 text-xs font-medium">
-                    Corretor
-                  </span>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Sheet de perfil */}
+            <Sheet open={perfilOpen} onOpenChange={(open) => {
+              setPerfilOpen(open);
+              if (open) { setEditingNome(false); setNomeValue(corretor?.nome_completo || ""); }
+            }}>
+              <SheetTrigger asChild>
+                <button className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity rounded-xl p-1">
+                  <CorretorAvatar size="sm" showUpload={false} />
+                  {!isMobile && (
+                    <div className="flex flex-col text-left">
+                      <span className="text-foreground font-medium text-xs sm:text-sm truncate max-w-32 sm:max-w-none leading-tight">
+                        {corretor?.nome_completo || 'Corretor'}
+                      </span>
+                      <span className="text-violet-500 text-xs font-medium leading-tight">Corretor</span>
+                    </div>
+                  )}
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[310px] sm:w-[360px] overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Meu Perfil</SheetTitle>
+                </SheetHeader>
+
+                <div className="mt-6 space-y-6">
+                  {/* Avatar grande */}
+                  <div className="flex flex-col items-center gap-2">
+                    <CorretorAvatar size="lg" showUpload={true} />
+                    <p className="text-xs text-center text-violet-500 font-medium italic">Área do Corretor</p>
+                  </div>
+
+                  <Separator />
+
+                  {/* Dados */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-xs text-slate-400 uppercase tracking-wide">Dados Principais</h3>
+
+                    {/* Nome editável */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-400">Nome</p>
+                      {editingNome ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={nomeValue}
+                            onChange={e => setNomeValue(e.target.value)}
+                            className="h-8 text-sm"
+                            autoFocus
+                            onKeyDown={async e => {
+                              if (e.key === 'Enter') {
+                                if (!nomeValue.trim()) return;
+                                setSavingNome(true);
+                                try {
+                                  await updateCorretorNome(nomeValue);
+                                  toast({ title: "Nome atualizado!" });
+                                  setEditingNome(false);
+                                } catch {
+                                  toast({ title: "Erro ao salvar nome.", variant: "destructive" });
+                                } finally { setSavingNome(false); }
+                              }
+                              if (e.key === 'Escape') { setEditingNome(false); setNomeValue(corretor?.nome_completo || ""); }
+                            }}
+                          />
+                          <button
+                            disabled={savingNome || !nomeValue.trim()}
+                            onClick={async () => {
+                              if (!nomeValue.trim()) return;
+                              setSavingNome(true);
+                              try {
+                                await updateCorretorNome(nomeValue);
+                                toast({ title: "Nome atualizado!" });
+                                setEditingNome(false);
+                              } catch {
+                                toast({ title: "Erro ao salvar nome.", variant: "destructive" });
+                              } finally { setSavingNome(false); }
+                            }}
+                            className="text-emerald-600 hover:text-emerald-700 disabled:opacity-40"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => { setEditingNome(false); setNomeValue(corretor?.nome_completo || ""); }}
+                            className="text-slate-400 hover:text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-800">{corretor?.nome_completo || '—'}</p>
+                          <button
+                            onClick={() => { setEditingNome(true); setNomeValue(corretor?.nome_completo || ""); }}
+                            className="text-slate-400 hover:text-violet-600 transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-400">E-mail</p>
+                      <p className="text-sm text-slate-600">{corretor?.email || '—'}</p>
+                    </div>
+
+                    {/* Tipo */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-xs text-slate-500">Tipo de usuário:</span>
+                      <Badge variant="secondary" className="text-xs px-2 py-0.5">Corretor</Badge>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Sair */}
+                  <Button
+                    variant="outline"
+                    className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 gap-2"
+                    onClick={() => { setPerfilOpen(false); logout(); }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sair da conta
+                  </Button>
                 </div>
-              )}
-            </div>
-            
-            <Button variant="outline" onClick={logout} size="sm" className="px-2 sm:px-4">
-              <LogOut className="w-4 h-4 sm:mr-2" />
-              {!isMobile && <span>Sair</span>}
-            </Button>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
         

@@ -324,9 +324,6 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.22em] text-violet-200">Central de correção</p>
             <h2 className="mt-2 text-3xl font-black">Redações da turma</h2>
-            <p className="mt-2 max-w-2xl text-sm text-violet-100">
-              Gerencie pendências, incompletas, devolvidas e corrigidas.
-            </p>
           </div>
           {(incompletas.length > 0 || pendentes.length > 0) && (
             <button

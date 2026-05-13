@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClipboardCheck, Plus } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
+import { useNavigate } from "react-router-dom";
 
 const CorretorSimulados = () => {
+  const navigate = useNavigate();
   const { data: simulados, isLoading, error } = useQuery({
     queryKey: ['simulados-corretor'],
     queryFn: async () => {
@@ -31,8 +34,7 @@ const CorretorSimulados = () => {
           <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
             <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Avaliações</p>
             <h1 className="text-2xl sm:text-3xl font-black mt-1">Simulados</h1>
-            <p className="text-sm text-violet-100 mt-1">Simulados finalizados disponíveis para consulta</p>
-          </div>
+            </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
               <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
@@ -85,9 +87,21 @@ const CorretorSimulados = () => {
       <div className="space-y-6">
         {/* Hero */}
         <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
-          <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Avaliações</p>
-          <h1 className="text-2xl sm:text-3xl font-black mt-1">Simulados</h1>
-          <p className="text-sm text-violet-100 mt-1">Simulados finalizados disponíveis para consulta</p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Avaliações</p>
+              <h1 className="text-2xl sm:text-3xl font-black mt-1">Simulados</h1>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 gap-1.5 shrink-0"
+              onClick={() => navigate("/corretor/simulados/novo")}
+            >
+              <Plus className="w-4 h-4" />
+              Novo Simulado
+            </Button>
+          </div>
         </div>
 
         {(!simulados || simulados.length === 0) ? (

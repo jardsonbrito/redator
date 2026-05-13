@@ -9,7 +9,6 @@ const CorretorAjudaRapida = () => {
         <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
           <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Comunicação</p>
           <h1 className="text-2xl sm:text-3xl font-black mt-1">Recados dos Alunos</h1>
-          <p className="text-sm text-violet-100 mt-1">Gerencie mensagens e pedidos de ajuda dos seus alunos.</p>
         </div>
         <MensagensCorretor />
       </div>
