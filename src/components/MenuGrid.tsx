@@ -129,8 +129,9 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
           const functionalityName = getFunctionalityName(item.title);
           const isPlanFeatureDisabled = !isProfessor && functionalityName && !isFeatureEnabled(functionalityName);
 
-          // Todas as funcionalidades são controladas exclusivamente pelo plano — sem exceções hardcoded.
-          const isAlwaysAvailable = false;
+          // "Minhas Redações" nunca fica indisponível: o aluno sempre deve acessar histórico e correções.
+          // Para todos os outros cards, o plano tem controle total.
+          const isAlwaysAvailable = functionalityName === 'minhas_redacoes';
 
           // Verificação de funcionalidades (logs de debug removidos para produção)
           

@@ -30,12 +30,18 @@ export interface EventoCalendario {
   ativo?: boolean;
 }
 
+export type EventoCalendarioPayload = Omit<EventoCalendario, 'id'> & { id?: string };
+
 interface EventoCalendarioFormProps {
   mode: 'create' | 'edit';
   initialValues?: EventoCalendario;
   onSuccess?: () => void;
   onCancel?: () => void;
   onViewList?: () => void;
+  /** Quando definido, trava turmas_autorizadas nessas turmas e exibe como somente leitura */
+  lockedTurmas?: string[];
+  /** Substitui o save padrão (supabase direto). Útil para corretores que usam RPCs. */
+  onSave?: (payload: EventoCalendarioPayload) => Promise<void>;
 }
 
 const TIPOS_EVENTO = [
@@ -103,7 +109,7 @@ const STATUS_OPTIONS = [
 ];
 
 export const EventoCalendarioForm = ({
-  mode, initialValues, onSuccess, onCancel, onViewList,
+  mode, initialValues, onSuccess, onCancel, onViewList, lockedTurmas, onSave,
 }: EventoCalendarioFormProps) => {
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('basico');
@@ -123,7 +129,7 @@ export const EventoCalendarioForm = ({
     entidade_tipo: '',
     entidade_id: '',
     link_direto: '',
-    turmas_autorizadas: [],
+    turmas_autorizadas: lockedTurmas ?? [],
     permite_visitante: false,
     status: 'publicado',
   });
@@ -140,6 +146,7 @@ export const EventoCalendarioForm = ({
         link_direto: initialValues.link_direto || '',
         competencia: initialValues.competencia || '',
         descricao: initialValues.descricao || '',
+        turmas_autorizadas: lockedTurmas ?? initialValues.turmas_autorizadas,
       });
     }
   }, [mode, initialValues]);
@@ -185,14 +192,33 @@ export const EventoCalendarioForm = ({
       setActiveSection('quando');
       return;
     }
-    if (form.turmas_autorizadas.length === 0 && !form.permite_visitante) {
+    if (!lockedTurmas && form.turmas_autorizadas.length === 0 && !form.permite_visitante) {
       toast.error('Selecione pelo menos uma turma ou ative "Permite Visitante".');
       setActiveSection('destinatarios');
       return;
     }
 
     setLoading(true);
-    const payload = {
+    const payload: EventoCalendarioPayload = {
+      ...(form.id ? { id: form.id } : {}),
+      titulo: form.titulo.trim(),
+      descricao: form.descricao?.trim() || undefined,
+      tipo_evento: form.tipo_evento,
+      competencia: form.competencia || undefined,
+      data_evento: form.data_evento,
+      hora_inicio: form.hora_inicio || undefined,
+      hora_fim: form.hora_fim || undefined,
+      cor: form.cor || undefined,
+      entidade_tipo: form.entidade_tipo || undefined,
+      entidade_id: form.entidade_id || undefined,
+      link_direto: form.link_direto?.trim() || undefined,
+      turmas_autorizadas: lockedTurmas ?? form.turmas_autorizadas,
+      permite_visitante: form.permite_visitante,
+      status: form.status,
+    };
+
+    // Payload com null para o supabase direto (admin) — garante que campos opcionais sejam limpos
+    const supabasePayload = {
       titulo: form.titulo.trim(),
       descricao: form.descricao?.trim() || null,
       tipo_evento: form.tipo_evento,
@@ -210,17 +236,19 @@ export const EventoCalendarioForm = ({
     };
 
     try {
-      if (mode === 'edit' && form.id) {
+      if (onSave) {
+        await onSave(payload);
+      } else if (mode === 'edit' && form.id) {
         const { error } = await supabase
           .from('calendario_atividades' as any)
-          .update(payload)
+          .update(supabasePayload)
           .eq('id', form.id);
         if (error) throw error;
         toast.success('Evento atualizado com sucesso!');
       } else {
         const { error } = await supabase
           .from('calendario_atividades' as any)
-          .insert([payload]);
+          .insert([supabasePayload]);
         if (error) throw error;
         toast.success('Evento criado com sucesso!');
         setForm({
@@ -228,7 +256,7 @@ export const EventoCalendarioForm = ({
           data_evento: new Date().toISOString().slice(0, 10),
           hora_inicio: '', hora_fim: '', cor: '', entidade_tipo: '', entidade_id: '',
           link_direto: '',
-          turmas_autorizadas: [], permite_visitante: false, status: 'publicado',
+          turmas_autorizadas: lockedTurmas ?? [], permite_visitante: false, status: 'publicado',
         });
       }
       onSuccess?.();
@@ -400,12 +428,43 @@ export const EventoCalendarioForm = ({
         )}
 
         {activeSection === 'destinatarios' && (
-          <TurmaSelector
-            selectedTurmas={form.turmas_autorizadas}
-            permiteVisitante={form.permite_visitante}
-            onTurmasChange={turmas => setForm(f => ({ ...f, turmas_autorizadas: turmas }))}
-            onPermiteVisitanteChange={v => setForm(f => ({ ...f, permite_visitante: v }))}
-          />
+          lockedTurmas ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Turmas destinatárias</p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Este evento ficará visível para os alunos das seguintes turmas (vinculadas ao seu perfil):
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {lockedTurmas.map(t => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700 border border-violet-200"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Permite Visitante</p>
+                  <p className="text-xs text-gray-500">Exibir também para alunos sem turma definida</p>
+                </div>
+                <Switch
+                  checked={form.permite_visitante}
+                  onCheckedChange={v => setForm(f => ({ ...f, permite_visitante: v }))}
+                />
+              </div>
+            </div>
+          ) : (
+            <TurmaSelector
+              selectedTurmas={form.turmas_autorizadas}
+              permiteVisitante={form.permite_visitante}
+              onTurmasChange={turmas => setForm(f => ({ ...f, turmas_autorizadas: turmas }))}
+              onPermiteVisitanteChange={v => setForm(f => ({ ...f, permite_visitante: v }))}
+            />
+          )
         )}
 
         {activeSection === 'vinculacao' && (

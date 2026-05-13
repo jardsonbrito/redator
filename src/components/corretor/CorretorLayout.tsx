@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap } from "lucide-react";
+import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
@@ -49,6 +49,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
 
   const menuItems = [
     { icon: Home, label: "Home", path: "/corretor" },
+    { icon: CalendarDays, label: "Calendário", path: "/corretor/calendario" },
     { icon: MessageCircle, label: "Recado dos Alunos", path: "/corretor/ajuda-rapida" },
     { icon: FileText, label: "Redações", path: "/corretor/redacoes-corretor" },
     { icon: BookOpen, label: "Temas", path: "/corretor/temas" },

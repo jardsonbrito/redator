@@ -67,6 +67,7 @@ const CorretorTemaDetalhes    = lazy(() => import("./pages/corretor/CorretorTema
 const CorretorLousas          = lazy(() => import("./pages/corretor/CorretorLousas"));
 const CorretorLousaDetalhes   = lazy(() => import("./pages/corretor/CorretorLousaDetalhes"));
 const CorretorVisitantes      = lazy(() => import("./pages/corretor/CorretorVisitantes"));
+const CorretorCalendario      = lazy(() => import("./pages/corretor/CorretorCalendario"));
 const LousaRespostasPage      = lazy(() => import("./pages/admin/LousaRespostas"));
 const VisitantesAdmin         = lazy(() => import("./pages/admin/VisitantesAdmin"));
 const Top5Admin               = lazy(() => import("./pages/admin/Top5Admin"));
@@ -257,6 +258,7 @@ function App() {
                     <Route path="/corretor/lousas" element={<CorretorLousas />} />
                     <Route path="/corretor/lousas/:id" element={<CorretorLousaDetalhes />} />
                     <Route path="/corretor/visitantes" element={<CorretorVisitantes />} />
+                    <Route path="/corretor/calendario" element={<CorretorCalendario />} />
 
                     {/* Rotas do Professor */}
                     <Route path="/professor/login" element={<ProfessorLogin />} />

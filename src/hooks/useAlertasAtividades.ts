@@ -206,7 +206,7 @@ export function useAlertasAtividades({ turma, userType, email, enabled = true }:
 
         const { data: temas } = await supabase
           .from('temas')
-          .select('id, frase_tematica, published_at')
+          .select('id, frase_tematica, published_at, turmas_permitidas')
           .eq('status', 'publicado')
           .gte('published_at', cincoDiasAtras)
           .order('published_at', { ascending: false });
@@ -227,6 +227,20 @@ export function useAlertasAtividades({ turma, userType, email, enabled = true }:
           }
 
           for (const tema of temas) {
+            // Filtrar por turma: turmas_permitidas vazio/null = visível para todos
+            const turmasPermitidas = (tema as any).turmas_permitidas as string[] | null;
+            if (
+              !isVisitante &&
+              turmaNormalizada &&
+              turmasPermitidas && turmasPermitidas.length > 0 &&
+              !turmasPermitidas.includes(turmaNormalizada) &&
+              !turmasPermitidas.includes(`TURMA ${turmaNormalizada}`) &&
+              !turmasPermitidas.includes('Todas') &&
+              !turmasPermitidas.includes('TODAS')
+            ) {
+              continue;
+            }
+
             // Não alertar se o aluno já escreveu sobre este tema
             if (tema.frase_tematica && frasesJaEscritas.has(tema.frase_tematica)) {
               continue;
