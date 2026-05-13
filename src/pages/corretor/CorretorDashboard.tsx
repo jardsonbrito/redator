@@ -299,14 +299,6 @@ const CorretorDashboard = () => {
           </Card>
         </div>
 
-        {/* ── GALERIA DE HONRA + TOP 5 (horizontal compacto) ──────────── */}
-        <Top5Widget
-          variant="corretor"
-          showHeader
-          horizontal
-          turmasPermitidas={(corretor.turmas_autorizadas as string[]) ?? []}
-        />
-
         {/* ── GRÁFICOS ─────────────────────────────────────────────────── */}
         <div className="grid xl:grid-cols-2 gap-4">
           <ChartCard
@@ -322,6 +314,14 @@ const CorretorDashboard = () => {
             color="#06b6d4"
           />
         </div>
+
+        {/* ── GALERIA DE HONRA + TOP 5 (horizontal compacto) ──────────── */}
+        <Top5Widget
+          variant="corretor"
+          showHeader
+          horizontal
+          turmasPermitidas={(corretor.turmas_autorizadas as string[]) ?? []}
+        />
 
       </div>
     </CorretorLayout>
