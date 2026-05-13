@@ -51,6 +51,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Plus, Pencil, Trash2, ListChecks, MoreHorizontal, GripVertical, ImagePlus, BookOpen } from 'lucide-react';
 import { sanitizeFileName } from '@/utils/fileUtils';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 const schema = z.object({
   titulo: z.string().min(1, 'Título obrigatório'),
@@ -177,6 +179,7 @@ const TopicoCard = ({ topico, isDragging = false, onItens, onEditar, onExcluir, 
 
 export const MicroTopicosAdmin = () => {
   const queryClient = useQueryClient();
+  const { turmasDinamicas } = useTurmasAtivas();
   const { data: topicos = [], isLoading } = useMicroTopicosAdmin();
   const [ordered, setOrdered] = useState<Topico[]>([]);
   const [activeTopico, setActiveTopico] = useState<Topico | null>(null);
@@ -186,6 +189,7 @@ export const MicroTopicosAdmin = () => {
   const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
 
   useEffect(() => {
     setOrdered([...topicos].sort((a, b) => a.ordem - b.ordem));
@@ -204,6 +208,7 @@ export const MicroTopicosAdmin = () => {
   const openEditar = (t: Topico) => {
     setTopicoSelecionado(t);
     reset({ titulo: t.titulo, descricao: t.descricao ?? '', ordem: t.ordem, ativo: t.ativo });
+    setTurmasSelecionadas((t as any).turmas_permitidas ?? []);
     setCoverFile(null);
     if (t.cover_storage_path) {
       const { data } = supabase.storage.from('micro-covers').getPublicUrl(t.cover_storage_path);
@@ -217,6 +222,7 @@ export const MicroTopicosAdmin = () => {
   const openCriar = () => {
     setTopicoSelecionado(null);
     reset({ titulo: '', descricao: '', ordem: topicos.length, ativo: true });
+    setTurmasSelecionadas([]);
     setCoverFile(null);
     setCoverPreview(null);
     setModo('criar');
@@ -233,17 +239,18 @@ export const MicroTopicosAdmin = () => {
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
+      const turmasPayload = turmasSelecionadas.length > 0 ? turmasSelecionadas : null;
       if (modo === 'editar' && topicoSelecionado) {
         const coverPath = await uploadCover(topicoSelecionado.id);
         const { error } = await supabase
           .from('micro_topicos')
-          .update({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo, cover_storage_path: coverPath })
+          .update({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo, cover_storage_path: coverPath, turmas_permitidas: turmasPayload })
           .eq('id', topicoSelecionado.id);
         if (error) throw error;
       } else {
         const { data: novo, error } = await supabase
           .from('micro_topicos')
-          .insert({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo })
+          .insert({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo, turmas_permitidas: turmasPayload })
           .select()
           .single();
         if (error) throw error;
@@ -402,6 +409,29 @@ export const MicroTopicosAdmin = () => {
               ) : (
                 <span className="text-gray-400">Tópico inativo</span>
               )}</Label>
+            </div>
+            {/* Turmas */}
+            <div className="space-y-2">
+              <Label>Turmas com acesso</Label>
+              <p className="text-xs text-muted-foreground">Deixe sem seleção para todas as turmas.</p>
+              {turmasDinamicas.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {turmasDinamicas.map(({ valor, label }) => (
+                    <div key={valor} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`topico-turma-${valor}`}
+                        checked={turmasSelecionadas.includes(valor)}
+                        onCheckedChange={(checked) => {
+                          setTurmasSelecionadas(prev =>
+                            checked ? [...prev, valor] : prev.filter(t => t !== valor)
+                          );
+                        }}
+                      />
+                      <label htmlFor={`topico-turma-${valor}`} className="text-sm cursor-pointer">{label}</label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={mutation.isPending} className="bg-[#3f0776] hover:bg-[#643293]">

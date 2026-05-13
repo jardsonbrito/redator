@@ -13,8 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ImageSelector } from './ImageSelector';
 import { useGuiaTematico, GuiaTematico, NovoGuiaInput } from '@/hooks/useGuiaTematico';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 
 // ==================== SCHEMA ====================
@@ -65,10 +67,12 @@ export function GuiaTematicoForm({
   onSuccess,
 }: GuiaTematicoFormProps) {
   const { criarGuia, editarGuia, isCriando, isEditando } = useGuiaTematico();
+  const { turmasDinamicas } = useTurmasAtivas();
   const isEditing = !!guiaParaEditar;
   const isSaving = isCriando || isEditando;
 
   const [cover, setCover] = useState<ImageValue>(null);
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
 
   const {
     register,
@@ -153,6 +157,7 @@ export function GuiaTematicoForm({
             }
           : null
       );
+      setTurmasSelecionadas((guiaParaEditar as any).turmas_permitidas ?? []);
     } else {
       reset({
         frase_tematica: '',
@@ -167,6 +172,7 @@ export function GuiaTematicoForm({
         propostas_solucao: [{ titulo: '', descricao: '' }],
       });
       setCover(null);
+      setTurmasSelecionadas([]);
     }
   }, [guiaParaEditar, reset, open]);
 
@@ -185,6 +191,7 @@ export function GuiaTematicoForm({
       problematica_central: values.problematica_central,
       problematicas_associadas: values.problematicas_associadas,
       propostas_solucao: values.propostas_solucao,
+      turmas_permitidas: turmasSelecionadas.length > 0 ? turmasSelecionadas : null,
     };
 
     if (isEditing) {
@@ -507,6 +514,30 @@ export function GuiaTematicoForm({
               <Plus className="h-3.5 w-3.5" />
               Adicionar proposta
             </Button>
+          </div>
+
+          {/* Turmas */}
+          <div className="space-y-2 pt-2 border-t">
+            <Label>Turmas com acesso</Label>
+            <p className="text-xs text-muted-foreground">Deixe sem seleção para disponibilizar a todas as turmas.</p>
+            {turmasDinamicas.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {turmasDinamicas.map(({ valor, label }) => (
+                  <div key={valor} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`guia-turma-${valor}`}
+                      checked={turmasSelecionadas.includes(valor)}
+                      onCheckedChange={(checked) => {
+                        setTurmasSelecionadas(prev =>
+                          checked ? [...prev, valor] : prev.filter(t => t !== valor)
+                        );
+                      }}
+                    />
+                    <label htmlFor={`guia-turma-${valor}`} className="text-sm cursor-pointer">{label}</label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <DialogFooter className="pt-4 border-t">

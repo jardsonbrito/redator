@@ -44,6 +44,7 @@ export interface NovoGuiaInput {
   problematica_central: string;
   problematicas_associadas: ItemDescrito[];
   propostas_solucao: ItemDescrito[];
+  turmas_permitidas?: string[] | null;
 }
 
 // ==================== HOOK PRINCIPAL ====================

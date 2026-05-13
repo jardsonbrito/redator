@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SparklesIcon, EditIcon, SaveIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface GameFormProps {
   gameId?: string;
@@ -17,6 +19,7 @@ interface GameFormProps {
 }
 
 const GameForm: React.FC<GameFormProps> = ({ gameId, onSuccess, onCancel }) => {
+  const { turmasDinamicas } = useTurmasAtivas();
   const [formData, setFormData] = useState({
     title: '',
     template: 'conectivos' as 'conectivos' | 'desvios' | 'intervencao',
@@ -495,14 +498,24 @@ const GameForm: React.FC<GameFormProps> = ({ gameId, onSuccess, onCancel }) => {
 
             <div>
               <Label>Turmas Autorizadas</Label>
-              <Input
-                value={formData.turmas_autorizadas.join(', ')}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  turmas_autorizadas: e.target.value.split(',').map(t => t.trim()).filter(t => t)
-                })}
-                placeholder="A, B, C, E (deixe vazio para todas)"
-              />
+              <p className="text-xs text-muted-foreground mb-2">Deixe sem seleção para todas as turmas.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {turmasDinamicas.map(({ valor, label }) => (
+                  <div key={valor} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`game-turma-${valor}`}
+                      checked={formData.turmas_autorizadas.includes(valor)}
+                      onCheckedChange={(checked) => setFormData({
+                        ...formData,
+                        turmas_autorizadas: checked
+                          ? [...formData.turmas_autorizadas, valor]
+                          : formData.turmas_autorizadas.filter(t => t !== valor)
+                      })}
+                    />
+                    <label htmlFor={`game-turma-${valor}`} className="text-sm cursor-pointer">{label}</label>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center space-x-2 pt-6">
@@ -817,14 +830,24 @@ const GameForm: React.FC<GameFormProps> = ({ gameId, onSuccess, onCancel }) => {
 
             <div>
               <Label>Turmas Autorizadas</Label>
-              <Input
-                value={formData.turmas_autorizadas.join(', ')}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  turmas_autorizadas: e.target.value.split(',').map(t => t.trim()).filter(t => t)
-                })}
-                placeholder="A, B, C, E (deixe vazio para todas)"
-              />
+              <p className="text-xs text-muted-foreground mb-2">Deixe sem seleção para todas as turmas.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {turmasDinamicas.map(({ valor, label }) => (
+                  <div key={valor} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`game-turma-${valor}`}
+                      checked={formData.turmas_autorizadas.includes(valor)}
+                      onCheckedChange={(checked) => setFormData({
+                        ...formData,
+                        turmas_autorizadas: checked
+                          ? [...formData.turmas_autorizadas, valor]
+                          : formData.turmas_autorizadas.filter(t => t !== valor)
+                      })}
+                    />
+                    <label htmlFor={`game-turma-${valor}`} className="text-sm cursor-pointer">{label}</label>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center space-x-2 pt-6">
