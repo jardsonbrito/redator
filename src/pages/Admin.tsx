@@ -248,10 +248,19 @@ const Admin = () => {
       }).length || 0;
       const temasSemCapa = temas?.filter(t => !t.cover_file_path && !t.cover_url && !t.imagem_texto_4_url).length || 0;
 
+      // Solicitações de tema por corretores (últimos 30 dias)
+      const trintaDiasAtras = new Date();
+      trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+      const { count: solicitacoesCount } = await supabase
+        .from('solicitacoes_tema')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', trintaDiasAtras.toISOString());
+
       const temasChips: string[] = [];
       if (temasAgendados > 0) temasChips.push(`${temasAgendados} agendados`);
       if (temasRascunho > 0) temasChips.push(`${temasRascunho} rascunhos`);
       if (temasSemCapa > 0) temasChips.push(`${temasSemCapa} sem capa ⚠️`);
+      if ((solicitacoesCount ?? 0) > 0) temasChips.push(`${solicitacoesCount} solicitação${solicitacoesCount === 1 ? '' : 'ões'} de corretor 🔔`);
 
       data.temas = {
         info: `${temasPublicados} publicados`,

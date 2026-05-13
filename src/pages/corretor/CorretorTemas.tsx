@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen, Plus, CheckCircle2, PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState, useMemo } from "react";
@@ -12,14 +12,22 @@ import { TemaCardPadrao } from "@/components/shared/TemaCard";
 import { FormattedText } from "@/components/shared/FormattedText";
 import { getTemaMotivatorIVUrl } from "@/utils/temaImageUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type TemaRow = Database['public']['Tables']['temas']['Row'];
 
 const CorretorTemas = () => {
   const navigate = useNavigate();
+  const { corretor } = useCorretorAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedTema, setSelectedTema] = useState<TemaRow | null>(null);
   const [orderBy, setOrderBy] = useState<'recente' | 'mais_redacoes'>('recente');
+  const [solicitando, setSolicitando] = useState<string | null>(null);
+
+  const turmasCorretor: string[] = (corretor?.turmas_autorizadas as string[]) ?? [];
 
   // Buscar temas publicados
   const { data: temas, isLoading, error } = useQuery({
@@ -30,12 +38,42 @@ const CorretorTemas = () => {
         .select('*')
         .eq('status', 'publicado')
         .order('published_at', { ascending: false, nullsFirst: false })
-        .order('id', { ascending: false }); // Fallback para temas sem published_at
+        .order('id', { ascending: false });
 
       if (error) throw error;
       return data || [];
     }
   });
+
+  // Verifica se o tema já está disponível para alguma turma do corretor
+  const temaDisponivelParaCorretor = (tema: TemaRow): boolean => {
+    if (turmasCorretor.length === 0) return false;
+    const permitidas: string[] = (tema.turmas_permitidas as string[]) ?? [];
+    return turmasCorretor.some(t => permitidas.includes(t));
+  };
+
+  const handleSolicitar = async (tema: TemaRow) => {
+    if (!corretor?.email) return;
+    setSolicitando(tema.id);
+    try {
+      const { data, error } = await supabase.rpc('solicitar_tema_para_turma', {
+        p_corretor_email: corretor.email,
+        p_tema_id: tema.id,
+      });
+      if (error) throw error;
+      if (data === 'ja_disponivel') {
+        toast({ title: "Tema já disponível", description: "Este tema já está listado para suas turmas." });
+      } else {
+        toast({ title: "Tema adicionado!", description: "O tema agora está disponível para suas turmas." });
+        await queryClient.invalidateQueries({ queryKey: ['temas-corretor'] });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao solicitar tema.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
+    } finally {
+      setSolicitando(null);
+    }
+  };
 
   // Buscar contagem de redações por tema
   const { data: redacoesCount } = useQuery({
@@ -195,16 +233,37 @@ const CorretorTemas = () => {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {temasOrdenados.map((tema) => (
-              <TemaCardPadrao
-                key={tema.id}
-                tema={tema}
-                perfil="corretor"
-                actions={{
-                  onVerTema: () => setSelectedTema(tema)
-                }}
-              />
-            ))}
+            {temasOrdenados.map((tema) => {
+              const disponivel = temaDisponivelParaCorretor(tema);
+              return (
+                <div key={tema.id} className="flex flex-col gap-2">
+                  <TemaCardPadrao
+                    tema={tema}
+                    perfil="corretor"
+                    actions={{ onVerTema: () => setSelectedTema(tema) }}
+                  />
+                  {turmasCorretor.length > 0 && (
+                    disponivel ? (
+                      <div className="flex items-center gap-1.5 px-1 text-xs text-emerald-600 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Disponível para suas turmas
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs border-violet-200 text-violet-700 hover:bg-violet-50 gap-1.5"
+                        disabled={solicitando === tema.id}
+                        onClick={() => handleSolicitar(tema)}
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        {solicitando === tema.id ? "Adicionando..." : "Adicionar às minhas turmas"}
+                      </Button>
+                    )
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
