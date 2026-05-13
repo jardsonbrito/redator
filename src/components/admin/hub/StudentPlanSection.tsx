@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { usePlanOverrides } from '@/hooks/usePlanOverrides';
-import { useFuncionalidades } from '@/hooks/usePlansAdmin';
+import { useFuncionalidades, usePlanos } from '@/hooks/usePlansAdmin';
 import { Settings2, RotateCcw, User } from 'lucide-react';
 
 interface StudentPlanSectionProps {
@@ -17,6 +17,8 @@ export function StudentPlanSection({ studentId, plano }: StudentPlanSectionProps
   const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
 
   const { data: funcionalidades = [] } = useFuncionalidades();
+  const { data: planos = [] } = usePlanos();
+  const planoExibicao = planos.find(p => p.nome === plano)?.nome_exibicao ?? plano;
 
   const {
     overrides,
@@ -56,7 +58,7 @@ export function StudentPlanSection({ studentId, plano }: StudentPlanSectionProps
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Settings2 className="h-4 w-4 text-primary" />
             Controle de Funcionalidades
-            <Badge variant="outline" className="text-xs">{plano}</Badge>
+            <Badge variant="outline" className="text-xs">{planoExibicao}</Badge>
           </CardTitle>
           {hasCustomizations() && (
             <Button size="sm" variant="outline" onClick={resetAllOverrides}>
@@ -106,7 +108,7 @@ export function StudentPlanSection({ studentId, plano }: StudentPlanSectionProps
         </div>
         {hasCustomizations() && (
           <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded p-2 mt-3">
-            Este aluno possui customizações que sobrescrevem o padrão do plano {plano}.
+            Este aluno possui customizações que sobrescrevem o padrão do plano {planoExibicao}.
           </p>
         )}
       </CardContent>

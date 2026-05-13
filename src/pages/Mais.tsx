@@ -197,9 +197,6 @@ const Mais = () => {
               <h1 className="text-2xl font-bold text-gray-800">
                 Todos os Recursos
               </h1>
-              <p className="text-sm text-gray-600 mt-2">
-                {menuItems.length} recursos disponíveis
-              </p>
             </div>
 
             <MenuGrid

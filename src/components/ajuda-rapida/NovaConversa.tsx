@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useToast } from '@/hooks/use-toast';
 
 interface Corretor {
@@ -15,7 +16,7 @@ interface Corretor {
 }
 
 interface NovaConversaProps {
-  alunoId: string; // Agora aceita email também
+  alunoId: string;
   onVoltar: () => void;
   onConversaCriada: (corretorId: string, corretorNome: string) => void;
 }
@@ -26,6 +27,7 @@ export const NovaConversa = ({ alunoId, onVoltar, onConversaCriada }: NovaConver
   const [mensagem, setMensagem] = useState('');
   const [loading, setLoading] = useState(false);
   const { enviarMensagem } = useAjudaRapida();
+  const { studentData } = useStudentAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,12 +35,24 @@ export const NovaConversa = ({ alunoId, onVoltar, onConversaCriada }: NovaConver
       try {
         const { data, error } = await supabase
           .from('corretores')
-          .select('id, nome_completo')
+          .select('id, nome_completo, turmas_autorizadas')
           .eq('ativo', true)
+          .eq('visivel_no_formulario', true)
           .order('nome_completo');
 
         if (error) throw error;
-        setCorretores(data || []);
+
+        const turmaDoPerfil = studentData.turma;
+
+        // Filtrar pelos corretores vinculados à turma do aluno.
+        // Se turmas_autorizadas for null/vazio, o corretor não aparece (não configurado).
+        const corretoresDaTurma = (data || []).filter((c) => {
+          if (!c.turmas_autorizadas || c.turmas_autorizadas.length === 0) return false;
+          if (!turmaDoPerfil) return true; // visitante: mostra todos configurados
+          return c.turmas_autorizadas.includes(turmaDoPerfil);
+        });
+
+        setCorretores(corretoresDaTurma.map(({ id, nome_completo }) => ({ id, nome_completo })));
       } catch (error) {
         console.error('Erro ao buscar corretores:', error);
         toast({
@@ -50,7 +64,7 @@ export const NovaConversa = ({ alunoId, onVoltar, onConversaCriada }: NovaConver
     };
 
     buscarCorretores();
-  }, []);
+  }, [studentData.turma]);
 
   const handleEnviar = async () => {
     if (!corretorSelecionado || !mensagem.trim()) {
@@ -64,14 +78,11 @@ export const NovaConversa = ({ alunoId, onVoltar, onConversaCriada }: NovaConver
 
     try {
       setLoading(true);
-      console.log('🔄 Enviando mensagem:', { alunoId, corretorSelecionado, mensagem: mensagem.trim() });
-      
       await enviarMensagem(alunoId, corretorSelecionado, mensagem.trim(), 'aluno');
-      
       const corretorNome = corretores.find(c => c.id === corretorSelecionado)?.nome_completo || '';
       onConversaCriada(corretorSelecionado, corretorNome);
     } catch (error) {
-      console.error('❌ Erro ao criar conversa:', error);
+      console.error('Erro ao criar conversa:', error);
       toast({
         title: "Erro",
         description: "Não foi possível enviar a mensagem. Tente novamente.",
@@ -102,18 +113,24 @@ export const NovaConversa = ({ alunoId, onVoltar, onConversaCriada }: NovaConver
               <label className="text-sm font-medium mb-2 block">
                 Selecione um corretor
               </label>
-              <Select value={corretorSelecionado} onValueChange={setCorretorSelecionado}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha um corretor..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {corretores.map((corretor) => (
-                    <SelectItem key={corretor.id} value={corretor.id}>
-                      {corretor.nome_completo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {corretores.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum corretor disponível para a sua turma no momento.
+                </p>
+              ) : (
+                <Select value={corretorSelecionado} onValueChange={setCorretorSelecionado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha um corretor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {corretores.map((corretor) => (
+                      <SelectItem key={corretor.id} value={corretor.id}>
+                        {corretor.nome_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div>

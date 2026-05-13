@@ -9,16 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { usePlanos } from '@/hooks/usePlansAdmin';
 import { Edit2, History, Trash2, Plus, Crown } from 'lucide-react';
 import { formatDateSafe, isDateActiveOrFuture, formatDateTimeSafe } from '@/utils/dateUtils';
-
-const PLANOS = ['Liderança', 'Lapidação', 'Largada', 'Bolsista'] as const;
-type Plano = typeof PLANOS[number];
 
 interface Subscription {
   id: string;
   aluno_id: string;
-  plano: Plano;
+  plano: string;
   data_inscricao: string;
   data_validade: string;
   status: 'Ativo' | 'Vencido';
@@ -31,6 +29,8 @@ interface SubscriptionHistory {
   data_alteracao: string;
   admin_responsavel: string;
 }
+
+type Plano = string;
 
 interface StudentSubscriptionSectionProps {
   studentId: string;
@@ -47,6 +47,7 @@ const planoBadgeClass: Record<string, string> = {
 
 export function StudentSubscriptionSection({ studentId, studentName, onPlanoChange }: StudentSubscriptionSectionProps) {
   const { toast } = useToast();
+  const { data: planosDisponiveis = [] } = usePlanos();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<SubscriptionHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +171,7 @@ export function StudentSubscriptionSection({ studentId, studentName, onPlanoChan
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={openEdit}>
-              {subscription ? <><Edit2 className="h-3 w-3 mr-1" />Editar</> : <><Plus className="h-3 w-3 mr-1" />Criar</>}
+              {subscription ? <><Edit2 className="h-3 w-3 mr-1" />Editar</> : <><Plus className="h-3 w-3 mr-1" />Atribuir plano</>}
             </Button>
             {subscription && (
               <>
@@ -189,7 +190,9 @@ export function StudentSubscriptionSection({ studentId, studentName, onPlanoChan
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Plano</p>
-              <Badge className={planoBadgeClass[subscription.plano]}>{subscription.plano}</Badge>
+              <Badge className={planoBadgeClass[subscription.plano]}>
+                {planosDisponiveis.find(p => p.nome === subscription.plano)?.nome_exibicao ?? subscription.plano}
+              </Badge>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Validade</p>
@@ -211,7 +214,7 @@ export function StudentSubscriptionSection({ studentId, studentName, onPlanoChan
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{subscription ? 'Editar' : 'Criar'} assinatura — {studentName}</DialogTitle>
+            <DialogTitle>{subscription ? 'Editar' : 'Atribuir'} plano — {studentName}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -219,7 +222,12 @@ export function StudentSubscriptionSection({ studentId, studentName, onPlanoChan
               <Select value={editForm.plano} onValueChange={(v: Plano) => setEditForm((p) => ({ ...p, plano: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione o plano" /></SelectTrigger>
                 <SelectContent>
-                  {PLANOS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  {planosDisponiveis
+                    .filter(p => p.ativo && p.tipo === 'aluno')
+                    .map(p => (
+                      <SelectItem key={p.nome} value={p.nome}>{p.nome_exibicao}</SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
             </div>
@@ -243,7 +251,7 @@ export function StudentSubscriptionSection({ studentId, studentName, onPlanoChan
             </div>
             <div className="flex gap-2">
               <Button onClick={save} disabled={saving || !editForm.plano || !editForm.data_validade} className="flex-1">
-                {saving ? 'Salvando...' : subscription ? 'Atualizar' : 'Criar'}
+                {saving ? 'Salvando...' : subscription ? 'Atualizar' : 'Atribuir plano'}
               </Button>
               <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
             </div>

@@ -129,10 +129,8 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
           const functionalityName = getFunctionalityName(item.title);
           const isPlanFeatureDisabled = !isProfessor && functionalityName && !isFeatureEnabled(functionalityName);
 
-          // Para visitantes e candidatos do PS, a tabela de features é autoritativa — sem bypass.
-          // Para alunos com plano, algumas funcionalidades sempre ficam ativas.
-          const alwaysAvailableFeatures = ['minhas_redacoes', 'jarvis', 'microaprendizagem'];
-          const isAlwaysAvailable = !isVisitante && !isPSCandidate && alwaysAvailableFeatures.includes(functionalityName || '');
+          // Todas as funcionalidades são controladas exclusivamente pelo plano — sem exceções hardcoded.
+          const isAlwaysAvailable = false;
 
           // Verificação de funcionalidades (logs de debug removidos para produção)
           

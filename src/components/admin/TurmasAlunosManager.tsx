@@ -40,8 +40,9 @@ export const TurmasAlunosManager = () => {
 
   // Área de convite
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState<string>("");
-  const [nomeDestinatario, setNomeDestinatario] = useState("");
   const [emailDestinatario, setEmailDestinatario] = useState("");
+  const [alunosNaTurma, setAlunosNaTurma] = useState<number | null>(null);
+  const [verificandoAlunos, setVerificandoAlunos] = useState(false);
   const [gerandoConvite, setGerandoConvite] = useState(false);
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
 
@@ -141,10 +142,22 @@ export const TurmasAlunosManager = () => {
       setLinkGerado(link);
       navigator.clipboard.writeText(link).catch(() => {});
       toast({ title: "Convite gerado!", description: "Link copiado para a área de transferência." });
-      setNomeDestinatario("");
       setEmailDestinatario("");
     }
     setGerandoConvite(false);
+  };
+
+  const handleAbrirDeleteTurma = async (turma: TurmaAluno) => {
+    setVerificandoAlunos(true);
+    setAlunosNaTurma(null);
+    setConfirmacaoNome("");
+    setTurmaParaDeletar(turma);
+    const { count } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("turma_id", turma.id);
+    setAlunosNaTurma(count ?? 0);
+    setVerificandoAlunos(false);
   };
 
   const toggleCodigoVisivel = (id: string) => {
@@ -264,7 +277,7 @@ export const TurmasAlunosManager = () => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => { setConfirmacaoNome(""); setTurmaParaDeletar(turma); }}
+                              onClick={() => handleAbrirDeleteTurma(turma)}
                               className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition-colors"
                             >
                               Deletar turma
@@ -296,13 +309,10 @@ export const TurmasAlunosManager = () => {
                       </Select>
                     </div>
                   )}
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_auto]">
-                    <Input
-                      placeholder="Nome do aluno"
-                      value={nomeDestinatario}
-                      onChange={(e) => setNomeDestinatario(e.target.value)}
-                      className="border-purple-200 focus-visible:ring-purple-200"
-                    />
+                  <p className="text-xs text-muted-foreground">
+                    O aluno preencherá o próprio nome ao acessar o link de convite.
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
                     <Input
                       type="email"
                       placeholder="E-mail do aluno"
@@ -338,10 +348,10 @@ export const TurmasAlunosManager = () => {
         </div>
       </article>
 
-      {/* Confirmação de exclusão com digitação do nome */}
+      {/* Confirmação de exclusão com verificação de alunos */}
       <AlertDialog
         open={!!turmaParaDeletar}
-        onOpenChange={(open) => { if (!open) { setTurmaParaDeletar(null); setConfirmacaoNome(""); } }}
+        onOpenChange={(open) => { if (!open) { setTurmaParaDeletar(null); setConfirmacaoNome(""); setAlunosNaTurma(null); } }}
       >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
@@ -349,40 +359,56 @@ export const TurmasAlunosManager = () => {
             <AlertDialogDescription>
               Você está prestes a deletar{" "}
               <strong className="text-slate-900">"{turmaParaDeletar?.nome}"</strong>.
-              Esta ação <strong>não pode ser desfeita</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-3 px-1 text-sm text-slate-700">
-            <ul className="list-disc pl-5 space-y-1 text-slate-600">
-              <li>Todos os convites pendentes desta turma serão removidos</li>
-              <li>Os alunos vinculados perderão a referência de turma</li>
-              <li>O código de acesso deixará de funcionar</li>
-              <li>Filtros e relatórios baseados nessa turma serão afetados</li>
-            </ul>
-            <div className="rounded-md border border-red-200 bg-red-50 p-3">
-              <p className="font-semibold text-red-800 mb-1.5">
-                Para confirmar, digite o nome exato da turma:
-              </p>
-              <code className="block text-xs text-red-700 mb-2">{turmaParaDeletar?.nome}</code>
-              <Input
-                value={confirmacaoNome}
-                onChange={(e) => setConfirmacaoNome(e.target.value)}
-                placeholder="Digite o nome da turma..."
-                className="border-red-300 focus-visible:ring-red-300 bg-white"
-                autoComplete="off"
-              />
+          {verificandoAlunos ? (
+            <p className="text-sm text-muted-foreground py-2">Verificando alunos vinculados...</p>
+          ) : alunosNaTurma !== null && alunosNaTurma > 0 ? (
+            <div className="space-y-3 px-1">
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <p className="font-semibold mb-1">
+                  Esta turma possui <strong>{alunosNaTurma}</strong> {alunosNaTurma === 1 ? "aluno vinculado" : "alunos vinculados"}.
+                </p>
+                <p>Migre ou remova os alunos desta turma antes de deletá-la. A exclusão direta de turmas com alunos não é permitida para evitar perda de dados.</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3 px-1 text-sm text-slate-700">
+              <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                <li>Todos os convites pendentes desta turma serão removidos</li>
+                <li>O código de acesso deixará de funcionar</li>
+                <li>Filtros e relatórios baseados nessa turma serão afetados</li>
+              </ul>
+              <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                <p className="font-semibold text-red-800 mb-1.5">
+                  Para confirmar, digite o nome exato da turma:
+                </p>
+                <code className="block text-xs text-red-700 mb-2">{turmaParaDeletar?.nome}</code>
+                <Input
+                  value={confirmacaoNome}
+                  onChange={(e) => setConfirmacaoNome(e.target.value)}
+                  placeholder="Digite o nome da turma..."
+                  className="border-red-300 focus-visible:ring-red-300 bg-white"
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmacaoNome("")}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
-              disabled={confirmacaoNome.trim() !== turmaParaDeletar?.nome}
-              onClick={handleDeletarTurma}
-            >
-              Deletar permanentemente
-            </AlertDialogAction>
+            <AlertDialogCancel onClick={() => { setConfirmacaoNome(""); setAlunosNaTurma(null); }}>
+              {alunosNaTurma && alunosNaTurma > 0 ? "Entendido" : "Cancelar"}
+            </AlertDialogCancel>
+            {(!alunosNaTurma || alunosNaTurma === 0) && !verificandoAlunos && (
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={confirmacaoNome.trim() !== turmaParaDeletar?.nome}
+                onClick={handleDeletarTurma}
+              >
+                Deletar permanentemente
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
