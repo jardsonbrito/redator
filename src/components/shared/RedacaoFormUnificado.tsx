@@ -167,41 +167,28 @@ export const RedacaoFormUnificado = ({
 
       let corretoresFiltrados = data || [];
 
-      // Obter a turma do aluno
       const turmaAluno = studentData.turma || alunoTurma;
 
       if (turmaAluno) {
-        // Normalizar a turma do aluno usando a função do turmaUtils
-        const turmaNormalizada = normalizeTurmaToLetter(turmaAluno);
-        console.log('✨ TURMA NORMALIZADA (extraída):', turmaNormalizada);
+        const turmaNormalizadaAluno = normalizeTurmaToLetter(turmaAluno);
 
-        if (!turmaNormalizada) {
-          console.log('⚠️ Turma do aluno inválida, mostrando todos os corretores');
-        } else {
-          corretoresFiltrados = corretoresFiltrados.filter(corretor => {
-            // Se turmas_autorizadas é null, o corretor está disponível para todas as turmas
-            if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
-              console.log(`✅ ${corretor.nome_completo} - Disponível para todas as turmas (null/vazio)`);
-              return true;
+        corretoresFiltrados = corretoresFiltrados.filter(corretor => {
+          // Sem turmas configuradas → disponível para todos
+          if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
+            return true;
+          }
+
+          return corretor.turmas_autorizadas.some((t: string) => {
+            // 1) Comparação direta (cobre "Redatores 2026", nomes completos, etc.)
+            if (t === turmaAluno) return true;
+            // 2) Normalização por letra (cobre "TURMA A", "LRA2025", "A", etc.)
+            if (turmaNormalizadaAluno) {
+              const tNorm = normalizeTurmaToLetter(t);
+              if (tNorm && tNorm === turmaNormalizadaAluno) return true;
             }
-
-            // Normalizar as turmas autorizadas usando a mesma função
-            const turmasNormalizadas = corretor.turmas_autorizadas
-              .map(t => normalizeTurmaToLetter(t))
-              .filter(Boolean);
-
-            console.log(`🔍 ${corretor.nome_completo}:`);
-            console.log(`   - Turmas autorizadas (original):`, corretor.turmas_autorizadas);
-            console.log(`   - Turmas autorizadas (normalizado):`, turmasNormalizadas);
-            console.log(`   - Turma do aluno (normalizada): "${turmaNormalizada}"`);
-
-            // Verificar se a turma do aluno está nas turmas autorizadas
-            const incluido = turmasNormalizadas.includes(turmaNormalizada);
-            console.log(`   - ${incluido ? '✅ INCLUÍDO' : '❌ EXCLUÍDO'}`);
-
-            return incluido;
+            return false;
           });
-        }
+        });
       }
 
       console.log('🔍 DEBUG RedacaoFormUnificado - Corretores filtrados por turma:', corretoresFiltrados);
