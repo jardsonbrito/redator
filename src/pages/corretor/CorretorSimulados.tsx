@@ -28,9 +28,10 @@ const CorretorSimulados = () => {
     return (
       <CorretorLayout>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Simulados</h1>
-            <p className="text-gray-600">Simulados finalizados disponíveis para consulta</p>
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Avaliações</p>
+            <h1 className="text-2xl sm:text-3xl font-black mt-1">Simulados</h1>
+            <p className="text-sm text-violet-100 mt-1">Simulados finalizados disponíveis para consulta</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
@@ -66,8 +67,14 @@ const CorretorSimulados = () => {
   if (error) {
     return (
       <CorretorLayout>
-        <div className="text-center py-8">
-          <p className="text-red-600">Erro ao carregar simulados. Tente novamente.</p>
+        <div className="space-y-6">
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Avaliações</p>
+            <h1 className="text-2xl sm:text-3xl font-black mt-1">Simulados</h1>
+          </div>
+          <div className="text-center py-8">
+            <p className="text-red-600">Erro ao carregar simulados. Tente novamente.</p>
+          </div>
         </div>
       </CorretorLayout>
     );
@@ -76,9 +83,11 @@ const CorretorSimulados = () => {
   return (
     <CorretorLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Simulados</h1>
-          <p className="text-gray-600">Simulados finalizados disponíveis para consulta</p>
+        {/* Hero */}
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+          <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Avaliações</p>
+          <h1 className="text-2xl sm:text-3xl font-black mt-1">Simulados</h1>
+          <p className="text-sm text-violet-100 mt-1">Simulados finalizados disponíveis para consulta</p>
         </div>
 
         {(!simulados || simulados.length === 0) ? (

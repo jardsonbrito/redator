@@ -48,9 +48,9 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
 
   return (
     <CorretorNavigationProvider>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-cyan-50">
       {/* Header - Responsivo */}
-      <header className="border-b bg-white shadow-sm">
+      <header className="border-b border-violet-100 bg-white shadow-none">
         <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
             {isMobile && (
@@ -71,11 +71,11 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
             />
             
             <div className="min-w-0 flex-1">
-              <h1 className="text-base sm:text-xl font-bold text-redator-primary truncate">
+              <h1 className="text-base sm:text-xl font-bold text-violet-700 truncate">
                 {isMobile ? "Corretor" : "Painel do Corretor"}
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                {isMobile ? corretor?.nome_completo?.split(' ')[0] : `Bem-vindo(a), ${corretor?.nome_completo}`}
+              <p className="text-xs text-violet-400 font-medium truncate hidden sm:block">
+                Central Operacional
               </p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
                   <span className="text-foreground font-medium text-xs sm:text-sm truncate max-w-32 sm:max-w-none">
                     {corretor?.nome_completo || 'Corretor'}
                   </span>
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-violet-500 text-xs font-medium">
                     Corretor
                   </span>
                 </div>
@@ -104,7 +104,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
         </div>
         
         {/* Breadcrumbs */}
-        <div className="px-3 sm:px-6 py-2 border-b bg-muted/30">
+        <div className="px-3 sm:px-6 py-2 border-b border-violet-50 bg-transparent">
           <BreadcrumbNavigation basePath="/corretor" />
         </div>
       </header>
@@ -116,7 +116,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
             ? `fixed inset-y-0 left-0 z-50 w-64 bg-white border-r shadow-lg transform transition-transform duration-300 ease-in-out ${
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
               } top-[73px]`
-            : 'w-52 lg:w-64 bg-white border-r shadow-sm'
+            : 'w-52 lg:w-64 bg-white border-r border-violet-100 shadow-none'
           } min-h-[calc(100vh-73px)]
         `}>
           {isMobile && sidebarOpen && (
@@ -137,10 +137,10 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
                     <Link
                       to={item.path}
                       onClick={() => isMobile && setSidebarOpen(false)}
-                      className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg transition-colors text-sm ${
-                        isActive 
-                          ? 'bg-redator-primary text-white' 
-                          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                      className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                        isActive
+                          ? 'bg-violet-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:bg-violet-50 hover:text-violet-700'
                       }`}
                     >
                       <Icon className="w-4 h-4 shrink-0" />

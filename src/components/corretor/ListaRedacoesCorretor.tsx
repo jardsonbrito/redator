@@ -1,6 +1,5 @@
 
-import { useState, useMemo, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import { Clock, User, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
 import { supabase } from "@/integrations/supabase/client";
-import { TODAS_TURMAS } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface ListaRedacoesCorretorProps {
   corretorEmail: string;
@@ -32,20 +31,18 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const { loading, redacoes, getRedacoesPorStatus } = useCorretorRedacoes(corretorEmail);
   const isMobile = useIsMobile();
   const [notasRedacoes, setNotasRedacoes] = useState<Record<string, NotasRedacao>>({});
-  
+
   // Hook para visualizações em tempo real
-  const { isRedacaoVisualizada, getVisualizacao } = useVisualizacoesRealtime();
-  
+  const { isRedacaoVisualizada } = useVisualizacoesRealtime();
+
   // Estados dos filtros
   const [buscaNome, setBuscaNome] = useState("");
   const [filtroTurma, setFiltroTurma] = useState("todas");
   const [filtroStatus, setFiltroStatus] = useState("todas");
   const [filtroMes, setFiltroMes] = useState("todos");
 
-  // Lista fixa de todas as turmas do sistema
-  const turmasDisponiveis = useMemo(() => {
-    return TODAS_TURMAS;
-  }, []);
+  // Turmas dinâmicas do banco de dados
+  const { turmasDinamicas } = useTurmasAtivas();
 
   const mesesDisponiveis = useMemo(() => {
     const meses = Array.from(new Set(redacoes.map(r => {
@@ -66,7 +63,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   // Filtrar redações baseado nos filtros ativos
   const redacoesFiltradas = useMemo(() => {
     return redacoes.filter(redacao => {
-      const matchNome = buscaNome === "" || 
+      const matchNome = buscaNome === "" ||
         redacao.nome_aluno.toLowerCase().includes(buscaNome.toLowerCase()) ||
         redacao.email_aluno.toLowerCase().includes(buscaNome.toLowerCase());
 
@@ -96,7 +93,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
 
     try {
       let data, error;
-      
+
       if (redacao.tipo_redacao === 'regular') {
         const result = await supabase
           .from('redacoes_enviadas')
@@ -183,7 +180,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     const incompletas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'incompleta');
     const corrigidas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'corrigida');
     const devolvidas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'devolvida');
-    
+
     return { pendentes, incompletas, corrigidas, devolvidas };
   }, [redacoesFiltradas]);
 
@@ -196,8 +193,8 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
       </div>
     );
   }
@@ -205,37 +202,41 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const { pendentes, incompletas, corrigidas, devolvidas } = getRedacoesFiltradas;
 
   const RedacaoItem = ({ redacao, index }: { redacao: RedacaoCorretor; index: number }) => (
-    <div className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+    <div className="rounded-2xl border border-slate-100 bg-white p-3 sm:p-4 hover:bg-violet-50/40 hover:border-violet-100 transition-colors shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="font-semibold text-sm sm:text-lg">#{index + 1}</span>
-            <Badge variant="outline" className="text-xs">
-              {redacao.tipo_redacao === 'regular' ? 'Regular' : 
-               redacao.tipo_redacao === 'simulado' ? 'Simulado' : 
-               redacao.tipo_redacao === 'exercicio' ? 'Exercício' : 
+            <span className="font-semibold text-sm sm:text-base text-slate-500">#{index + 1}</span>
+            <Badge variant="outline" className="text-xs bg-slate-50">
+              {redacao.tipo_redacao === 'regular' ? 'Regular' :
+               redacao.tipo_redacao === 'simulado' ? 'Simulado' :
+               redacao.tipo_redacao === 'exercicio' ? 'Exercício' :
                redacao.tipo_redacao === 'avulsa' ? 'Livre' : redacao.tipo_redacao}
             </Badge>
+            {redacao.turma && (
+              <Badge variant="outline" className="text-xs bg-violet-50 text-violet-600 border-violet-200">
+                {redacao.turma}
+              </Badge>
+            )}
           </div>
-          
-          <div className="flex items-start gap-2 mb-2">
-            <User className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-            <h3 className="font-medium text-sm sm:text-base break-words">
+
+          <div className="flex items-start gap-2 mb-1.5">
+            <User className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <h3 className="font-semibold text-sm sm:text-base text-slate-800 break-words">
               {redacao.nome_aluno}
             </h3>
           </div>
-          
-          <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2 break-words">
+
+          <p className="text-xs sm:text-sm text-slate-500 mb-2 line-clamp-2 break-words pl-6">
             {redacao.frase_tematica}
           </p>
 
           {/* Exibir notas para redações corrigidas */}
           {redacao.status_minha_correcao === 'corrigida' && (
-            <div className="mb-2">
+            <div className="mb-2 pl-6">
               {redacao.exercicio_tipo === 'Produção Guiada' ? (
-                /* Produção Guiada: exibe só nota final (sem C1-C5) */
                 notasRedacoes[redacao.id] ? (
-                  <div className="font-semibold text-purple-700 bg-purple-100 inline-block px-2 py-1 rounded text-xs sm:text-sm">
+                  <div className="font-semibold text-violet-700 bg-violet-100 inline-block px-2 py-1 rounded text-xs sm:text-sm">
                     Nota final: {notasRedacoes[redacao.id].total ?? 0}/1000
                   </div>
                 ) : (
@@ -246,13 +247,13 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
               ) : notasRedacoes[redacao.id] ? (
                 <div className="text-xs sm:text-sm">
                   <div className="flex flex-wrap gap-1 sm:gap-2 mb-1">
-                    <span className="text-red-600">C1: {notasRedacoes[redacao.id].c1 ?? 0}</span>
-                    <span className="text-green-600">C2: {notasRedacoes[redacao.id].c2 ?? 0}</span>
-                    <span className="text-blue-600">C3: {notasRedacoes[redacao.id].c3 ?? 0}</span>
-                    <span className="text-purple-600">C4: {notasRedacoes[redacao.id].c4 ?? 0}</span>
-                    <span className="text-orange-600">C5: {notasRedacoes[redacao.id].c5 ?? 0}</span>
+                    <span className="text-red-600 font-medium">C1: {notasRedacoes[redacao.id].c1 ?? 0}</span>
+                    <span className="text-green-600 font-medium">C2: {notasRedacoes[redacao.id].c2 ?? 0}</span>
+                    <span className="text-blue-600 font-medium">C3: {notasRedacoes[redacao.id].c3 ?? 0}</span>
+                    <span className="text-purple-600 font-medium">C4: {notasRedacoes[redacao.id].c4 ?? 0}</span>
+                    <span className="text-orange-600 font-medium">C5: {notasRedacoes[redacao.id].c5 ?? 0}</span>
                   </div>
-                  <div className="font-semibold text-purple-700 bg-purple-100 inline-block px-2 py-1 rounded text-xs sm:text-sm">
+                  <div className="font-semibold text-violet-700 bg-violet-100 inline-block px-2 py-1 rounded text-xs sm:text-sm">
                     Total: {notasRedacoes[redacao.id].total ?? 0}/1000
                   </div>
                 </div>
@@ -263,8 +264,8 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
               )}
             </div>
           )}
-          
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+
+          <div className="flex items-center gap-2 text-xs text-slate-400 pl-6">
             <Clock className="w-3 h-3 shrink-0" />
             <span className="truncate">
               {new Date(redacao.data_envio).toLocaleDateString('pt-BR', {
@@ -275,7 +276,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             </span>
           </div>
         </div>
-        
+
         <div className="shrink-0 w-full sm:w-auto">
           {redacao.status_minha_correcao === 'devolvida' ? (
             <div className="text-center">
@@ -284,8 +285,8 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
               </div>
               <Badge
                 variant={verificarSeAlunoVisualizou(redacao) ? "default" : "secondary"}
-                className={`text-xs ${verificarSeAlunoVisualizou(redacao) 
-                  ? "bg-green-100 text-green-700 border-green-300" 
+                className={`text-xs ${verificarSeAlunoVisualizou(redacao)
+                  ? "bg-green-100 text-green-700 border-green-300"
                   : "bg-gray-100 text-gray-600 border-gray-300"
                 }`}
               >
@@ -301,7 +302,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
               }}
               variant={redacao.status_minha_correcao === 'corrigida' ? 'outline' : 'default'}
               size="sm"
-              className="w-full sm:w-auto text-xs sm:text-sm"
+              className={`w-full sm:w-auto text-xs sm:text-sm ${redacao.status_minha_correcao !== 'corrigida' ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'border-violet-200 text-violet-700 hover:bg-violet-50'}`}
               disabled={false}
             >
               {redacao.status_minha_correcao === 'pendente' && 'Corrigir'}
@@ -316,106 +317,163 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Hero */}
+      <section className="overflow-hidden rounded-[2rem] bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.22em] text-violet-200">Central de correção</p>
+            <h2 className="mt-2 text-3xl font-black">Redações da turma</h2>
+            <p className="mt-2 max-w-2xl text-sm text-violet-100">
+              Gerencie pendências, incompletas, devolvidas e corrigidas.
+            </p>
+          </div>
+          {(incompletas.length > 0 || pendentes.length > 0) && (
+            <button
+              className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-violet-900 shadow-sm hover:bg-violet-50 transition-colors"
+              onClick={() => onCorrigir(incompletas[0] ?? pendentes[0])}
+            >
+              Corrigir próxima
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* Contadores */}
+      <section className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        <div className="rounded-3xl border border-amber-100 bg-amber-50 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-amber-700">Pendentes</p>
+          <p className="mt-2 text-3xl font-black text-amber-900">{pendentes.length}</p>
+        </div>
+        <div className="rounded-3xl border border-red-100 bg-red-50 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-red-700">Incompletas</p>
+          <p className="mt-2 text-3xl font-black text-red-900">{incompletas.length}</p>
+        </div>
+        <div className="rounded-3xl border border-violet-100 bg-violet-50 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-violet-700">Corrigidas</p>
+          <p className="mt-2 text-3xl font-black text-violet-900">{corrigidas.length}</p>
+        </div>
+        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Devolvidas</p>
+          <p className="mt-2 text-3xl font-black text-slate-900">{devolvidas.length}</p>
+        </div>
+      </section>
+
       {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-              <Label>Buscar por nome/email</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Digite nome ou email..."
-                  value={buscaNome}
-                  onChange={(e) => setBuscaNome(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label>Turma</Label>
-              <Select value={filtroTurma} onValueChange={setFiltroTurma}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as turmas</SelectItem>
-                  {turmasDisponiveis.map(turma => (
-                    <SelectItem key={turma} value={turma}>
-                      {turma === "Visitante" ? "Visitantes" : turma}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label>Status</Label>
-              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="pendente">Pendentes</SelectItem>
-                  <SelectItem value="incompleta">Incompletas</SelectItem>
-                  <SelectItem value="corrigida">Corrigidas</SelectItem>
-                  <SelectItem value="devolvida">Devolvidas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Mês/Ano</Label>
-              <Select value={filtroMes} onValueChange={setFiltroMes}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os meses</SelectItem>
-                  {mesesDisponiveis.map(mes => (
-                    <SelectItem key={mes} value={mes}>
-                      {mes}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setBuscaNome("");
-                  setFiltroTurma("todas");
-                  setFiltroStatus("todas");
-                  setFiltroMes("todos");
-                }}
-                className="w-full"
-              >
-                Limpar Filtros
-              </Button>
+      <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
+        <p className="text-sm font-semibold text-slate-700 mb-4">Filtros</p>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <Label>Buscar por nome/email</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Digite nome ou email..."
+                value={buscaNome}
+                onChange={(e) => setBuscaNome(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Tabs com contadores atualizados */}
-      <Card>
-        <CardContent>
-          <Tabs defaultValue="pendentes" className="w-full">
-          <TabsList>
-            <TabsTrigger value="pendentes">Pendentes ({pendentes.length})</TabsTrigger>
-            <TabsTrigger value="incompletas">Incompletas ({incompletas.length})</TabsTrigger>
-            <TabsTrigger value="corrigidas">Corrigidas ({corrigidas.length})</TabsTrigger>
-            <TabsTrigger value="devolvidas">Devolvidas ({devolvidas.length})</TabsTrigger>
+          <div>
+            <Label>Turma</Label>
+            <Select value={filtroTurma} onValueChange={setFiltroTurma}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as turmas</SelectItem>
+                {turmasDinamicas.map(turma => (
+                  <SelectItem key={turma.id} value={turma.valor}>
+                    {turma.label}
+                  </SelectItem>
+                ))}
+                <SelectItem value="Visitantes">Visitantes</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Status</Label>
+            <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas</SelectItem>
+                <SelectItem value="pendente">Pendentes</SelectItem>
+                <SelectItem value="incompleta">Incompletas</SelectItem>
+                <SelectItem value="corrigida">Corrigidas</SelectItem>
+                <SelectItem value="devolvida">Devolvidas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Mês/Ano</Label>
+            <Select value={filtroMes} onValueChange={setFiltroMes}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os meses</SelectItem>
+                {mesesDisponiveis.map(mes => (
+                  <SelectItem key={mes} value={mes}>
+                    {mes}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBuscaNome("");
+                setFiltroTurma("todas");
+                setFiltroStatus("todas");
+                setFiltroMes("todos");
+              }}
+              className="w-full"
+            >
+              Limpar Filtros
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Tabs + lista */}
+      <section className="rounded-3xl border border-violet-100 bg-white/80 p-4 shadow-sm backdrop-blur">
+        <Tabs defaultValue="pendentes" className="w-full">
+          <TabsList className="mb-2 flex flex-wrap h-auto bg-violet-50 p-1 rounded-2xl gap-0.5 w-full sm:w-auto">
+            <TabsTrigger
+              value="pendentes"
+              className="rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              Pendentes ({pendentes.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="incompletas"
+              className="rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              Incompletas ({incompletas.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="corrigidas"
+              className="rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              Corrigidas ({corrigidas.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="devolvidas"
+              className="rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              Devolvidas ({devolvidas.length})
+            </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="pendentes" className="mt-4">
             {pendentes.length === 0 ? (
               <p className="text-center text-muted-foreground py-8 text-sm">
@@ -429,8 +487,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
               </div>
             )}
           </TabsContent>
-          
-          
+
           <TabsContent value="incompletas" className="mt-4">
             {incompletas.length === 0 ? (
               <p className="text-center text-muted-foreground py-8 text-sm">
@@ -444,7 +501,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
               </div>
             )}
           </TabsContent>
-          
+
           <TabsContent value="corrigidas" className="mt-4">
             {corrigidas.length === 0 ? (
               <p className="text-center text-muted-foreground py-8 text-sm">
@@ -473,8 +530,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             )}
           </TabsContent>
         </Tabs>
-        </CardContent>
-      </Card>
+      </section>
     </div>
   );
 };

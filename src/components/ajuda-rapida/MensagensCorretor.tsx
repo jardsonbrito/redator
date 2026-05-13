@@ -81,11 +81,11 @@ export const MensagensCorretor = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 p-4">
-      <div className="max-w-4xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">Recados dos Alunos</CardTitle>
+    <div className="w-full">
+      <div className="max-w-4xl">
+        <Card className="border-0 ring-1 ring-violet-100 shadow-sm rounded-3xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold text-slate-800">Conversas</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="pendentes" className="w-full">

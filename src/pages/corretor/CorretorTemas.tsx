@@ -10,9 +10,12 @@ import { TemaCardPadrao } from "@/components/shared/TemaCard";
 import { FormattedText } from "@/components/shared/FormattedText";
 import { getTemaMotivatorIVUrl } from "@/utils/temaImageUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Database } from "@/integrations/supabase/types";
+
+type TemaRow = Database['public']['Tables']['temas']['Row'];
 
 const CorretorTemas = () => {
-  const [selectedTema, setSelectedTema] = useState<any>(null);
+  const [selectedTema, setSelectedTema] = useState<TemaRow | null>(null);
   const [orderBy, setOrderBy] = useState<'recente' | 'mais_redacoes'>('recente');
 
   // Buscar temas publicados
@@ -77,9 +80,10 @@ const CorretorTemas = () => {
     return (
       <CorretorLayout>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
-            <p className="text-gray-600">Visualização dos temas disponíveis</p>
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
+            <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
+            <p className="text-sm text-violet-100 mt-1">Visualização dos temas disponíveis</p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <div className="space-y-3">
@@ -127,8 +131,14 @@ const CorretorTemas = () => {
   if (error) {
     return (
       <CorretorLayout>
-        <div className="text-center py-8">
-          <p className="text-red-600">Erro ao carregar temas. Tente novamente.</p>
+        <div className="space-y-6">
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
+            <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
+          </div>
+          <div className="text-center py-8">
+            <p className="text-red-600">Erro ao carregar temas. Tente novamente.</p>
+          </div>
         </div>
       </CorretorLayout>
     );
@@ -137,24 +147,24 @@ const CorretorTemas = () => {
   return (
     <CorretorLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
-            <p className="text-gray-600">Visualização dos temas disponíveis</p>
-          </div>
+        {/* Hero */}
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+          <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
+          <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
+          <p className="text-sm text-violet-100 mt-1">Visualização dos temas disponíveis</p>
+        </div>
 
-          {/* Filtro de ordenação */}
-          <div className="w-full sm:w-auto">
-            <Select value={orderBy} onValueChange={(value) => setOrderBy(value as 'recente' | 'mais_redacoes')}>
-              <SelectTrigger className="w-full sm:w-[250px]">
-                <SelectValue placeholder="Ordenar por..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recente">Mais recentes</SelectItem>
-                <SelectItem value="mais_redacoes">Mais redações</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Filtro de ordenação */}
+        <div className="flex items-center justify-end">
+          <Select value={orderBy} onValueChange={(value) => setOrderBy(value as 'recente' | 'mais_redacoes')}>
+            <SelectTrigger className="w-full sm:w-[250px]">
+              <SelectValue placeholder="Ordenar por..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recente">Mais recentes</SelectItem>
+              <SelectItem value="mais_redacoes">Mais redações</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {(!temasOrdenados || temasOrdenados.length === 0) ? (
