@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Send, Plus, X, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const EIXOS = [
   "Educação", "Saúde", "Meio Ambiente", "Cidadania e Democracia",
@@ -106,6 +107,7 @@ const CorretorCriarTema = () => {
   const { corretor, loading } = useCorretorAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [turmasCorretor, setTurmasCorretor] = useState<string[]>([]);
   const [loadingTurmas, setLoadingTurmas] = useState(true);
@@ -183,6 +185,7 @@ const CorretorCriarTema = () => {
       if (error) throw error;
 
       toast({ title: "Tema publicado!", description: "Disponibilizado para suas turmas com sucesso." });
+      await queryClient.invalidateQueries({ queryKey: ['temas-corretor'] });
       navigate("/corretor/temas");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao criar tema.";
