@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Edit3, Mic, MicOff, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, Trash2, Edit3, Mic, MicOff, Loader2, X, ChevronDown, ChevronUp, Bot, SendHorizontal } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { cn } from "@/lib/utils";
 import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
@@ -258,6 +258,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const [editandoAnotacao, setEditandoAnotacao] = useState<AnotacaoVisual | null>(null);
   const [refineLoading, setRefineLoading] = useState(false);
   const [refineSugestoes, setRefineSugestoes] = useState<string[]>([]);
+  // Assistente de correção
+  const [showAssistente, setShowAssistente] = useState(false);
+  const [assistentePergunta, setAssistentePergunta] = useState('');
+  const [assistenteLoading, setAssistenteLoading] = useState(false);
+  const [assistenteHistorico, setAssistenteHistorico] = useState<Array<{ pergunta: string; resposta: string }>>([]);
+  const assistenteInputRef = useRef<HTMLTextAreaElement>(null);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
   const [contadorSequencial, setContadorSequencial] = useState(1);
@@ -713,9 +719,15 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   }, [anotacoes, imageDimensions]);
 
   useEffect(() => {
-    if (dialogAberto && !editandoAnotacao) {
-      setCompetenciasExpanded(false);
-      setCompetenciaDialog(1);
+    if (dialogAberto) {
+      if (!editandoAnotacao) {
+        setCompetenciasExpanded(false);
+        setCompetenciaDialog(1);
+      }
+      // Resetar assistente a cada abertura do modal
+      setShowAssistente(false);
+      setAssistentePergunta('');
+      setAssistenteHistorico([]);
     }
   }, [dialogAberto, editandoAnotacao]);
 
@@ -837,6 +849,29 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     } catch (error) {
       console.error('Erro ao limpar anotações:', error);
       toast({ title: "Erro ao limpar", variant: "destructive" });
+    }
+  };
+
+  const chamarAssistente = async () => {
+    if (!assistentePergunta.trim()) return;
+    const perguntaAtual = assistentePergunta.trim();
+    setAssistenteLoading(true);
+    setAssistentePergunta('');
+    const compLabel = competenciaDialog
+      ? (competenciaDialog === 6 ? 'PA — Ponto de Atenção' : `C${competenciaDialog} — ${CORES_COMPETENCIAS[competenciaDialog as keyof typeof CORES_COMPETENCIAS].label}`)
+      : 'Não selecionada';
+    try {
+      const { data, error } = await supabase.functions.invoke('assistente-correcao', {
+        body: { competencia: compLabel, comentarioAtual: comentarioTemp, pergunta: perguntaAtual },
+      });
+      if (error) throw error;
+      const resposta = data?.resposta ?? 'Sem resposta.';
+      setAssistenteHistorico(prev => [...prev.slice(-4), { pergunta: perguntaAtual, resposta }]);
+    } catch (err: any) {
+      toast({ title: "Erro no assistente", description: err.message || "Tente novamente.", variant: "destructive" });
+      setAssistentePergunta(perguntaAtual); // devolve a pergunta ao input
+    } finally {
+      setAssistenteLoading(false);
     }
   };
 
@@ -1182,6 +1217,86 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                   ))}
                 </div>
               )}
+
+              {/* Assistente de correção */}
+              <div className="border-t pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAssistente(prev => !prev);
+                    if (!showAssistente) setTimeout(() => assistenteInputRef.current?.focus(), 100);
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-colors",
+                    showAssistente
+                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                      : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                  )}
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  Assistente de correção
+                </button>
+
+                {showAssistente && (
+                  <div className="mt-2.5 rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
+                    {/* Histórico */}
+                    {assistenteHistorico.length > 0 && (
+                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        {assistenteHistorico.map((item, i) => (
+                          <div key={i} className="space-y-1">
+                            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide truncate">
+                              Você: {item.pergunta}
+                            </p>
+                            <div className="bg-white rounded-lg border border-blue-100 p-2.5 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                              {item.resposta}
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setComentarioTemp(prev => prev.trim() ? `${prev.trim()}\n\n${item.resposta}` : item.resposta)}
+                                  className="text-[10px] font-bold text-violet-700 border border-violet-200 bg-violet-50 hover:bg-violet-100 px-2 py-0.5 rounded-lg transition-colors"
+                                >
+                                  Inserir no comentário
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Input */}
+                    <div className="flex gap-1.5 items-end">
+                      <textarea
+                        ref={assistenteInputRef}
+                        value={assistentePergunta}
+                        onChange={(e) => setAssistentePergunta(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            chamarAssistente();
+                          }
+                        }}
+                        placeholder="Pergunte ao assistente… (Enter para enviar)"
+                        rows={2}
+                        disabled={assistenteLoading}
+                        className="flex-1 resize-none rounded-xl border border-blue-200 bg-white p-2 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        onClick={chamarAssistente}
+                        disabled={assistenteLoading || !assistentePergunta.trim()}
+                        className="self-end p-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {assistenteLoading
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <SendHorizontal className="w-3.5 h-3.5" />
+                        }
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-blue-400">Shift+Enter para nova linha</p>
+                  </div>
+                )}
+              </div>
 
               {/* Footer */}
               <div className="flex justify-end gap-2 pt-2 border-t">
