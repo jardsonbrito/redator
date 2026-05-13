@@ -408,11 +408,11 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </div>
       </section>
 
-      {/* Layout de duas colunas */}
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+      {/* Layout de duas colunas — redação protagonista */}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
 
-        {/* Coluna principal: Redação */}
-        <div className="space-y-4">
+        {/* ── COLUNA PRINCIPAL: REDAÇÃO ── */}
+        <main className="min-w-0 space-y-4">
           {/* Alertas */}
           {redacaoCongelada && (
             <Alert variant="destructive" className="border-cyan-500 bg-cyan-50">
@@ -436,80 +436,132 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           )}
 
-          {/* Card da Redação em Imagem */}
+          {/* Redação em imagem — ocupa máximo do contêiner */}
           {hasImage && (
-            <Card className="w-full overflow-hidden shadow-sm">
-              <CardHeader className="pb-2 pt-4 px-4 border-b">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">
-                      {isImagemGerada ? 'Redação digitalizada' : 'Redação manuscrita'}
-                    </CardTitle>
-                    {(redacao as any).contagem_palavras ? (
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {(redacao as any).contagem_palavras} palavras
-                      </p>
-                    ) : null}
-                  </div>
-                  {isImagemGerada && (
-                    <Button variant="outline" size="sm" onClick={copiarRedacaoDigitada}>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copiar redação
-                    </Button>
-                  )}
+            <div className="min-w-0 rounded-2xl border border-violet-100 bg-white shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between border-b border-violet-100 px-5 py-3">
+                <div>
+                  <h2 className="text-sm font-black text-slate-900">
+                    {isImagemGerada ? 'Redação digitalizada' : 'Redação manuscrita'}
+                  </h2>
+                  {(redacao as any).contagem_palavras ? (
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {(redacao as any).contagem_palavras} palavras
+                    </p>
+                  ) : null}
                 </div>
-              </CardHeader>
-              <CardContent className="p-0 m-0">
-                <RedacaoAnotacaoVisual
-                  ref={anotacaoRef}
-                  imagemUrl={imagemUrl!}
-                  redacaoId={redacao.id}
-                  corretorId={corretorId}
-                  ehCorretor1={redacao.eh_corretor_1}
-                  ehCorretor2={redacao.eh_corretor_2}
-                  statusMinhaCorrecao={redacao.status_minha_correcao}
-                  tipoTabela={
-                    redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
-                    redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' :
-                    'redacoes_enviadas'
-                  }
-                  onAnotacoesChange={handleAnotacoesChange}
-                />
-              </CardContent>
-            </Card>
+              </div>
+              <RedacaoAnotacaoVisual
+                ref={anotacaoRef}
+                imagemUrl={imagemUrl!}
+                redacaoId={redacao.id}
+                corretorId={corretorId}
+                ehCorretor1={redacao.eh_corretor_1}
+                ehCorretor2={redacao.eh_corretor_2}
+                statusMinhaCorrecao={redacao.status_minha_correcao}
+                tipoTabela={
+                  redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
+                  redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' :
+                  'redacoes_enviadas'
+                }
+                onAnotacoesChange={handleAnotacoesChange}
+              />
+            </div>
           )}
 
           {/* Redação digitada (sem imagem) */}
           {!hasImage && (
-            <Card className="card">
-              <CardHeader className="card__header">
-                <CardTitle>Redação Digitada</CardTitle>
+            <div className="min-w-0 rounded-2xl border border-violet-100 bg-white shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between border-b border-violet-100 px-5 py-3">
+                <h2 className="text-sm font-black text-slate-900">Redação Digitada</h2>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={copiarRedacaoDigitada} className="icon-btn" aria-label="Copiar redação">
+                  <Button variant="outline" size="sm" onClick={copiarRedacaoDigitada} aria-label="Copiar redação">
                     <Copy className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" onClick={() => setShowRedacaoExpandida(true)} className="icon-btn" aria-label="Expandir redação">
+                  <Button variant="outline" size="sm" onClick={() => setShowRedacaoExpandida(true)} aria-label="Expandir redação">
                     <Maximize2 className="w-4 h-4" />
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="p-4">
                 <div className="max-h-[300px] overflow-y-auto p-4 border rounded-xl bg-background prose whitespace-pre-wrap leading-relaxed text-sm">
                   {redacao.texto || 'Texto da redação não disponível'}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
-        </div>
+        </main>
 
-        {/* Sidebar */}
-        <aside className="space-y-4">
+        {/* ── SIDEBAR ── */}
+        <aside className="min-w-0 space-y-3">
 
-          {/* PEP */}
-          <Card className={`shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
-            <CardContent className="p-4 flex items-center justify-between gap-3">
+          {/* 1. Mensagem pedagógica */}
+          <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
+            <div className="px-4 py-3 border-b border-violet-50">
+              <h3 className="text-sm font-black text-slate-900">Mensagem pedagógica do corretor</h3>
+            </div>
+            <div className="p-4 space-y-2">
+              <textarea
+                placeholder="Escreva aqui a mensagem pedagógica para o aluno…"
+                value={comentarios.elogios}
+                onChange={(e) => atualizarComentario('elogios', e.target.value)}
+                className="w-full min-h-[130px] resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={refinarElogios}
+                  disabled={refineElogiosLoading || !comentarios.elogios.trim()}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors"
+                >
+                  {refineElogiosLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
+                  {refineElogiosLoading ? 'Refinando…' : 'Refinar clareza'}
+                </button>
+                {refineElogiosSugestoes.length > 0 && (
+                  <button type="button" onClick={() => setRefineElogiosSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                    <X className="w-3 h-3" /> Ignorar
+                  </button>
+                )}
+              </div>
+              {refineElogiosSugestoes.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
+                  {refineElogiosSugestoes.map((s, i) => (
+                    <button
+                      key={i} type="button"
+                      onClick={() => { atualizarComentario('elogios', s); setRefineElogiosSugestoes([]); }}
+                      className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Gravar mensagem */}
+          <div className="rounded-2xl border border-red-200 bg-white shadow-sm">
+            <div className="px-4 py-3 border-b border-red-50">
+              <h3 className="text-sm font-black text-slate-900">Gravar mensagem</h3>
+              <p className="text-xs text-red-500 mt-0.5">Mensagem em áudio para o aluno</p>
+            </div>
+            <div className="p-4">
+              <AudioRecorder
+                redacaoId={redacao.id}
+                tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                onAudioSaved={(url) => setAudioUrl(url)}
+                existingAudioUrl={audioUrl}
+                ehCorretor1={redacao.eh_corretor_1}
+              />
+            </div>
+          </div>
+
+          {/* 3. Plano de Estudo (PEP) */}
+          <div className={`rounded-2xl border bg-white shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
+            <div className="p-4 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-black text-slate-800 leading-tight">Plano de Estudo (PEP)</p>
+                <h3 className="text-sm font-black text-slate-900 leading-tight">Plano de Estudo (PEP)</h3>
                 <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
                   {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
                 </p>
@@ -523,159 +575,45 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 <BookMarked className="w-3.5 h-3.5" />
                 Preencher
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Áudio */}
-          <Card className="shadow-sm border-red-200">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black text-slate-800 leading-tight">Gravar mensagem</p>
-                  <p className="text-xs text-red-500 mt-0.5">Mensagem em áudio para o aluno</p>
-                </div>
-              </div>
-              <AudioRecorder
-                redacaoId={redacao.id}
-                tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                onAudioSaved={(url) => setAudioUrl(url)}
-                existingAudioUrl={audioUrl}
-                ehCorretor1={redacao.eh_corretor_1}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Ações da correção */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="text-sm">Ações da correção</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
+          {/* 4. Ações da correção */}
+          <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+            <h3 className="text-sm font-black text-slate-900 mb-3">Ações da correção</h3>
+            <div className="space-y-2">
               {isImagemGerada && (
                 <button
                   onClick={copiarRedacaoDigitada}
-                  className="w-full rounded-xl border px-4 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="w-full rounded-xl border px-3 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Copiar redação
                 </button>
               )}
-              {totalAnotacoes > 0 && (
-                <button
-                  onClick={() => anotacaoRef.current?.triggerLimparTodasAnotacoes()}
-                  className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-left text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors"
-                  disabled={redacaoCongelada}
-                >
-                  Limpar todas as marcações
-                </button>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Comentários por competência */}
-          {totalAnotacoes > 0 && (
-            <Card className="shadow-sm">
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm flex items-center justify-between">
-                  Comentários por competência
-                  <span className="text-xs font-bold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">{totalAnotacoes}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="flex flex-wrap gap-2">
-                  {PILLS_INFO.map(({ key, label, cor }) => {
-                    const count = anotacoesCounts[key] || 0;
-                    if (count === 0) return null;
-                    return (
-                      <span
-                        key={key}
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
-                        style={{ backgroundColor: cor + '18', color: cor, border: `1px solid ${cor}44` }}
-                      >
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: cor }} />
-                        {label} ({count})
-                      </span>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Mensagem pedagógica do corretor */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="text-sm">Mensagem pedagógica do corretor</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              <textarea
-                placeholder="Escreva aqui a mensagem pedagógica para o aluno…"
-                value={comentarios.elogios}
-                onChange={(e) => atualizarComentario('elogios', e.target.value)}
-                className="w-full min-h-[140px] resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"
-              />
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button" variant="outline" size="sm"
-                  onClick={refinarElogios}
-                  disabled={refineElogiosLoading || !comentarios.elogios.trim()}
-                  className="flex items-center gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-200 hover:border-purple-500 hover:text-purple-900"
-                >
-                  {refineElogiosLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <JarvisIcon size={14} />}
-                  {refineElogiosLoading ? 'Refinando…' : 'Refinar clareza'}
-                </Button>
-                {refineElogiosSugestoes.length > 0 && (
-                  <button type="button" onClick={() => setRefineElogiosSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-                    <X className="w-3 h-3" /> Ignorar
-                  </button>
-                )}
-              </div>
-              {refineElogiosSugestoes.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-purple-700">Sugestões — clique para usar:</p>
-                  {refineElogiosSugestoes.map((s, i) => (
-                    <button
-                      key={i} type="button"
-                      onClick={() => { atualizarComentario('elogios', s); setRefineElogiosSugestoes([]); }}
-                      className="w-full text-left text-sm p-3 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:border-purple-400 transition-colors cursor-pointer"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Finalização */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="text-sm">Finalização</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
               <button
                 onClick={() => salvarCorrecao('incompleta')}
                 disabled={loading || redacaoCongelada}
-                className="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-left text-sm font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                className="w-full rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-left text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50 transition-colors"
               >
                 Incompleta
               </button>
               <button
                 onClick={() => setShowDevolverModal(true)}
                 disabled={loading || redacaoCongelada}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-left text-sm font-bold text-slate-800 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-left text-xs font-bold text-slate-800 hover:bg-slate-50 disabled:opacity-50 transition-colors"
               >
                 Devolver redação
               </button>
               <button
                 onClick={() => salvarCorrecao('corrigida')}
                 disabled={loading || redacaoCongelada}
-                className={`w-full rounded-xl px-4 py-2.5 text-left text-sm font-bold text-white disabled:opacity-50 transition-colors ${marcacoesPEP.length === 0 ? 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'}`}
-                title={marcacoesPEP.length === 0 ? 'Preencha o Plano de Estudo (PEP) antes de finalizar' : undefined}
+                className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors ${marcacoesPEP.length === 0 ? 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'}`}
+                title={marcacoesPEP.length === 0 ? 'Preencha o PEP antes de finalizar' : undefined}
               >
                 {loading ? 'Salvando…' : 'Finalizar correção'}
               </button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </aside>
       </div>
 
