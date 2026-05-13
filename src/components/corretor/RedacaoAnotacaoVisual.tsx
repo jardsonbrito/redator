@@ -303,6 +303,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const { isRecording: isMicRecording, isSupported: isMicSupported, toggleRecording: toggleMicRecording, stopRecording: stopMicRecording } =
     useVoiceTranscription(setComentarioTemp, comentarioTemp, comentarioTextareaRef);
 
+  // Hook de voz para o campo de pergunta do Assistente de correção
+  const { isRecording: isAssistenteMicRecording, isSupported: isAssistenteMicSupported, toggleRecording: toggleAssistenteMic } =
+    useVoiceTranscription(setAssistentePergunta, assistentePergunta, assistenteInputRef);
+
   useEffect(() => {
     if (!dialogAberto) stopMicRecording();
   }, [dialogAberto, stopMicRecording]);
@@ -1266,21 +1270,37 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
                     {/* Input */}
                     <div className="flex gap-1.5 items-end">
-                      <textarea
-                        ref={assistenteInputRef}
-                        value={assistentePergunta}
-                        onChange={(e) => setAssistentePergunta(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            chamarAssistente();
-                          }
-                        }}
-                        placeholder="Pergunte ao assistente… (Enter para enviar)"
-                        rows={2}
-                        disabled={assistenteLoading}
-                        className="flex-1 resize-none rounded-xl border border-blue-200 bg-white p-2 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-50"
-                      />
+                      <div className="relative flex-1">
+                        <textarea
+                          ref={assistenteInputRef}
+                          value={assistentePergunta}
+                          onChange={(e) => setAssistentePergunta(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              chamarAssistente();
+                            }
+                          }}
+                          placeholder="Pergunte ao assistente… (Enter para enviar)"
+                          rows={2}
+                          disabled={assistenteLoading}
+                          className="w-full resize-none rounded-xl border border-blue-200 bg-white p-2 pr-8 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-50"
+                        />
+                        <button
+                          type="button"
+                          onClick={toggleAssistenteMic}
+                          disabled={!isAssistenteMicSupported || assistenteLoading}
+                          className={cn(
+                            "absolute bottom-2 right-2 p-1 rounded-full transition-colors",
+                            isAssistenteMicRecording
+                              ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                              : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                            (!isAssistenteMicSupported || assistenteLoading) && "opacity-40 cursor-not-allowed"
+                          )}
+                        >
+                          {isAssistenteMicRecording ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={chamarAssistente}
@@ -1293,7 +1313,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                         }
                       </button>
                     </div>
-                    <p className="text-[10px] text-blue-400">Shift+Enter para nova linha</p>
+                    {isAssistenteMicRecording && <p className="text-[10px] text-red-500 font-medium animate-pulse">Ouvindo...</p>}
+                    {!isAssistenteMicRecording && <p className="text-[10px] text-blue-400">Shift+Enter para nova linha · microfone para ditar</p>}
                   </div>
                 )}
               </div>
