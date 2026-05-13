@@ -213,11 +213,6 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
               <p className="text-xs text-muted-foreground">Nenhuma turma ativa encontrada.</p>
             )}
 
-            {formData.turmas_autorizadas.length === 0 && (
-              <p className="text-xs text-amber-600">
-                Sem turmas selecionadas — o corretor não poderá criar temas.
-              </p>
-            )}
           </div>
 
           <div className="flex gap-2">
