@@ -66,9 +66,10 @@ interface Top5WidgetProps {
   variant?: "student" | "corretor" | "admin";
   turmaFilter?: string;
   horizontal?: boolean; // Galeria e Ranking lado a lado
+  turmasPermitidas?: string[]; // Para corretor: restringe ao conjunto de turmas autorizadas
 }
 
-export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter, horizontal = false }: Top5WidgetProps) => {
+export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter, horizontal = false, turmasPermitidas }: Top5WidgetProps) => {
   const [selectedType, setSelectedType] = useState<"simulado" | "regular" | "avulsa">("simulado");
   const [selectedSimulado, setSelectedSimulado] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -84,6 +85,11 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   const { user: adminUser } = useAuth();
   const { turmasDinamicas } = useTurmasAtivas();
 
+  // Para o corretor: mostra apenas suas turmas autorizadas no seletor
+  const turmasParaSelector = variant === "corretor" && turmasPermitidas && turmasPermitidas.length > 0
+    ? turmasDinamicas.filter(t => turmasPermitidas.includes(t.valor))
+    : turmasDinamicas;
+
   // Handler para seleção de simulado com log
   const handleSimuladoSelect = (simuladoId: string) => {
     console.log(`🎯 Simulado Selecionado:`, {
@@ -97,6 +103,23 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   const turmaFiltroAtivo = (variant === "admin" || variant === "corretor") && selectedTurma !== "todas"
     ? selectedTurma
     : null;
+
+  // Quando corretor seleciona "Todas as turmas", filtra pelas turmas autorizadas dele
+  const turmasFiltroCorretor: string[] | null =
+    variant === "corretor" && selectedTurma === "todas" && turmasPermitidas && turmasPermitidas.length > 0
+      ? turmasPermitidas
+      : null;
+
+  // Helper: verifica se item.turma pertence a uma lista de turmas permitidas
+  const matchesAnyTurma = (itemTurma: string | null | undefined, lista: string[]): boolean => {
+    if (!itemTurma) return false;
+    return lista.some(t => {
+      if (itemTurma === t) return true;
+      const n1 = normalizeTurmaToLetter(itemTurma);
+      const n2 = normalizeTurmaToLetter(t);
+      return !!(n1 && n2 && n1 === n2);
+    });
+  };
 
   // Mantém compatibilidade com código existente que usa turmaAtivaLetter
   const turmaAtivaLetter = turmaFiltroAtivo;
@@ -113,7 +136,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
   // Buscar notas 1000 para "Galeria de Honra" (filtra por turma para alunos, global para admin)
   const { data: galeria1000 } = useQuery({
-    queryKey: ['galeria-honra-1000', selectedType, selectedMonth, variant, turmaFiltroAtivo, studentData?.turma],
+    queryKey: ['galeria-honra-1000', selectedType, selectedMonth, variant, turmaFiltroAtivo, turmasFiltroCorretor, studentData?.turma],
     queryFn: async () => {
       // Determinar filtro de turma baseado no tipo de usuário
       let turmaFilterStr: string | null = null;
@@ -157,7 +180,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         ...(exercicioRes.data || [])
       ];
 
-      // FILTRO CLIENT-SIDE: turma (direct match + normalização por letra)
+      // FILTRO CLIENT-SIDE: turma específica (direct match + normalização por letra)
       if (turmaFilterStr) {
         todasNotas1000 = todasNotas1000.filter(nota => {
           if (!nota.turma) return false;
@@ -166,6 +189,9 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           const n2 = normalizeTurmaToLetter(turmaFilterStr);
           return !!(n1 && n2 && n1 === n2);
         });
+      } else if (turmasFiltroCorretor) {
+        // Corretor "todas": restringe às suas turmas autorizadas
+        todasNotas1000 = todasNotas1000.filter(nota => matchesAnyTurma(nota.turma, turmasFiltroCorretor));
       }
 
       if (todasNotas1000.length === 0) return null;
@@ -327,7 +353,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   // - "LRA 2025", "LRB 2025" → normaliza para "A", "B"
   // - Evita problemas de case-sensitivity e formatos inconsistentes
   const { data: ranking } = useQuery({
-    queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth, turmaFiltroAtivo, variant, studentData?.turma],
+    queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth, turmaFiltroAtivo, turmasFiltroCorretor, variant, studentData?.turma],
     queryFn: async () => {
       let rankingTurmaFilter: string | null = null;
 
@@ -396,6 +422,8 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             const n2 = normalizeTurmaToLetter(rankingTurmaFilter);
             return !!(n1 && n2 && n1 === n2);
           });
+        } else if (turmasFiltroCorretor) {
+          filteredData = filteredData.filter(item => matchesAnyTurma(item.turma, turmasFiltroCorretor));
         }
         // Filtrar por simulado específico se selecionado
         if (selectedSimulado && simulados) {
@@ -482,8 +510,10 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             const n2 = normalizeTurmaToLetter(rankingTurmaFilter);
             return !!(n1 && n2 && n1 === n2);
           });
+        } else if (turmasFiltroCorretor) {
+          filteredData = filteredData.filter(item => matchesAnyTurma(item.turma, turmasFiltroCorretor));
         }
-        
+
         // Filtrar por mês se for tipo "regular" e um mês estiver selecionado
         if (selectedType === "regular" && selectedMonth) {
           filteredData = filteredData.filter(redacao => {
@@ -700,7 +730,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
   const styles = getCardStyles();
 
-  const turmaSelector = (variant === "admin" || variant === "corretor") && turmasDinamicas.length > 0 ? (
+  const turmaSelector = (variant === "admin" || variant === "corretor") && turmasParaSelector.length > 0 ? (
     <div className="flex items-center gap-3">
       <span className="text-sm font-medium text-slate-600 shrink-0">Turma:</span>
       <Select value={selectedTurma} onValueChange={setSelectedTurma}>
@@ -709,7 +739,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todas">Todas as turmas</SelectItem>
-          {turmasDinamicas.map(t => (
+          {turmasParaSelector.map(t => (
             <SelectItem key={t.id} value={t.valor}>{t.label}</SelectItem>
           ))}
         </SelectContent>
