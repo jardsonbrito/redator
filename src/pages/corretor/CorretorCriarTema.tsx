@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
@@ -6,54 +6,65 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Loader2, Send, Plus, X, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 const EIXOS = [
   "Educação", "Saúde", "Meio Ambiente", "Cidadania e Democracia",
   "Violência", "Tecnologia", "Cultura e Arte", "Economia", "Ciência",
-  "Direitos Humanos", "Outro",
+  "Direitos Humanos",
 ];
+
+type FormKey = keyof typeof FORM_DEFAULTS;
+const FORM_DEFAULTS = {
+  frase_tematica: "",
+  eixo_tematico: "",
+  texto_1: "", texto_1_fonte: "", motivator1_url: "",
+  texto_2: "", texto_2_fonte: "", motivator2_url: "",
+  texto_3: "", texto_3_fonte: "", motivator3_url: "",
+  texto_4: "", texto_4_fonte: "", motivator4_url: "",
+  texto_5: "", texto_5_fonte: "", motivator5_url: "",
+};
 
 const CorretorCriarTema = () => {
   const { corretor, loading } = useCorretorAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { turmasDinamicas } = useTurmasAtivas();
   const [saving, setSaving] = useState(false);
+  const [turmasCorretor, setTurmasCorretor] = useState<string[]>([]);
+  const [loadingTurmas, setLoadingTurmas] = useState(true);
+  const [novoEixo, setNovoEixo] = useState("");
+  const [form, setForm] = useState({ ...FORM_DEFAULTS });
 
-  const [form, setForm] = useState({
-    frase_tematica: "",
-    eixo_tematico: "",
-    texto_1: "",
-    texto_1_fonte: "",
-    texto_2: "",
-    texto_2_fonte: "",
-    texto_3: "",
-    texto_3_fonte: "",
-    texto_4: "",
-    texto_4_fonte: "",
-    texto_5: "",
-    texto_5_fonte: "",
-    turmas_permitidas: [] as string[],
-  });
+  useEffect(() => {
+    if (!corretor?.email) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("corretores")
+        .select("turmas_autorizadas")
+        .eq("email", corretor.email.toLowerCase())
+        .maybeSingle();
+      setTurmasCorretor((data?.turmas_autorizadas as string[]) ?? []);
+      setLoadingTurmas(false);
+    };
+    fetch();
+  }, [corretor?.email]);
 
   if (loading) return null;
   if (!corretor) return <Navigate to="/corretor/login" replace />;
 
-  const set = (field: string, value: string) =>
+  const set = (field: FormKey, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
-  const toggleTurma = (turma: string, checked: boolean) =>
-    setForm(prev => ({
-      ...prev,
-      turmas_permitidas: checked
-        ? [...prev.turmas_permitidas, turma]
-        : prev.turmas_permitidas.filter(t => t !== turma),
-    }));
+  const isCustomEixo = form.eixo_tematico && !EIXOS.includes(form.eixo_tematico);
+
+  const handleAdicionarEixo = () => {
+    if (!novoEixo.trim()) return;
+    set("eixo_tematico", novoEixo.trim());
+    setNovoEixo("");
+  };
 
   const handleSave = async () => {
     if (!form.frase_tematica.trim()) {
@@ -61,32 +72,44 @@ const CorretorCriarTema = () => {
       return;
     }
     if (!form.eixo_tematico.trim()) {
-      toast({ title: "Campo obrigatório", description: "Selecione ou preencha o eixo temático.", variant: "destructive" });
+      toast({ title: "Campo obrigatório", description: "Selecione ou adicione o eixo temático.", variant: "destructive" });
+      return;
+    }
+    if (!form.texto_1.trim()) {
+      toast({ title: "Campo obrigatório", description: "O Texto I é obrigatório.", variant: "destructive" });
+      return;
+    }
+    if (turmasCorretor.length === 0) {
+      toast({ title: "Sem turmas autorizadas", description: "Você não possui turmas autorizadas. Contate o administrador.", variant: "destructive" });
       return;
     }
 
     setSaving(true);
     try {
       const { error } = await supabase.rpc("criar_tema_corretor", {
-        p_corretor_email: corretor.email,
-        p_frase_tematica: form.frase_tematica.trim(),
-        p_eixo_tematico: form.eixo_tematico.trim(),
-        p_texto_1: form.texto_1.trim() || null,
-        p_texto_1_fonte: form.texto_1_fonte.trim() || null,
-        p_texto_2: form.texto_2.trim() || null,
-        p_texto_2_fonte: form.texto_2_fonte.trim() || null,
-        p_texto_3: form.texto_3.trim() || null,
-        p_texto_3_fonte: form.texto_3_fonte.trim() || null,
-        p_texto_4: form.texto_4.trim() || null,
-        p_texto_4_fonte: form.texto_4_fonte.trim() || null,
-        p_texto_5: form.texto_5.trim() || null,
-        p_texto_5_fonte: form.texto_5_fonte.trim() || null,
-        p_turmas_permitidas: form.turmas_permitidas.length > 0 ? form.turmas_permitidas : null,
+        p_corretor_email:  corretor.email,
+        p_frase_tematica:  form.frase_tematica.trim(),
+        p_eixo_tematico:   form.eixo_tematico.trim(),
+        p_texto_1:         form.texto_1.trim()         || null,
+        p_texto_1_fonte:   form.texto_1_fonte.trim()   || null,
+        p_motivator1_url:  form.motivator1_url.trim()  || null,
+        p_texto_2:         form.texto_2.trim()         || null,
+        p_texto_2_fonte:   form.texto_2_fonte.trim()   || null,
+        p_motivator2_url:  form.motivator2_url.trim()  || null,
+        p_texto_3:         form.texto_3.trim()         || null,
+        p_texto_3_fonte:   form.texto_3_fonte.trim()   || null,
+        p_motivator3_url:  form.motivator3_url.trim()  || null,
+        p_texto_4:         form.texto_4.trim()         || null,
+        p_texto_4_fonte:   form.texto_4_fonte.trim()   || null,
+        p_motivator4_url:  form.motivator4_url.trim()  || null,
+        p_texto_5:         form.texto_5.trim()         || null,
+        p_texto_5_fonte:   form.texto_5_fonte.trim()   || null,
+        p_motivator5_url:  form.motivator5_url.trim()  || null,
       });
 
       if (error) throw error;
 
-      toast({ title: "Tema salvo!", description: "Tema criado como rascunho. Aguarda aprovação do administrador." });
+      toast({ title: "Tema publicado!", description: "Disponibilizado para suas turmas com sucesso." });
       navigate("/corretor/temas");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao criar tema.";
@@ -96,29 +119,72 @@ const CorretorCriarTema = () => {
     }
   };
 
-  const TextBlock = ({ n, label }: { n: 1 | 2 | 3 | 4 | 5; label: string }) => (
-    <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm space-y-3">
-      <p className="text-sm font-semibold text-slate-700">{label}</p>
-      <div>
-        <Label className="text-xs text-slate-500 mb-1 block">Conteúdo</Label>
-        <Textarea
-          value={(form as Record<string, string>)[`texto_${n}`]}
-          onChange={e => set(`texto_${n}`, e.target.value)}
-          placeholder={`Digite o conteúdo do ${label.toLowerCase()}...`}
-          className="min-h-[120px] resize-y text-sm"
-        />
+  const TextBlock = ({
+    n, label, required,
+  }: {
+    n: 1 | 2 | 3 | 4 | 5;
+    label: string;
+    required?: boolean;
+  }) => {
+    const imgKey = `motivator${n}_url` as FormKey;
+    const imgUrl = form[imgKey];
+
+    return (
+      <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm space-y-3">
+        <p className="text-sm font-semibold text-slate-700">
+          {label} {required && <span className="text-red-500">*</span>}
+        </p>
+
+        {/* Conteúdo */}
+        <div>
+          <Label className="text-xs text-slate-500 mb-1 block">
+            Conteúdo {required && <span className="text-red-500">*</span>}
+          </Label>
+          <Textarea
+            value={form[`texto_${n}` as FormKey]}
+            onChange={e => set(`texto_${n}` as FormKey, e.target.value)}
+            placeholder={`Digite o conteúdo do ${label.toLowerCase()}...`}
+            className="min-h-[120px] resize-y text-sm"
+          />
+        </div>
+
+        {/* Fonte */}
+        <div>
+          <Label className="text-xs text-slate-500 mb-1 block">Fonte / Referência</Label>
+          <Input
+            value={form[`texto_${n}_fonte` as FormKey]}
+            onChange={e => set(`texto_${n}_fonte` as FormKey, e.target.value)}
+            placeholder="Ex.: IBGE, 2023."
+            className="text-sm"
+          />
+        </div>
+
+        {/* URL da imagem */}
+        <div>
+          <Label className="text-xs text-slate-500 mb-1 block flex items-center gap-1">
+            <ImageIcon className="w-3 h-3" /> URL da imagem (opcional)
+          </Label>
+          <Input
+            value={imgUrl}
+            onChange={e => set(imgKey, e.target.value)}
+            placeholder="https://..."
+            className="text-sm"
+          />
+          {imgUrl && (
+            <div className="mt-2">
+              <img
+                src={imgUrl}
+                alt={`Preview ${label}`}
+                className="max-h-52 w-auto rounded-xl border border-slate-200 object-contain"
+                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                onLoad={e => { (e.target as HTMLImageElement).style.display = ""; }}
+              />
+            </div>
+          )}
+        </div>
       </div>
-      <div>
-        <Label className="text-xs text-slate-500 mb-1 block">Fonte / Referência</Label>
-        <Input
-          value={(form as Record<string, string>)[`texto_${n}_fonte`]}
-          onChange={e => set(`texto_${n}_fonte`, e.target.value)}
-          placeholder="Ex.: IBGE, 2023."
-          className="text-sm"
-        />
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <CorretorLayout>
@@ -142,14 +208,36 @@ const CorretorCriarTema = () => {
           </div>
         </div>
 
-        {/* Aviso rascunho */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          Temas criados por correto ficam como <strong>rascunho</strong> até serem publicados pelo administrador.
+        {/* Aviso publicação */}
+        <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+          Este tema será disponibilizado <strong>apenas para as turmas vinculadas ao seu perfil de corretor</strong>.
         </div>
 
-        {/* Campos principais */}
+        {/* Turmas do corretor — informativo */}
+        <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
+          <p className="text-sm font-semibold text-slate-700 mb-2">Turmas autorizadas</p>
+          {loadingTurmas ? (
+            <p className="text-xs text-slate-400">Carregando...</p>
+          ) : turmasCorretor.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {turmasCorretor.map(t => (
+                <Badge key={t} variant="outline" className="bg-violet-50 text-violet-700 border-violet-200">{t}</Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-amber-600 font-medium">
+              Nenhuma turma autorizada. Contate o administrador antes de criar temas.
+            </p>
+          )}
+          <p className="text-xs text-slate-400 mt-2">
+            O tema será publicado automaticamente para estas turmas.
+          </p>
+        </div>
+
+        {/* Identificação */}
         <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm space-y-4">
           <p className="text-sm font-semibold text-slate-700">Identificação do tema</p>
+
           <div>
             <Label>Frase temática <span className="text-red-500">*</span></Label>
             <Input
@@ -159,14 +247,17 @@ const CorretorCriarTema = () => {
               className="mt-1"
             />
           </div>
+
           <div>
             <Label>Eixo temático <span className="text-red-500">*</span></Label>
-            <div className="flex flex-wrap gap-2 mt-1">
+
+            {/* Pills predefinidos */}
+            <div className="flex flex-wrap gap-2 mt-2">
               {EIXOS.map(e => (
                 <button
                   key={e}
                   type="button"
-                  onClick={() => set("eixo_tematico", e)}
+                  onClick={() => { set("eixo_tematico", e); setNovoEixo(""); }}
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                     form.eixo_tematico === e
                       ? "bg-violet-600 border-violet-600 text-white"
@@ -176,57 +267,70 @@ const CorretorCriarTema = () => {
                   {e}
                 </button>
               ))}
+
+              {/* Pill do eixo personalizado selecionado */}
+              {isCustomEixo && (
+                <span className="rounded-full border border-violet-500 bg-violet-600 text-white px-3 py-1 text-xs font-medium flex items-center gap-1">
+                  {form.eixo_tematico}
+                  <button
+                    type="button"
+                    onClick={() => set("eixo_tematico", "")}
+                    className="hover:text-red-300 ml-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
             </div>
-            {form.eixo_tematico === "Outro" && (
+
+            {/* Campo para novo eixo */}
+            <div className="flex gap-2 mt-3">
               <Input
-                className="mt-2"
-                placeholder="Especifique o eixo temático..."
-                onChange={e => set("eixo_tematico", e.target.value)}
+                value={novoEixo}
+                onChange={e => setNovoEixo(e.target.value)}
+                placeholder="Adicionar novo eixo temático..."
+                className="text-sm flex-1"
+                onKeyDown={e => {
+                  if (e.key === "Enter") { e.preventDefault(); handleAdicionarEixo(); }
+                }}
               />
-            )}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!novoEixo.trim()}
+                onClick={handleAdicionarEixo}
+                className="shrink-0 gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Adicionar
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Textos motivadores */}
         <div className="space-y-4">
           <p className="text-sm font-semibold text-slate-700 px-1">Textos motivadores</p>
-          <TextBlock n={1} label="Texto I" />
+          <TextBlock n={1} label="Texto I" required />
           <TextBlock n={2} label="Texto II" />
           <TextBlock n={3} label="Texto III" />
           <TextBlock n={4} label="Texto IV (opcional)" />
           <TextBlock n={5} label="Texto V (opcional)" />
         </div>
 
-        {/* Turmas */}
-        {turmasDinamicas.length > 0 && (
-          <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-700 mb-3">Turmas permitidas</p>
-            <div className="flex flex-wrap gap-3">
-              {turmasDinamicas.map(t => (
-                <label key={t.id} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={form.turmas_permitidas.includes(t.valor)}
-                    onCheckedChange={(checked) => toggleTurma(t.valor, !!checked)}
-                  />
-                  <span className="text-sm text-slate-700">{t.label}</span>
-                </label>
-              ))}
-            </div>
-            {form.turmas_permitidas.length === 0 && (
-              <p className="text-xs text-slate-400 mt-2">Nenhuma turma selecionada = visível para todas.</p>
-            )}
-          </div>
-        )}
-
-        {/* Botão salvar */}
+        {/* Botão publicar */}
         <div className="flex justify-end">
           <Button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || turmasCorretor.length === 0}
             className="bg-violet-600 hover:bg-violet-700 text-white gap-2 px-6"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? "Salvando..." : "Salvar rascunho"}
+            {saving
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Send className="w-4 h-4" />
+            }
+            {saving ? "Publicando..." : "Publicar para minhas turmas"}
           </Button>
         </div>
       </div>
