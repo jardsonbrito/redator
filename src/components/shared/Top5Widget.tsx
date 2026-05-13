@@ -7,7 +7,8 @@ import { Trophy, Medal, Crown, History, ChevronDown, ChevronUp } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
-import { normalizeTurmaToLetter, formatTurmaDisplay, TURMAS_VALIDAS, isStatusEspecial } from "@/utils/turmaUtils";
+import { normalizeTurmaToLetter, formatTurmaDisplay, isStatusEspecial } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 // Função para obter as cores da turma
 const getTurmaColors = (turmaLetter: string) => {
@@ -63,14 +64,15 @@ const resolveGenericNames = async (
 interface Top5WidgetProps {
   showHeader?: boolean;
   variant?: "student" | "corretor" | "admin";
-  turmaFilter?: string; // Para casos onde queremos forçar uma turma específica
+  turmaFilter?: string;
+  horizontal?: boolean; // Galeria e Ranking lado a lado
 }
 
-export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter }: Top5WidgetProps) => {
+export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter, horizontal = false }: Top5WidgetProps) => {
   const [selectedType, setSelectedType] = useState<"simulado" | "regular" | "avulsa">("simulado");
   const [selectedSimulado, setSelectedSimulado] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
-  const [selectedTurmaAdmin, setSelectedTurmaAdmin] = useState<string>("geral");
+  const [selectedTurma, setSelectedTurma] = useState<string>("todas");
   const [showHistorico, setShowHistorico] = useState<boolean>(false);
   const [showSimuladoHistorico, setShowSimuladoHistorico] = useState<boolean>(false);
 
@@ -80,6 +82,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   // Hooks de autenticação
   const { studentData } = useStudentAuth();
   const { user: adminUser } = useAuth();
+  const { turmasDinamicas } = useTurmasAtivas();
 
   // Handler para seleção de simulado com log
   const handleSimuladoSelect = (simuladoId: string) => {
@@ -90,25 +93,36 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
     setSelectedSimulado(simuladoId);
   };
 
-  // Determinar turma ativa para filtros - apenas letra maiúscula (A-E ou VISITANTE)
-  const turmaAtivaLetter = variant === "admin" && selectedTurmaAdmin !== "geral" ? selectedTurmaAdmin : null;
+  // Turma ativa para admin e corretor; aluno usa a própria turma
+  const turmaFiltroAtivo = (variant === "admin" || variant === "corretor") && selectedTurma !== "todas"
+    ? selectedTurma
+    : null;
+
+  // Mantém compatibilidade com código existente que usa turmaAtivaLetter
+  const turmaAtivaLetter = turmaFiltroAtivo;
+
+  // Helper: compara turma do item com o filtro selecionado
+  // Suporta: nomes completos ("Redatores 2026") e letras normalizadas ("A", "LRA2025")
+  const matchesTurmaFiltro = (itemTurma: string | null | undefined): boolean => {
+    if (!itemTurma || !turmaFiltroAtivo) return false;
+    if (itemTurma === turmaFiltroAtivo) return true;
+    const n1 = normalizeTurmaToLetter(itemTurma);
+    const n2 = normalizeTurmaToLetter(turmaFiltroAtivo);
+    return !!(n1 && n2 && n1 === n2);
+  };
 
   // Buscar notas 1000 para "Galeria de Honra" (filtra por turma para alunos, global para admin)
   const { data: galeria1000 } = useQuery({
-    queryKey: ['galeria-honra-1000', selectedType, selectedMonth, variant, turmaAtivaLetter, studentData?.turma],
+    queryKey: ['galeria-honra-1000', selectedType, selectedMonth, variant, turmaFiltroAtivo, studentData?.turma],
     queryFn: async () => {
       // Determinar filtro de turma baseado no tipo de usuário
-      let turmaFilter: string | null = null;
+      let turmaFilterStr: string | null = null;
 
-      if (variant === "admin") {
-        // Admin: usa seletor de turma ou mostra geral
-        turmaFilter = turmaAtivaLetter;
+      if (variant === "admin" || variant === "corretor") {
+        turmaFilterStr = turmaFiltroAtivo;
       } else if (variant === "student" && studentData?.turma) {
-        // Aluno: filtra apenas sua turma
-        const turmaLetter = normalizeTurmaToLetter(studentData.turma);
-        turmaFilter = turmaLetter || null;
+        turmaFilterStr = studentData.turma;
       }
-      // Visitantes: sem filtro (turmaFilter = null)
 
       // Buscar TODOS os registros com nota 1000 (SEM filtro SQL de turma)
       // Faremos a filtragem client-side para suportar formatos antigos
@@ -143,35 +157,15 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         ...(exercicioRes.data || [])
       ];
 
-      console.log(`🎯 Galeria de Honra - Total inicial (antes filtro): ${todasNotas1000.length}`, {
-        selectedMonth,
-        variant,
-        turmaFilter,
-        studentTurma: studentData?.turma,
-        enviadasCount: enviadasRes.data?.length || 0,
-        simuladoCount: simuladoRes.data?.length || 0,
-        exercicioCount: exercicioRes.data?.length || 0
-      });
-
-      // FILTRO CLIENT-SIDE: aplicar filtro de turma usando normalização
-      if (turmaFilter) {
+      // FILTRO CLIENT-SIDE: turma (direct match + normalização por letra)
+      if (turmaFilterStr) {
         todasNotas1000 = todasNotas1000.filter(nota => {
-          const turmaNormalizada = normalizeTurmaToLetter(nota.turma);
-          const match = turmaNormalizada === turmaFilter;
-
-          if (!match) {
-            console.log(`🔍 Galeria - Filtrado fora:`, {
-              nome: nota.nome_aluno,
-              turmaRaw: nota.turma,
-              turmaNormalizada,
-              esperado: turmaFilter
-            });
-          }
-
-          return match;
+          if (!nota.turma) return false;
+          if (nota.turma === turmaFilterStr) return true;
+          const n1 = normalizeTurmaToLetter(nota.turma);
+          const n2 = normalizeTurmaToLetter(turmaFilterStr);
+          return !!(n1 && n2 && n1 === n2);
         });
-
-        console.log(`📊 Galeria de Honra - Após filtro de turma ${turmaFilter}: ${todasNotas1000.length}`);
       }
 
       if (todasNotas1000.length === 0) return null;
@@ -333,14 +327,12 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   // - "LRA 2025", "LRB 2025" → normaliza para "A", "B"
   // - Evita problemas de case-sensitivity e formatos inconsistentes
   const { data: ranking } = useQuery({
-    queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth, turmaAtivaLetter, variant, studentData?.turma],
+    queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth, turmaFiltroAtivo, variant, studentData?.turma],
     queryFn: async () => {
-      // Determinar filtro de turma para o ranking baseado no tipo de usuário
       let rankingTurmaFilter: string | null = null;
 
-      if (variant === "admin") {
-        // Admin: usa seletor de turma ou mostra geral
-        rankingTurmaFilter = turmaAtivaLetter;
+      if (variant === "admin" || variant === "corretor") {
+        rankingTurmaFilter = turmaFiltroAtivo;
       } else if (variant === "student" && studentData?.turma) {
         // Aluno: filtra apenas sua turma
         const turmaLetter = normalizeTurmaToLetter(studentData.turma);
@@ -396,32 +388,13 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           }))
         });
 
-        // Filtrar por turma no client-side usando normalização (admin, aluno ou visitante)
         if (rankingTurmaFilter) {
-          console.log(`🎯 Simulado Query Filter (client-side):`, {
-            turmaLetter: rankingTurmaFilter,
-            totalBeforeFilter: filteredData.length
-          });
-
           filteredData = filteredData.filter(item => {
-            const turmaNormalizada = normalizeTurmaToLetter(item.turma);
-            const match = turmaNormalizada === rankingTurmaFilter;
-
-            if (!match) {
-              console.log(`🔍 Filtrado fora:`, {
-                nome: item.nome_aluno,
-                turmaRaw: item.turma,
-                turmaNormalizada,
-                esperado: rankingTurmaFilter
-              });
-            }
-
-            return match;
-          });
-
-          console.log(`📊 Simulado Results after filter:`, {
-            totalAfterFilter: filteredData.length,
-            expectedTurma: rankingTurmaFilter
+            if (!item.turma) return false;
+            if (item.turma === rankingTurmaFilter) return true;
+            const n1 = normalizeTurmaToLetter(item.turma);
+            const n2 = normalizeTurmaToLetter(rankingTurmaFilter);
+            return !!(n1 && n2 && n1 === n2);
           });
         }
         // Filtrar por simulado específico se selecionado
@@ -501,37 +474,13 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
         let filteredData = data || [];
 
-        // Filtrar por turma no client-side usando normalização (admin, aluno ou visitante)
         if (rankingTurmaFilter) {
-          console.log(`🎯 Regular/Avulsa Query Filter (client-side):`, {
-            selectedType: selectedType,
-            turmaLetter: rankingTurmaFilter,
-            totalBeforeFilter: filteredData.length
-          });
-
           filteredData = filteredData.filter(item => {
-            const turmaNormalizada = normalizeTurmaToLetter(item.turma);
-            return turmaNormalizada === rankingTurmaFilter;
-          });
-
-          console.log(`📊 Regular/Avulsa Results after filter:`, {
-            totalAfterFilter: filteredData.length,
-            expectedTurma: rankingTurmaFilter
-          });
-        }
-        
-        // Debug para verificar resultados do filtro de regular/avulsa (após normalização client-side)
-        if (variant === "student" && rankingTurmaFilter) {
-          console.log(`📊 ${selectedType} Results for Turma ${rankingTurmaFilter}:`, {
-            totalFound: filteredData.length,
-            expectedTurma: rankingTurmaFilter,
-            students: filteredData.slice(0, 15).map(item => ({
-              nome: item.nome_aluno,
-              email: item.email_aluno,
-              turmaRaw: item.turma,
-              turmaNormalizada: normalizeTurmaToLetter(item.turma),
-              nota: item.nota_total
-            }))
+            if (!item.turma) return false;
+            if (item.turma === rankingTurmaFilter) return true;
+            const n1 = normalizeTurmaToLetter(item.turma);
+            const n2 = normalizeTurmaToLetter(rankingTurmaFilter);
+            return !!(n1 && n2 && n1 === n2);
           });
         }
         
@@ -751,8 +700,118 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
   const styles = getCardStyles();
 
+  const turmaSelector = (variant === "admin" || variant === "corretor") && turmasDinamicas.length > 0 ? (
+    <div className="flex items-center gap-3">
+      <span className="text-sm font-medium text-slate-600 shrink-0">Turma:</span>
+      <Select value={selectedTurma} onValueChange={setSelectedTurma}>
+        <SelectTrigger className="w-48 h-8 text-sm">
+          <SelectValue placeholder="Todas as turmas" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todas">Todas as turmas</SelectItem>
+          {turmasDinamicas.map(t => (
+            <SelectItem key={t.id} value={t.valor}>{t.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  ) : null;
+
+  if (horizontal) {
+    return (
+      <div className="space-y-3">
+        {turmaSelector}
+        <div className="grid md:grid-cols-2 gap-4 items-start">
+          {/* Galeria de Honra compacta */}
+          <Card className={styles.majorNoteCard}>
+            <CardHeader className="pb-3 pt-4 px-4">
+              <div className="flex items-center gap-2">
+                <div className={styles.majorNoteIconBg} style={{ width: 36, height: 36 }}>
+                  <Crown className={`w-5 h-5 text-white ${!galeria1000 || galeria1000.total === 0 ? 'opacity-50' : ''}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className={`${styles.majorNoteTitle} text-base`}>Galeria de Honra</CardTitle>
+                  {galeria1000 && galeria1000.total > 0 ? (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-lg font-bold text-yellow-600">1000</span>
+                      <span className="text-xs text-muted-foreground">pts</span>
+                      <span className="text-xs text-muted-foreground">· {galeria1000.total} {galeria1000.total === 1 ? 'aluno' : 'alunos'}</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">Nenhum aluno ainda.</p>
+                  )}
+                </div>
+              </div>
+              {galeria1000 && galeria1000.total > 0 && (
+                <div className="mt-2 space-y-0.5">
+                  {galeria1000.alunos.slice(0, 4).map((aluno, index) => (
+                    <div key={index} className="text-sm text-slate-700 flex items-center gap-1.5">
+                      <Crown className="w-3 h-3 text-yellow-500 shrink-0" />
+                      <span className="truncate">{aluno.nome_aluno}</span>
+                      {(variant === "admin" || variant === "corretor") && aluno.turma && !isStatusEspecial(aluno.turma) && (
+                        (() => {
+                          const turmaLetter = normalizeTurmaToLetter(aluno.turma) || 'N/A';
+                          const colors = getTurmaColors(turmaLetter);
+                          return (
+                            <span className={`shrink-0 px-1.5 py-0.5 ${colors.bg} ${colors.text} ${colors.border} border text-[10px] rounded font-medium`}>
+                              {formatTurmaDisplay(aluno.turma)}
+                            </span>
+                          );
+                        })()
+                      )}
+                    </div>
+                  ))}
+                  {galeria1000.total > 4 && (
+                    <p className="text-xs text-muted-foreground pl-4">+ {galeria1000.total - 4} alunos</p>
+                  )}
+                </div>
+              )}
+            </CardHeader>
+          </Card>
+
+          {/* Classificação Top 5 compacta */}
+          <Card className={styles.container}>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className={`${styles.title} text-base`}>🏅 Classificação Top 5</CardTitle>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(["simulado", "regular", "avulsa"] as const).map(tipo => (
+                  <Button key={tipo} variant={selectedType === tipo ? "default" : "outline"}
+                    onClick={() => setSelectedType(tipo)} size="sm" className="h-7 text-xs px-2.5"
+                    style={selectedType === tipo ? undefined : undefined}>
+                    {tipo === "simulado" ? "Simulado" : tipo === "regular" ? "Regular" : "Visitante"}
+                  </Button>
+                ))}
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              {ranking && ranking.length > 0 ? (
+                <div className="space-y-2">
+                  {ranking.slice(0, 5).map((item, index) => (
+                    <div key={`${item.nome_aluno}-${index}`} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {getPosicaoIcon(item.posicao)}
+                        <span className="text-sm font-medium text-slate-700 truncate">{item.nome_aluno}</span>
+                      </div>
+                      <span className="text-sm font-bold text-slate-900 shrink-0 ml-2">{item.nota_total}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500">Nenhuma redação corrigida ainda</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {turmaSelector}
+
       {/* Galeria de Honra - 1000 pontos */}
       <Card className={styles.majorNoteCard}>
         <CardHeader>
@@ -837,34 +896,6 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           <CardTitle className={styles.title}>
             🏅 Classificação Top 5
           </CardTitle>
-          
-          {/* Seletor de Turma para Admin */}
-          {variant === "admin" && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <label className="block text-sm font-medium mb-2 text-blue-700">
-                Filtrar por turma:
-              </label>
-              <Select value={selectedTurmaAdmin} onValueChange={setSelectedTurmaAdmin}>
-                <SelectTrigger className="w-full max-w-xs">
-                  <SelectValue placeholder="Selecione uma turma" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="geral">Geral (Todas as turmas)</SelectItem>
-                  {TURMAS_VALIDAS.map(letra => (
-                    <SelectItem key={letra} value={letra}>
-                      {formatTurmaDisplay(letra)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="text-xs text-blue-600 mt-1">
-                {selectedTurmaAdmin === "geral" 
-                  ? "Exibindo ranking de todas as turmas" 
-                  : `Exibindo apenas alunos da turma ${selectedTurmaAdmin}`
-                }
-              </div>
-            </div>
-          )}
           
           {/* Filtros */}
           <div className="flex flex-wrap gap-3 mt-4">
