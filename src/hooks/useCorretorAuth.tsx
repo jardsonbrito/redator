@@ -43,17 +43,35 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
   const { toast } = useToast();
 
   useEffect(() => {
-    // Verificar se há um corretor logado no localStorage
     const savedCorretor = localStorage.getItem('corretor_session');
     if (savedCorretor) {
       try {
         const parsed = JSON.parse(savedCorretor);
         setCorretor(parsed);
-      } catch (error) {
+        setLoading(false);
+
+        // Atualiza turmas_autorizadas do banco (sessão antiga pode não ter esse campo)
+        if (parsed.id) {
+          supabase
+            .from('corretores')
+            .select('turmas_autorizadas')
+            .eq('id', parsed.id)
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data) {
+                const updated = { ...parsed, turmas_autorizadas: (data.turmas_autorizadas as string[]) ?? null };
+                setCorretor(updated);
+                localStorage.setItem('corretor_session', JSON.stringify(updated));
+              }
+            });
+        }
+      } catch {
         localStorage.removeItem('corretor_session');
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const loginAsCorretor = async (email: string, senha?: string) => {
