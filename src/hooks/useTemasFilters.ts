@@ -23,6 +23,7 @@ export interface Tema {
 export const useTemasFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { studentData } = useStudentAuth();
+  const turmaDoAluno = studentData?.turma ?? null;
 
   // Estados dos filtros
   const [fraseFilter, setFraseFilter] = useState(searchParams.get('q') || '');
@@ -35,7 +36,7 @@ export const useTemasFilters = () => {
 
   // Buscar todos os temas publicados
   const { data: allTemas, isLoading, error } = useQuery({
-    queryKey: ['temas-student-all'],
+    queryKey: ['temas-student-all', turmaDoAluno],
     queryFn: async (): Promise<Tema[]> => {
       try {
         const { data, error } = await supabase
@@ -47,10 +48,18 @@ export const useTemasFilters = () => {
 
         if (error) throw error;
 
-        return (data || []).map((t: any) => ({
+        const items = (data || []).map((t: any) => ({
           ...t,
           frase_tematica: t.frase_tematica || 'Tema sem título',
         }));
+
+        // Filtrar por turma: null/vazio = visível para todas
+        if (turmaDoAluno) {
+          return items.filter((t: any) =>
+            !t.turmas_permitidas || t.turmas_permitidas.length === 0 || t.turmas_permitidas.includes(turmaDoAluno)
+          );
+        }
+        return items;
       } catch (e) {
         console.error('Erro ao buscar temas:', e);
         return [];

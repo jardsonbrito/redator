@@ -28,11 +28,12 @@ export function useStudentInbox() {
 
   // Usar studentData.email como fonte principal
   const emailToUse = studentData?.email || user?.email;
+  const turmaDoAluno = studentData?.turma ?? null;
 
 
   // Buscar mensagens do aluno
   const { data: messages = [], isLoading, error } = useQuery({
-    queryKey: ['student-inbox', emailToUse],
+    queryKey: ['student-inbox', emailToUse, turmaDoAluno],
     queryFn: async () => {
 
       try {
@@ -54,7 +55,8 @@ export function useStudentInbox() {
               created_at,
               aula_id,
               acao,
-              send_at
+              send_at,
+              turmas_alvo
             )
           `)
           .eq('student_email', emailToUse)
@@ -82,6 +84,9 @@ export function useStudentInbox() {
             if (message.valid_until && new Date(message.valid_until) <= now) return false;
             // Mensagem agendada ainda não no horário
             if ((message as any).send_at && new Date((message as any).send_at) > now) return false;
+            // Filtro por turma: se turmas_alvo definido, aluno deve ser da turma
+            const turmasAlvo = (message as any).turmas_alvo as string[] | null;
+            if (turmasAlvo && turmasAlvo.length > 0 && turmaDoAluno && !turmasAlvo.includes(turmaDoAluno)) return false;
             return true;
           })
           .map((item) => ({

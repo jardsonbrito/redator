@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 import {
   Select,
   SelectContent,
@@ -58,11 +59,13 @@ interface Props {
 
 export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) => {
   const queryClient = useQueryClient();
+  const { turmasDinamicas } = useTurmasAtivas();
   const isEditing = !!item;
   const [ordemEditada, setOrdemEditada] = useState(false);
   const [arquivoUpload, setArquivoUpload] = useState<File | null>(null);
   const [uploadando, setUploadando] = useState(false);
   const [questoes, setQuestoes] = useState<Questao[]>([]);
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>(item?.turmas_permitidas ?? []);
   // Modo do microtexto: 'pdf' ou 'texto'
   const [microtextoModo, setMicrotextoModo] = useState<'pdf' | 'texto'>(
     item?.tipo === 'microtexto' && item?.conteudo_texto ? 'texto' : 'pdf'
@@ -196,6 +199,7 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
         status: data.status,
         ordem: data.ordem,
         planos_permitidos: data.planos_permitidos,
+        turmas_permitidas: turmasSelecionadas.length > 0 ? turmasSelecionadas : null,
         conteudo_url: ['video', 'podcast'].includes(data.tipo) ? (data.conteudo_url || null) : null,
         conteudo_texto: data.tipo === 'card' ? (data.conteudo_texto || null)
           : (data.tipo === 'microtexto' && microtextoModo === 'texto') ? (data.conteudo_texto || null)
@@ -402,6 +406,30 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
         </div>
         {errors.planos_permitidos && (
           <p className="text-xs text-red-500">{errors.planos_permitidos.message}</p>
+        )}
+      </div>
+
+      {/* Turmas */}
+      <div className="space-y-2">
+        <Label>Turmas com acesso</Label>
+        <p className="text-xs text-muted-foreground">Deixe sem seleção para disponibilizar a todas as turmas.</p>
+        {turmasDinamicas.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {turmasDinamicas.map(({ valor, label }) => (
+              <div key={valor} className="flex items-center gap-2">
+                <Checkbox
+                  id={`turma-mi-${valor}`}
+                  checked={turmasSelecionadas.includes(valor)}
+                  onCheckedChange={(checked) => {
+                    setTurmasSelecionadas(prev =>
+                      checked ? [...prev, valor] : prev.filter(t => t !== valor)
+                    );
+                  }}
+                />
+                <label htmlFor={`turma-mi-${valor}`} className="text-sm cursor-pointer">{label}</label>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

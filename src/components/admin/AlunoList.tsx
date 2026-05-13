@@ -453,12 +453,10 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
     }
   };
 
-  // Helper: identifica se o aluno está no estado AGUARDANDO (literal ou computado)
+  // Qualquer aluno sem assinatura ativa pode ser excluído definitivamente.
+  // O backend (RPC) bloqueia a exclusão se houver assinatura ativa.
   const isAlunoAguardando = (aluno: Aluno) =>
-    aluno.tipo === 'aluno' && (
-      aluno.turma === 'AGUARDANDO' ||
-      (!aluno.temPlanoAtivo && turmasComPlano.includes(aluno.turma))
-    );
+    aluno.tipo === 'aluno' && !aluno.temPlanoAtivo;
 
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;

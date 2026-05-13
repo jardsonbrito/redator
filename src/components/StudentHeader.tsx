@@ -11,6 +11,8 @@ import { ProfessorAvatar } from "@/components/professor/ProfessorAvatar";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useProfessorSubscription } from "@/hooks/useProfessorSubscription";
+import { usePlanos } from "@/hooks/usePlansAdmin";
+import { useTurmaBranding } from "@/hooks/useTurmaBranding";
 import { InboxNotificationIcon } from "@/components/student/InboxNotificationIcon";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -44,12 +46,9 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   // Dados adicionais do perfil
   const [profileData, setProfileData] = useState<any>(null);
 
-  // Debug: ver dados de subscription
-  useEffect(() => {
-    if (subscription) {
-      console.log('Dados de subscription carregados:', subscription);
-    }
-  }, [subscription]);
+  const { data: planos = [] } = usePlanos();
+  const turmaNomeParaBranding = !professor && studentData.userType === 'aluno' ? studentData.turma : null;
+  const { data: branding } = useTurmaBranding(turmaNomeParaBranding);
 
   // Carregar dados do perfil quando o drawer abrir
   useEffect(() => {
@@ -103,7 +102,10 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
 
   return (
     <>
-      <header className="bg-primary shadow-lg sticky top-0 z-50 rounded-b-3xl">
+      <header
+        className="shadow-lg sticky top-0 z-50 rounded-b-3xl"
+        style={{ backgroundColor: branding?.corPrimaria ?? 'hsl(var(--primary))' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             {/* Logo à esquerda */}
@@ -112,8 +114,8 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
               className="flex items-center gap-3 hover:opacity-90 transition-opacity duration-200"
             >
               <img
-                src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png"
-                alt="App do Redator"
+                src={branding?.logoUrl ?? "/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png"}
+                alt={branding?.nomeTurma ?? "App do Redator"}
                 className="h-12 w-auto"
               />
               <span className="font-bold text-xl text-primary-foreground hidden sm:inline">
@@ -248,7 +250,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-muted-foreground">Plano:</span>
                                   <Badge variant="secondary" className="px-3 py-1">
-                                    {subscription.plano === 'Bolsista' ? 'Bolsista' : `Plano ${subscription.plano}`}
+                                    {planos.find(p => p.nome === subscription.plano)?.nome_exibicao ?? subscription.plano}
                                   </Badge>
                                 </div>
                               ) : (

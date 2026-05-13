@@ -11,7 +11,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Copy, Eye, EyeOff } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Copy, Eye, EyeOff, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TurmaAluno {
@@ -21,6 +24,17 @@ interface TurmaAluno {
   descricao: string | null;
   ativo: boolean;
   criado_em: string;
+  logo_url?: string | null;
+  cor_primaria?: string | null;
+  cor_secundaria?: string | null;
+  cor_destaque?: string | null;
+}
+
+interface BrandingForm {
+  logo_url: string;
+  cor_primaria: string;
+  cor_secundaria: string;
+  cor_destaque: string;
 }
 
 const gerarCodigo = () =>
@@ -46,13 +60,20 @@ export const TurmasAlunosManager = () => {
   const [gerandoConvite, setGerandoConvite] = useState(false);
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
 
+  // Branding por turma
+  const [turmaParaBranding, setTurmaParaBranding] = useState<TurmaAluno | null>(null);
+  const [salvandoBranding, setSalvandoBranding] = useState(false);
+  const [brandingForm, setBrandingForm] = useState<BrandingForm>({
+    logo_url: '', cor_primaria: '', cor_secundaria: '', cor_destaque: '',
+  });
+
   const { toast } = useToast();
 
   const fetchTurmas = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("turmas_alunos")
-      .select("*")
+      .select("id, nome, codigo_acesso, descricao, ativo, criado_em, logo_url, cor_primaria, cor_secundaria, cor_destaque")
       .order("criado_em", { ascending: false });
 
     if (error) {
@@ -145,6 +166,38 @@ export const TurmasAlunosManager = () => {
       setEmailDestinatario("");
     }
     setGerandoConvite(false);
+  };
+
+  const handleAbrirBranding = (turma: TurmaAluno) => {
+    setBrandingForm({
+      logo_url: turma.logo_url ?? '',
+      cor_primaria: turma.cor_primaria ?? '',
+      cor_secundaria: turma.cor_secundaria ?? '',
+      cor_destaque: turma.cor_destaque ?? '',
+    });
+    setTurmaParaBranding(turma);
+  };
+
+  const handleSalvarBranding = async () => {
+    if (!turmaParaBranding) return;
+    setSalvandoBranding(true);
+    const { error } = await supabase
+      .from('turmas_alunos')
+      .update({
+        logo_url: brandingForm.logo_url || null,
+        cor_primaria: brandingForm.cor_primaria || null,
+        cor_secundaria: brandingForm.cor_secundaria || null,
+        cor_destaque: brandingForm.cor_destaque || null,
+      })
+      .eq('id', turmaParaBranding.id);
+    if (error) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Identidade visual salva!' });
+      setTurmaParaBranding(null);
+      fetchTurmas();
+    }
+    setSalvandoBranding(false);
   };
 
   const handleAbrirDeleteTurma = async (turma: TurmaAluno) => {
@@ -277,10 +330,18 @@ export const TurmasAlunosManager = () => {
                             </button>
                             <button
                               type="button"
+                              onClick={() => handleAbrirBranding(turma)}
+                              className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors flex items-center gap-1"
+                            >
+                              <Palette className="w-3 h-3" />
+                              Visual
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleAbrirDeleteTurma(turma)}
                               className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition-colors"
                             >
-                              Deletar turma
+                              Deletar
                             </button>
                           </div>
                         </td>
@@ -347,6 +408,102 @@ export const TurmasAlunosManager = () => {
           )}
         </div>
       </article>
+
+      {/* Dialog de identidade visual */}
+      <Dialog open={!!turmaParaBranding} onOpenChange={(o) => { if (!o) setTurmaParaBranding(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-indigo-600" />
+              Identidade visual — {turmaParaBranding?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para usar o visual padrão do App do Redator.
+            </p>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Logo (URL da imagem)</Label>
+              <Input
+                placeholder="https://..."
+                value={brandingForm.logo_url}
+                onChange={e => setBrandingForm(f => ({ ...f, logo_url: e.target.value }))}
+              />
+              {brandingForm.logo_url && (
+                <img src={brandingForm.logo_url} alt="preview" className="h-10 w-auto rounded" onError={e => (e.currentTarget.style.display = 'none')} />
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Cor principal</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={brandingForm.cor_primaria || '#3F0077'}
+                    onChange={e => setBrandingForm(f => ({ ...f, cor_primaria: e.target.value }))}
+                    className="h-9 w-9 rounded cursor-pointer border"
+                  />
+                  <Input
+                    className="text-xs h-9"
+                    value={brandingForm.cor_primaria}
+                    onChange={e => setBrandingForm(f => ({ ...f, cor_primaria: e.target.value }))}
+                    placeholder="#3F0077"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Cor secundária</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={brandingForm.cor_secundaria || '#662F96'}
+                    onChange={e => setBrandingForm(f => ({ ...f, cor_secundaria: e.target.value }))}
+                    className="h-9 w-9 rounded cursor-pointer border"
+                  />
+                  <Input
+                    className="text-xs h-9"
+                    value={brandingForm.cor_secundaria}
+                    onChange={e => setBrandingForm(f => ({ ...f, cor_secundaria: e.target.value }))}
+                    placeholder="#662F96"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Destaque / botões</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={brandingForm.cor_destaque || '#9B59B6'}
+                    onChange={e => setBrandingForm(f => ({ ...f, cor_destaque: e.target.value }))}
+                    className="h-9 w-9 rounded cursor-pointer border"
+                  />
+                  <Input
+                    className="text-xs h-9"
+                    value={brandingForm.cor_destaque}
+                    onChange={e => setBrandingForm(f => ({ ...f, cor_destaque: e.target.value }))}
+                    placeholder="#9B59B6"
+                  />
+                </div>
+              </div>
+            </div>
+            {(brandingForm.cor_primaria || brandingForm.cor_secundaria || brandingForm.cor_destaque) && (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline"
+                onClick={() => setBrandingForm({ logo_url: '', cor_primaria: '', cor_secundaria: '', cor_destaque: '' })}
+              >
+                Limpar branding (voltar ao padrão)
+              </button>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTurmaParaBranding(null)} disabled={salvandoBranding}>Cancelar</Button>
+            <Button onClick={handleSalvarBranding} disabled={salvandoBranding}>
+              {salvandoBranding ? 'Salvando...' : 'Salvar visual'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmação de exclusão com verificação de alunos */}
       <AlertDialog

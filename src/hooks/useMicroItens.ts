@@ -12,6 +12,7 @@ export interface MicroItem {
   status: 'ativo' | 'inativo';
   ordem: number;
   planos_permitidos: string[];
+  turmas_permitidas: string[] | null;
   conteudo_url: string | null;
   conteudo_storage_path: string | null;
   conteudo_texto: string | null;
@@ -25,9 +26,10 @@ export const useMicroItens = (topicoId: string) => {
   const { studentData } = useStudentAuth();
   const { data: subscription } = useSubscription(studentData.email);
   const plano = subscription?.plano;
+  const turma = studentData?.turma ?? null;
 
   return useQuery({
-    queryKey: ['micro-itens', topicoId, plano],
+    queryKey: ['micro-itens', topicoId, plano, turma],
     queryFn: async () => {
       const query = supabase
         .from('micro_itens')
@@ -41,7 +43,11 @@ export const useMicroItens = (topicoId: string) => {
         : await query;
 
       if (error) throw error;
-      return (data ?? []) as MicroItem[];
+      const items = (data ?? []) as MicroItem[];
+      // Filter by turma: null = visible to all, otherwise must include student's turma
+      return turma
+        ? items.filter(i => !i.turmas_permitidas || i.turmas_permitidas.length === 0 || i.turmas_permitidas.includes(turma))
+        : items;
     },
     enabled: !!topicoId,
     staleTime: 5 * 60 * 1000,

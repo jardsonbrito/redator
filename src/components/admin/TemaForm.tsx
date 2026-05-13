@@ -12,6 +12,7 @@ import { ArrowLeft, Sparkles, Loader2, ExternalLink, AlertTriangle } from 'lucid
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { syncToBlog } from '@/utils/blogSync';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 type ImageValue = {
   source: 'upload' | 'url';
@@ -50,6 +51,7 @@ interface FormData {
   // Scheduling fields
   enableScheduling: boolean;
   scheduledPublishAt?: Date;
+  turmas_permitidas: string[];
 }
 
 type ActionType = 'save' | 'publish' | 'schedule';
@@ -67,9 +69,11 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
+  const { turmasDinamicas } = useTurmasAtivas();
+
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(mode === 'edit');
-  const [activeSection, setActiveSection] = useState<string>('capinha');
+  const [activeSection, setActiveSection] = useState<string>('turmas');
   const [actionType, setActionType] = useState<ActionType>('save');
 
   // Laboratório de Repertório — geração com IA
@@ -108,7 +112,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
     motivator5: null,
     motivator5Position: 'after',
     enableScheduling: false,
-    scheduledPublishAt: undefined
+    scheduledPublishAt: undefined,
+    turmas_permitidas: []
   });
 
   // Estado para armazenar dados originais do tema (para preservar datas de publicação)
@@ -250,7 +255,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
             motivator5: motivator5Value,
             motivator5Position: (data.motivator5_image_position as ImagePosition) || 'after',
             enableScheduling: !!data.scheduled_publish_at,
-            scheduledPublishAt: data.scheduled_publish_at ? new Date(data.scheduled_publish_at) : undefined
+            scheduledPublishAt: data.scheduled_publish_at ? new Date(data.scheduled_publish_at) : undefined,
+            turmas_permitidas: (data as any).turmas_permitidas ?? []
           });
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -271,7 +277,7 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
   // Second useEffect: Open first section after data loads in edit mode
   useEffect(() => {
     if (mode === 'edit' && !loadingData) {
-      setActiveSection('capinha');
+      setActiveSection('turmas');
     }
   }, [mode, loadingData]);
 
@@ -440,6 +446,7 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
         scheduled_by: action === 'schedule' && formData.scheduledPublishAt
           ? session.user.id
           : null,
+        turmas_permitidas: formData.turmas_permitidas.length > 0 ? formData.turmas_permitidas : null,
         // Set published_at when publishing immediately (apenas para novos temas)
         published_at: action === 'publish'
           ? (mode === 'edit' && originalThemeData?.published_at
@@ -568,7 +575,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
           motivator5: null,
           motivator5Position: 'after',
           enableScheduling: false,
-          scheduledPublishAt: undefined
+          scheduledPublishAt: undefined,
+          turmas_permitidas: []
         });
         setActiveSection('capinha');
       } else {
@@ -647,6 +655,7 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
   }
 
   const sections = [
+    { id: 'turmas', label: 'Turmas' },
     { id: 'capinha', label: 'Capinha' },
     { id: 'frase', label: 'Frase Temática' },
     { id: 'eixo', label: 'Eixo Temático' },
@@ -1395,6 +1404,44 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Gerando aula com IA... isso pode levar alguns segundos.
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Seção: Turmas */}
+            {activeSection === 'turmas' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <p className="text-sm font-medium text-gray-800 mb-1">Restringir turmas</p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Deixe sem seleção para disponibilizar a todas as turmas.
+                </p>
+                {turmasDinamicas.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma turma ativa encontrada.</p>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {turmasDinamicas.map(({ valor, label }) => (
+                      <div key={valor} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`turma-tema-${valor}`}
+                          checked={formData.turmas_permitidas.includes(valor)}
+                          onCheckedChange={(checked) => {
+                            setFormData(f => ({
+                              ...f,
+                              turmas_permitidas: checked
+                                ? [...f.turmas_permitidas, valor]
+                                : f.turmas_permitidas.filter(t => t !== valor)
+                            }));
+                          }}
+                        />
+                        <label htmlFor={`turma-tema-${valor}`} className="text-sm cursor-pointer">{label}</label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {formData.turmas_permitidas.length > 0 && (
+                  <p className="text-xs text-primary mt-3">
+                    Visível apenas para: {formData.turmas_permitidas.join(', ')}
+                  </p>
                 )}
               </div>
             )}

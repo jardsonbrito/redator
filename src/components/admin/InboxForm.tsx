@@ -20,6 +20,7 @@ interface InboxFormData {
   config: InboxConfiguracao;
   destinatarios: AlunoSelecionado[];
   extras: InboxExtras;
+  turmasAlvo: string[];
 }
 
 export function InboxForm() {
@@ -35,6 +36,7 @@ export function InboxForm() {
     },
     destinatarios: [],
     extras: {},
+    turmasAlvo: [],
   });
 
   // Mutação para criar mensagem
@@ -71,6 +73,7 @@ export function InboxForm() {
           extra_link: data.extras.extraLink || null,
           extra_image: data.extras.extraImage || null,
           created_by: user.id,
+          turmas_alvo: data.turmasAlvo.length > 0 ? data.turmasAlvo : null,
         })
         .select()
         .single();
@@ -108,6 +111,7 @@ export function InboxForm() {
         },
         destinatarios: [],
         extras: {},
+        turmasAlvo: [],
       });
 
       // Voltar para aba de mensagens
@@ -135,6 +139,10 @@ export function InboxForm() {
     setFormData(prev => ({ ...prev, extras }));
   };
 
+  const handleTurmasAlvoChange = (turmasAlvo: string[]) => {
+    setFormData(prev => ({ ...prev, turmasAlvo }));
+  };
+
   const handleSendMessage = () => {
     createMessageMutation.mutate(formData);
   };
@@ -143,6 +151,7 @@ export function InboxForm() {
     return (
       formData.message.trim().length >= 1 &&
       formData.destinatarios.length > 0 &&
+      formData.turmasAlvo.length > 0 &&
       (formData.config.validity !== "ate_data" || formData.config.validUntil)
     );
   };
@@ -262,6 +271,8 @@ export function InboxForm() {
           <InboxDestinatariosListaAlunos
             onDestinatariosChange={handleDestinatariosChange}
             destinatariosSelecionados={formData.destinatarios}
+            onTurmasAlvoChange={handleTurmasAlvoChange}
+            turmasAlvoSelecionadas={formData.turmasAlvo}
           />
         </TabsContent>
 
