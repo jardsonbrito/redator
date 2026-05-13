@@ -8,6 +8,7 @@ interface Corretor {
   nome_completo: string;
   email: string;
   ativo: boolean;
+  turmas_autorizadas?: string[] | null;
 }
 
 interface CorretorAuthContextType {
@@ -74,6 +75,7 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         nome_completo: corretorData.nome_completo,
         email: corretorData.email,
         ativo: corretorData.ativo,
+        turmas_autorizadas: (corretorData.turmas_autorizadas as string[]) ?? null,
       };
 
       setCorretor(corretorInfo);

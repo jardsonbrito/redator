@@ -104,9 +104,9 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
     ? selectedTurma
     : null;
 
-  // Quando corretor seleciona "Todas as turmas", filtra pelas turmas autorizadas dele
+  // Corretor: filtra sempre pelas turmas autorizadas (sem selector, filtro automático)
   const turmasFiltroCorretor: string[] | null =
-    variant === "corretor" && selectedTurma === "todas" && turmasPermitidas && turmasPermitidas.length > 0
+    variant === "corretor" && turmasPermitidas && turmasPermitidas.length > 0
       ? turmasPermitidas
       : null;
 
@@ -730,7 +730,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
   const styles = getCardStyles();
 
-  const turmaSelector = (variant === "admin" || variant === "corretor") && turmasParaSelector.length > 0 ? (
+  const turmaSelector = variant === "admin" && turmasDinamicas.length > 0 ? (
     <div className="flex items-center gap-3">
       <span className="text-sm font-medium text-slate-600 shrink-0">Turma:</span>
       <Select value={selectedTurma} onValueChange={setSelectedTurma}>
@@ -739,7 +739,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todas">Todas as turmas</SelectItem>
-          {turmasParaSelector.map(t => (
+          {turmasDinamicas.map(t => (
             <SelectItem key={t.id} value={t.valor}>{t.label}</SelectItem>
           ))}
         </SelectContent>
