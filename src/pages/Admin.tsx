@@ -111,6 +111,7 @@ import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 // Import aluno components
 import { AlunoFormModern } from "@/components/admin/AlunoFormModern";
 import { AlunosHub } from "@/components/admin/hub/AlunosHub";
+import { TurmasAlunosManager } from "@/components/admin/TurmasAlunosManager";
 
 // Import corretor components
 import { CorretorForm } from "@/components/admin/CorretorForm";
@@ -1212,6 +1213,9 @@ const Admin = () => {
       case "alunos":
         return <AlunosHub />;
 
+      case "turmas":
+        return <TurmasAlunosManager />;
+
       case "professores":
         return <ProfessoresHub />;
 
@@ -1374,6 +1378,7 @@ const Admin = () => {
                   { label: 'Calendário', view: 'calendario' },
                   { label: 'Temas', view: 'temas' },
                   { label: 'Gerenciar alunos', view: 'alunos' },
+                  { label: 'Gerenciar turmas', view: 'turmas' },
                   { label: 'Gerenciar professores', view: 'professores' },
                   { label: 'Gerenciar corretores', view: 'corretores' },
                 ].map((item) => (
