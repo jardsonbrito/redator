@@ -153,18 +153,21 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         .from('redacoes_enviadas')
         .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
         .eq('nota_total', 1000)
+        .is('deleted_at', null)
         .order('data_envio', { ascending: false });
 
       const simuladoQuery = supabase
         .from('redacoes_simulado')
         .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
         .eq('nota_total', 1000)
+        .is('deleted_at', null)
         .order('data_envio', { ascending: false });
 
       const exercicioQuery = supabase
         .from('redacoes_exercicio')
         .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
         .eq('nota_total', 1000)
+        .is('deleted_at', null)
         .order('data_envio', { ascending: false });
 
       // Executar queries
@@ -290,6 +293,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         .select('data_envio')
         .in('tipo_envio', ['regular', 'exercicio'])
         .eq('corrigida', true)
+        .is('deleted_at', null)
         .not('nota_total', 'is', null);
 
       if (error) throw error;
@@ -392,6 +396,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           `)
           .not('nota_total', 'is', null)
           .eq('corrigida', true)
+          .is('deleted_at', null)
           .order('nota_total', { ascending: false });
 
         const { data, error } = await query;
@@ -487,7 +492,8 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           .from('redacoes_enviadas')
           .select('nome_aluno, nota_total, tipo_envio, data_envio, email_aluno, turma')
           .not('nota_total', 'is', null)
-          .eq('corrigida', true);
+          .eq('corrigida', true)
+          .is('deleted_at', null);
 
         if (selectedType === "regular") {
           // Incluir exercícios no ranking Regular (redações de exercício são essencialmente regulares)
@@ -804,10 +810,9 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             <CardHeader className="pb-2 pt-4 px-4">
               <CardTitle className={`${styles.title} text-base`}>🏅 Classificação Top 5</CardTitle>
               <div className="flex flex-wrap gap-2 mt-2">
-                {(["simulado", "regular", "avulsa"] as const).map(tipo => (
+                {(["simulado", "regular", ...(variant === "admin" ? ["avulsa"] : [])] as ("simulado" | "regular" | "avulsa")[]).map(tipo => (
                   <Button key={tipo} variant={selectedType === tipo ? "default" : "outline"}
-                    onClick={() => setSelectedType(tipo)} size="sm" className="h-7 text-xs px-2.5"
-                    style={selectedType === tipo ? undefined : undefined}>
+                    onClick={() => setSelectedType(tipo)} size="sm" className="h-7 text-xs px-2.5">
                     {tipo === "simulado" ? "Simulado" : tipo === "regular" ? "Regular" : "Visitante"}
                   </Button>
                 ))}
@@ -945,14 +950,14 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             >
               Regular
             </Button>
-            <Button
-              variant={selectedType === "avulsa" ? "default" : "outline"}
-              onClick={() => setSelectedType("avulsa")}
-              className={variant === "student" ? (selectedType === "avulsa" ? styles.buttonActive : styles.buttonInactive) : ""}
-              size={variant === "corretor" ? "sm" : undefined}
-            >
-              Visitante
-            </Button>
+            {variant === "admin" && (
+              <Button
+                variant={selectedType === "avulsa" ? "default" : "outline"}
+                onClick={() => setSelectedType("avulsa")}
+              >
+                Visitante
+              </Button>
+            )}
           </div>
 
           {/* Filtro adicional para simulados */}

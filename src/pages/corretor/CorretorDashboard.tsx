@@ -86,7 +86,10 @@ const CorretorDashboard = () => {
   const { corretor, loading } = useCorretorAuth();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { metricas, loading: loadingMetricas } = useCorretorMetricas(corretor?.email || '');
+  const { metricas, loading: loadingMetricas } = useCorretorMetricas(
+    corretor?.email || '',
+    (corretor?.turmas_autorizadas as string[]) ?? []
+  );
   const { getRedacoesPorStatus, loading: loadingRedacoes } = useCorretorRedacoes(corretor?.email || '');
 
   if (loading) {
