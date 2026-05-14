@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Plus, CheckCircle2, PlusCircle } from "lucide-react";
+import { BookOpen, CheckCircle2, PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState, useMemo } from "react";
@@ -195,13 +195,11 @@ const CorretorTemas = () => {
               <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
             </div>
             <Button
-              variant="ghost"
               size="sm"
-              className="text-white hover:bg-white/10 gap-1.5 shrink-0"
+              className="bg-white text-violet-700 hover:bg-violet-50 font-semibold shrink-0"
               onClick={() => navigate("/corretor/temas/novo")}
             >
-              <Plus className="w-4 h-4" />
-              Novo Tema
+              Cadastrar Tema
             </Button>
           </div>
         </div>

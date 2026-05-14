@@ -207,14 +207,12 @@ const CorretorCalendario = () => {
             </div>
             {!showForm && (
               <Button
-                variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/10 gap-1.5 shrink-0"
+                className="bg-white text-violet-700 hover:bg-violet-50 font-semibold shrink-0"
                 onClick={() => { setEventoEditando(null); setShowForm(true); }}
                 disabled={turmasCorretor.length === 0}
               >
-                <Plus className="w-4 h-4" />
-                Novo Evento
+                Cadastrar Evento
               </Button>
             )}
           </div>

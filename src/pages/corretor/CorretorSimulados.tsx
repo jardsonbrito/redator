@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardCheck, Plus } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
 import { useNavigate } from "react-router-dom";
@@ -107,11 +107,10 @@ const CorretorSimulados = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-white/10 gap-1.5 shrink-0"
+              className="bg-white text-violet-700 hover:bg-violet-50 font-semibold shrink-0"
               onClick={() => navigate("/corretor/simulados/novo")}
             >
-              <Plus className="w-4 h-4" />
-              Novo Simulado
+              Cadastrar Simulado
             </Button>
           </div>
         </div>
