@@ -135,7 +135,8 @@ const CorretorSimulados = () => {
                 simulado={simulado}
                 perfil="corretor"
                 actions={{
-                  onVerDetalhes: (id) => window.location.href = `/corretor/simulados/${id}/redacoes`
+                  onVerDetalhes: (id) => navigate(`/corretor/simulados/${id}/redacoes`),
+                  onEditar: (id) => navigate(`/corretor/simulados/${id}/editar`),
                 }}
               />
             ))}

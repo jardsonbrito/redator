@@ -210,7 +210,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                        canCancelRedacao(simulado.redacaoData) &&
                        !isEncerrado;
 
-  // Determinar se o card é clicável (remover clicabilidade para alunos que já enviaram redação)
+  // Determinar se o card é clicável
   const isClickable = (perfil === 'aluno' && isAtivo) ||
                      (perfil === 'corretor' && isEncerrado);
 
@@ -321,7 +321,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
       </div>
 
       {/* Rodapé condicional */}
-      {(perfil === 'admin' || !isAgendado) && (
+      {(perfil === 'admin' || perfil === 'corretor' || !isAgendado) && (
         <div className="px-4 py-3 border-t border-gray-100 mt-auto">
           {perfil === 'admin' ? (
             <div className="flex items-center justify-between">
@@ -581,13 +581,43 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                   Você não enviou sua redação para este simulado
                 </div>
               )}
-              {perfil === 'corretor' && isEncerrado && (
-                <Button
-                  onClick={handleCardClick}
-                  className="w-full bg-purple-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Ver Redações
-                </Button>
+              {perfil === 'corretor' && (
+                <div className="flex items-center justify-between">
+                  {isEncerrado ? (
+                    <Button
+                      onClick={handleCardClick}
+                      size="sm"
+                      className="bg-violet-600 text-white hover:bg-violet-700 text-xs px-3 py-1.5 h-8 rounded-lg"
+                    >
+                      Ver Redações
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                  <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                      >
+                        <MoreVertical className="h-4 w-4 text-gray-600" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          actions.onEditar?.(simulado.id);
+                        }}
+                        className="flex items-center cursor-pointer hover:bg-gray-50"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               )}
             </>
           )}
