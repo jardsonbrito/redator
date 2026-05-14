@@ -1,7 +1,5 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StudentLoginForm } from "./login/StudentLoginForm";
@@ -24,41 +22,43 @@ export const LoginForm = ({ selectedProfile, onLogin, loading }: LoginFormProps)
   };
 
   return (
-    <Card className="shadow-xl border-redator-accent/20">
-      <CardContent className="p-6 space-y-6">
+    <div className="space-y-5">
+      {/* Formulário dinâmico — lógica inalterada */}
+      <div>
         {selectedProfile === "professor" && (
           <ProfessorLoginForm onLogin={handleLogin} loading={loading} />
         )}
-
         {selectedProfile === "aluno" && (
           <StudentLoginForm onLogin={handleLogin} loading={loading} />
         )}
-
         {selectedProfile === "visitante" && (
           <VisitorLoginForm onLogin={handleLogin} loading={loading} />
         )}
-
         {selectedProfile === "corretor" && (
           <CorretorLoginForm onLogin={handleLogin} loading={loading} />
         )}
+      </div>
 
-        {/* Checkbox Lembre-se de mim + Link Área administrativa */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="remember-me"
-              checked={rememberMe}
-              onCheckedChange={(checked) => setRememberMe(checked === true)}
-            />
-            <Label htmlFor="remember-me" className="text-sm text-redator-accent">
-              Lembre-se de mim
-            </Label>
-          </div>
-          <Link to="/login" className="text-xs text-redator-primary hover:underline">
-            Área administrativa
-          </Link>
+      {/* Rodapé: Lembre-se de mim + Área administrativa */}
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="remember-me"
+            checked={rememberMe}
+            onCheckedChange={(checked) => setRememberMe(checked === true)}
+            className="border-violet-300 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+          />
+          <Label htmlFor="remember-me" className="text-sm text-slate-500 cursor-pointer select-none">
+            Lembre-se de mim
+          </Label>
         </div>
-      </CardContent>
-    </Card>
+        <Link
+          to="/login"
+          className="text-xs text-violet-600 hover:text-violet-800 hover:underline transition-colors"
+        >
+          Área administrativa
+        </Link>
+      </div>
+    </div>
   );
 };
