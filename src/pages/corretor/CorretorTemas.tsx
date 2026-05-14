@@ -13,6 +13,7 @@ import { FormattedText } from "@/components/shared/FormattedText";
 import { getTemaMotivatorIVUrl } from "@/utils/temaImageUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -22,6 +23,7 @@ const CorretorTemas = () => {
   const navigate = useNavigate();
   const { corretor } = useCorretorAuth();
   const { toast } = useToast();
+  const { podeGerenciar } = useCorretorPermissoes();
   const queryClient = useQueryClient();
   const [selectedTema, setSelectedTema] = useState<TemaRow | null>(null);
   const [orderBy, setOrderBy] = useState<'recente' | 'mais_redacoes'>('recente');
@@ -194,13 +196,15 @@ const CorretorTemas = () => {
               <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
               <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
             </div>
-            <Button
-              size="sm"
-              className="bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-700 font-semibold shrink-0"
-              onClick={() => navigate("/corretor/temas/novo")}
-            >
-              Cadastrar Tema
-            </Button>
+            {podeGerenciar && (
+              <Button
+                size="sm"
+                className="bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-700 font-semibold shrink-0"
+                onClick={() => navigate("/corretor/temas/novo")}
+              >
+                Cadastrar Tema
+              </Button>
+            )}
           </div>
         </div>
 

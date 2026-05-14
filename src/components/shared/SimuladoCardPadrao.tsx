@@ -594,40 +594,46 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                   ) : (
                     <span />
                   )}
-                  <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                      >
-                        <MoreVertical className="h-4 w-4 text-gray-600" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          actions.onEditar?.(simulado.id);
-                        }}
-                        className="flex items-center cursor-pointer hover:bg-gray-50"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setDropdownOpen(false);
-                          setTimeout(() => setDeleteDialogOpen(true), 100);
-                        }}
-                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {(actions.onEditar || actions.onExcluir) && (
+                    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                        >
+                          <MoreVertical className="h-4 w-4 text-gray-600" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+                        {actions.onEditar && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setDropdownOpen(false);
+                              actions.onEditar?.(simulado.id);
+                            }}
+                            className="flex items-center cursor-pointer hover:bg-gray-50"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                        )}
+                        {actions.onExcluir && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setDropdownOpen(false);
+                              setTimeout(() => setDeleteDialogOpen(true), 100);
+                            }}
+                            className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               )}
             </>

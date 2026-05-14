@@ -28,6 +28,7 @@ interface TurmaAluno {
   cor_primaria?: string | null;
   cor_secundaria?: string | null;
   cor_destaque?: string | null;
+  gerenciada_por?: "admin" | "externo";
 }
 
 interface BrandingForm {
@@ -48,6 +49,7 @@ export const TurmasAlunosManager = () => {
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [gerenciadaPor, setGerenciadaPor] = useState<"admin" | "externo">("admin");
   const [turmaParaDeletar, setTurmaParaDeletar] = useState<TurmaAluno | null>(null);
   const [confirmacaoNome, setConfirmacaoNome] = useState("");
   const [codigosVisiveis, setCodigosVisiveis] = useState<Set<string>>(new Set());
@@ -73,7 +75,7 @@ export const TurmasAlunosManager = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("turmas_alunos")
-      .select("id, nome, codigo_acesso, descricao, ativo, criado_em, logo_url, cor_primaria, cor_secundaria, cor_destaque")
+      .select("id, nome, codigo_acesso, descricao, ativo, criado_em, logo_url, cor_primaria, cor_secundaria, cor_destaque, gerenciada_por")
       .order("criado_em", { ascending: false });
 
     if (error) {
@@ -99,13 +101,14 @@ export const TurmasAlunosManager = () => {
     setCriando(true);
     const { error } = await supabase
       .from("turmas_alunos")
-      .insert({ nome: nome.trim(), codigo_acesso: gerarCodigo(), descricao: descricao.trim() || null });
+      .insert({ nome: nome.trim(), codigo_acesso: gerarCodigo(), descricao: descricao.trim() || null, gerenciada_por: gerenciadaPor });
     if (error) {
       toast({ title: "Erro", description: "Não foi possível criar a turma.", variant: "destructive" });
     } else {
       toast({ title: "Turma criada", description: `"${nome.trim()}" criada com sucesso.` });
       setNome("");
       setDescricao("");
+      setGerenciadaPor("admin");
       fetchTurmas();
     }
     setCriando(false);
@@ -213,6 +216,19 @@ export const TurmasAlunosManager = () => {
     setVerificandoAlunos(false);
   };
 
+  const handleToggleGestao = async (turma: TurmaAluno) => {
+    const novoValor = turma.gerenciada_por === "externo" ? "admin" : "externo";
+    const { error } = await supabase
+      .from("turmas_alunos")
+      .update({ gerenciada_por: novoValor })
+      .eq("id", turma.id);
+    if (error) {
+      toast({ title: "Erro", description: "Não foi possível alterar a gestão.", variant: "destructive" });
+    } else {
+      fetchTurmas();
+    }
+  };
+
   const toggleCodigoVisivel = (id: string) => {
     setCodigosVisiveis(prev => {
       const next = new Set(prev);
@@ -252,6 +268,46 @@ export const TurmasAlunosManager = () => {
               className="border-purple-200 focus-visible:ring-purple-200"
             />
           </div>
+
+          {/* Tipo de gestão */}
+          <div>
+            <Label className="mb-2 block text-sm font-semibold">Gestão da turma</Label>
+            <div className="flex gap-3">
+              <label className={cn(
+                "flex-1 flex items-center gap-3 rounded-xl border-2 cursor-pointer px-3 py-2.5 transition-colors",
+                gerenciadaPor === "admin"
+                  ? "border-purple-600 bg-purple-50"
+                  : "border-purple-100 bg-white hover:border-purple-300"
+              )}>
+                <input
+                  type="radio"
+                  name="gerenciada_por"
+                  value="admin"
+                  checked={gerenciadaPor === "admin"}
+                  onChange={() => setGerenciadaPor("admin")}
+                  className="accent-purple-700"
+                />
+                <span className="text-sm font-semibold text-slate-800">Admin</span>
+              </label>
+              <label className={cn(
+                "flex-1 flex items-center gap-3 rounded-xl border-2 cursor-pointer px-3 py-2.5 transition-colors",
+                gerenciadaPor === "externo"
+                  ? "border-emerald-600 bg-emerald-50"
+                  : "border-purple-100 bg-white hover:border-purple-300"
+              )}>
+                <input
+                  type="radio"
+                  name="gerenciada_por"
+                  value="externo"
+                  checked={gerenciadaPor === "externo"}
+                  onChange={() => setGerenciadaPor("externo")}
+                  className="accent-emerald-600"
+                />
+                <span className="text-sm font-semibold text-slate-800">Corretor (externo)</span>
+              </label>
+            </div>
+          </div>
+
           <Button
             type="submit"
             disabled={criando}
@@ -281,6 +337,7 @@ export const TurmasAlunosManager = () => {
                     <tr className="border-b border-purple-200 text-left text-purple-900/80">
                       <th className="px-4 py-4 font-semibold">Nome</th>
                       <th className="px-4 py-4 font-semibold">Código da turma</th>
+                      <th className="px-4 py-4 font-semibold">Gestão</th>
                       <th className="px-4 py-4 font-semibold">Status</th>
                       <th className="px-4 py-4 font-semibold">Ações</th>
                     </tr>
@@ -310,6 +367,21 @@ export const TurmasAlunosManager = () => {
                                 : <Eye className="w-3.5 h-3.5" />}
                             </button>
                           </div>
+                        </td>
+                        <td className="px-4 py-5">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleGestao(turma)}
+                            title="Clique para alternar"
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors",
+                              turma.gerenciada_por === "externo"
+                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                            )}
+                          >
+                            {turma.gerenciada_por === "externo" ? "Corretor" : "Admin"}
+                          </button>
                         </td>
                         <td className="px-4 py-5">
                           <span className={cn(

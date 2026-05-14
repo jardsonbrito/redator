@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,6 +106,7 @@ type FormKey = keyof typeof FORM_DEFAULTS;
 
 const CorretorCriarTema = () => {
   const { corretor, loading } = useCorretorAuth();
+  const { podeGerenciar, loading: loadingPerm } = useCorretorPermissoes();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -127,8 +129,9 @@ const CorretorCriarTema = () => {
       });
   }, [corretor?.email]);
 
-  if (loading) return null;
+  if (loading || loadingPerm) return null;
   if (!corretor) return <Navigate to="/corretor/login" replace />;
+  if (!podeGerenciar) return <Navigate to="/corretor/temas" replace />;
 
   const set = (field: FormKey, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));

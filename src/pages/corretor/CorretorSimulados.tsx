@@ -7,6 +7,7 @@ import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
 import { useNavigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { useToast } from "@/hooks/use-toast";
 
 const CorretorSimulados = () => {
@@ -14,6 +15,7 @@ const CorretorSimulados = () => {
   const { corretor } = useCorretorAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { podeGerenciar } = useCorretorPermissoes();
   const turmasCorretor: string[] = corretor?.turmas_autorizadas ?? [];
 
   const { data: simulados, isLoading, error } = useQuery({
@@ -128,14 +130,16 @@ const CorretorSimulados = () => {
               <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Avaliações</p>
               <h1 className="text-2xl sm:text-3xl font-black mt-1">Simulados</h1>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-700 font-semibold shrink-0"
-              onClick={() => navigate("/corretor/simulados/novo")}
-            >
-              Cadastrar Simulado
-            </Button>
+            {podeGerenciar && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-700 font-semibold shrink-0"
+                onClick={() => navigate("/corretor/simulados/novo")}
+              >
+                Cadastrar Simulado
+              </Button>
+            )}
           </div>
         </div>
 
@@ -160,8 +164,10 @@ const CorretorSimulados = () => {
                 perfil="corretor"
                 actions={{
                   onVerDetalhes: (id) => navigate(`/corretor/simulados/${id}/redacoes`),
-                  onEditar: (id) => navigate(`/corretor/simulados/${id}/editar`),
-                  onExcluir: handleExcluir,
+                  ...(podeGerenciar ? {
+                    onEditar: (id) => navigate(`/corretor/simulados/${id}/editar`),
+                    onExcluir: handleExcluir,
+                  } : {}),
                 }}
               />
             ))}

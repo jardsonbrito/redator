@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const CorretorCriarSimulado = () => {
   const { corretor, loading } = useCorretorAuth();
+  const { podeGerenciar, loading: loadingPerm } = useCorretorPermissoes();
   const navigate = useNavigate();
   const { toast } = useToast();
   const turmasCorretor: string[] = corretor?.turmas_autorizadas ?? [];
@@ -58,8 +60,9 @@ const CorretorCriarSimulado = () => {
     [temas, form.tema_id]
   );
 
-  if (loading) return null;
+  if (loading || loadingPerm) return null;
   if (!corretor) return <Navigate to="/corretor/login" replace />;
+  if (!podeGerenciar) return <Navigate to="/corretor/simulados" replace />;
 
   const set = <K extends keyof typeof form>(field: K, value: typeof form[K]) =>
     setForm(prev => ({ ...prev, [field]: value }));

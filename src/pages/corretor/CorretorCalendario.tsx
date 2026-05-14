@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, CalendarDays, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -70,6 +71,7 @@ function formatarData(iso: string) {
 const CorretorCalendario = () => {
   const { corretor, loading } = useCorretorAuth();
   const queryClient = useQueryClient();
+  const { podeGerenciar } = useCorretorPermissoes();
   const [showForm, setShowForm] = useState(false);
   const [eventoEditando, setEventoEditando] = useState<EventoCalendario | null>(null);
   const [eventoExcluindo, setEventoExcluindo] = useState<string | null>(null);
@@ -205,12 +207,11 @@ const CorretorCalendario = () => {
                 </p>
               )}
             </div>
-            {!showForm && (
+            {!showForm && podeGerenciar && (
               <Button
                 size="sm"
                 className="bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-700 font-semibold shrink-0"
                 onClick={() => { setEventoEditando(null); setShowForm(true); }}
-                disabled={turmasCorretor.length === 0}
               >
                 Cadastrar Evento
               </Button>
@@ -265,7 +266,7 @@ const CorretorCalendario = () => {
                 <CardContent className="text-center py-12">
                   <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">Nenhum evento em {MESES[mesAtual.getMonth()]}.</p>
-                  {turmasCorretor.length > 0 && (
+                  {podeGerenciar && (
                     <Button
                       size="sm"
                       className="mt-4 bg-violet-600 hover:bg-violet-700 text-white"
@@ -320,24 +321,26 @@ const CorretorCalendario = () => {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-slate-400 hover:text-violet-600"
-                              onClick={() => handleEditar(evento)}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
-                              onClick={() => setEventoExcluindo(evento.id)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
+                          {podeGerenciar && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-slate-400 hover:text-violet-600"
+                                onClick={() => handleEditar(evento)}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
+                                onClick={() => setEventoExcluindo(evento.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         {evento.descricao && (
                           <p className="text-xs text-slate-400 mt-1 line-clamp-2">{evento.descricao}</p>
