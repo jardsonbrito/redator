@@ -50,7 +50,7 @@ export const ProfessorLoginForm = ({ onLogin, loading }: ProfessorLoginFormProps
       <Button
         onClick={handleSubmit}
         disabled={loading}
-        className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white h-12"
+        className="w-full bg-violet-600 hover:bg-violet-700 text-white h-12 rounded-xl font-semibold"
       >
         {loading ? 'Entrando...' : 'Entrar'}
       </Button>

@@ -81,6 +81,13 @@ const Welcome = () => {
 
         {/* Card de login */}
         <section className="mx-auto w-full max-w-[520px]">
+          {/* Tagline compacta — mobile only */}
+          <div className="mb-5 text-center lg:hidden">
+            <p className="text-2xl font-black leading-snug tracking-tight text-slate-900">
+              Redação na prática,<br />aprovação na certa.
+            </p>
+          </div>
+
           <div className="rounded-[2rem] border border-violet-100 bg-white/85 p-6 shadow-2xl shadow-violet-200/40 backdrop-blur xl:p-8">
 
             {/* Logo + título */}
