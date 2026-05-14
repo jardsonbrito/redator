@@ -6,11 +6,15 @@ import { ClipboardCheck, Plus } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
 import { useNavigate } from "react-router-dom";
+import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 
 const CorretorSimulados = () => {
   const navigate = useNavigate();
+  const { corretor } = useCorretorAuth();
+  const turmasCorretor: string[] = corretor?.turmas_autorizadas ?? [];
+
   const { data: simulados, isLoading, error } = useQuery({
-    queryKey: ['simulados-corretor'],
+    queryKey: ['simulados-corretor', turmasCorretor],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('simulados')
@@ -19,12 +23,20 @@ const CorretorSimulados = () => {
           tema:temas(id, frase_tematica, eixo_tematico, cover_file_path, cover_url)
         `)
         .eq('ativo', true)
-        .lt('data_fim', new Date().toISOString().split('T')[0]) // Apenas simulados já finalizados
-        .order('data_fim', { ascending: false });
-      
+        .order('data_inicio', { ascending: false });
+
       if (error) throw error;
-      return data || [];
-    }
+      const todos = data || [];
+
+      // Filtra somente simulados vinculados às turmas do corretor
+      if (turmasCorretor.length === 0) return todos;
+      return todos.filter(s => {
+        const turmasSimulado = s.turmas_autorizadas as string[] | null;
+        if (!turmasSimulado || turmasSimulado.length === 0) return true;
+        return turmasSimulado.some(t => turmasCorretor.includes(t));
+      });
+    },
+    enabled: !!corretor,
   });
 
   if (isLoading) {
@@ -109,10 +121,10 @@ const CorretorSimulados = () => {
             <CardContent className="text-center py-12">
               <ClipboardCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                Nenhum simulado finalizado
+                Nenhum simulado encontrado
               </h3>
               <p className="text-gray-500">
-                Os simulados já realizados aparecerão aqui.
+                Os simulados vinculados às suas turmas aparecerão aqui.
               </p>
             </CardContent>
           </Card>

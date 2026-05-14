@@ -11,13 +11,12 @@ import { ArrowLeft, Loader2, Save, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 const CorretorCriarSimulado = () => {
   const { corretor, loading } = useCorretorAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { turmasDinamicas } = useTurmasAtivas();
+  const turmasCorretor: string[] = corretor?.turmas_autorizadas ?? [];
   const [saving, setSaving] = useState(false);
   const [buscaTema, setBuscaTema] = useState("");
 
@@ -218,20 +217,20 @@ const CorretorCriarSimulado = () => {
         {/* Turmas */}
         <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm space-y-3">
           <p className="text-sm font-semibold text-slate-700">Turmas autorizadas</p>
-          {turmasDinamicas.length > 0 ? (
+          {turmasCorretor.length > 0 ? (
             <div className="flex flex-wrap gap-3">
-              {turmasDinamicas.map(t => (
-                <label key={t.id} className="flex items-center gap-2 cursor-pointer">
+              {turmasCorretor.map(t => (
+                <label key={t} className="flex items-center gap-2 cursor-pointer">
                   <Checkbox
-                    checked={form.turmas_autorizadas.includes(t.valor)}
-                    onCheckedChange={(checked) => toggleTurma(t.valor, !!checked)}
+                    checked={form.turmas_autorizadas.includes(t)}
+                    onCheckedChange={(checked) => toggleTurma(t, !!checked)}
                   />
-                  <span className="text-sm text-slate-700">{t.label}</span>
+                  <span className="text-sm text-slate-700">{t}</span>
                 </label>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-400">Nenhuma turma encontrada.</p>
+            <p className="text-xs text-slate-400">Você não possui turmas vinculadas.</p>
           )}
           <label className="flex items-center gap-2 cursor-pointer pt-1">
             <Checkbox
@@ -240,8 +239,8 @@ const CorretorCriarSimulado = () => {
             />
             <span className="text-sm text-slate-700">Permitir visitantes</span>
           </label>
-          {form.turmas_autorizadas.length === 0 && (
-            <p className="text-xs text-slate-400">Nenhuma turma selecionada = aberto para todas.</p>
+          {form.turmas_autorizadas.length === 0 && turmasCorretor.length > 0 && (
+            <p className="text-xs text-slate-400">Nenhuma turma selecionada = visível para todas as suas turmas.</p>
           )}
         </div>
 
