@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,13 @@ import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
 import { useNavigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const CorretorSimulados = () => {
   const navigate = useNavigate();
   const { corretor } = useCorretorAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const turmasCorretor: string[] = corretor?.turmas_autorizadas ?? [];
 
   const { data: simulados, isLoading, error } = useQuery({
@@ -38,6 +41,27 @@ const CorretorSimulados = () => {
     },
     enabled: !!corretor,
   });
+
+  const handleExcluir = async (id: string) => {
+    if (!corretor) return;
+    try {
+      const { data, error } = await supabase.rpc('deletar_simulado_corretor' as any, {
+        p_corretor_email: corretor.email,
+        p_simulado_id: id,
+      });
+      if (error) throw error;
+      const result = data as { success: boolean; message?: string };
+      if (!result?.success) {
+        toast({ title: "Não foi possível excluir", description: result?.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Simulado excluído com sucesso!" });
+      queryClient.invalidateQueries({ queryKey: ['simulados-corretor'] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao excluir simulado.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -137,6 +161,7 @@ const CorretorSimulados = () => {
                 actions={{
                   onVerDetalhes: (id) => navigate(`/corretor/simulados/${id}/redacoes`),
                   onEditar: (id) => navigate(`/corretor/simulados/${id}/editar`),
+                  onExcluir: handleExcluir,
                 }}
               />
             ))}

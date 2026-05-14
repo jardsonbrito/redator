@@ -615,6 +615,17 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                         <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setDropdownOpen(false);
+                          setTimeout(() => setDeleteDialogOpen(true), 100);
+                        }}
+                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -625,7 +636,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
       )}
 
       {/* AlertDialog de confirmação de exclusão - FORA do DropdownMenu */}
-      {perfil === 'admin' && (
+      {(perfil === 'admin' || perfil === 'corretor') && (
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent className="max-w-md mx-4 rounded-lg">
             <AlertDialogHeader>
