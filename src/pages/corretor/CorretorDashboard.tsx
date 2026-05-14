@@ -1,5 +1,6 @@
 import { Navigate, useNavigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useCorretorMetricas } from "@/hooks/useCorretorMetricas";
 import { useCorretorRedacoes } from "@/hooks/useCorretorRedacoes";
@@ -84,6 +85,7 @@ const ChartCard = ({ title, data, dataKey, color = "#8b5cf6" }: {
 
 const CorretorDashboard = () => {
   const { corretor, loading } = useCorretorAuth();
+  const { podeGerenciar } = useCorretorPermissoes();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { metricas, loading: loadingMetricas } = useCorretorMetricas(
@@ -285,21 +287,23 @@ const CorretorDashboard = () => {
               <ArrowRight className="w-4 h-4 text-slate-400" />
             </CardContent>
           </Card>
-          <Card
-            className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => navigate('/corretor/temas')}
-          >
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="bg-fuchsia-100 p-3 rounded-xl">
-                <BookOpen className="w-5 h-5 text-fuchsia-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800 text-sm">Temas</p>
-                <p className="text-xs text-slate-500">Explorar temas disponíveis</p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </CardContent>
-          </Card>
+          {podeGerenciar && (
+            <Card
+              className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate('/corretor/temas')}
+            >
+              <CardContent className="flex items-center gap-4 p-5">
+                <div className="bg-fuchsia-100 p-3 rounded-xl">
+                  <BookOpen className="w-5 h-5 text-fuchsia-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-800 text-sm">Temas</p>
+                  <p className="text-xs text-slate-500">Explorar temas disponíveis</p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-400" />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* ── GRÁFICOS ─────────────────────────────────────────────────── */}
@@ -318,13 +322,15 @@ const CorretorDashboard = () => {
           />
         </div>
 
-        {/* ── GALERIA DE HONRA + TOP 5 (horizontal compacto) ──────────── */}
-        <Top5Widget
-          variant="corretor"
-          showHeader
-          horizontal
-          turmasPermitidas={(corretor.turmas_autorizadas as string[]) ?? []}
-        />
+        {/* ── GALERIA DE HONRA + TOP 5 (apenas para corretores com turmas externas) */}
+        {podeGerenciar && (
+          <Top5Widget
+            variant="corretor"
+            showHeader
+            horizontal
+            turmasPermitidas={(corretor.turmas_autorizadas as string[]) ?? []}
+          />
+        )}
 
       </div>
     </CorretorLayout>
