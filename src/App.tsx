@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import { ProfessorAuthProvider } from "./hooks/useProfessorAuth";
 import { ProfessorProtectedRoute } from "./components/ProfessorProtectedRoute";
+import { CorretorGerenteRoute } from "./components/corretor/CorretorGerenteRoute";
 import { ProtectedStudentRoute } from "./components/ProtectedStudentRoute";
 import { ProtectedStudentOrAdminRoute } from "./components/ProtectedStudentOrAdminRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -238,29 +239,31 @@ function App() {
                     <Route path="/admin/plano-estudo" element={<PlanoEstudoAdmin />} />
                     <Route path="/admin/redacoes-comentadas" element={<RedacoesComentadasAdmin />} />
 
-                    {/* Rotas do Corretor */}
+                    {/* Rotas do Corretor — acesso livre */}
                     <Route path="/corretor/login" element={<CorretorLogin />} />
                     <Route path="/corretor" element={<CorretorHome />} />
-                    <Route path="/corretor/redacoes-corretor" element={<CorretorRedacoes />} />
-                    <Route path="/corretor/temas" element={<CorretorTemas />} />
-                    <Route path="/corretor/temas/novo" element={<CorretorCriarTema />} />
-                    <Route path="/corretor/temas/:id" element={<CorretorTemaDetalhes />} />
-                    <Route path="/corretor/simulados" element={<CorretorSimulados />} />
-                    <Route path="/corretor/simulados/novo" element={<CorretorCriarSimulado />} />
-                    <Route path="/corretor/simulados/:id/editar" element={<CorretorEditarSimulado />} />
-                    <Route path="/corretor/simulados/:simuladoId/redacoes" element={<CorretorSimuladoRedacoes />} />
-                    <Route path="/corretor/simulados/redacao/:id" element={<CorretorRedacaoSimuladoDetalhes />} />
-                    <Route path="/corretor/aulas" element={<CorretorAulas />} />
-                    <Route path="/corretor/videoteca" element={<CorretorVideoteca />} />
-                    <Route path="/corretor/biblioteca" element={<CorretorBiblioteca />} />
-                    <Route path="/corretor/redacoes" element={<CorretorRedacoesExemplar />} />
-                    <Route path="/corretor/redacoes-exemplar/:id" element={<CorretorRedacaoExemplarDetalhes />} />
-                    <Route path="/corretor/top5" element={<CorretorTop5 />} />
                     <Route path="/corretor/ajuda-rapida" element={<CorretorAjudaRapida />} />
-                    <Route path="/corretor/lousas" element={<CorretorLousas />} />
-                    <Route path="/corretor/lousas/:id" element={<CorretorLousaDetalhes />} />
-                    <Route path="/corretor/visitantes" element={<CorretorVisitantes />} />
-                    <Route path="/corretor/calendario" element={<CorretorCalendario />} />
+                    <Route path="/corretor/redacoes-corretor" element={<CorretorRedacoes />} />
+
+                    {/* Rotas do Corretor — apenas para turmas externas (gerenciada_por='externo') */}
+                    <Route path="/corretor/temas" element={<CorretorGerenteRoute><CorretorTemas /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/temas/novo" element={<CorretorGerenteRoute><CorretorCriarTema /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/temas/:id" element={<CorretorGerenteRoute><CorretorTemaDetalhes /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/simulados" element={<CorretorGerenteRoute><CorretorSimulados /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/simulados/novo" element={<CorretorGerenteRoute><CorretorCriarSimulado /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/simulados/:id/editar" element={<CorretorGerenteRoute><CorretorEditarSimulado /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/simulados/:simuladoId/redacoes" element={<CorretorGerenteRoute><CorretorSimuladoRedacoes /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/simulados/redacao/:id" element={<CorretorGerenteRoute><CorretorRedacaoSimuladoDetalhes /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/aulas" element={<CorretorGerenteRoute><CorretorAulas /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/videoteca" element={<CorretorGerenteRoute><CorretorVideoteca /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/biblioteca" element={<CorretorGerenteRoute><CorretorBiblioteca /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/redacoes" element={<CorretorGerenteRoute><CorretorRedacoesExemplar /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/redacoes-exemplar/:id" element={<CorretorGerenteRoute><CorretorRedacaoExemplarDetalhes /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/top5" element={<CorretorGerenteRoute><CorretorTop5 /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/lousas" element={<CorretorGerenteRoute><CorretorLousas /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/lousas/:id" element={<CorretorGerenteRoute><CorretorLousaDetalhes /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/visitantes" element={<CorretorGerenteRoute><CorretorVisitantes /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/calendario" element={<CorretorGerenteRoute><CorretorCalendario /></CorretorGerenteRoute>} />
 
                     {/* Rotas do Professor */}
                     <Route path="/professor/login" element={<ProfessorLogin />} />

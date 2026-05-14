@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ interface CorretorLayoutProps {
 
 export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   const { corretor, logout, updateCorretorNome } = useCorretorAuth();
+  const { podeGerenciar } = useCorretorPermissoes();
   const { buscarMensagensNaoLidas } = useAjudaRapida();
   const { toast } = useToast();
   const location = useLocation();
@@ -47,14 +49,16 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
     }
   }, [corretor?.email, buscarMensagensNaoLidas]);
 
-  const menuItems = [
-    { icon: Home, label: "Home", path: "/corretor" },
-    { icon: CalendarDays, label: "Calendário", path: "/corretor/calendario" },
-    { icon: MessageCircle, label: "Recado dos Alunos", path: "/corretor/ajuda-rapida" },
-    { icon: FileText, label: "Redações", path: "/corretor/redacoes-corretor" },
-    { icon: BookOpen, label: "Temas", path: "/corretor/temas" },
-    { icon: FileText, label: "Simulados", path: "/corretor/simulados" },
+  const allMenuItems = [
+    { icon: Home, label: "Home", path: "/corretor", apenasGerente: false },
+    { icon: CalendarDays, label: "Calendário", path: "/corretor/calendario", apenasGerente: true },
+    { icon: MessageCircle, label: "Recado dos Alunos", path: "/corretor/ajuda-rapida", apenasGerente: false },
+    { icon: FileText, label: "Redações", path: "/corretor/redacoes-corretor", apenasGerente: false },
+    { icon: BookOpen, label: "Temas", path: "/corretor/temas", apenasGerente: true },
+    { icon: FileText, label: "Simulados", path: "/corretor/simulados", apenasGerente: true },
   ];
+
+  const menuItems = allMenuItems.filter(item => !item.apenasGerente || podeGerenciar);
 
   return (
     <CorretorNavigationProvider>
