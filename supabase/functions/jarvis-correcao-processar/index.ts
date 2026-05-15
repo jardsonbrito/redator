@@ -557,8 +557,18 @@ function _normalizarTexto(s: string): string {
 }
 
 const PADROES_ORACAO_COMENTATIVA_V4 = [
+  // Orações comentativas com "o que"
   ", o que demonstra", ", o que evidencia", ", o que revela",
   ", o que mostra", ", o que comprova", ", o que indica", ", o que reforça",
+  ", o que gera", ", o que causa", ", o que resulta", ", o que implica",
+  ", o que configura", ", o que caracteriza", ", o que representa",
+];
+
+// Padrões de adjunto/aposto intercalado — vírgula legítima entre sujeito e verbo
+const PADROES_ELEMENTO_INTERCALADO_V4 = [
+  ", segundo ", ", conforme ", ", de acordo com ",
+  ", nesse contexto,", ", nesse sentido,", ", nessa perspectiva,",
+  ", como se sabe,", ", como é sabido,",
 ];
 
 const TERMOS_COESAO_C1_V4 = [
@@ -594,10 +604,29 @@ function filtrarErrosC1Falsos(erros: any[], correcaoId: string, etapa: string): 
     }
 
     if (comp === "c1") {
-      // Regra 2 — vírgula tida como "entre sujeito e verbo" mas introduz oração comentativa
-      if (desc.includes("vírgula entre sujeito e verbo") || desc.includes("separando sujeito do verbo")) {
-        if (PADROES_ORACAO_COMENTATIVA_V4.some(p => trecho.includes(p))) {
-          descartados.push({ motivo: "virgula_oracao_comentativa", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+      // Regra 2 — vírgula classificada como "entre sujeito e verbo" mas estrutura justifica
+      if (desc.includes("vírgula entre sujeito e verbo") || desc.includes("separando sujeito do verbo") ||
+          desc.includes("vírgula antes do verbo") || desc.includes("separa sujeito")) {
+        if (
+          PADROES_ORACAO_COMENTATIVA_V4.some(p => trecho.includes(p)) ||
+          PADROES_ELEMENTO_INTERCALADO_V4.some(p => trecho.includes(p))
+        ) {
+          descartados.push({ motivo: "virgula_elemento_intercalado_ou_comentativa", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+          continue;
+        }
+      }
+
+      // Regra 5 — "falta vírgula" mas trecho_original já contém vírgula e texto limpo é idêntico à sugestão
+      if (
+        (desc.includes("falt") || desc.includes("ausência") || desc.includes("ausencia")) &&
+        (desc.includes("vírgula") || desc.includes("virgula")) &&
+        erro.trecho_original && erro.sugestao &&
+        (erro.trecho_original as string).includes(",")
+      ) {
+        const origSemVirgula = _normalizarTexto((erro.trecho_original as string).replace(/,/g, " ")).toLowerCase();
+        const sugSemVirgula = _normalizarTexto((erro.sugestao as string).replace(/,/g, " ")).toLowerCase();
+        if (origSemVirgula === sugSemVirgula) {
+          descartados.push({ motivo: "falsa_ausencia_virgula_presente_no_trecho", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
           continue;
         }
       }

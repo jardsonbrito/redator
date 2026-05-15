@@ -272,6 +272,41 @@ Exemplo sem inversão sintática:
 "A necessidade de intervenção estatal torna-se evidente diante desse cenário."
 
 ══════════════════════════════════════════════
+REGRA DE VERIFICAÇÃO OBRIGATÓRIA — PONTUAÇÃO
+══════════════════════════════════════════════
+
+Antes de registrar qualquer desvio relacionado a vírgula, execute obrigatoriamente
+estas três etapas internas:
+
+ETAPA 1 — VERIFICAÇÃO LITERAL DE PRESENÇA OU AUSÊNCIA
+• Para apontar "falta vírgula" numa posição: localize exatamente esse ponto no texto
+  original e confirme que a vírgula NÃO está ali. Se a vírgula já existir nessa posição,
+  NÃO registre o erro — não há desvio.
+• Para apontar "vírgula indevida": confirme que a vírgula está presente no trecho citado.
+• O campo trecho_original deve ser cópia literal e fiel do texto — nunca altere, adicione
+  ou omita pontuação no que você transcreve como trecho_original.
+
+ETAPA 2 — VERIFICAÇÃO SINTÁTICA ANTES DE CLASSIFICAR "SEPARA SUJEITO E VERBO"
+Não classifique uma vírgula como separando sujeito e verbo quando houver, entre o sujeito
+e o verbo, qualquer um dos elementos abaixo — nessas estruturas a vírgula é obrigatória
+ou plenamente aceitável pela norma-padrão:
+• Aposto ou aposto explicativo:
+  ex.: "A educação, pilar da democracia, deve ser garantida pelo Estado."
+• Adjunto adverbial ou expressão adverbial intercalados:
+  ex.: "O governo, nesse contexto, falhou em garantir o acesso à saúde."
+• Oração adjetiva explicativa:
+  ex.: "O aluno, que estudava todos os dias, foi aprovado no processo seletivo."
+• Oração comentativa (iniciada por "o que"):
+  ex.: "O Estado negligenciou a educação, o que demonstra descaso histórico."
+• Elemento parentético, vocativo ou explicativo de qualquer tipo entre o sujeito e o verbo.
+Em todas essas estruturas, a vírgula está correta e não deve ser apontada como desvio.
+
+ETAPA 3 — PRINCÍPIO DA CAUTELA
+Em caso de dúvida sobre se um uso de vírgula é correto ou incorreto, NÃO o registre
+como erro. Prefira o silêncio ao erro de avaliação. Só aponte desvio de pontuação quando
+a infração for inegável e diretamente comprovável pela leitura literal do trecho original.
+
+══════════════════════════════════════════════
 REGRAS ABSOLUTAS DE LISTAGEM
 ══════════════════════════════════════════════
 
@@ -1224,8 +1259,18 @@ function _normalizarTexto(s: string): string {
 }
 
 const PADROES_ORACAO_COMENTATIVA = [
+  // Orações comentativas com "o que"
   ", o que demonstra", ", o que evidencia", ", o que revela",
   ", o que mostra", ", o que comprova", ", o que indica", ", o que reforça",
+  ", o que gera", ", o que causa", ", o que resulta", ", o que implica",
+  ", o que configura", ", o que caracteriza", ", o que representa",
+];
+
+// Padrões que indicam adjunto/aposto intercalado — vírgula legítima entre sujeito e verbo
+const PADROES_ELEMENTO_INTERCALADO = [
+  ", segundo ", ", conforme ", ", de acordo com ",
+  ", nesse contexto,", ", nesse sentido,", ", nessa perspectiva,",
+  ", como se sabe,", ", como é sabido,", ", é sabido,",
 ];
 
 // Apenas termos técnicos específicos de C4 — evitar "coesão" e conectivos soltos
@@ -1263,10 +1308,31 @@ function filtrarErrosC1Falsos(erros: any[], correcaoId: string, etapa: string): 
     }
 
     if (comp === "c1") {
-      // Regra 2 — vírgula tida como "entre sujeito e verbo" mas introduz oração comentativa
-      if (desc.includes("vírgula entre sujeito e verbo") || desc.includes("separando sujeito do verbo")) {
-        if (PADROES_ORACAO_COMENTATIVA.some(p => trecho.includes(p))) {
-          descartados.push({ motivo: "virgula_oracao_comentativa", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+      // Regra 2 — vírgula classificada como "entre sujeito e verbo" mas estrutura justifica
+      if (desc.includes("vírgula entre sujeito e verbo") || desc.includes("separando sujeito do verbo") ||
+          desc.includes("vírgula antes do verbo") || desc.includes("separa sujeito")) {
+        if (
+          PADROES_ORACAO_COMENTATIVA.some(p => trecho.includes(p)) ||
+          PADROES_ELEMENTO_INTERCALADO.some(p => trecho.includes(p))
+        ) {
+          descartados.push({ motivo: "virgula_elemento_intercalado_ou_comentativa", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
+          continue;
+        }
+      }
+
+      // Regra 5 — "falta vírgula" mas trecho_original já contém vírgula e texto limpo é idêntico à sugestão
+      // (AI afirma ausência de vírgula mas ela já estava presente no texto)
+      if (
+        erro.tipo === "pontuacao" &&
+        (desc.includes("falt") || desc.includes("ausência") || desc.includes("ausencia")) &&
+        (desc.includes("vírgula") || desc.includes("virgula")) &&
+        erro.trecho_original && erro.sugestao &&
+        (erro.trecho_original as string).includes(",")
+      ) {
+        const origSemVirgula = _normalizarTexto((erro.trecho_original as string).replace(/,/g, " ")).toLowerCase();
+        const sugSemVirgula = _normalizarTexto((erro.sugestao as string).replace(/,/g, " ")).toLowerCase();
+        if (origSemVirgula === sugSemVirgula) {
+          descartados.push({ motivo: "falsa_ausencia_virgula_presente_no_trecho", tipo: erro.tipo, trecho: (erro.trecho_original ?? "").slice(0, 80) });
           continue;
         }
       }
