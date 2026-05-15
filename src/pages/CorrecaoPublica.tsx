@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -153,6 +154,15 @@ export default function CorrecaoPublica() {
   }
 
   const correcao = data.correcao;
+
+  // Título da aba/share sheet: nome do aluno + tema (deve vir antes de qualquer return)
+  useEffect(() => {
+    if (!correcao) return;
+    const prev = document.title;
+    document.title = `${correcao.autor_nome} — ${correcao.tema}`;
+    return () => { document.title = prev; };
+  }, [correcao?.autor_nome, correcao?.tema]);
+
   if (!correcao) return null;
 
   // Normaliza correcao_ia
