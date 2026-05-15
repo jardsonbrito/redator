@@ -99,7 +99,6 @@ export default function CorrecaoPublica() {
       if (!link.ativo) throw new Error("DESATIVADO");
       if (link.expira_em && new Date(link.expira_em) < new Date()) throw new Error("EXPIRADO");
 
-      // Incrementa contagem de acessos sem bloquear a renderização
       supabase
         .from("jarvis_correcao_links" as any)
         .update({ acessos: (link.acessos || 0) + 1, ultimo_acesso_em: new Date().toISOString() })
@@ -111,6 +110,15 @@ export default function CorrecaoPublica() {
     enabled: !!token,
     retry: false,
   });
+
+  // Deve ficar antes de qualquer return condicional (Rules of Hooks)
+  useEffect(() => {
+    const correcao = data?.correcao;
+    if (!correcao) return;
+    const prev = document.title;
+    document.title = `${correcao.autor_nome} — ${correcao.tema}`;
+    return () => { document.title = prev; };
+  }, [data?.correcao?.autor_nome, data?.correcao?.tema]);
 
   if (isLoading) {
     return (
@@ -154,14 +162,6 @@ export default function CorrecaoPublica() {
   }
 
   const correcao = data.correcao;
-
-  // Título da aba/share sheet: nome do aluno + tema (deve vir antes de qualquer return)
-  useEffect(() => {
-    if (!correcao) return;
-    const prev = document.title;
-    document.title = `${correcao.autor_nome} — ${correcao.tema}`;
-    return () => { document.title = prev; };
-  }, [correcao?.autor_nome, correcao?.tema]);
 
   if (!correcao) return null;
 
@@ -455,9 +455,8 @@ export default function CorrecaoPublica() {
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between py-4 border-t border-[#dcc8f5]">
+        <div className="flex items-center justify-center py-4 border-t border-[#dcc8f5]">
           <p className="text-[10px] text-zinc-400">Laboratório do Professor de Redação</p>
-          <p className="text-[10px] text-zinc-400">Corrigido por Jarvis IA</p>
         </div>
       </div>
     </div>
