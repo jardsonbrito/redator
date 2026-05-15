@@ -1,9 +1,12 @@
 {
-  "rewrites": [
+  "redirects": [
     {
       "source": "/s/:token",
-      "destination": "https://kgmxntpmvlnbftjqtyxx.supabase.co/functions/v1/correcao-og/:token"
-    },
+      "destination": "https://kgmxntpmvlnbftjqtyxx.supabase.co/functions/v1/correcao-og/:token",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
