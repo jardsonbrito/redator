@@ -69,7 +69,7 @@ export const useJarvisCorrecaoLink = (correcaoId: string) => {
   });
 
   const buildUrl = (token: string) =>
-    `${window.location.origin}/api/share/${token}`;
+    `${window.location.origin}/s/${token}`;
 
   return { link, isLoading, criarLink, desativarLink, buildUrl };
 };
