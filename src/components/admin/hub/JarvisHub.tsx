@@ -7,6 +7,7 @@ import { JarvisModosManagement } from '@/components/admin/JarvisModosManagement'
 import { JarvisConfigManagement } from '@/components/admin/JarvisConfigManagement';
 import { JarvisTutoriaConfiguracao } from '@/components/admin/JarvisTutoriaConfiguracao';
 import { JarvisCorrecaoConfigManager } from '@/components/admin/JarvisCorrecaoConfigManager';
+import { JarvisVideoInstrucao } from '@/components/admin/JarvisVideoInstrucao';
 
 interface JarvisHubProps {
   defaultTab?: string;
@@ -62,6 +63,7 @@ export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
             <TabsTrigger value="correcoes">Correções</TabsTrigger>
             <TabsTrigger value="config-correcao">Config. Correção IA</TabsTrigger>
+            <TabsTrigger value="video-instrucao">Vídeo de instrução</TabsTrigger>
           </TabsList>
           <TabsContent value="creditos" className="space-y-6">
             <JarvisCorrecaoCreditosProfessores />
@@ -71,6 +73,9 @@ export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
           </TabsContent>
           <TabsContent value="config-correcao" className="space-y-6">
             <JarvisCorrecaoConfigManager />
+          </TabsContent>
+          <TabsContent value="video-instrucao" className="space-y-6">
+            <JarvisVideoInstrucao />
           </TabsContent>
         </Tabs>
       </TabsContent>

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   BookOpen, FileText, Video, GraduationCap, Library,
   Map, Layers, Bot, ClipboardCheck, NotebookPen,
-  MessageCircle, Trophy, Star, Sparkles,
+  MessageCircle, Trophy, Star, Sparkles, PlayCircle,
 } from "lucide-react";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
@@ -15,6 +15,8 @@ import { ProfessorBottomNavigation } from "@/components/professor/ProfessorBotto
 import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import { useProfessorFeatures } from "@/hooks/useProfessorFeatures";
+import { useJarvisVideoInstrucao } from "@/hooks/useJarvisVideoInstrucao";
+import { JarvisVideoModal } from "@/components/professor/JarvisVideoModal";
 
 const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; tooltip: string }> = {
   jarvis_correcao: {
@@ -130,6 +132,7 @@ const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; too
 const ProfessorHome = () => {
   const { professor } = useProfessorAuth();
   const { funcionalidadesOrdenadas } = useProfessorFeatures();
+  const { config: videoConfig, modalAberto, dispensar, abrirModal } = useJarvisVideoInstrucao();
 
   const emptyBreadcrumbs = useMemo(() => [], []);
   useBreadcrumbs(emptyBreadcrumbs);
@@ -158,11 +161,30 @@ const ProfessorHome = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 pb-20">
         <StudentHeader />
 
+        {videoConfig && (
+          <JarvisVideoModal
+            aberto={modalAberto}
+            titulo={videoConfig.titulo}
+            urlYoutube={videoConfig.url_youtube}
+            onAssistirDepois={dispensar}
+          />
+        )}
+
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
+          <div className="mb-8 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-800">
               Olá, {primeiroNome}!
             </h1>
+            {videoConfig && !modalAberto && (
+              <button
+                type="button"
+                onClick={abrirModal}
+                className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                <PlayCircle className="w-4 h-4" />
+                Vídeo de orientação
+              </button>
+            )}
           </div>
 
           <div className="max-w-5xl mx-auto mb-8">
