@@ -179,10 +179,10 @@ const ProfessorHome = () => {
               <button
                 type="button"
                 onClick={abrirModal}
-                className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 border border-violet-200 transition-colors shadow-sm"
               >
                 <PlayCircle className="w-4 h-4" />
-                Vídeo de orientação
+                Assistir vídeo de orientação
               </button>
             )}
           </div>
