@@ -260,8 +260,8 @@ export default function CorrecaoPublica() {
         </div>
 
         {/* Notas */}
-        <div className="grid grid-cols-6 gap-2">
-          <div className="flex flex-col items-center justify-center rounded-2xl py-3 bg-gradient-to-b from-[#4B0082] to-[#7c2fd9] text-white shadow">
+        <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+          <div className="col-span-5 sm:col-span-1 flex flex-col items-center justify-center rounded-2xl py-3 bg-gradient-to-b from-[#4B0082] to-[#7c2fd9] text-white shadow">
             <p className="text-[9px] font-bold uppercase tracking-wider opacity-75">Nota Final</p>
             <p className="mt-0.5 text-2xl font-black leading-none">{correcao.nota_total ?? "—"}</p>
             <p className="mt-1 text-[9px] opacity-60">/1000</p>
