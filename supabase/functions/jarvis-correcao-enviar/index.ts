@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       // Validar admin
       const { data: admin, error: adminError } = await supabaseClient
         .from("admin_users")
-        .select("id, nome")
+        .select("id")
         .eq("id", adminId)
         .single();
 
