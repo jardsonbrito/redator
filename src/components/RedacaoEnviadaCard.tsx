@@ -192,9 +192,6 @@ export const RedacaoEnviadaCard = ({
                 {redacao.tipo_envio !== 'simulado' && (
                   <Badge className="bg-white/15 text-white border-white/25 text-xs">{getTipoEnvioLabel(redacao.tipo_envio)}</Badge>
                 )}
-                {redacao.status === 'em_correcao' && (
-                  <Badge className="bg-orange-400/30 text-orange-100 border-orange-300/30 text-xs">Em correção</Badge>
-                )}
               </div>
               <h1 className="text-base sm:text-lg font-black leading-snug">{redacao.frase_tematica}</h1>
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-white/65 text-xs sm:text-sm">
