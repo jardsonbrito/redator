@@ -9,9 +9,17 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
+import { ImageSelector } from "@/components/admin/ImageSelector";
 
 type AulaDisponivel = { id: string; titulo: string; data_aula: string };
 type AulaGravadaDisponivel = { id: string; titulo: string; criado_em: string };
+type ImageValue = {
+  source: 'upload' | 'url';
+  url?: string;
+  file_path?: string;
+  file_size?: number;
+  dimensions?: { width: number; height: number };
+} | null;
 
 const formatarData = (data: string) => {
   if (!data) return '';
@@ -51,6 +59,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
   const [aulasGravadas, setAulasGravadas] = useState<AulaGravadaDisponivel[]>([]);
+  const [imagemCapaValue, setImagemCapaValue] = useState<ImageValue>(null);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -89,6 +98,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         aula_mae_id: aula.aula_mae_id || null,
         aula_gravada_id: aula.aula_gravada_id || null,
       });
+      setImagemCapaValue(aula.imagem_capa_url ? { source: 'url', url: aula.imagem_capa_url } : null);
     }
   }, [aula]);
 
@@ -114,6 +124,16 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
     carregarAulas();
   }, [aula.id]);
 
+  const resolveImageUrl = (imageValue: ImageValue): string | null => {
+    if (!imageValue) return null;
+    if (imageValue.source === 'url') return imageValue.url || null;
+    if (imageValue.source === 'upload' && imageValue.file_path) {
+      const { data } = supabase.storage.from('aulas').getPublicUrl(imageValue.file_path);
+      return data.publicUrl;
+    }
+    return null;
+  };
+
   const gerarAulaGravada = async () => {
     const MODULO_AULA_AO_VIVO_ID = 'b14dd9be-a203-45df-97b7-ae592f5c60ed';
     setGerandoGravada(true);
@@ -126,8 +146,8 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
           link_conteudo: '',
           turmas_autorizadas: formData.turmas_autorizadas,
           permite_visitante: formData.permite_visitante,
-          cover_url: formData.imagem_capa_url.trim() || null,
-          cover_source: formData.imagem_capa_url.trim() ? 'url' : null,
+          cover_url: resolveImageUrl(imagemCapaValue),
+          cover_source: imagemCapaValue ? imagemCapaValue.source : null,
           modulo_id: MODULO_AULA_AO_VIVO_ID,
           ativo: false,
         }])
@@ -202,7 +222,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         horario_inicio: formData.horario_inicio,
         horario_fim: formData.horario_fim,
         turmas_autorizadas: formData.turmas_autorizadas,
-        imagem_capa_url: formData.imagem_capa_url.trim() || null,
+        imagem_capa_url: resolveImageUrl(imagemCapaValue),
         link_meet: formData.link_meet.trim(),
         abrir_aba_externa: formData.abrir_aba_externa,
         permite_visitante: formData.permite_visitante,
@@ -426,15 +446,14 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
 
                 {/* Imagem de Capa */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">URL da Imagem de Capa</label>
-                    <Input
-                      value={formData.imagem_capa_url}
-                      onChange={(e) => setFormData({...formData, imagem_capa_url: e.target.value})}
-                      className="text-sm"
-                      spellCheck={false}
-                    />
-                  </div>
+                  <ImageSelector
+                    title="Imagem de Capa"
+                    description="Envie um arquivo ou informe uma URL pública. Recomendado 1280x720px."
+                    value={imagemCapaValue}
+                    onChange={setImagemCapaValue}
+                    minDimensions={{ width: 640, height: 360 }}
+                    bucket="aulas"
+                  />
                 </div>
 
                 {/* Configurações */}
