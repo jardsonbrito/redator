@@ -19,7 +19,7 @@ export const ProfessorProtectedRoute = ({
     if (!loading) {
       // Se não estiver logado, redirecionar para login
       if (!professor) {
-        navigate('/professor/login', { replace: true });
+        navigate('/', { replace: true });
         return;
       }
 

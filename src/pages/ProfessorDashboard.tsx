@@ -73,7 +73,7 @@ export const ProfessorDashboard = () => {
   const { professor, logout } = useProfessorAuth();
   const { funcionalidadesOrdenadas, isLoading } = useProfessorFeatures();
 
-  if (!professor) return <Navigate to="/professor/login" replace />;
+  if (!professor) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
