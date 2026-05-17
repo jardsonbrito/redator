@@ -463,6 +463,37 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     setModoTexto(hasJarvisAtivo);
   }, [redacao.id]);
 
+  const {
+    marcacoes: marcacoesJarvis,
+    inserir: inserirAnotacao, isInserting: isInsertingAnotacao,
+    confirmar: confirmarMarcacao, ignorar: ignorarMarcacao,
+    isSaving: isSavingMarcacao,
+  } = useComentariosTrechoCorrecao(hasJarvisAtivo ? redacao.id : null);
+  const [tooltipMarcacao, setTooltipMarcacao] = useState<ComentarioTrecho | null>(null);
+  const textoCorretorRef = useRef<HTMLDivElement>(null);
+  const [dialogAnotacao, setDialogAnotacao] = useState<DialogAnotacao | null>(null);
+
+  const [panelDragPos, setPanelDragPos] = useState({ x: 0, y: 0 });
+  const panelDragRef = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
+  const [panelRefineLoading, setPanelRefineLoading] = useState(false);
+  const [panelRefineSugestoes, setPanelRefineSugestoes] = useState<string[]>([]);
+  const [panelShowAssistente, setPanelShowAssistente] = useState(false);
+  const [panelAssistentePergunta, setPanelAssistentePergunta] = useState('');
+  const [panelAssistenteLoading, setPanelAssistenteLoading] = useState(false);
+  const [panelAssistenteHistorico, setPanelAssistenteHistorico] = useState<Array<{ pergunta: string; resposta: string }>>([]);
+  const panelComentarioRef = useRef<HTMLTextAreaElement>(null);
+  const panelAssistenteRef = useRef<HTMLTextAreaElement>(null);
+
+  const panelSetComentario = useCallback((val: string) => {
+    setDialogAnotacao(p => p ? { ...p, comentario: val } : null);
+  }, []);
+
+  const { isRecording: panelMicRecording, isSupported: panelMicSupported, toggleRecording: panelToggleMic, stopRecording: panelStopMic } =
+    useVoiceTranscription(panelSetComentario, dialogAnotacao?.comentario ?? '', panelComentarioRef);
+
+  const { isRecording: panelAssistenteMicRecording, isSupported: panelAssistenteMicSupported, toggleRecording: panelAssistenteMicToggle } =
+    useVoiceTranscription(setPanelAssistentePergunta, panelAssistentePergunta, panelAssistenteRef);
+
   // Drag do painel de anotação
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
@@ -494,37 +525,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!dialogAnotacao]);
-
-  const {
-    marcacoes: marcacoesJarvis,
-    inserir: inserirAnotacao, isInserting: isInsertingAnotacao,
-    confirmar: confirmarMarcacao, ignorar: ignorarMarcacao,
-    isSaving: isSavingMarcacao,
-  } = useComentariosTrechoCorrecao(hasJarvisAtivo ? redacao.id : null);
-  const [tooltipMarcacao, setTooltipMarcacao] = useState<ComentarioTrecho | null>(null);
-  const textoCorretorRef = useRef<HTMLDivElement>(null);
-  const [dialogAnotacao, setDialogAnotacao] = useState<DialogAnotacao | null>(null);
-
-  const [panelDragPos, setPanelDragPos] = useState({ x: 0, y: 0 });
-  const panelDragRef = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-  const [panelRefineLoading, setPanelRefineLoading] = useState(false);
-  const [panelRefineSugestoes, setPanelRefineSugestoes] = useState<string[]>([]);
-  const [panelShowAssistente, setPanelShowAssistente] = useState(false);
-  const [panelAssistentePergunta, setPanelAssistentePergunta] = useState('');
-  const [panelAssistenteLoading, setPanelAssistenteLoading] = useState(false);
-  const [panelAssistenteHistorico, setPanelAssistenteHistorico] = useState<Array<{ pergunta: string; resposta: string }>>([]);
-  const panelComentarioRef = useRef<HTMLTextAreaElement>(null);
-  const panelAssistenteRef = useRef<HTMLTextAreaElement>(null);
-
-  const panelSetComentario = useCallback((val: string) => {
-    setDialogAnotacao(p => p ? { ...p, comentario: val } : null);
-  }, []);
-
-  const { isRecording: panelMicRecording, isSupported: panelMicSupported, toggleRecording: panelToggleMic, stopRecording: panelStopMic } =
-    useVoiceTranscription(panelSetComentario, dialogAnotacao?.comentario ?? '', panelComentarioRef);
-
-  const { isRecording: panelAssistenteMicRecording, isSupported: panelAssistenteMicSupported, toggleRecording: panelAssistenteMicToggle } =
-    useVoiceTranscription(setPanelAssistentePergunta, panelAssistentePergunta, panelAssistenteRef);
 
   const dataFormatada = new Date(redacao.data_envio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const statusLabel = STATUS_LABELS[redacao.status_minha_correcao] || redacao.status_minha_correcao;
