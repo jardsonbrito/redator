@@ -88,9 +88,6 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
               <h1 className="text-base sm:text-xl font-bold text-violet-700 truncate">
                 {isMobile ? "Corretor" : "Painel do Corretor"}
               </h1>
-              <p className="text-xs text-violet-400 font-medium truncate hidden sm:block">
-                Central Operacional
-              </p>
             </div>
           </div>
           
@@ -104,12 +101,9 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
                 <button className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity rounded-xl p-1">
                   <CorretorAvatar size="sm" showUpload={false} />
                   {!isMobile && (
-                    <div className="flex flex-col text-left">
-                      <span className="text-foreground font-medium text-xs sm:text-sm truncate max-w-32 sm:max-w-none leading-tight">
-                        {corretor?.nome_completo || 'Corretor'}
-                      </span>
-                      <span className="text-violet-500 text-xs font-medium leading-tight">Corretor</span>
-                    </div>
+                    <span className="text-foreground font-medium text-xs sm:text-sm truncate max-w-32 sm:max-w-none leading-tight">
+                      {corretor?.nome_completo || 'Corretor'}
+                    </span>
                   )}
                 </button>
               </SheetTrigger>
