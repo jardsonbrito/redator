@@ -12,6 +12,7 @@ export interface ComentarioTrecho {
   contexto_anterior: string | null;
   contexto_posterior: string | null;
   ocorrencia: number;
+  paragrafo: number | null;
   competencia: string;
   tipo: string | null;
   comentario: string;
@@ -21,6 +22,13 @@ export interface ComentarioTrecho {
   criado_em: string;
   atualizado_em: string;
 }
+
+export type EdicoesAnotacao = {
+  comentario?: string;
+  competencia?: string;
+  tipo?: string;
+  sugestao_reescrita?: string;
+};
 
 export const useComentariosTrechoCorrecao = (redacaoEnviadaId: string | null | undefined) => {
   const { toast } = useToast();
@@ -44,12 +52,18 @@ export const useComentariosTrechoCorrecao = (redacaoEnviadaId: string | null | u
   });
 
   const mutacao = useMutation({
-    mutationFn: async ({ id, status, comentario }: { id: string; status: string; comentario?: string }) => {
-      const update: Record<string, any> = { status };
-      if (comentario !== undefined) update.comentario = comentario;
+    mutationFn: async (update: {
+      id: string; status: string;
+      comentario?: string; competencia?: string; tipo?: string; sugestao_reescrita?: string;
+    }) => {
+      const { id, ...fields } = update;
+      const updateData: Record<string, any> = {};
+      for (const [k, v] of Object.entries(fields)) {
+        if (v !== undefined) updateData[k] = v;
+      }
       const { error } = await supabase
         .from('comentarios_trecho_correcao')
-        .update(update)
+        .update(updateData)
         .eq('id', id);
       if (error) throw error;
     },
@@ -61,8 +75,8 @@ export const useComentariosTrechoCorrecao = (redacaoEnviadaId: string | null | u
     },
   });
 
-  const confirmar = (id: string, comentarioEditado?: string) =>
-    mutacao.mutate({ id, status: 'confirmada', comentario: comentarioEditado });
+  const confirmar = (id: string, edicoes?: EdicoesAnotacao) =>
+    mutacao.mutate({ id, status: 'confirmada', ...edicoes });
 
   const ignorar = (id: string) =>
     mutacao.mutate({ id, status: 'ignorada' });
@@ -73,6 +87,7 @@ export const useComentariosTrechoCorrecao = (redacaoEnviadaId: string | null | u
   const mutacaoInserir = useMutation({
     mutationFn: async (nova: {
       trecho: string; inicio: number; fim: number;
+      paragrafo?: number;
       competencia: string; tipo?: string;
       comentario: string; sugestao_reescrita?: string;
     }) => {
@@ -84,6 +99,7 @@ export const useComentariosTrechoCorrecao = (redacaoEnviadaId: string | null | u
           inicio: nova.inicio,
           fim: nova.fim,
           ocorrencia: 1,
+          paragrafo: nova.paragrafo ?? null,
           competencia: nova.competencia,
           tipo: nova.tipo ?? null,
           comentario: nova.comentario,
@@ -108,5 +124,10 @@ export const useComentariosTrechoCorrecao = (redacaoEnviadaId: string | null | u
   const confirmadas = marcacoes.filter(m => m.status === 'confirmada');
   const ignoradas = marcacoes.filter(m => m.status === 'ignorada');
 
-  return { marcacoes, isLoading, sugeridas, confirmadas, ignoradas, confirmar, ignorar, desfazer, inserir, isInserting: mutacaoInserir.isPending };
+  return {
+    marcacoes, isLoading, sugeridas, confirmadas, ignoradas,
+    confirmar, ignorar, desfazer,
+    inserir, isInserting: mutacaoInserir.isPending,
+    isSaving: mutacao.isPending,
+  };
 };

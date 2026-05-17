@@ -74,6 +74,19 @@ const TIPO_LABELS_FORM: Record<string, string> = {
   ponto_de_atencao: 'Ponto de atenção',
 };
 
+interface DialogAnotacao {
+  mode: 'nova' | 'editar';
+  trecho: string;
+  inicio: number;
+  fim: number;
+  paragrafo?: number;
+  existingId?: string;
+  competencia: string;
+  tipo: string;
+  comentario: string;
+  sugestao_reescrita: string;
+}
+
 export const FormularioCorrecaoCompletoComAnotacoes = ({
   redacao,
   corretorEmail,
@@ -357,8 +370,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       if (!selected.trim()) return;
       sel.removeAllRanges();
       setTimeout(() => {
-        setNovaAnotacaoForm({ competencia: 'c1', tipo: 'erro', comentario: '', sugestao_reescrita: '' });
-        setDialogNovaAnotacao({ trecho: selected, inicio, fim: inicio + selected.length });
+        setDialogAnotacao({ mode: 'nova', trecho: selected, inicio, fim: inicio + selected.length, competencia: 'c1', tipo: 'erro', comentario: '', sugestao_reescrita: '' });
       }, 10);
     } catch {
       window.getSelection()?.removeAllRanges();
@@ -396,11 +408,15 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     setModoTexto(hasJarvisAtivo);
   }, [redacao.id]);
 
-  const { marcacoes: marcacoesJarvis, inserir: inserirAnotacao, isInserting: isInsertingAnotacao } = useComentariosTrechoCorrecao(hasJarvisAtivo ? redacao.id : null);
+  const {
+    marcacoes: marcacoesJarvis,
+    inserir: inserirAnotacao, isInserting: isInsertingAnotacao,
+    confirmar: confirmarMarcacao, ignorar: ignorarMarcacao,
+    isSaving: isSavingMarcacao,
+  } = useComentariosTrechoCorrecao(hasJarvisAtivo ? redacao.id : null);
   const [tooltipMarcacao, setTooltipMarcacao] = useState<ComentarioTrecho | null>(null);
   const textoCorretorRef = useRef<HTMLDivElement>(null);
-  const [dialogNovaAnotacao, setDialogNovaAnotacao] = useState<{ trecho: string; inicio: number; fim: number } | null>(null);
-  const [novaAnotacaoForm, setNovaAnotacaoForm] = useState({ competencia: 'c1', tipo: 'erro', comentario: '', sugestao_reescrita: '' });
+  const [dialogAnotacao, setDialogAnotacao] = useState<DialogAnotacao | null>(null);
 
   const dataFormatada = new Date(redacao.data_envio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const statusLabel = STATUS_LABELS[redacao.status_minha_correcao] || redacao.status_minha_correcao;
@@ -576,8 +592,25 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                             <span
                               key={m.id}
                               className={`rounded-sm px-0.5 transition-colors ${cls}`}
-                              onClick={() => setTooltipMarcacao(m)}
-                              title={m.comentario}
+                              onClick={() => {
+                                if (m.status === 'sugerida') {
+                                  setDialogAnotacao({
+                                    mode: 'editar',
+                                    existingId: m.id,
+                                    trecho: m.trecho,
+                                    inicio: m.inicio,
+                                    fim: m.fim,
+                                    paragrafo: m.paragrafo ?? undefined,
+                                    competencia: m.competencia,
+                                    tipo: m.tipo ?? 'erro',
+                                    comentario: m.comentario,
+                                    sugestao_reescrita: m.sugestao_reescrita ?? '',
+                                  });
+                                } else {
+                                  setTooltipMarcacao(m);
+                                }
+                              }}
+                              title={m.status === 'sugerida' ? 'Clique para revisar esta sugestão do Jarvis' : m.comentario}
                             >
                               {redacao.texto!.slice(m.inicio, m.fim)}
                             </span>
@@ -1051,41 +1084,51 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: nova marcação do corretor por seleção de texto */}
-      <Dialog open={!!dialogNovaAnotacao} onOpenChange={(open) => !open && setDialogNovaAnotacao(null)}>
+      {/* Dialog unificado: revisão de sugestão Jarvis (editar) ou nova marcação manual (nova) */}
+      <Dialog open={!!dialogAnotacao} onOpenChange={(open) => !open && setDialogAnotacao(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nova marcação de trecho</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {dialogAnotacao?.mode === 'editar' ? (
+                <><Sparkles className="w-4 h-4 text-violet-500" /> Revisar sugestão do Jarvis</>
+              ) : 'Nova marcação do corretor'}
+            </DialogTitle>
           </DialogHeader>
-          {dialogNovaAnotacao && (
+          {dialogAnotacao && (
             <div className="space-y-4">
+              {/* Trecho */}
               <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Trecho selecionado</p>
-                <p className="text-sm italic text-slate-700">"{dialogNovaAnotacao.trecho}"</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    {dialogAnotacao.mode === 'editar' ? 'Trecho marcado pelo Jarvis' : 'Trecho selecionado'}
+                  </p>
+                  {dialogAnotacao.paragrafo && (
+                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">¶{dialogAnotacao.paragrafo}</span>
+                  )}
+                </div>
+                <p className="text-sm italic text-slate-700">"{dialogAnotacao.trecho}"</p>
               </div>
 
+              {/* Competência + Tipo */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">Competência</label>
-                  <Select value={novaAnotacaoForm.competencia} onValueChange={(v) => setNovaAnotacaoForm(p => ({ ...p, competencia: v }))}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={dialogAnotacao.competencia} onValueChange={(v) => setDialogAnotacao(p => p ? { ...p, competencia: v } : null)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="c1">C1 — Norma-padrão</SelectItem>
                       <SelectItem value="c2">C2 — Tema e repertório</SelectItem>
                       <SelectItem value="c3">C3 — Projeto de texto</SelectItem>
                       <SelectItem value="c4">C4 — Coesão</SelectItem>
                       <SelectItem value="c5">C5 — Intervenção</SelectItem>
+                      <SelectItem value="pa">PA — Ponto de atenção</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">Tipo</label>
-                  <Select value={novaAnotacaoForm.tipo} onValueChange={(v) => setNovaAnotacaoForm(p => ({ ...p, tipo: v }))}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={dialogAnotacao.tipo} onValueChange={(v) => setDialogAnotacao(p => p ? { ...p, tipo: v } : null)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="erro">Erro</SelectItem>
                       <SelectItem value="dica">Dica</SelectItem>
@@ -1095,53 +1138,79 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 </div>
               </div>
 
+              {/* Comentário */}
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">Comentário *</label>
                 <TextareaWithSpellcheck
-                  value={novaAnotacaoForm.comentario}
-                  onChange={(e) => setNovaAnotacaoForm(p => ({ ...p, comentario: e.target.value }))}
+                  value={dialogAnotacao.comentario}
+                  onChange={(e) => setDialogAnotacao(p => p ? { ...p, comentario: e.target.value } : null)}
                   placeholder="Explique o erro ou orientação para o aluno..."
                   className="text-xs min-h-[80px] resize-none"
                   maxLength={300}
                 />
-                <p className="text-[10px] text-slate-400 text-right mt-0.5">{novaAnotacaoForm.comentario.length}/300</p>
+                <p className="text-[10px] text-slate-400 text-right mt-0.5">{dialogAnotacao.comentario.length}/300</p>
               </div>
 
+              {/* Sugestão de reescrita */}
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Sugestão de reescrita <span className="text-slate-400 font-normal">(opcional)</span></label>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Sugestão de reescrita <span className="text-slate-400 font-normal">(opcional)</span>
+                </label>
                 <TextareaWithSpellcheck
-                  value={novaAnotacaoForm.sugestao_reescrita}
-                  onChange={(e) => setNovaAnotacaoForm(p => ({ ...p, sugestao_reescrita: e.target.value }))}
+                  value={dialogAnotacao.sugestao_reescrita}
+                  onChange={(e) => setDialogAnotacao(p => p ? { ...p, sugestao_reescrita: e.target.value } : null)}
                   placeholder="Como poderia ser reescrito?"
-                  className="text-xs min-h-[60px] resize-none"
+                  className="text-xs min-h-[56px] resize-none"
                   maxLength={200}
                 />
               </div>
 
-              <div className="flex gap-2 justify-end pt-1">
-                <Button variant="outline" size="sm" onClick={() => setDialogNovaAnotacao(null)}>
-                  Cancelar
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={!novaAnotacaoForm.comentario.trim() || isInsertingAnotacao}
-                  onClick={() => {
-                    inserirAnotacao({
-                      trecho: dialogNovaAnotacao.trecho,
-                      inicio: dialogNovaAnotacao.inicio,
-                      fim: dialogNovaAnotacao.fim,
-                      competencia: novaAnotacaoForm.competencia,
-                      tipo: novaAnotacaoForm.tipo,
-                      comentario: novaAnotacaoForm.comentario.trim(),
-                      sugestao_reescrita: novaAnotacaoForm.sugestao_reescrita.trim() || undefined,
-                    });
-                    setDialogNovaAnotacao(null);
-                  }}
-                  className="bg-violet-700 hover:bg-violet-800 text-white gap-1.5"
-                >
-                  {isInsertingAnotacao && <Loader2 className="w-3 h-3 animate-spin" />}
-                  Salvar marcação
-                </Button>
+              {/* Ações */}
+              <div className="flex gap-2 items-center pt-1">
+                {dialogAnotacao.mode === 'editar' && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-red-600 hover:bg-red-50"
+                    onClick={() => { ignorarMarcacao(dialogAnotacao.existingId!); setDialogAnotacao(null); }}
+                  >
+                    <X className="w-3 h-3 mr-1" /> Ignorar
+                  </Button>
+                )}
+                <div className="flex gap-2 ml-auto">
+                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setDialogAnotacao(null)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!dialogAnotacao.comentario.trim() || isInsertingAnotacao || isSavingMarcacao}
+                    onClick={() => {
+                      if (dialogAnotacao.mode === 'editar') {
+                        confirmarMarcacao(dialogAnotacao.existingId!, {
+                          competencia: dialogAnotacao.competencia,
+                          tipo: dialogAnotacao.tipo,
+                          comentario: dialogAnotacao.comentario.trim(),
+                          sugestao_reescrita: dialogAnotacao.sugestao_reescrita.trim() || undefined,
+                        });
+                      } else {
+                        inserirAnotacao({
+                          trecho: dialogAnotacao.trecho,
+                          inicio: dialogAnotacao.inicio,
+                          fim: dialogAnotacao.fim,
+                          competencia: dialogAnotacao.competencia,
+                          tipo: dialogAnotacao.tipo,
+                          comentario: dialogAnotacao.comentario.trim(),
+                          sugestao_reescrita: dialogAnotacao.sugestao_reescrita.trim() || undefined,
+                        });
+                      }
+                      setDialogAnotacao(null);
+                    }}
+                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                  >
+                    {(isInsertingAnotacao || isSavingMarcacao) && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {dialogAnotacao.mode === 'editar' ? 'Confirmar' : 'Salvar'}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

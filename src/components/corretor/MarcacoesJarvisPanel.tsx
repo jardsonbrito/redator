@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Check, X, Edit2, Undo2, ChevronDown, ChevronUp } from "lucide-react";
 import { TextareaWithSpellcheck } from "@/components/ui/textarea-with-spellcheck";
-import { useComentariosTrechoCorrecao, ComentarioTrecho } from "@/hooks/useComentariosTrechoCorrecao";
+import { useComentariosTrechoCorrecao, ComentarioTrecho, EdicoesAnotacao } from "@/hooks/useComentariosTrechoCorrecao";
 
 const COMP_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
   c1: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300', label: 'C1' },
@@ -53,7 +53,7 @@ function highlightClass(m: ComentarioTrecho): string {
 interface MarcacaoCardProps {
   marcacao: ComentarioTrecho;
   highlighted: boolean;
-  onConfirmar: (id: string, comentario?: string) => void;
+  onConfirmar: (id: string, edicoes?: EdicoesAnotacao) => void;
   onIgnorar: (id: string) => void;
   onDesfazer?: (id: string) => void;
 }
@@ -80,6 +80,11 @@ const MarcacaoCard = ({ marcacao, highlighted, onConfirmar, onIgnorar, onDesfaze
         {c && (
           <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>
             {c.label}
+          </span>
+        )}
+        {marcacao.paragrafo && (
+          <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+            ¶{marcacao.paragrafo}
           </span>
         )}
         {marcacao.tipo && (
@@ -113,7 +118,7 @@ const MarcacaoCard = ({ marcacao, highlighted, onConfirmar, onIgnorar, onDesfaze
             <Button
               size="sm"
               className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => { onConfirmar(marcacao.id, comentarioEditado); setEditando(false); }}
+              onClick={() => { onConfirmar(marcacao.id, { comentario: comentarioEditado }); setEditando(false); }}
             >
               <Check className="w-3 h-3 mr-1" /> Confirmar
             </Button>

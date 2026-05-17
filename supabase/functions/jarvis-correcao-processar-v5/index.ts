@@ -1168,17 +1168,20 @@ Tom:
 MARCAÇÕES DE TRECHO
 ══════════════════════════════════════════════
 
-Com base nos problemas identificados em C1-C5, selecione de 4 a 10 dos mais impactantes na nota e gere marcações de trecho.
+Com base nos problemas identificados em C1-C5, gere marcações individuais — UMA marcação por erro específico.
 
-REGRAS:
-- O campo "trecho" deve ser texto literal copiado EXATAMENTE da redação original
-- Máximo de 10 marcações
-- Para C1/C4: use o trecho_original já identificado na análise de cada competência
-- Para C2/C3/C5: use a passagem do texto que melhor ilustra o problema
-- Omita quando não houver trecho identificável no texto (ex: ausência total de elemento)
-- "comentario": máximo 150 caracteres, direto e pedagógico
-- "tipo": use "erro" para problemas formais (gramática, ortografia), "ponto_de_atencao" para questões argumentativas/estruturais, "dica" para sugestões de melhoria
-- "sugestao_reescrita": versão corrigida do trecho, ou null se não aplicável
+REGRAS CRÍTICAS:
+- CADA marcação aponta UM ÚNICO problema — nunca agrupe múltiplos erros em uma marcação
+- "trecho": copie EXATAMENTE a palavra ou expressão mínima problemática do texto original (inclua os erros como estão)
+- Para C1 (ortografia/gramática/pontuação): UMA marcação por palavra/vírgula incorreta — ex: "verassidade" e "vunerável" são marcações separadas
+- Para C4 (coesão): UMA marcação por conector, pronome referencial ou operador argumentativo inadequado
+- Para C2/C3/C5: UMA marcação por problema estrutural/argumentativo identificável com trecho preciso
+- "paragrafo": número do parágrafo onde o trecho se encontra (1 = introdução, 2 = 1º desenvolvimento, etc.)
+- Gere entre 5 e 20 marcações (quantidade proporcional aos problemas encontrados — não limite artificialmente)
+- "comentario": máximo 120 caracteres, diagnóstico direto e pedagógico
+- "tipo": "erro" para problemas formais, "ponto_de_atencao" para questões estruturais/argumentativas, "dica" para sugestões
+- "sugestao_reescrita": apenas a forma corrigida da palavra/expressão (não a frase inteira), ou null se não aplicável
+- Omita marcações quando não houver trecho literalmente identificável
 
 ══════════════════════════════════════════════
 FORMATO FINAL — JSON OBRIGATÓRIO
@@ -1209,11 +1212,12 @@ Use \n\n para separar pontos distintos. Exemplo:
   "resumo_geral": "<comentário pedagógico final>",
   "marcacoes_trecho": [
     {
-      "trecho": "<texto literal copiado da redação>",
+      "trecho": "<palavra ou expressão exata copiada do texto>",
+      "paragrafo": <numero do parágrafo, 1=introdução>,
       "competencia": "<c1|c2|c3|c4|c5>",
       "tipo": "<erro|dica|ponto_de_atencao>",
-      "comentario": "<comentário pedagógico, max 150 chars>",
-      "sugestao_reescrita": "<versão corrigida ou null>"
+      "comentario": "<diagnóstico direto, max 120 chars>",
+      "sugestao_reescrita": "<forma corrigida ou null>"
     }
   ]
 }`,
@@ -1263,6 +1267,15 @@ function parseJSON<T>(text: string, label?: string): T {
   // Loga trecho do texto para diagnóstico sem expor dados sensíveis
   console.error(`❌ parseJSON falhou${label ? ` [${label}]` : ""}. Início: ${text.slice(0, 300)} | Fim: ${text.slice(-200)}`);
   throw new Error("Não foi possível parsear o JSON retornado pela IA");
+}
+
+function obterNumeroParagrafo(textoOriginal: string, trecho: string): number {
+  const busca = trecho.trim().slice(0, 30);
+  const pos = textoOriginal.indexOf(busca);
+  if (pos === -1) return 1;
+  const antes = textoOriginal.slice(0, pos);
+  const blocos = antes.split(/\n+/).filter(b => b.trim().length > 0);
+  return blocos.length + 1;
 }
 
 function localizarTrecho(texto: string, trecho: string): {
@@ -2100,10 +2113,13 @@ Deno.serve(async (req) => {
         const textoRedacao: string = correcao.transcricao_confirmada ?? transcricaoConfirmada ?? "";
         const rows = marcacoesRaw
           .filter((m: any) => m?.trecho && m?.competencia && m?.comentario)
-          .slice(0, 10)
+          .slice(0, 20)
           .map((m: any) => {
             const loc = localizarTrecho(textoRedacao, m.trecho);
             if (!loc) return null;
+            const paragrafo = m.paragrafo
+              ? Number(m.paragrafo)
+              : obterNumeroParagrafo(textoRedacao, m.trecho);
             return {
               redacao_enviada_id: correcao.redacao_enviada_id,
               jarvis_correcao_id: correcaoId,
@@ -2113,6 +2129,7 @@ Deno.serve(async (req) => {
               ocorrencia: loc.ocorrencia,
               contexto_anterior: loc.contexto_anterior,
               contexto_posterior: loc.contexto_posterior,
+              paragrafo: isNaN(paragrafo) ? null : paragrafo,
               competencia: String(m.competencia).toLowerCase(),
               tipo: m.tipo ?? null,
               comentario: String(m.comentario).slice(0, 150),
