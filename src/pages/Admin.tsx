@@ -862,18 +862,14 @@ const Admin = () => {
 
 
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleLogout = async () => {
-    console.log('🔐 Iniciando logout do admin...');
     try {
       await supabase.auth.signOut();
-      console.log('✅ Supabase auth signOut completo');
       signOut();
-      console.log('✅ Context signOut completo');
-      navigate('/login', { replace: true });
-      console.log('✅ Navegação para /login completa');
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('❌ Erro no logout:', error);
     }
