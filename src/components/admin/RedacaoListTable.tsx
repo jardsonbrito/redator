@@ -244,6 +244,15 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                 <TableCell className="w-[12%]">
                   {(() => {
                     const congelada = estaCongelada(redacao);
+                    const jarvisState = getJarvisState(redacao);
+                    if (jarvisState === "processando") {
+                      return (
+                        <Badge className="bg-violet-100 text-violet-700 text-xs px-1 py-0.5 flex items-center gap-1 w-fit">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Processando
+                        </Badge>
+                      );
+                    }
                     const statusDisplay = congelada ? "congelada" : redacao.status;
                     return (
                       <Badge className={`${getStatusColor(statusDisplay, redacao.corrigida)} text-xs px-1 py-0.5`}>
