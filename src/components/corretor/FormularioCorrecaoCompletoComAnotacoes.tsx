@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MarcacoesJarvisPanel } from "./MarcacoesJarvisPanel";
 import { Badge } from "@/components/ui/badge";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { useJarvisAdmin } from "@/hooks/useJarvisAdmin";
@@ -711,8 +713,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
       {/* Painel lateral — Sugestão do Jarvis */}
       <Sheet open={showJarvisPanel} onOpenChange={setShowJarvisPanel}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader className="border-b pb-4">
+        <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col overflow-hidden p-0">
+          <SheetHeader className="border-b px-6 py-4 shrink-0">
             <SheetTitle className="flex items-center gap-2 text-violet-900">
               <Sparkles className="w-4 h-4 text-violet-600" />
               Sugestão do Jarvis
@@ -720,88 +722,114 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           </SheetHeader>
 
           {loadingJarvis && (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex items-center justify-center flex-1 py-16">
               <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
             </div>
           )}
 
           {!loadingJarvis && jarvisData && (
-            <div className="py-4 space-y-6">
-              {/* Notas sugeridas */}
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Notas sugeridas</p>
-                <div className="grid grid-cols-5 gap-2">
-                  {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
-                    const info = COMP_INFO[key];
-                    const nota = jarvisData[`nota_${key}`] ?? jarvisData.correcao_ia?.competencias?.[key]?.nota ?? 0;
-                    return (
-                      <div key={key} className="rounded-xl border p-2 text-center" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
-                        <p className="text-[10px] font-black" style={{ color: info.tc }}>C{i + 1}</p>
-                        <p className="text-lg font-black leading-none mt-1" style={{ color: info.cor }}>{nota}</p>
+            <Tabs defaultValue="analise" className="flex flex-col flex-1 overflow-hidden">
+              <TabsList className="shrink-0 mx-6 mt-4 mb-0 grid w-auto grid-cols-2 bg-slate-100">
+                <TabsTrigger value="analise" className="text-xs font-semibold">Análise</TabsTrigger>
+                <TabsTrigger value="marcacoes" className="text-xs font-semibold" disabled={!redacao.texto}>
+                  Marcações
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Aba: Análise */}
+              <TabsContent value="analise" className="flex-1 overflow-y-auto px-6 py-4">
+                <div className="space-y-6">
+                  {/* Notas sugeridas */}
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Notas sugeridas</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
+                        const info = COMP_INFO[key];
+                        const nota = jarvisData[`nota_${key}`] ?? jarvisData.correcao_ia?.competencias?.[key]?.nota ?? 0;
+                        return (
+                          <div key={key} className="rounded-xl border p-2 text-center" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
+                            <p className="text-[10px] font-black" style={{ color: info.tc }}>C{i + 1}</p>
+                            <p className="text-lg font-black leading-none mt-1" style={{ color: info.cor }}>{nota}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-center">
+                      <p className="text-xs text-violet-600 font-bold uppercase tracking-wide">Nota total</p>
+                      <p className="text-2xl font-black text-violet-800">{jarvisData.nota_total ?? 0}</p>
+                    </div>
+                  </div>
+
+                  {/* Análise por competência */}
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Análise por competência</p>
+                    <div className="space-y-3">
+                      {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
+                        const info = COMP_INFO[key];
+                        const justificativa = jarvisData.correcao_ia?.competencias?.[key]?.justificativa;
+                        if (!justificativa) return null;
+                        return (
+                          <div key={key} className="rounded-xl border p-3" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <span className="text-xs font-black" style={{ color: info.tc }}>C{i + 1}</span>
+                              <span className="text-xs text-slate-400">—</span>
+                              <span className="text-xs font-semibold text-slate-600">{info.label}</span>
+                            </div>
+                            <p className="text-xs text-slate-700 leading-relaxed">{justificativa}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Pontos de atenção */}
+                  {jarvisData.correcao_ia?.sugestoes_objetivas?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Pontos de atenção</p>
+                      <ul className="space-y-1.5">
+                        {(jarvisData.correcao_ia.sugestoes_objetivas as string[]).map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
+                            <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black">{i + 1}</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Versão lapidada */}
+                  {jarvisData.correcao_ia?.versao_lapidada && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Versão lapidada</p>
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{jarvisData.correcao_ia.versao_lapidada}</p>
                       </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-center">
-                  <p className="text-xs text-violet-600 font-bold uppercase tracking-wide">Nota total</p>
-                  <p className="text-2xl font-black text-violet-800">{jarvisData.nota_total ?? 0}</p>
-                </div>
-              </div>
+                    </div>
+                  )}
 
-              {/* Análise por competência */}
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Análise por competência</p>
-                <div className="space-y-3">
-                  {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
-                    const info = COMP_INFO[key];
-                    const justificativa = jarvisData.correcao_ia?.competencias?.[key]?.justificativa;
-                    if (!justificativa) return null;
-                    return (
-                      <div key={key} className="rounded-xl border p-3" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <span className="text-xs font-black" style={{ color: info.tc }}>C{i + 1}</span>
-                          <span className="text-xs text-slate-400">—</span>
-                          <span className="text-xs font-semibold text-slate-600">{info.label}</span>
-                        </div>
-                        <p className="text-xs text-slate-700 leading-relaxed">{justificativa}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Pontos de atenção */}
-              {jarvisData.correcao_ia?.sugestoes_objetivas?.length > 0 && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Pontos de atenção</p>
-                  <ul className="space-y-1.5">
-                    {(jarvisData.correcao_ia.sugestoes_objetivas as string[]).map((s, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
-                        <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black">{i + 1}</span>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Versão lapidada */}
-              {jarvisData.correcao_ia?.versao_lapidada && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Versão lapidada</p>
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{jarvisData.correcao_ia.versao_lapidada}</p>
+                  {/* Aviso */}
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      <strong>Atenção:</strong> estas são sugestões da IA e servem de apoio à sua análise. A correção final é de sua responsabilidade.
+                    </p>
                   </div>
                 </div>
-              )}
+              </TabsContent>
 
-              {/* Aviso */}
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-xs text-amber-700 leading-relaxed">
-                  <strong>Atenção:</strong> estas são sugestões da IA e servem de apoio à sua análise. A correção final é de sua responsabilidade.
-                </p>
-              </div>
-            </div>
+              {/* Aba: Marcações de trecho */}
+              <TabsContent value="marcacoes" className="flex-1 overflow-y-auto px-6 py-4">
+                {redacao.texto ? (
+                  <MarcacoesJarvisPanel
+                    redacaoEnviadaId={redacao.id}
+                    texto={redacao.texto}
+                  />
+                ) : (
+                  <div className="text-center py-10 text-slate-400">
+                    <p className="text-sm">Marcações disponíveis apenas para redações digitadas.</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
         </SheetContent>
       </Sheet>
