@@ -775,7 +775,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                               <span className="text-xs text-slate-400">—</span>
                               <span className="text-xs font-semibold text-slate-600">{info.label}</span>
                             </div>
-                            <p className="text-xs text-slate-700 leading-relaxed">{justificativa}</p>
+                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{justificativa}</p>
                           </div>
                         );
                       })}

@@ -1184,13 +1184,17 @@ REGRAS:
 FORMATO FINAL — JSON OBRIGATÓRIO
 ══════════════════════════════════════════════
 
+ATENÇÃO — justificativas:
+Use \n\n para separar pontos distintos. Exemplo:
+"Ponto principal com avaliação geral.\n\nDetalhe dos erros ou aspectos encontrados.\n\nConclusão e enquadramento na nota."
+
 {
   "competencias": {
-    "c1": { "nota": <numero>, "justificativa": "<texto>" },
-    "c2": { "nota": <numero>, "justificativa": "<texto>" },
-    "c3": { "nota": <numero>, "justificativa": "<texto>" },
-    "c4": { "nota": <numero>, "justificativa": "<texto>" },
-    "c5": { "nota": <numero>, "justificativa": "<texto>" }
+    "c1": { "nota": <numero>, "justificativa": "<ponto geral>\n\n<detalhes>\n\n<conclusão>" },
+    "c2": { "nota": <numero>, "justificativa": "<ponto geral>\n\n<detalhes>\n\n<conclusão>" },
+    "c3": { "nota": <numero>, "justificativa": "<ponto geral>\n\n<detalhes>\n\n<conclusão>" },
+    "c4": { "nota": <numero>, "justificativa": "<ponto geral>\n\n<detalhes>\n\n<conclusão>" },
+    "c5": { "nota": <numero>, "justificativa": "<ponto geral>\n\n<detalhes>\n\n<conclusão>" }
   },
   "nota_total": <numero>,
   "estrutura": {
@@ -2093,7 +2097,7 @@ Deno.serve(async (req) => {
       // Inserir marcações de trecho geradas pelo Jarvis
       const marcacoesRaw: any[] = consolResult?.marcacoes_trecho ?? [];
       if (marcacoesRaw.length > 0) {
-        const textoRedacao: string = correcao.texto ?? "";
+        const textoRedacao: string = correcao.transcricao_confirmada ?? transcricaoConfirmada ?? "";
         const rows = marcacoesRaw
           .filter((m: any) => m?.trecho && m?.competencia && m?.comentario)
           .slice(0, 10)
