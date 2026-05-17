@@ -6,7 +6,9 @@ import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarcacoesJarvisPanel } from "./MarcacoesJarvisPanel";
+import { useComentariosTrechoCorrecao, ComentarioTrecho } from "@/hooks/useComentariosTrechoCorrecao";
 import { Badge } from "@/components/ui/badge";
+import { FileText, ImageIcon } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { useJarvisAdmin } from "@/hooks/useJarvisAdmin";
 import { estaCongelada } from "@/utils/redacaoUtils";
@@ -64,6 +66,12 @@ const STATUS_LABELS: Record<string, string> = {
   incompleta: 'Incompleta',
   corrigida: 'Corrigida',
   devolvida: 'Devolvida',
+};
+
+const TIPO_LABELS_FORM: Record<string, string> = {
+  erro: 'Erro',
+  dica: 'Dica',
+  ponto_de_atencao: 'Ponto de atenção',
 };
 
 export const FormularioCorrecaoCompletoComAnotacoes = ({
@@ -330,6 +338,33 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     );
   };
 
+  const handleMouseUpTexto = () => {
+    if (!modoTexto || !textoCorretorRef.current) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    try {
+      const range = sel.getRangeAt(0);
+      const container = textoCorretorRef.current;
+      if (!container.contains(range.startContainer) || !container.contains(range.endContainer)) {
+        sel.removeAllRanges();
+        return;
+      }
+      const preRange = document.createRange();
+      preRange.selectNodeContents(container);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const inicio = preRange.toString().length;
+      const selected = sel.toString();
+      if (!selected.trim()) return;
+      sel.removeAllRanges();
+      setTimeout(() => {
+        setNovaAnotacaoForm({ competencia: 'c1', tipo: 'erro', comentario: '', sugestao_reescrita: '' });
+        setDialogNovaAnotacao({ trecho: selected, inicio, fim: inicio + selected.length });
+      }, 10);
+    } catch {
+      window.getSelection()?.removeAllRanges();
+    }
+  };
+
   const refinarElogios = async () => {
     if (!comentarios.elogios.trim()) {
       toast({ title: "Atenção", description: "Digite a mensagem antes de refinar.", variant: "destructive" });
@@ -351,6 +386,21 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const hasImage = !!(redacao as any).redacao_imagem_gerada_url || !!redacao.redacao_manuscrita_url;
   const imagemUrl = (redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url;
   const isImagemGerada = !!(redacao as any).redacao_imagem_gerada_url;
+
+  // Modo texto com marcações Jarvis: só disponível para digitadas com Jarvis corrigido
+  const hasJarvisAtivo = isImagemGerada && !!redacao.texto && redacao.jarvis_precorrecao_status === 'corrigida';
+  const [modoTexto, setModoTexto] = useState(false);
+
+  // Sincroniza modo texto quando a redação muda
+  useEffect(() => {
+    setModoTexto(hasJarvisAtivo);
+  }, [redacao.id]);
+
+  const { marcacoes: marcacoesJarvis, inserir: inserirAnotacao, isInserting: isInsertingAnotacao } = useComentariosTrechoCorrecao(hasJarvisAtivo ? redacao.id : null);
+  const [tooltipMarcacao, setTooltipMarcacao] = useState<ComentarioTrecho | null>(null);
+  const textoCorretorRef = useRef<HTMLDivElement>(null);
+  const [dialogNovaAnotacao, setDialogNovaAnotacao] = useState<{ trecho: string; inicio: number; fim: number } | null>(null);
+  const [novaAnotacaoForm, setNovaAnotacaoForm] = useState({ competencia: 'c1', tipo: 'erro', comentario: '', sugestao_reescrita: '' });
 
   const dataFormatada = new Date(redacao.data_envio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const statusLabel = STATUS_LABELS[redacao.status_minha_correcao] || redacao.status_minha_correcao;
@@ -460,7 +510,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               <div className="flex items-center justify-between border-b border-violet-100 px-5 py-3">
                 <div>
                   <h2 className="text-sm font-black text-slate-900">
-                    {isImagemGerada ? 'Redação digitalizada' : 'Redação manuscrita'}
+                    {isImagemGerada
+                      ? (modoTexto ? 'Redação — texto com marcações' : 'Redação digitalizada')
+                      : 'Redação manuscrita'}
                   </h2>
                   {(redacao as any).contagem_palavras ? (
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -468,22 +520,113 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                     </p>
                   ) : null}
                 </div>
+                {/* Toggle imagem / texto — só para digitadas com Jarvis */}
+                {hasJarvisAtivo && (
+                  <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs">
+                    <button
+                      onClick={() => setModoTexto(false)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${!modoTexto ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                    >
+                      <ImageIcon className="w-3 h-3" /> Imagem
+                    </button>
+                    <button
+                      onClick={() => setModoTexto(true)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${modoTexto ? 'bg-violet-700 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                    >
+                      <FileText className="w-3 h-3" /> Texto
+                    </button>
+                  </div>
+                )}
               </div>
-              <RedacaoAnotacaoVisual
-                ref={anotacaoRef}
-                imagemUrl={imagemUrl!}
-                redacaoId={redacao.id}
-                corretorId={corretorId}
-                ehCorretor1={redacao.eh_corretor_1}
-                ehCorretor2={redacao.eh_corretor_2}
-                statusMinhaCorrecao={redacao.status_minha_correcao}
-                tipoTabela={
-                  redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
-                  redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' :
-                  'redacoes_enviadas'
-                }
-                onAnotacoesChange={handleAnotacoesChange}
-              />
+
+              {/* Modo texto — redação com highlights do Jarvis */}
+              {modoTexto && redacao.texto ? (
+                <div className="p-6">
+                  <p className="text-[11px] text-slate-400 mb-3">Selecione um trecho do texto para criar uma marcação do corretor</p>
+                  <div
+                    ref={textoCorretorRef}
+                    onMouseUp={handleMouseUpTexto}
+                    className="text-sm leading-relaxed whitespace-pre-wrap text-slate-800 font-serif cursor-text select-text"
+                  >
+                    {(() => {
+                      const visiveis = marcacoesJarvis.filter(
+                        m => m.status !== 'ignorada' && m.inicio >= 0 && m.fim <= redacao.texto!.length && m.fim > m.inicio
+                      );
+                      if (!visiveis.length) return redacao.texto;
+
+                      const sorted = [...visiveis].sort((a, b) => a.inicio - b.inicio);
+                      const parts: React.ReactNode[] = [];
+                      let cursor = 0;
+
+                      const COMP_HL: Record<string, string> = {
+                        c1: 'bg-red-100 text-red-900 border-b-2 border-red-300',
+                        c2: 'bg-emerald-100 text-emerald-900 border-b-2 border-emerald-300',
+                        c3: 'bg-blue-100 text-blue-900 border-b-2 border-blue-300',
+                        c4: 'bg-orange-100 text-orange-900 border-b-2 border-orange-300',
+                        c5: 'bg-purple-100 text-purple-900 border-b-2 border-purple-300',
+                      };
+
+                      for (const m of sorted) {
+                        if (m.inicio > cursor) parts.push(<span key={`t-${cursor}`}>{redacao.texto!.slice(cursor, m.inicio)}</span>);
+                        if (m.fim > m.inicio) {
+                          const cls = m.status === 'sugerida'
+                            ? 'bg-violet-100 text-violet-900 border-b-2 border-dashed border-violet-400 cursor-pointer hover:bg-violet-200'
+                            : (COMP_HL[m.competencia] ?? 'bg-yellow-100') + ' cursor-pointer hover:opacity-80';
+                          parts.push(
+                            <span
+                              key={m.id}
+                              className={`rounded-sm px-0.5 transition-colors ${cls}`}
+                              onClick={() => setTooltipMarcacao(m)}
+                              title={m.comentario}
+                            >
+                              {redacao.texto!.slice(m.inicio, m.fim)}
+                            </span>
+                          );
+                        }
+                        cursor = Math.max(cursor, m.fim);
+                      }
+                      if (cursor < redacao.texto!.length) parts.push(<span key={`t-end`}>{redacao.texto!.slice(cursor)}</span>);
+                      return parts;
+                    })()}
+                  </div>
+
+                  {/* Legenda */}
+                  {marcacoesJarvis.length > 0 && (
+                    <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-5 flex-wrap">
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Legenda:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block w-5 h-2 rounded-sm bg-violet-100 border-b-2 border-dashed border-violet-400" />
+                        <span className="text-[10px] text-slate-500">Sugestão pendente</span>
+                      </div>
+                      {['c1','c2','c3','c4','c5'].map((c, i) => {
+                        const colors = ['bg-red-100 border-red-300','bg-emerald-100 border-emerald-300','bg-blue-100 border-blue-300','bg-orange-100 border-orange-300','bg-purple-100 border-purple-300'];
+                        return (
+                          <div key={c} className="flex items-center gap-1">
+                            <span className={`inline-block w-5 h-2 rounded-sm border-b-2 ${colors[i]}`} />
+                            <span className="text-[10px] text-slate-500">C{i+1}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <RedacaoAnotacaoVisual
+                  ref={anotacaoRef}
+                  imagemUrl={imagemUrl!}
+                  redacaoId={redacao.id}
+                  corretorId={corretorId}
+                  ehCorretor1={redacao.eh_corretor_1}
+                  ehCorretor2={redacao.eh_corretor_2}
+                  statusMinhaCorrecao={redacao.status_minha_correcao}
+                  tipoTabela={
+                    redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
+                    redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' :
+                    'redacoes_enviadas'
+                  }
+                  onAnotacoesChange={handleAnotacoesChange}
+                />
+              )}
             </div>
           )}
 
@@ -857,6 +1000,151 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               <Button onClick={() => setShowRedacaoExpandida(false)}>Fechar</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: detalhe de marcação ao clicar no highlight */}
+      <Dialog open={!!tooltipMarcacao} onOpenChange={(open) => !open && setTooltipMarcacao(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2 flex-wrap">
+              {tooltipMarcacao && COMP_INFO[tooltipMarcacao.competencia as keyof typeof COMP_INFO] && (
+                <span
+                  className="text-xs font-black px-2 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: COMP_INFO[tooltipMarcacao.competencia as keyof typeof COMP_INFO].bg,
+                    color: COMP_INFO[tooltipMarcacao.competencia as keyof typeof COMP_INFO].tc,
+                  }}
+                >
+                  {tooltipMarcacao.competencia.toUpperCase()}
+                </span>
+              )}
+              <span>Marcação de trecho</span>
+              {tooltipMarcacao?.tipo && (
+                <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                  {TIPO_LABELS_FORM[tooltipMarcacao.tipo] ?? tooltipMarcacao.tipo}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {tooltipMarcacao && (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Trecho</p>
+                <p className="text-sm italic text-slate-700">"{tooltipMarcacao.trecho}"</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Comentário</p>
+                <p className="text-sm text-slate-800 leading-relaxed">{tooltipMarcacao.comentario}</p>
+              </div>
+              {tooltipMarcacao.sugestao_reescrita && (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 mb-1">Sugestão de reescrita</p>
+                  <p className="text-sm italic text-emerald-800">"{tooltipMarcacao.sugestao_reescrita}"</p>
+                </div>
+              )}
+              <p className="text-[10px] text-slate-400">
+                Origem: {tooltipMarcacao.origem === 'jarvis' ? 'Jarvis (IA)' : 'Corretor'}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: nova marcação do corretor por seleção de texto */}
+      <Dialog open={!!dialogNovaAnotacao} onOpenChange={(open) => !open && setDialogNovaAnotacao(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova marcação de trecho</DialogTitle>
+          </DialogHeader>
+          {dialogNovaAnotacao && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Trecho selecionado</p>
+                <p className="text-sm italic text-slate-700">"{dialogNovaAnotacao.trecho}"</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Competência</label>
+                  <Select value={novaAnotacaoForm.competencia} onValueChange={(v) => setNovaAnotacaoForm(p => ({ ...p, competencia: v }))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="c1">C1 — Norma-padrão</SelectItem>
+                      <SelectItem value="c2">C2 — Tema e repertório</SelectItem>
+                      <SelectItem value="c3">C3 — Projeto de texto</SelectItem>
+                      <SelectItem value="c4">C4 — Coesão</SelectItem>
+                      <SelectItem value="c5">C5 — Intervenção</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Tipo</label>
+                  <Select value={novaAnotacaoForm.tipo} onValueChange={(v) => setNovaAnotacaoForm(p => ({ ...p, tipo: v }))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="erro">Erro</SelectItem>
+                      <SelectItem value="dica">Dica</SelectItem>
+                      <SelectItem value="ponto_de_atencao">Ponto de atenção</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Comentário *</label>
+                <TextareaWithSpellcheck
+                  value={novaAnotacaoForm.comentario}
+                  onChange={(e) => setNovaAnotacaoForm(p => ({ ...p, comentario: e.target.value }))}
+                  placeholder="Explique o erro ou orientação para o aluno..."
+                  className="text-xs min-h-[80px] resize-none"
+                  maxLength={300}
+                />
+                <p className="text-[10px] text-slate-400 text-right mt-0.5">{novaAnotacaoForm.comentario.length}/300</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Sugestão de reescrita <span className="text-slate-400 font-normal">(opcional)</span></label>
+                <TextareaWithSpellcheck
+                  value={novaAnotacaoForm.sugestao_reescrita}
+                  onChange={(e) => setNovaAnotacaoForm(p => ({ ...p, sugestao_reescrita: e.target.value }))}
+                  placeholder="Como poderia ser reescrito?"
+                  className="text-xs min-h-[60px] resize-none"
+                  maxLength={200}
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end pt-1">
+                <Button variant="outline" size="sm" onClick={() => setDialogNovaAnotacao(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!novaAnotacaoForm.comentario.trim() || isInsertingAnotacao}
+                  onClick={() => {
+                    inserirAnotacao({
+                      trecho: dialogNovaAnotacao.trecho,
+                      inicio: dialogNovaAnotacao.inicio,
+                      fim: dialogNovaAnotacao.fim,
+                      competencia: novaAnotacaoForm.competencia,
+                      tipo: novaAnotacaoForm.tipo,
+                      comentario: novaAnotacaoForm.comentario.trim(),
+                      sugestao_reescrita: novaAnotacaoForm.sugestao_reescrita.trim() || undefined,
+                    });
+                    setDialogNovaAnotacao(null);
+                  }}
+                  className="bg-violet-700 hover:bg-violet-800 text-white gap-1.5"
+                >
+                  {isInsertingAnotacao && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Salvar marcação
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -70,9 +70,43 @@ export const useComentariosTrechoCorrecao = (redacaoEnviadaId: string | null | u
   const desfazer = (id: string) =>
     mutacao.mutate({ id, status: 'sugerida' });
 
+  const mutacaoInserir = useMutation({
+    mutationFn: async (nova: {
+      trecho: string; inicio: number; fim: number;
+      competencia: string; tipo?: string;
+      comentario: string; sugestao_reescrita?: string;
+    }) => {
+      const { error } = await supabase
+        .from('comentarios_trecho_correcao')
+        .insert({
+          redacao_enviada_id: redacaoEnviadaId!,
+          trecho: nova.trecho,
+          inicio: nova.inicio,
+          fim: nova.fim,
+          ocorrencia: 1,
+          competencia: nova.competencia,
+          tipo: nova.tipo ?? null,
+          comentario: nova.comentario,
+          sugestao_reescrita: nova.sugestao_reescrita ?? null,
+          origem: 'corretor',
+          status: 'confirmada',
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+    onError: () => {
+      toast({ title: "Erro ao criar marcação", variant: "destructive" });
+    },
+  });
+
+  const inserir = (nova: Parameters<typeof mutacaoInserir.mutate>[0]) =>
+    mutacaoInserir.mutate(nova);
+
   const sugeridas = marcacoes.filter(m => m.status === 'sugerida');
   const confirmadas = marcacoes.filter(m => m.status === 'confirmada');
   const ignoradas = marcacoes.filter(m => m.status === 'ignorada');
 
-  return { marcacoes, isLoading, sugeridas, confirmadas, ignoradas, confirmar, ignorar, desfazer };
+  return { marcacoes, isLoading, sugeridas, confirmadas, ignoradas, confirmar, ignorar, desfazer, inserir, isInserting: mutacaoInserir.isPending };
 };
