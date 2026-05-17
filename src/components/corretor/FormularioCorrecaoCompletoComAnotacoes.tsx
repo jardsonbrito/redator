@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight } from "lucide-react";
+import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight, Mic, MicOff, Bot, SendHorizontal } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarcacoesJarvisPanel } from "./MarcacoesJarvisPanel";
@@ -24,6 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
 import { PEPMarcacaoModal } from "./PEPMarcacaoModal";
 import { useMarcacoesRedacao } from "@/hooks/usePEPMarcacoes";
+import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
+import { cn } from "@/lib/utils";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -60,6 +62,9 @@ const PILLS_INFO = [
   { key: 6, label: 'PA', cor: '#00BCD4' },
 ] as const;
 
+const COMP_STR_TO_NUM: Record<string, number> = { c1: 1, c2: 2, c3: 3, c4: 4, c5: 5, pa: 6 };
+const COMP_NUM_TO_STR: Record<number, string> = { 1: 'c1', 2: 'c2', 3: 'c3', 4: 'c4', 5: 'c5', 6: 'pa' };
+
 const STATUS_LABELS: Record<string, string> = {
   pendente: 'Pendente',
   em_correcao: 'Em correção',
@@ -82,9 +87,9 @@ interface DialogAnotacao {
   paragrafo?: number;
   existingId?: string;
   competencia: string;
-  tipo: string;
+  tipo?: string;
   comentario: string;
-  sugestao_reescrita: string;
+  sugestao_reescrita?: string;
 }
 
 export const FormularioCorrecaoCompletoComAnotacoes = ({
@@ -351,6 +356,56 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     );
   };
 
+  const panelHandleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    panelDragRef.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: panelDragPos.x,
+      startPosY: panelDragPos.y,
+    };
+  };
+
+  const panelRefinar = async () => {
+    if (!dialogAnotacao?.comentario.trim()) return;
+    setPanelRefineLoading(true);
+    setPanelRefineSugestoes([]);
+    try {
+      const { data, error } = await supabase.functions.invoke('refinar-comentario-corretor', { body: { comentario: dialogAnotacao.comentario.trim() } });
+      if (error) throw error;
+      if (data?.sugestoes && Array.isArray(data.sugestoes)) setPanelRefineSugestoes(data.sugestoes);
+    } catch (err: any) {
+      toast({ title: "Erro ao refinar", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setPanelRefineLoading(false);
+    }
+  };
+
+  const panelChamarAssistente = async () => {
+    if (!panelAssistentePergunta.trim() || !dialogAnotacao) return;
+    const perguntaAtual = panelAssistentePergunta.trim();
+    setPanelAssistenteLoading(true);
+    setPanelAssistentePergunta('');
+    const compNum = COMP_STR_TO_NUM[dialogAnotacao.competencia] ?? 1;
+    const pill = PILLS_INFO[compNum - 1];
+    const compInfo = COMP_INFO[dialogAnotacao.competencia as keyof typeof COMP_INFO];
+    const compLabel = pill ? `${pill.label} — ${compInfo?.label ?? (compNum === 6 ? 'Ponto de Atenção' : '')}` : '';
+    try {
+      const { data, error } = await supabase.functions.invoke('assistente-correcao', {
+        body: { competencia: compLabel, comentarioAtual: dialogAnotacao.comentario, pergunta: perguntaAtual },
+      });
+      if (error) throw error;
+      const resposta = data?.resposta ?? 'Sem resposta.';
+      setPanelAssistenteHistorico(prev => [...prev.slice(-4), { pergunta: perguntaAtual, resposta }]);
+    } catch (err: any) {
+      toast({ title: "Erro no assistente", description: err.message || "Tente novamente.", variant: "destructive" });
+      setPanelAssistentePergunta(perguntaAtual);
+    } finally {
+      setPanelAssistenteLoading(false);
+    }
+  };
+
   const handleMouseUpTexto = () => {
     if (!modoTexto || !textoCorretorRef.current) return;
     const sel = window.getSelection();
@@ -370,7 +425,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       if (!selected.trim()) return;
       sel.removeAllRanges();
       setTimeout(() => {
-        setDialogAnotacao({ mode: 'nova', trecho: selected, inicio, fim: inicio + selected.length, competencia: 'c1', tipo: 'erro', comentario: '', sugestao_reescrita: '' });
+        setDialogAnotacao({ mode: 'nova', trecho: selected, inicio, fim: inicio + selected.length, competencia: 'c1', comentario: '' });
       }, 10);
     } catch {
       window.getSelection()?.removeAllRanges();
@@ -408,6 +463,38 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     setModoTexto(hasJarvisAtivo);
   }, [redacao.id]);
 
+  // Drag do painel de anotação
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!panelDragRef.current.isDragging) return;
+      setPanelDragPos({
+        x: panelDragRef.current.startPosX + (e.clientX - panelDragRef.current.startX),
+        y: panelDragRef.current.startPosY + (e.clientY - panelDragRef.current.startY),
+      });
+    };
+    const onMouseUp = () => { panelDragRef.current.isDragging = false; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  // Reset do painel ao abrir/fechar
+  useEffect(() => {
+    if (!dialogAnotacao) {
+      panelStopMic();
+    } else {
+      setPanelDragPos({ x: 0, y: 0 });
+      setPanelRefineSugestoes([]);
+      setPanelShowAssistente(false);
+      setPanelAssistentePergunta('');
+      setPanelAssistenteHistorico([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!dialogAnotacao]);
+
   const {
     marcacoes: marcacoesJarvis,
     inserir: inserirAnotacao, isInserting: isInsertingAnotacao,
@@ -417,6 +504,27 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [tooltipMarcacao, setTooltipMarcacao] = useState<ComentarioTrecho | null>(null);
   const textoCorretorRef = useRef<HTMLDivElement>(null);
   const [dialogAnotacao, setDialogAnotacao] = useState<DialogAnotacao | null>(null);
+
+  const [panelDragPos, setPanelDragPos] = useState({ x: 0, y: 0 });
+  const panelDragRef = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
+  const [panelRefineLoading, setPanelRefineLoading] = useState(false);
+  const [panelRefineSugestoes, setPanelRefineSugestoes] = useState<string[]>([]);
+  const [panelShowAssistente, setPanelShowAssistente] = useState(false);
+  const [panelAssistentePergunta, setPanelAssistentePergunta] = useState('');
+  const [panelAssistenteLoading, setPanelAssistenteLoading] = useState(false);
+  const [panelAssistenteHistorico, setPanelAssistenteHistorico] = useState<Array<{ pergunta: string; resposta: string }>>([]);
+  const panelComentarioRef = useRef<HTMLTextAreaElement>(null);
+  const panelAssistenteRef = useRef<HTMLTextAreaElement>(null);
+
+  const panelSetComentario = useCallback((val: string) => {
+    setDialogAnotacao(p => p ? { ...p, comentario: val } : null);
+  }, []);
+
+  const { isRecording: panelMicRecording, isSupported: panelMicSupported, toggleRecording: panelToggleMic, stopRecording: panelStopMic } =
+    useVoiceTranscription(panelSetComentario, dialogAnotacao?.comentario ?? '', panelComentarioRef);
+
+  const { isRecording: panelAssistenteMicRecording, isSupported: panelAssistenteMicSupported, toggleRecording: panelAssistenteMicToggle } =
+    useVoiceTranscription(setPanelAssistentePergunta, panelAssistentePergunta, panelAssistenteRef);
 
   const dataFormatada = new Date(redacao.data_envio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const statusLabel = STATUS_LABELS[redacao.status_minha_correcao] || redacao.status_minha_correcao;
@@ -1084,138 +1192,312 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog unificado: revisão de sugestão Jarvis (editar) ou nova marcação manual (nova) */}
-      <Dialog open={!!dialogAnotacao} onOpenChange={(open) => !open && setDialogAnotacao(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {dialogAnotacao?.mode === 'editar' ? (
-                <><Sparkles className="w-4 h-4 text-violet-500" /> Revisar sugestão do Jarvis</>
-              ) : 'Nova marcação do corretor'}
-            </DialogTitle>
-          </DialogHeader>
-          {dialogAnotacao && (
-            <div className="space-y-4">
-              {/* Trecho */}
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    {dialogAnotacao.mode === 'editar' ? 'Trecho marcado pelo Jarvis' : 'Trecho selecionado'}
-                  </p>
-                  {dialogAnotacao.paragrafo && (
-                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">¶{dialogAnotacao.paragrafo}</span>
+      {/* Painel flutuante: revisão de sugestão Jarvis (editar) ou nova marcação manual (nova) */}
+      {!!dialogAnotacao && (() => {
+        const compNum = COMP_STR_TO_NUM[dialogAnotacao.competencia] ?? 1;
+        const pill = PILLS_INFO[compNum - 1];
+        const compInfo = COMP_INFO[dialogAnotacao.competencia as keyof typeof COMP_INFO];
+        const borderColor = pill?.cor ?? '#7c3aed';
+        return (
+          <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
+            <div
+              className="absolute inset-0 bg-black/30"
+              style={{ pointerEvents: 'auto' }}
+              onClick={() => setDialogAnotacao(null)}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: `calc(50% + ${panelDragPos.x}px)`,
+                top: `calc(50% + ${panelDragPos.y}px)`,
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'auto',
+                width: '26rem',
+                maxWidth: '92vw',
+                borderTop: `4px solid ${borderColor}`,
+              }}
+              className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden"
+            >
+              {/* Header arrastável */}
+              <div
+                onMouseDown={panelHandleDragStart}
+                className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b cursor-grab active:cursor-grabbing select-none"
+              >
+                <div className="flex items-center gap-2">
+                  {pill && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-black"
+                      style={{ backgroundColor: pill.cor + '20', color: pill.cor, border: `1px solid ${pill.cor}55` }}
+                    >
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: pill.cor }} />
+                      {pill.label}
+                    </span>
+                  )}
+                  <span className="text-sm font-bold text-slate-800">
+                    {dialogAnotacao.mode === 'editar'
+                      ? 'Revisar sugestão do Jarvis'
+                      : (compInfo?.label ?? (compNum === 6 ? 'Ponto de Atenção' : 'Nova Marcação'))
+                    }
+                  </span>
+                </div>
+                <button
+                  onClick={() => setDialogAnotacao(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-3">
+                {/* Trecho marcado pelo Jarvis (apenas modo editar) */}
+                {dialogAnotacao.mode === 'editar' && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Trecho marcado pelo Jarvis</p>
+                      {dialogAnotacao.paragrafo && (
+                        <span className="text-[10px] font-semibold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">¶{dialogAnotacao.paragrafo}</span>
+                      )}
+                    </div>
+                    <p className="text-xs italic text-slate-700">"{dialogAnotacao.trecho}"</p>
+                  </div>
+                )}
+
+                {/* Pills de competência */}
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Competência</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {PILLS_INFO.map(p => {
+                      const key = COMP_NUM_TO_STR[p.key];
+                      const selected = dialogAnotacao.competencia === key;
+                      return (
+                        <button
+                          key={p.key}
+                          onClick={() => setDialogAnotacao(prev => prev ? { ...prev, competencia: key } : null)}
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-xs font-bold border transition-all",
+                            selected ? "ring-2 ring-offset-1" : "opacity-60 hover:opacity-100"
+                          )}
+                          style={{
+                            backgroundColor: selected ? p.cor + '20' : 'white',
+                            borderColor: p.cor,
+                            color: p.cor,
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Textarea com microfone */}
+                <div className="relative">
+                  <textarea
+                    ref={panelComentarioRef}
+                    placeholder="Digite seu comentário sobre esta marcação..."
+                    value={dialogAnotacao.comentario}
+                    onChange={(e) => setDialogAnotacao(prev => prev ? { ...prev, comentario: e.target.value } : null)}
+                    rows={4}
+                    autoFocus
+                    autoCapitalize="sentences"
+                    spellCheck={true}
+                    lang="pt-BR"
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={panelToggleMic}
+                    disabled={!panelMicSupported}
+                    className={cn(
+                      "absolute bottom-2 right-2 p-1.5 rounded-full transition-colors",
+                      panelMicRecording
+                        ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                        : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                      !panelMicSupported && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    {panelMicRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
+                </div>
+                {panelMicRecording && <p className="text-xs text-red-500 font-medium animate-pulse">Ouvindo...</p>}
+
+                {/* Refinar clareza */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={panelRefinar}
+                    disabled={panelRefineLoading || !dialogAnotacao.comentario.trim()}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors"
+                  >
+                    {panelRefineLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
+                    {panelRefineLoading ? 'Refinando…' : 'Refinar clareza'}
+                  </button>
+                  {panelRefineSugestoes.length > 0 && (
+                    <button type="button" onClick={() => setPanelRefineSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                      <X className="w-3 h-3" /> Ignorar
+                    </button>
                   )}
                 </div>
-                <p className="text-sm italic text-slate-700">"{dialogAnotacao.trecho}"</p>
-              </div>
 
-              {/* Competência + Tipo */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Competência</label>
-                  <Select value={dialogAnotacao.competencia} onValueChange={(v) => setDialogAnotacao(p => p ? { ...p, competencia: v } : null)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="c1">C1 — Norma-padrão</SelectItem>
-                      <SelectItem value="c2">C2 — Tema e repertório</SelectItem>
-                      <SelectItem value="c3">C3 — Projeto de texto</SelectItem>
-                      <SelectItem value="c4">C4 — Coesão</SelectItem>
-                      <SelectItem value="c5">C5 — Intervenção</SelectItem>
-                      <SelectItem value="pa">PA — Ponto de atenção</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Tipo</label>
-                  <Select value={dialogAnotacao.tipo} onValueChange={(v) => setDialogAnotacao(p => p ? { ...p, tipo: v } : null)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="erro">Erro</SelectItem>
-                      <SelectItem value="dica">Dica</SelectItem>
-                      <SelectItem value="ponto_de_atencao">Ponto de atenção</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Comentário */}
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Comentário *</label>
-                <TextareaWithSpellcheck
-                  value={dialogAnotacao.comentario}
-                  onChange={(e) => setDialogAnotacao(p => p ? { ...p, comentario: e.target.value } : null)}
-                  placeholder="Explique o erro ou orientação para o aluno..."
-                  className="text-xs min-h-[80px] resize-none"
-                  maxLength={300}
-                />
-                <p className="text-[10px] text-slate-400 text-right mt-0.5">{dialogAnotacao.comentario.length}/300</p>
-              </div>
-
-              {/* Sugestão de reescrita */}
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Sugestão de reescrita <span className="text-slate-400 font-normal">(opcional)</span>
-                </label>
-                <TextareaWithSpellcheck
-                  value={dialogAnotacao.sugestao_reescrita}
-                  onChange={(e) => setDialogAnotacao(p => p ? { ...p, sugestao_reescrita: e.target.value } : null)}
-                  placeholder="Como poderia ser reescrito?"
-                  className="text-xs min-h-[56px] resize-none"
-                  maxLength={200}
-                />
-              </div>
-
-              {/* Ações */}
-              <div className="flex gap-2 items-center pt-1">
-                {dialogAnotacao.mode === 'editar' && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 text-xs text-red-600 hover:bg-red-50"
-                    onClick={() => { ignorarMarcacao(dialogAnotacao.existingId!); setDialogAnotacao(null); }}
-                  >
-                    <X className="w-3 h-3 mr-1" /> Ignorar
-                  </Button>
+                {panelRefineSugestoes.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
+                    {panelRefineSugestoes.map((s, i) => (
+                      <button
+                        key={i} type="button"
+                        onClick={() => { setDialogAnotacao(prev => prev ? { ...prev, comentario: s } : null); setPanelRefineSugestoes([]); }}
+                        className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 )}
-                <div className="flex gap-2 ml-auto">
-                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setDialogAnotacao(null)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!dialogAnotacao.comentario.trim() || isInsertingAnotacao || isSavingMarcacao}
+
+                {/* Assistente de correção */}
+                <div className="border-t pt-3">
+                  <button
+                    type="button"
                     onClick={() => {
-                      if (dialogAnotacao.mode === 'editar') {
-                        confirmarMarcacao(dialogAnotacao.existingId!, {
-                          competencia: dialogAnotacao.competencia,
-                          tipo: dialogAnotacao.tipo,
-                          comentario: dialogAnotacao.comentario.trim(),
-                          sugestao_reescrita: dialogAnotacao.sugestao_reescrita.trim() || undefined,
-                        });
-                      } else {
-                        inserirAnotacao({
-                          trecho: dialogAnotacao.trecho,
-                          inicio: dialogAnotacao.inicio,
-                          fim: dialogAnotacao.fim,
-                          competencia: dialogAnotacao.competencia,
-                          tipo: dialogAnotacao.tipo,
-                          comentario: dialogAnotacao.comentario.trim(),
-                          sugestao_reescrita: dialogAnotacao.sugestao_reescrita.trim() || undefined,
-                        });
-                      }
-                      setDialogAnotacao(null);
+                      setPanelShowAssistente(prev => !prev);
+                      if (!panelShowAssistente) setTimeout(() => panelAssistenteRef.current?.focus(), 100);
                     }}
-                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-colors",
+                      panelShowAssistente
+                        ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                        : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                    )}
                   >
-                    {(isInsertingAnotacao || isSavingMarcacao) && <Loader2 className="w-3 h-3 animate-spin" />}
-                    {dialogAnotacao.mode === 'editar' ? 'Confirmar' : 'Salvar'}
-                  </Button>
+                    <Bot className="w-3.5 h-3.5" />
+                    Assistente de correção
+                  </button>
+
+                  {panelShowAssistente && (
+                    <div className="mt-2.5 rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
+                      {panelAssistenteHistorico.length > 0 && (
+                        <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                          {panelAssistenteHistorico.map((item, i) => (
+                            <div key={i} className="space-y-1">
+                              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide truncate">Você: {item.pergunta}</p>
+                              <div className="bg-white rounded-lg border border-blue-100 p-2.5 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                {item.resposta}
+                                <div className="mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setDialogAnotacao(prev => prev
+                                      ? { ...prev, comentario: prev.comentario.trim() ? `${prev.comentario.trim()}\n\n${item.resposta}` : item.resposta }
+                                      : null
+                                    )}
+                                    className="text-[10px] font-bold text-violet-700 border border-violet-200 bg-violet-50 hover:bg-violet-100 px-2 py-0.5 rounded-lg transition-colors"
+                                  >
+                                    Inserir no comentário
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-1.5 items-end">
+                        <div className="relative flex-1">
+                          <textarea
+                            ref={panelAssistenteRef}
+                            value={panelAssistentePergunta}
+                            onChange={(e) => setPanelAssistentePergunta(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); panelChamarAssistente(); }
+                            }}
+                            placeholder="Pergunte ao assistente… (Enter para enviar)"
+                            rows={2}
+                            disabled={panelAssistenteLoading}
+                            className="w-full resize-none rounded-xl border border-blue-200 bg-white p-2 pr-8 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-50"
+                          />
+                          <button
+                            type="button"
+                            onClick={panelAssistenteMicToggle}
+                            disabled={!panelAssistenteMicSupported || panelAssistenteLoading}
+                            className={cn(
+                              "absolute bottom-2 right-2 p-1 rounded-full transition-colors",
+                              panelAssistenteMicRecording
+                                ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                                : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                              (!panelAssistenteMicSupported || panelAssistenteLoading) && "opacity-40 cursor-not-allowed"
+                            )}
+                          >
+                            {panelAssistenteMicRecording ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={panelChamarAssistente}
+                          disabled={panelAssistenteLoading || !panelAssistentePergunta.trim()}
+                          className="self-end p-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        >
+                          {panelAssistenteLoading
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <SendHorizontal className="w-3.5 h-3.5" />
+                          }
+                        </button>
+                      </div>
+                      {panelAssistenteMicRecording && <p className="text-[10px] text-red-500 font-medium animate-pulse">Ouvindo...</p>}
+                      {!panelAssistenteMicRecording && <p className="text-[10px] text-blue-400">Shift+Enter para nova linha · microfone para ditar</p>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  {dialogAnotacao.mode === 'editar' && (
+                    <button
+                      type="button"
+                      onClick={() => { ignorarMarcacao(dialogAnotacao.existingId!); setDialogAnotacao(null); }}
+                      className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-xl transition-colors"
+                    >
+                      <X className="w-3 h-3" /> Ignorar
+                    </button>
+                  )}
+                  <div className="flex gap-2 ml-auto">
+                    <button
+                      onClick={() => setDialogAnotacao(null)}
+                      className="text-xs px-3 py-1.5 rounded-xl border font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      disabled={!dialogAnotacao.comentario.trim() || isInsertingAnotacao || isSavingMarcacao}
+                      onClick={() => {
+                        if (dialogAnotacao.mode === 'editar') {
+                          confirmarMarcacao(dialogAnotacao.existingId!, {
+                            competencia: dialogAnotacao.competencia,
+                            tipo: dialogAnotacao.tipo,
+                            comentario: dialogAnotacao.comentario.trim(),
+                            sugestao_reescrita: dialogAnotacao.sugestao_reescrita?.trim() || undefined,
+                          });
+                        } else {
+                          inserirAnotacao({
+                            trecho: dialogAnotacao.trecho,
+                            inicio: dialogAnotacao.inicio,
+                            fim: dialogAnotacao.fim,
+                            competencia: dialogAnotacao.competencia,
+                            tipo: dialogAnotacao.tipo,
+                            comentario: dialogAnotacao.comentario.trim(),
+                          });
+                        }
+                        setDialogAnotacao(null);
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-xl bg-violet-700 text-white font-semibold hover:bg-violet-800 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                    >
+                      {(isInsertingAnotacao || isSavingMarcacao) && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {dialogAnotacao.mode === 'editar' ? 'Confirmar' : 'Salvar'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        );
+      })()}
     </div>
   );
 };
