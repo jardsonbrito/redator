@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCorretorRedacoes, RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { Clock, User, Search } from "lucide-react";
+import { Clock, User, Search, Sparkles } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
 import { supabase } from "@/integrations/supabase/client";
@@ -216,6 +216,12 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             {redacao.turma && (
               <Badge variant="outline" className="text-xs bg-violet-50 text-violet-600 border-violet-200">
                 {redacao.turma}
+              </Badge>
+            )}
+            {redacao.jarvis_precorrecao_id && redacao.jarvis_precorrecao_status === 'corrigida' && (
+              <Badge className="text-xs bg-violet-100 text-violet-700 border border-violet-300 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                IA
               </Badge>
             )}
           </div>

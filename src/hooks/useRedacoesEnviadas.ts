@@ -47,6 +47,9 @@ export interface RedacaoEnviada {
   corretor_id_2: string | null;
   corretor_1: { nome_completo: string } | null;
   corretor_2: { nome_completo: string } | null;
+  // Pré-correção do Jarvis (admin)
+  jarvis_precorrecao_id: string | null;
+  jarvis_precorrecao: { status: string } | null;
 }
 
 export const useRedacoesEnviadas = () => {
@@ -104,7 +107,9 @@ export const useRedacoesEnviadas = () => {
           corretor_id_1,
           corretor_id_2,
           corretor_1:corretores!corretor_id_1(nome_completo),
-          corretor_2:corretores!corretor_id_2(nome_completo)
+          corretor_2:corretores!corretor_id_2(nome_completo),
+          jarvis_precorrecao_id,
+          jarvis_precorrecao:jarvis_correcoes!jarvis_precorrecao_id(status)
         `)
         .is('deleted_at', null)  // Filtrar soft deletes
         .order("data_envio", { ascending: false });

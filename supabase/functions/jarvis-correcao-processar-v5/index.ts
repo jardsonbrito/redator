@@ -19,7 +19,8 @@ const corsHeaders = {
 interface ProcessarV5Request {
   correcaoId: string;
   transcricaoConfirmada: string;
-  professorEmail: string;
+  professorEmail?: string; // obrigatório no caminho professor
+  adminId?: string;        // obrigatório no caminho admin
 }
 
 type Competencia = "c1" | "c2" | "c3" | "c4" | "c5";
@@ -1664,6 +1665,7 @@ Deno.serve(async (req) => {
   let professorId: string | undefined;
   let custoCreditos = 1;
   let creditoConsumido = false;
+  let creditResult: { creditos_atuais: number } | undefined;
 
   try {
     console.log("🤖 Jarvis V5 — Pipeline iniciado");
@@ -1673,12 +1675,14 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { correcaoId: cId, transcricaoConfirmada, professorEmail }: ProcessarV5Request = await req.json();
+    const { correcaoId: cId, transcricaoConfirmada, professorEmail, adminId }: ProcessarV5Request = await req.json();
     correcaoId = cId;
 
-    if (!cId || !transcricaoConfirmada || !professorEmail) {
+    const ehAdmin = !!adminId && !professorEmail;
+
+    if (!cId || !transcricaoConfirmada || (!professorEmail && !adminId)) {
       return new Response(
-        JSON.stringify({ error: "correcaoId, transcricaoConfirmada e professorEmail são obrigatórios" }),
+        JSON.stringify({ error: "correcaoId, transcricaoConfirmada e (professorEmail ou adminId) são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -1740,37 +1744,42 @@ Deno.serve(async (req) => {
     console.log(`📝 Tema: ${correcao.tema} | Aluno: ${correcao.autor_nome}`);
 
     // ══════════════════════════════════════════════════════════════
-    // 4. PROFESSOR + CRÉDITO
+    // 4. PROFESSOR + CRÉDITO  (ignorado no caminho admin)
     // ══════════════════════════════════════════════════════════════
-    const { data: professor, error: profErr } = await supabase
-      .from("professores")
-      .select("id, jarvis_correcao_creditos, nome_completo")
-      .eq("email", professorEmail.toLowerCase().trim())
-      .eq("ativo", true)
-      .single();
-    if (profErr || !professor) throw new Error("Professor não encontrado");
+    if (!ehAdmin) {
+      const { data: professor, error: profErr } = await supabase
+        .from("professores")
+        .select("id, jarvis_correcao_creditos, nome_completo")
+        .eq("email", professorEmail!.toLowerCase().trim())
+        .eq("ativo", true)
+        .single();
+      if (profErr || !professor) throw new Error("Professor não encontrado");
 
-    const { data: creditResult, error: creditErr } = await supabase.rpc("consumir_credito_professor", {
-      professor_id_param: professor.id,
-      quantidade: config.custo_creditos,
-    });
-    if (creditErr || !creditResult?.success) throw new Error(creditResult?.error || "Erro ao consumir créditos.");
+      const { data: creditResultData, error: creditErr } = await supabase.rpc("consumir_credito_professor", {
+        professor_id_param: professor.id,
+        quantidade: config.custo_creditos,
+      });
+      if (creditErr || !creditResultData?.success) throw new Error(creditResultData?.error || "Erro ao consumir créditos.");
 
-    professorId = professor.id;
-    custoCreditos = config.custo_creditos;
-    creditoConsumido = true;
+      professorId = professor.id;
+      custoCreditos = config.custo_creditos;
+      creditoConsumido = true;
+      creditResult = creditResultData;
 
-    console.log(`💳 ${professor.nome_completo}: ${creditResult.creditos_anteriores} → ${creditResult.creditos_atuais} créditos`);
+      console.log(`💳 ${professor.nome_completo}: ${creditResultData.creditos_anteriores} → ${creditResultData.creditos_atuais} créditos`);
 
-    await supabase
-      .from("jarvis_correcao_credit_audit")
-      .update({ correcao_id: correcaoId })
-      .eq("professor_id", professor.id)
-      .is("correcao_id", null)
-      .order("created_at", { ascending: false })
-      .limit(1);
+      await supabase
+        .from("jarvis_correcao_credit_audit")
+        .update({ correcao_id: correcaoId })
+        .eq("professor_id", professor.id)
+        .is("correcao_id", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+    } else {
+      console.log("🔑 Modo admin — sem consumo de créditos");
+    }
 
-    // Persiste texto imediatamente após consumir crédito — permite reenvio em caso de erro
+    // Persiste texto — permite identificar o estado antes do processamento
     await supabase
       .from("jarvis_correcoes")
       .update({ transcricao_confirmada: transcricaoConfirmada, status: "aguardando_correcao" })
@@ -2006,13 +2015,31 @@ Deno.serve(async (req) => {
     if (updateError) throw new Error("Erro ao salvar correção no banco de dados");
     console.log("✅ Correção V5 salva!");
 
+    // Após sucesso no caminho admin: atualiza redacoes_enviadas com FK e status incompleto
+    if (ehAdmin && correcao.redacao_enviada_id) {
+      await supabase
+        .from("redacoes_enviadas")
+        .update({
+          jarvis_precorrecao_id: correcaoId,
+          status_corretor_1: "incompleta",
+        })
+        .eq("id", correcao.redacao_enviada_id)
+        .is("jarvis_precorrecao_id", null); // idempotente: só atualiza se ainda não tiver
+    }
+
+    const responsePayload: Record<string, unknown> = {
+      success: true,
+      correcaoId,
+      pipeline: { versao: "v5", nota_total: notaTotal, tempo_ms: tempoTotal, tokens_total: totalTokens, custo_usd: custoEstimado },
+    };
+
+    // Créditos restantes só fazem sentido no caminho professor
+    if (!ehAdmin && typeof creditResult !== "undefined") {
+      responsePayload.creditos_restantes = (creditResult as any).creditos_atuais;
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        correcaoId,
-        creditos_restantes: creditResult.creditos_atuais,
-        pipeline: { versao: "v5", nota_total: notaTotal, tempo_ms: tempoTotal, tokens_total: totalTokens, custo_usd: custoEstimado },
-      }),
+      JSON.stringify(responsePayload),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
@@ -2024,6 +2051,7 @@ Deno.serve(async (req) => {
           .update({ status: "erro", erro_mensagem: `[V5] ${error.message || "Erro desconhecido"}` })
           .eq("id", correcaoId);
 
+        // Devolução de crédito só no caminho professor
         if (creditoConsumido && professorId) {
           const { error: refundErr } = await supabase.rpc("devolver_credito_professor", {
             professor_id_param: professorId,

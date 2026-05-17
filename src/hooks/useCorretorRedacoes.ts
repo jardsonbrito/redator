@@ -26,6 +26,9 @@ export interface RedacaoCorretor {
   data_descongelamento?: string | null;
   // Tipo do exercício pai — preenchido apenas quando tipo_redacao === 'exercicio'
   exercicio_tipo?: string | null;
+  // Pré-correção do Jarvis (admin) — apenas em redacoes_enviadas regulares
+  jarvis_precorrecao_id?: string | null;
+  jarvis_precorrecao_status?: string | null;
 }
 
 export const useCorretorRedacoes = (corretorEmail: string) => {
@@ -46,6 +49,8 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
         tipo_redacao: item.tipo_redacao as string,
         status_minha_correcao: item.status_minha_correcao as 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida' | 'devolvida',
         exercicio_tipo: (item as any).exercicio_tipo ?? null,
+        jarvis_precorrecao_id: (item as any).jarvis_precorrecao_id ?? null,
+        jarvis_precorrecao_status: (item as any).jarvis_precorrecao_status ?? null,
       }));
 
       return redacoesFormatadas;

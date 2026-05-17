@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Eye, RotateCcw, Download, MoreVertical, Unlock } from "lucide-react";
+import { Trash2, Eye, RotateCcw, Download, MoreVertical, Unlock, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
+import { useJarvisAdmin } from "@/hooks/useJarvisAdmin";
 import { getStatusColor, getTurmaColor, estaCongelada } from "@/utils/redacaoUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { formatTurmaDisplay } from "@/utils/turmaUtils";
@@ -45,6 +46,7 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isProcessing, enviarParaJarvis } = useJarvisAdmin(onRefresh);
 
   useEffect(() => {
     fetchCorretores();
@@ -163,6 +165,22 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
     }
   };
 
+  // Retorna o estado visual do Jarvis para uma redação
+  const getJarvisState = (redacao: RedacaoEnviada): "disponivel" | "processando" | "concluido" | "erro" | "oculto" => {
+    // Manuscritas nunca mostram a opção
+    if (redacao.redacao_manuscrita_url) return "oculto";
+    // Em processamento local (hook ainda aguarda resposta)
+    if (isProcessing(redacao.id)) return "processando";
+    // Sem pré-correção ainda
+    if (!redacao.jarvis_precorrecao_id) return "disponivel";
+    const st = redacao.jarvis_precorrecao?.status;
+    if (!st) return "disponivel";
+    if (st === "corrigida") return "concluido";
+    if (st === "erro") return "erro";
+    // aguardando_correcao ou em_revisao = processando no servidor
+    return "processando";
+  };
+
   return (
     <div className="w-full">
         <Table>
@@ -261,6 +279,48 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                           <Eye className="w-4 h-4 mr-2" />
                           Visualizar
                         </DropdownMenuItem>
+                        {/* ── Ação Jarvis — apenas para redações digitadas ── */}
+                        {(() => {
+                          const jarvisState = getJarvisState(redacao);
+                          if (jarvisState === "oculto") return null;
+                          if (jarvisState === "disponivel") return (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                enviarParaJarvis(redacao);
+                              }}
+                              className="text-violet-700 focus:text-violet-700"
+                            >
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Enviar para o Jarvis
+                            </DropdownMenuItem>
+                          );
+                          if (jarvisState === "processando") return (
+                            <DropdownMenuItem disabled className="text-violet-400 cursor-not-allowed">
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Processando...
+                            </DropdownMenuItem>
+                          );
+                          if (jarvisState === "concluido") return (
+                            <DropdownMenuItem disabled className="text-emerald-600 cursor-default">
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Sugestão gerada
+                            </DropdownMenuItem>
+                          );
+                          if (jarvisState === "erro") return (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                enviarParaJarvis(redacao);
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <AlertCircle className="w-4 h-4 mr-2" />
+                              Tentar novamente
+                            </DropdownMenuItem>
+                          );
+                          return null;
+                        })()}
                         {redacao.corrigida && (
                           <DropdownMenuItem onClick={() => {
                             setOpenDropdownId(null);

@@ -8,11 +8,15 @@ const corsHeaders = {
 };
 
 interface EnviarRequest {
-  professorEmail: string;
-  turmaId: string | null;
-  autorNome: string;
-  tema: string;
-  imagemBase64?: string; // Opcional: se não enviada, vai direto para digitação manual
+  // Caminho professor (existente)
+  professorEmail?: string;
+  turmaId?: string | null;
+  autorNome?: string;
+  tema?: string;
+  imagemBase64?: string;
+  // Caminho admin (novo) — pré-correção de redação digitada
+  adminId?: string;
+  redacaoEnviadaId?: string;
 }
 
 Deno.serve(async (req) => {
@@ -34,7 +38,123 @@ Deno.serve(async (req) => {
       autorNome,
       tema,
       imagemBase64,
+      adminId,
+      redacaoEnviadaId,
     }: EnviarRequest = await req.json();
+
+    const ehAdmin = !!adminId && !professorEmail;
+
+    // ══════════════════════════════════════════════════════════════
+    // CAMINHO ADMIN — pré-correção de redação digitada
+    // ══════════════════════════════════════════════════════════════
+    if (ehAdmin) {
+      console.log("🔑 Modo admin — pré-correção");
+
+      if (!adminId || !redacaoEnviadaId) {
+        return new Response(
+          JSON.stringify({ error: "adminId e redacaoEnviadaId são obrigatórios no modo admin" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validar admin
+      const { data: admin, error: adminError } = await supabaseClient
+        .from("admin_users")
+        .select("id, nome")
+        .eq("id", adminId)
+        .single();
+
+      if (adminError || !admin) {
+        return new Response(
+          JSON.stringify({ error: "Admin não encontrado" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verificar duplicata: impede re-envio se já existe pré-correção não-erro
+      const { data: existente } = await supabaseClient
+        .from("jarvis_correcoes")
+        .select("id, status")
+        .eq("redacao_enviada_id", redacaoEnviadaId)
+        .eq("is_pre_correcao", true)
+        .eq("is_versao_principal", true)
+        .neq("status", "erro")
+        .maybeSingle();
+
+      if (existente) {
+        return new Response(
+          JSON.stringify({
+            error: "ja_existe_pre_correcao",
+            correcaoId: existente.id,
+            status: existente.status,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Buscar dados da redação enviada
+      const { data: redacao, error: redacaoError } = await supabaseClient
+        .from("redacoes_enviadas")
+        .select("id, nome_aluno, frase_tematica, redacao_texto, redacao_manuscrita_url")
+        .eq("id", redacaoEnviadaId)
+        .single();
+
+      if (redacaoError || !redacao) {
+        throw new Error("Redação não encontrada");
+      }
+
+      if (redacao.redacao_manuscrita_url) {
+        return new Response(
+          JSON.stringify({ error: "Redações manuscritas não suportam pré-correção pelo Jarvis" }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Criar registro de pré-correção
+      const { data: novaCorrecao, error: correcaoError } = await supabaseClient
+        .from("jarvis_correcoes")
+        .insert({
+          professor_id: null,
+          admin_id: adminId,
+          redacao_enviada_id: redacaoEnviadaId,
+          origem_tipo: "admin",
+          is_pre_correcao: true,
+          autor_nome: redacao.nome_aluno,
+          tema: redacao.frase_tematica,
+          transcricao_confirmada: redacao.redacao_texto,
+          status: "aguardando_correcao",
+          grupo_id: null, // será preenchido pela RPC ou com o próprio id após inserção
+        })
+        .select()
+        .single();
+
+      if (correcaoError || !novaCorrecao) {
+        console.error("❌ Erro ao criar pré-correção:", correcaoError);
+        throw new Error("Erro ao salvar pré-correção no banco de dados");
+      }
+
+      // grupo_id = id do próprio registro (primeira versão)
+      await supabaseClient
+        .from("jarvis_correcoes")
+        .update({ grupo_id: novaCorrecao.id })
+        .eq("id", novaCorrecao.id);
+
+      console.log("✅ Pré-correção criada:", novaCorrecao.id);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          correcaoId: novaCorrecao.id,
+          status: "aguardando_correcao",
+          transcricaoConfirmada: redacao.redacao_texto,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CAMINHO PROFESSOR (existente, inalterado)
+    // ══════════════════════════════════════════════════════════════
 
     // Validações básicas
     if (!professorEmail || !autorNome || !tema) {

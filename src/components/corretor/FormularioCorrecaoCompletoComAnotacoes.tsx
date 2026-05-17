@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2 } from "lucide-react";
+import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
+import { useJarvisAdmin } from "@/hooks/useJarvisAdmin";
 import { estaCongelada } from "@/utils/redacaoUtils";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual, RedacaoAnotacaoVisualRef } from "./RedacaoAnotacaoVisual";
@@ -90,12 +93,16 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [anotacoesCounts, setAnotacoesCounts] = useState<Record<number, number>>({});
   const [refineElogiosLoading, setRefineElogiosLoading] = useState(false);
   const [refineElogiosSugestoes, setRefineElogiosSugestoes] = useState<string[]>([]);
+  const [showJarvisPanel, setShowJarvisPanel] = useState(false);
+  const [jarvisData, setJarvisData] = useState<any>(null);
+  const [loadingJarvis, setLoadingJarvis] = useState(false);
 
   // Ref para RedacaoAnotacaoVisual — permite triggerLimparTodasAnotacoes
   const anotacaoRef = useRef<RedacaoAnotacaoVisualRef>(null);
 
   const { data: marcacoesPEP = [], refetch: refetchMarcacoesPEP } = useMarcacoesRedacao(redacao.id);
   const { toast } = useToast();
+  const { fetchPrecorrecao } = useJarvisAdmin();
 
   const redacaoCongelada = estaCongelada({
     data_envio: redacao.data_envio,
@@ -137,6 +144,15 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     carregarCorrecaoExistente();
     buscarTemaCompleto();
   }, [redacao.id]);
+
+  useEffect(() => {
+    if (!showJarvisPanel || !redacao.jarvis_precorrecao_id || jarvisData) return;
+    setLoadingJarvis(true);
+    fetchPrecorrecao(redacao.jarvis_precorrecao_id)
+      .then(data => setJarvisData(data))
+      .catch(() => toast({ title: "Erro ao carregar sugestão do Jarvis", variant: "destructive" }))
+      .finally(() => setLoadingJarvis(false));
+  }, [showJarvisPanel]);
 
   const buscarTemaCompleto = async () => {
     try {
@@ -578,6 +594,30 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </div>
 
+          {/* Sugestão do Jarvis */}
+          {redacao.jarvis_precorrecao_id && redacao.jarvis_precorrecao_status === 'corrigida' && (
+            <div className="rounded-2xl border border-violet-300 bg-gradient-to-br from-violet-50 to-fuchsia-50 shadow-sm">
+              <div className="p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                    <h3 className="text-sm font-black text-violet-900 leading-tight">Sugestão do Jarvis</h3>
+                  </div>
+                  <p className="text-xs text-violet-600 mt-0.5">Pré-correção por IA disponível</p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setShowJarvisPanel(true)}
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-xs font-semibold bg-violet-700 hover:bg-violet-800 text-white"
+                >
+                  Ver
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* 4. Ações da correção */}
           <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
             <h3 className="text-sm font-black text-slate-900 mb-3">Ações da correção</h3>
@@ -668,6 +708,103 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Painel lateral — Sugestão do Jarvis */}
+      <Sheet open={showJarvisPanel} onOpenChange={setShowJarvisPanel}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="border-b pb-4">
+            <SheetTitle className="flex items-center gap-2 text-violet-900">
+              <Sparkles className="w-4 h-4 text-violet-600" />
+              Sugestão do Jarvis
+            </SheetTitle>
+          </SheetHeader>
+
+          {loadingJarvis && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+            </div>
+          )}
+
+          {!loadingJarvis && jarvisData && (
+            <div className="py-4 space-y-6">
+              {/* Notas sugeridas */}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Notas sugeridas</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
+                    const info = COMP_INFO[key];
+                    const nota = jarvisData[`nota_${key}`] ?? jarvisData.correcao_ia?.competencias?.[key]?.nota ?? 0;
+                    return (
+                      <div key={key} className="rounded-xl border p-2 text-center" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
+                        <p className="text-[10px] font-black" style={{ color: info.tc }}>C{i + 1}</p>
+                        <p className="text-lg font-black leading-none mt-1" style={{ color: info.cor }}>{nota}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-center">
+                  <p className="text-xs text-violet-600 font-bold uppercase tracking-wide">Nota total</p>
+                  <p className="text-2xl font-black text-violet-800">{jarvisData.nota_total ?? 0}</p>
+                </div>
+              </div>
+
+              {/* Análise por competência */}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Análise por competência</p>
+                <div className="space-y-3">
+                  {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
+                    const info = COMP_INFO[key];
+                    const justificativa = jarvisData.correcao_ia?.competencias?.[key]?.justificativa;
+                    if (!justificativa) return null;
+                    return (
+                      <div key={key} className="rounded-xl border p-3" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <span className="text-xs font-black" style={{ color: info.tc }}>C{i + 1}</span>
+                          <span className="text-xs text-slate-400">—</span>
+                          <span className="text-xs font-semibold text-slate-600">{info.label}</span>
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed">{justificativa}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Pontos de atenção */}
+              {jarvisData.correcao_ia?.sugestoes_objetivas?.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Pontos de atenção</p>
+                  <ul className="space-y-1.5">
+                    {(jarvisData.correcao_ia.sugestoes_objetivas as string[]).map((s, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
+                        <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black">{i + 1}</span>
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Versão lapidada */}
+              {jarvisData.correcao_ia?.versao_lapidada && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Versão lapidada</p>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{jarvisData.correcao_ia.versao_lapidada}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Aviso */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  <strong>Atenção:</strong> estas são sugestões da IA e servem de apoio à sua análise. A correção final é de sua responsabilidade.
+                </p>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Modal de Redação Expandida */}
       <Dialog open={showRedacaoExpandida} onOpenChange={setShowRedacaoExpandida}>
