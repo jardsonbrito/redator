@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Eye, Trash2 } from "lucide-react";
+import { MessageSquare, Eye, Trash2, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { ChatConversa } from "@/components/ajuda-rapida/ChatConversa";
@@ -45,7 +45,7 @@ export const AjudaRapidaAdmin = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     signOut();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const carregarConversas = async () => {

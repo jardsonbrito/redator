@@ -173,6 +173,21 @@ const Admin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeView, setActiveView] = useState("dashboard");
+
+  // Views que navegam para rotas externas ao Admin — chamadas via useEffect para
+  // evitar navigate() durante render (causa tela branca no React 18)
+  const EXTERNAL_VIEWS: Record<string, string> = {
+    'anotacoes':          '/admin/anotacoes',
+    'ajuda-rapida':       '/admin/ajuda-rapida',
+    'repertorio-orientado': '/repertorio-orientado',
+    'laboratorio':        '/admin/laboratorio',
+    'guia-tematico':      '/admin/guia-tematico',
+    'plano-estudo':       '/admin/plano-estudo',
+    'redacoes-comentadas':'/admin/redacoes-comentadas',
+    'exportacao':         '/admin/exportacao',
+    'gamificacao':        '/admin/gamificacao',
+    'processo-seletivo':  '/admin/processo-seletivo',
+  };
   const [jarvisTab, setJarvisTab] = useState("alunos");
   const [showProfile, setShowProfile] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
@@ -858,8 +873,12 @@ const Admin = () => {
     }
   }, [temAlunosPendentes, mostrarPopupAprovacao]);
 
-
-
+  // Navega para rotas externas fora do ciclo de render
+  useEffect(() => {
+    if (activeView in EXTERNAL_VIEWS) {
+      navigate(EXTERNAL_VIEWS[activeView]);
+    }
+  }, [activeView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user || !isAdmin) {
     return <Navigate to="/" replace />;
@@ -1203,7 +1222,6 @@ const Admin = () => {
         return <InboxForm />;
 
       case "anotacoes":
-        navigate('/admin/anotacoes');
         return null;
 
       case "alunos":
@@ -1219,15 +1237,12 @@ const Admin = () => {
         return <JarvisHub key={jarvisTab} defaultTab={jarvisTab} />;
 
       case "ajuda-rapida":
-        navigate('/admin/ajuda-rapida');
         return null;
 
       case "repertorio-orientado":
-        navigate('/repertorio-orientado');
         return null;
 
       case "laboratorio":
-        navigate('/admin/laboratorio');
         return null;
 
       case "microaprendizagem":
@@ -1257,19 +1272,15 @@ const Admin = () => {
         );
 
       case "guia-tematico":
-        navigate('/admin/guia-tematico');
         return null;
 
       case "plano-estudo":
-        navigate('/admin/plano-estudo');
         return null;
 
       case "redacoes-comentadas":
-        navigate('/admin/redacoes-comentadas');
         return null;
 
       case "exportacao":
-        navigate('/admin/exportacao');
         return null;
 
       case "configuracoes":
@@ -1296,7 +1307,6 @@ const Admin = () => {
         );
 
       case "gamificacao":
-        navigate('/admin/gamificacao');
         return null;
 
       case "top5":
@@ -1308,7 +1318,6 @@ const Admin = () => {
         );
 
       case "processo-seletivo":
-        navigate('/admin/processo-seletivo');
         return null;
       
       case "diario":
