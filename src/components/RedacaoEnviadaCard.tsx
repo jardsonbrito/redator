@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, MessageSquare, Volume2, X, AlertTriangle } from "lucide-react";
 import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
-import { TextoRedacaoComMarcacoes } from "./TextoRedacaoComMarcacoes";
 import { AudioPlayerAluno } from "./AudioPlayerAluno";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -386,11 +385,7 @@ export const RedacaoEnviadaCard = ({
                   <div className="p-4 space-y-4">
                     {redacao.redacao_texto?.trim() ? (
                       <div className="prose max-w-none text-sm sm:text-base text-gray-800 p-3 bg-white rounded border">
-                        <TextoRedacaoComMarcacoes
-                          redacaoId={redacao.id}
-                          texto={redacao.redacao_texto}
-                          className="text-sm sm:text-base"
-                        />
+                        <p className="whitespace-pre-wrap leading-relaxed">{redacao.redacao_texto}</p>
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500 italic">Conteúdo da redação não disponível</p>

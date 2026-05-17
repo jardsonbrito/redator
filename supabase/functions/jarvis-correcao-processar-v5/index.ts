@@ -1165,25 +1165,6 @@ Tom:
 • formativo
 
 ══════════════════════════════════════════════
-MARCAÇÕES DE TRECHO
-══════════════════════════════════════════════
-
-Com base nos problemas identificados em C1-C5, gere marcações individuais — UMA marcação por erro específico.
-
-REGRAS CRÍTICAS:
-- CADA marcação aponta UM ÚNICO problema — nunca agrupe múltiplos erros em uma marcação
-- "trecho": copie EXATAMENTE a palavra ou expressão mínima problemática do texto original (inclua os erros como estão)
-- Para C1 (ortografia/gramática/pontuação): UMA marcação por palavra/vírgula incorreta — ex: "verassidade" e "vunerável" são marcações separadas
-- Para C4 (coesão): UMA marcação por conector, pronome referencial ou operador argumentativo inadequado
-- Para C2/C3/C5: UMA marcação por problema estrutural/argumentativo identificável com trecho preciso
-- "paragrafo": número do parágrafo onde o trecho se encontra (1 = introdução, 2 = 1º desenvolvimento, etc.)
-- Gere entre 5 e 20 marcações (quantidade proporcional aos problemas encontrados — não limite artificialmente)
-- "comentario": máximo 120 caracteres, diagnóstico direto e pedagógico
-- "tipo": "erro" para problemas formais, "ponto_de_atencao" para questões estruturais/argumentativas, "dica" para sugestões
-- "sugestao_reescrita": apenas a forma corrigida da palavra/expressão (não a frase inteira), ou null se não aplicável
-- Omita marcações quando não houver trecho literalmente identificável
-
-══════════════════════════════════════════════
 FORMATO FINAL — JSON OBRIGATÓRIO
 ══════════════════════════════════════════════
 
@@ -1209,17 +1190,7 @@ Use \n\n para separar pontos distintos. Exemplo:
   },
   "versao_lapidada": "<redação completa reescrita>",
   "sugestoes_objetivas": ["<sug1>", "<sug2>", "<sug3>"],
-  "resumo_geral": "<comentário pedagógico final>",
-  "marcacoes_trecho": [
-    {
-      "trecho": "<palavra ou expressão exata copiada do texto>",
-      "paragrafo": <numero do parágrafo, 1=introdução>,
-      "competencia": "<c1|c2|c3|c4|c5>",
-      "tipo": "<erro|dica|ponto_de_atencao>",
-      "comentario": "<diagnóstico direto, max 120 chars>",
-      "sugestao_reescrita": "<forma corrigida ou null>"
-    }
-  ]
+  "resumo_geral": "<comentário pedagógico final>"
 }`,
     user_template: `TEMA: {tema}
 
@@ -1267,54 +1238,6 @@ function parseJSON<T>(text: string, label?: string): T {
   // Loga trecho do texto para diagnóstico sem expor dados sensíveis
   console.error(`❌ parseJSON falhou${label ? ` [${label}]` : ""}. Início: ${text.slice(0, 300)} | Fim: ${text.slice(-200)}`);
   throw new Error("Não foi possível parsear o JSON retornado pela IA");
-}
-
-function obterNumeroParagrafo(textoOriginal: string, trecho: string): number {
-  const busca = trecho.trim().slice(0, 30);
-  const pos = textoOriginal.indexOf(busca);
-  if (pos === -1) return 1;
-  const antes = textoOriginal.slice(0, pos);
-  const blocos = antes.split(/\n+/).filter(b => b.trim().length > 0);
-  return blocos.length + 1;
-}
-
-function localizarTrecho(texto: string, trecho: string): {
-  inicio: number; fim: number; ocorrencia: number;
-  contexto_anterior: string; contexto_posterior: string;
-} | null {
-  const norm = (s: string) => s.trim().replace(/\s+/g, " ");
-  const t = norm(texto);
-  const q = norm(trecho);
-  if (!q) return null;
-
-  let pos = t.indexOf(q);
-  let qEfetivo = q;
-
-  // Fallback: tenta prefixo de 50 chars se trecho completo não for encontrado
-  if (pos === -1) {
-    qEfetivo = q.slice(0, Math.min(50, q.length));
-    pos = t.indexOf(qEfetivo);
-    if (pos === -1) return null;
-  }
-
-  // Conta qual ocorrência é esta (para trechos repetidos)
-  let ocorrencia = 1;
-  let scan = 0;
-  while (true) {
-    const found = t.indexOf(qEfetivo, scan);
-    if (found === -1 || found >= pos) break;
-    ocorrencia++;
-    scan = found + 1;
-  }
-
-  const fim = pos + qEfetivo.length;
-  return {
-    inicio: pos,
-    fim,
-    ocorrencia,
-    contexto_anterior: t.slice(Math.max(0, pos - 40), pos),
-    contexto_posterior: t.slice(fim, Math.min(t.length, fim + 40)),
-  };
 }
 
 function arredondarNotaEnem(nota: number): number {
@@ -2106,51 +2029,6 @@ Deno.serve(async (req) => {
         })
         .eq("id", correcao.redacao_enviada_id)
         .is("jarvis_precorrecao_id", null); // idempotente: só atualiza se ainda não tiver
-
-      // Inserir marcações de trecho geradas pelo Jarvis
-      const marcacoesRaw: any[] = consolResult?.marcacoes_trecho ?? [];
-      if (marcacoesRaw.length > 0) {
-        const textoRedacao: string = correcao.transcricao_confirmada ?? transcricaoConfirmada ?? "";
-        const rows = marcacoesRaw
-          .filter((m: any) => m?.trecho && m?.competencia && m?.comentario)
-          .slice(0, 20)
-          .map((m: any) => {
-            const loc = localizarTrecho(textoRedacao, m.trecho);
-            if (!loc) return null;
-            const paragrafo = m.paragrafo
-              ? Number(m.paragrafo)
-              : obterNumeroParagrafo(textoRedacao, m.trecho);
-            return {
-              redacao_enviada_id: correcao.redacao_enviada_id,
-              jarvis_correcao_id: correcaoId,
-              trecho: m.trecho,
-              inicio: loc.inicio,
-              fim: loc.fim,
-              ocorrencia: loc.ocorrencia,
-              contexto_anterior: loc.contexto_anterior,
-              contexto_posterior: loc.contexto_posterior,
-              paragrafo: isNaN(paragrafo) ? null : paragrafo,
-              competencia: String(m.competencia).toLowerCase(),
-              tipo: m.tipo ?? null,
-              comentario: String(m.comentario).slice(0, 150),
-              sugestao_reescrita: m.sugestao_reescrita ?? null,
-              origem: "jarvis",
-              status: "sugerida",
-            };
-          })
-          .filter(Boolean);
-
-        if (rows.length > 0) {
-          const { error: marcacoesError } = await supabase
-            .from("comentarios_trecho_correcao")
-            .insert(rows);
-          if (marcacoesError) {
-            console.error("⚠️ Falha ao salvar marcações de trecho:", marcacoesError.message);
-          } else {
-            console.log(`✅ ${rows.length} marcações de trecho salvas`);
-          }
-        }
-      }
     }
 
     const responsePayload: Record<string, unknown> = {

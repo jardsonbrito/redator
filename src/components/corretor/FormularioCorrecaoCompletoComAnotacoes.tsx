@@ -1,14 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight, Mic, MicOff, Bot, SendHorizontal } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MarcacoesJarvisPanel } from "./MarcacoesJarvisPanel";
-import { useComentariosTrechoCorrecao, ComentarioTrecho } from "@/hooks/useComentariosTrechoCorrecao";
-import { Badge } from "@/components/ui/badge";
-import { FileText, ImageIcon } from "lucide-react";
+import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { useJarvisAdmin } from "@/hooks/useJarvisAdmin";
 import { estaCongelada } from "@/utils/redacaoUtils";
@@ -24,8 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
 import { PEPMarcacaoModal } from "./PEPMarcacaoModal";
 import { useMarcacoesRedacao } from "@/hooks/usePEPMarcacoes";
-import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
-import { cn } from "@/lib/utils";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -53,18 +45,6 @@ const COMP_INFO = {
   c5: { cor: '#9C27B0', bg: '#FAF5FF', tc: '#6B21A8', label: 'Intervenção' },
 } as const;
 
-const PILLS_INFO = [
-  { key: 1, label: 'C1', cor: '#E53935' },
-  { key: 2, label: 'C2', cor: '#43A047' },
-  { key: 3, label: 'C3', cor: '#2196F3' },
-  { key: 4, label: 'C4', cor: '#FF9800' },
-  { key: 5, label: 'C5', cor: '#9C27B0' },
-  { key: 6, label: 'PA', cor: '#00BCD4' },
-] as const;
-
-const COMP_STR_TO_NUM: Record<string, number> = { c1: 1, c2: 2, c3: 3, c4: 4, c5: 5, pa: 6 };
-const COMP_NUM_TO_STR: Record<number, string> = { 1: 'c1', 2: 'c2', 3: 'c3', 4: 'c4', 5: 'c5', 6: 'pa' };
-
 const STATUS_LABELS: Record<string, string> = {
   pendente: 'Pendente',
   em_correcao: 'Em correção',
@@ -73,31 +53,12 @@ const STATUS_LABELS: Record<string, string> = {
   devolvida: 'Devolvida',
 };
 
-const TIPO_LABELS_FORM: Record<string, string> = {
-  erro: 'Erro',
-  dica: 'Dica',
-  ponto_de_atencao: 'Ponto de atenção',
-};
-
-interface DialogAnotacao {
-  mode: 'nova' | 'editar';
-  trecho: string;
-  inicio: number;
-  fim: number;
-  paragrafo?: number;
-  existingId?: string;
-  competencia: string;
-  tipo?: string;
-  comentario: string;
-  sugestao_reescrita?: string;
-}
-
 export const FormularioCorrecaoCompletoComAnotacoes = ({
   redacao,
   corretorEmail,
   onVoltar,
   onSucesso,
-  onRefreshList
+  onRefreshList,
 }: FormularioCorrecaoCompletoComAnotacoesProps) => {
   const [notas, setNotas] = useState<NotasCorrecao>({ c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, total: 0 });
   const [comentarios, setComentarios] = useState<ComentariosCorrecao>({
@@ -125,7 +86,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [jarvisData, setJarvisData] = useState<any>(null);
   const [loadingJarvis, setLoadingJarvis] = useState(false);
 
-  // Ref para RedacaoAnotacaoVisual — permite triggerLimparTodasAnotacoes
   const anotacaoRef = useRef<RedacaoAnotacaoVisualRef>(null);
 
   const { data: marcacoesPEP = [], refetch: refetchMarcacoesPEP } = useMarcacoesRedacao(redacao.id);
@@ -142,8 +102,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const handleAnotacoesChange = useCallback((counts: Record<number, number>) => {
     setAnotacoesCounts(counts);
   }, []);
-
-  const totalAnotacoes = Object.values(anotacoesCounts).reduce((a, b) => a + b, 0);
 
   useEffect(() => {
     const buscarCorretorId = async () => {
@@ -356,82 +314,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     );
   };
 
-  const panelHandleDragStart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    panelDragRef.current = {
-      isDragging: true,
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: panelDragPos.x,
-      startPosY: panelDragPos.y,
-    };
-  };
-
-  const panelRefinar = async () => {
-    if (!dialogAnotacao?.comentario.trim()) return;
-    setPanelRefineLoading(true);
-    setPanelRefineSugestoes([]);
-    try {
-      const { data, error } = await supabase.functions.invoke('refinar-comentario-corretor', { body: { comentario: dialogAnotacao.comentario.trim() } });
-      if (error) throw error;
-      if (data?.sugestoes && Array.isArray(data.sugestoes)) setPanelRefineSugestoes(data.sugestoes);
-    } catch (err: any) {
-      toast({ title: "Erro ao refinar", description: err.message || "Tente novamente.", variant: "destructive" });
-    } finally {
-      setPanelRefineLoading(false);
-    }
-  };
-
-  const panelChamarAssistente = async () => {
-    if (!panelAssistentePergunta.trim() || !dialogAnotacao) return;
-    const perguntaAtual = panelAssistentePergunta.trim();
-    setPanelAssistenteLoading(true);
-    setPanelAssistentePergunta('');
-    const compNum = COMP_STR_TO_NUM[dialogAnotacao.competencia] ?? 1;
-    const pill = PILLS_INFO[compNum - 1];
-    const compInfo = COMP_INFO[dialogAnotacao.competencia as keyof typeof COMP_INFO];
-    const compLabel = pill ? `${pill.label} — ${compInfo?.label ?? (compNum === 6 ? 'Ponto de Atenção' : '')}` : '';
-    try {
-      const { data, error } = await supabase.functions.invoke('assistente-correcao', {
-        body: { competencia: compLabel, comentarioAtual: dialogAnotacao.comentario, pergunta: perguntaAtual },
-      });
-      if (error) throw error;
-      const resposta = data?.resposta ?? 'Sem resposta.';
-      setPanelAssistenteHistorico(prev => [...prev.slice(-4), { pergunta: perguntaAtual, resposta }]);
-    } catch (err: any) {
-      toast({ title: "Erro no assistente", description: err.message || "Tente novamente.", variant: "destructive" });
-      setPanelAssistentePergunta(perguntaAtual);
-    } finally {
-      setPanelAssistenteLoading(false);
-    }
-  };
-
-  const handleMouseUpTexto = () => {
-    if (!modoTexto || !textoCorretorRef.current) return;
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed) return;
-    try {
-      const range = sel.getRangeAt(0);
-      const container = textoCorretorRef.current;
-      if (!container.contains(range.startContainer) || !container.contains(range.endContainer)) {
-        sel.removeAllRanges();
-        return;
-      }
-      const preRange = document.createRange();
-      preRange.selectNodeContents(container);
-      preRange.setEnd(range.startContainer, range.startOffset);
-      const inicio = preRange.toString().length;
-      const selected = sel.toString();
-      if (!selected.trim()) return;
-      sel.removeAllRanges();
-      setTimeout(() => {
-        setDialogAnotacao({ mode: 'nova', trecho: selected, inicio, fim: inicio + selected.length, competencia: 'c1', comentario: '' });
-      }, 10);
-    } catch {
-      window.getSelection()?.removeAllRanges();
-    }
-  };
-
   const refinarElogios = async () => {
     if (!comentarios.elogios.trim()) {
       toast({ title: "Atenção", description: "Digite a mensagem antes de refinar.", variant: "destructive" });
@@ -454,88 +336,14 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const imagemUrl = (redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url;
   const isImagemGerada = !!(redacao as any).redacao_imagem_gerada_url;
 
-  // Modo texto com marcações Jarvis: só disponível para digitadas com Jarvis corrigido
-  const hasJarvisAtivo = isImagemGerada && !!redacao.texto && redacao.jarvis_precorrecao_status === 'corrigida';
-  const [modoTexto, setModoTexto] = useState(false);
-
-  // Sincroniza modo texto quando a redação muda
-  useEffect(() => {
-    setModoTexto(hasJarvisAtivo);
-  }, [redacao.id]);
-
-  const {
-    marcacoes: marcacoesJarvis,
-    inserir: inserirAnotacao, isInserting: isInsertingAnotacao,
-    confirmar: confirmarMarcacao, ignorar: ignorarMarcacao,
-    isSaving: isSavingMarcacao,
-  } = useComentariosTrechoCorrecao(hasJarvisAtivo ? redacao.id : null);
-  const [tooltipMarcacao, setTooltipMarcacao] = useState<ComentarioTrecho | null>(null);
-  const textoCorretorRef = useRef<HTMLDivElement>(null);
-  const [dialogAnotacao, setDialogAnotacao] = useState<DialogAnotacao | null>(null);
-
-  const [panelDragPos, setPanelDragPos] = useState({ x: 0, y: 0 });
-  const panelDragRef = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
-  const [panelRefineLoading, setPanelRefineLoading] = useState(false);
-  const [panelRefineSugestoes, setPanelRefineSugestoes] = useState<string[]>([]);
-  const [panelShowAssistente, setPanelShowAssistente] = useState(false);
-  const [panelAssistentePergunta, setPanelAssistentePergunta] = useState('');
-  const [panelAssistenteLoading, setPanelAssistenteLoading] = useState(false);
-  const [panelAssistenteHistorico, setPanelAssistenteHistorico] = useState<Array<{ pergunta: string; resposta: string }>>([]);
-  const panelComentarioRef = useRef<HTMLTextAreaElement>(null);
-  const panelAssistenteRef = useRef<HTMLTextAreaElement>(null);
-
-  const panelSetComentario = useCallback((val: string) => {
-    setDialogAnotacao(p => p ? { ...p, comentario: val } : null);
-  }, []);
-
-  const { isRecording: panelMicRecording, isSupported: panelMicSupported, toggleRecording: panelToggleMic, stopRecording: panelStopMic } =
-    useVoiceTranscription(panelSetComentario, dialogAnotacao?.comentario ?? '', panelComentarioRef);
-
-  const { isRecording: panelAssistenteMicRecording, isSupported: panelAssistenteMicSupported, toggleRecording: panelAssistenteMicToggle } =
-    useVoiceTranscription(setPanelAssistentePergunta, panelAssistentePergunta, panelAssistenteRef);
-
-  // Drag do painel de anotação
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!panelDragRef.current.isDragging) return;
-      setPanelDragPos({
-        x: panelDragRef.current.startPosX + (e.clientX - panelDragRef.current.startX),
-        y: panelDragRef.current.startPosY + (e.clientY - panelDragRef.current.startY),
-      });
-    };
-    const onMouseUp = () => { panelDragRef.current.isDragging = false; };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, []);
-
-  // Reset do painel ao abrir/fechar
-  useEffect(() => {
-    if (!dialogAnotacao) {
-      panelStopMic();
-    } else {
-      setPanelDragPos({ x: 0, y: 0 });
-      setPanelRefineSugestoes([]);
-      setPanelShowAssistente(false);
-      setPanelAssistentePergunta('');
-      setPanelAssistenteHistorico([]);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!dialogAnotacao]);
-
   const dataFormatada = new Date(redacao.data_envio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const statusLabel = STATUS_LABELS[redacao.status_minha_correcao] || redacao.status_minha_correcao;
 
-  // Indicador de discrepância
   const showDiscrepancia = redacaoFinalizada && parUtilizado != null &&
     ((redacao.eh_corretor_1 && parUtilizado === '2_admin') || (!redacao.eh_corretor_1 && parUtilizado === '1_admin'));
 
   return (
     <div className="container-corretor space-y-4 pb-8">
-      {/* Botão Voltar */}
       <Button variant="outline" onClick={onVoltar} className="flex items-center gap-2">
         <ArrowLeft className="w-4 h-4" />
         Voltar
@@ -600,12 +408,11 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </div>
       </section>
 
-      {/* Layout de duas colunas — redação protagonista */}
+      {/* Layout de duas colunas */}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
 
         {/* ── COLUNA PRINCIPAL: REDAÇÃO ── */}
         <main className="min-w-0 space-y-4">
-          {/* Alertas */}
           {redacaoCongelada && (
             <Alert variant="destructive" className="border-cyan-500 bg-cyan-50">
               <AlertTriangle className="h-4 w-4 text-cyan-600" />
@@ -628,146 +435,34 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           )}
 
-          {/* Redação em imagem — ocupa máximo do contêiner */}
+          {/* Redação em imagem */}
           {hasImage && (
             <div className="min-w-0 rounded-2xl border border-violet-100 bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between border-b border-violet-100 px-5 py-3">
-                <div>
-                  <h2 className="text-sm font-black text-slate-900">
-                    {isImagemGerada
-                      ? (modoTexto ? 'Redação — texto com marcações' : 'Redação digitalizada')
-                      : 'Redação manuscrita'}
-                  </h2>
-                  {(redacao as any).contagem_palavras ? (
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {(redacao as any).contagem_palavras} palavras
-                    </p>
-                  ) : null}
-                </div>
-                {/* Toggle imagem / texto — só para digitadas com Jarvis */}
-                {hasJarvisAtivo && (
-                  <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden text-xs">
-                    <button
-                      onClick={() => setModoTexto(false)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${!modoTexto ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
-                    >
-                      <ImageIcon className="w-3 h-3" /> Imagem
-                    </button>
-                    <button
-                      onClick={() => setModoTexto(true)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${modoTexto ? 'bg-violet-700 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
-                    >
-                      <FileText className="w-3 h-3" /> Texto
-                    </button>
-                  </div>
-                )}
+              <div className="border-b border-violet-100 px-5 py-3">
+                <h2 className="text-sm font-black text-slate-900">
+                  {isImagemGerada ? 'Redação digitalizada' : 'Redação manuscrita'}
+                </h2>
+                {(redacao as any).contagem_palavras ? (
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {(redacao as any).contagem_palavras} palavras
+                  </p>
+                ) : null}
               </div>
-
-              {/* Modo texto — redação com highlights do Jarvis */}
-              {modoTexto && redacao.texto ? (
-                <div className="p-6">
-                  <p className="text-[11px] text-slate-400 mb-3">Selecione um trecho do texto para criar uma marcação do corretor</p>
-                  <div
-                    ref={textoCorretorRef}
-                    onMouseUp={handleMouseUpTexto}
-                    className="text-sm leading-relaxed whitespace-pre-wrap text-slate-800 font-serif cursor-text select-text"
-                  >
-                    {(() => {
-                      const visiveis = marcacoesJarvis.filter(
-                        m => m.status !== 'ignorada' && m.inicio >= 0 && m.fim <= redacao.texto!.length && m.fim > m.inicio
-                      );
-                      if (!visiveis.length) return redacao.texto;
-
-                      const sorted = [...visiveis].sort((a, b) => a.inicio - b.inicio);
-                      const parts: React.ReactNode[] = [];
-                      let cursor = 0;
-
-                      const COMP_HL: Record<string, string> = {
-                        c1: 'bg-red-100 text-red-900 border-b-2 border-red-300',
-                        c2: 'bg-emerald-100 text-emerald-900 border-b-2 border-emerald-300',
-                        c3: 'bg-blue-100 text-blue-900 border-b-2 border-blue-300',
-                        c4: 'bg-orange-100 text-orange-900 border-b-2 border-orange-300',
-                        c5: 'bg-purple-100 text-purple-900 border-b-2 border-purple-300',
-                      };
-
-                      for (const m of sorted) {
-                        if (m.inicio > cursor) parts.push(<span key={`t-${cursor}`}>{redacao.texto!.slice(cursor, m.inicio)}</span>);
-                        if (m.fim > m.inicio) {
-                          const cls = m.status === 'sugerida'
-                            ? 'bg-violet-100 text-violet-900 border-b-2 border-dashed border-violet-400 cursor-pointer hover:bg-violet-200'
-                            : (COMP_HL[m.competencia] ?? 'bg-yellow-100') + ' cursor-pointer hover:opacity-80';
-                          parts.push(
-                            <span
-                              key={m.id}
-                              className={`rounded-sm px-0.5 transition-colors ${cls}`}
-                              onClick={() => {
-                                if (m.status === 'sugerida') {
-                                  setDialogAnotacao({
-                                    mode: 'editar',
-                                    existingId: m.id,
-                                    trecho: m.trecho,
-                                    inicio: m.inicio,
-                                    fim: m.fim,
-                                    paragrafo: m.paragrafo ?? undefined,
-                                    competencia: m.competencia,
-                                    tipo: m.tipo ?? 'erro',
-                                    comentario: m.comentario,
-                                    sugestao_reescrita: m.sugestao_reescrita ?? '',
-                                  });
-                                } else {
-                                  setTooltipMarcacao(m);
-                                }
-                              }}
-                              title={m.status === 'sugerida' ? 'Clique para revisar esta sugestão do Jarvis' : m.comentario}
-                            >
-                              {redacao.texto!.slice(m.inicio, m.fim)}
-                            </span>
-                          );
-                        }
-                        cursor = Math.max(cursor, m.fim);
-                      }
-                      if (cursor < redacao.texto!.length) parts.push(<span key={`t-end`}>{redacao.texto!.slice(cursor)}</span>);
-                      return parts;
-                    })()}
-                  </div>
-
-                  {/* Legenda */}
-                  {marcacoesJarvis.length > 0 && (
-                    <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-5 flex-wrap">
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Legenda:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-block w-5 h-2 rounded-sm bg-violet-100 border-b-2 border-dashed border-violet-400" />
-                        <span className="text-[10px] text-slate-500">Sugestão pendente</span>
-                      </div>
-                      {['c1','c2','c3','c4','c5'].map((c, i) => {
-                        const colors = ['bg-red-100 border-red-300','bg-emerald-100 border-emerald-300','bg-blue-100 border-blue-300','bg-orange-100 border-orange-300','bg-purple-100 border-purple-300'];
-                        return (
-                          <div key={c} className="flex items-center gap-1">
-                            <span className={`inline-block w-5 h-2 rounded-sm border-b-2 ${colors[i]}`} />
-                            <span className="text-[10px] text-slate-500">C{i+1}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <RedacaoAnotacaoVisual
-                  ref={anotacaoRef}
-                  imagemUrl={imagemUrl!}
-                  redacaoId={redacao.id}
-                  corretorId={corretorId}
-                  ehCorretor1={redacao.eh_corretor_1}
-                  ehCorretor2={redacao.eh_corretor_2}
-                  statusMinhaCorrecao={redacao.status_minha_correcao}
-                  tipoTabela={
-                    redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
-                    redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' :
-                    'redacoes_enviadas'
-                  }
-                  onAnotacoesChange={handleAnotacoesChange}
-                />
-              )}
+              <RedacaoAnotacaoVisual
+                ref={anotacaoRef}
+                imagemUrl={imagemUrl!}
+                redacaoId={redacao.id}
+                corretorId={corretorId}
+                ehCorretor1={redacao.eh_corretor_1}
+                ehCorretor2={redacao.eh_corretor_2}
+                statusMinhaCorrecao={redacao.status_minha_correcao}
+                tipoTabela={
+                  redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
+                  redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' :
+                  'redacoes_enviadas'
+                }
+                onAnotacoesChange={handleAnotacoesChange}
+              />
             </div>
           )}
 
@@ -796,7 +491,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
         {/* ── SIDEBAR ── */}
         <aside className="min-w-0 space-y-3">
-
           {/* 1. Mensagem pedagógica */}
           <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
             <div className="px-4 py-3 border-b border-violet-50">
@@ -1012,108 +706,84 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           )}
 
           {!loadingJarvis && jarvisData && (
-            <Tabs defaultValue="analise" className="flex flex-col flex-1 overflow-hidden">
-              <TabsList className="shrink-0 mx-6 mt-4 mb-0 grid w-auto grid-cols-2 bg-slate-100">
-                <TabsTrigger value="analise" className="text-xs font-semibold">Análise</TabsTrigger>
-                <TabsTrigger value="marcacoes" className="text-xs font-semibold" disabled={!redacao.texto}>
-                  Marcações
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Aba: Análise */}
-              <TabsContent value="analise" className="flex-1 overflow-y-auto px-6 py-4">
-                <div className="space-y-6">
-                  {/* Notas sugeridas */}
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Notas sugeridas</p>
-                    <div className="grid grid-cols-5 gap-2">
-                      {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
-                        const info = COMP_INFO[key];
-                        const nota = jarvisData[`nota_${key}`] ?? jarvisData.correcao_ia?.competencias?.[key]?.nota ?? 0;
-                        return (
-                          <div key={key} className="rounded-xl border p-2 text-center" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
-                            <p className="text-[10px] font-black" style={{ color: info.tc }}>C{i + 1}</p>
-                            <p className="text-lg font-black leading-none mt-1" style={{ color: info.cor }}>{nota}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-center">
-                      <p className="text-xs text-violet-600 font-bold uppercase tracking-wide">Nota total</p>
-                      <p className="text-2xl font-black text-violet-800">{jarvisData.nota_total ?? 0}</p>
-                    </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-6">
+                {/* Notas sugeridas */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Notas sugeridas</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
+                      const info = COMP_INFO[key];
+                      const nota = jarvisData[`nota_${key}`] ?? jarvisData.correcao_ia?.competencias?.[key]?.nota ?? 0;
+                      return (
+                        <div key={key} className="rounded-xl border p-2 text-center" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
+                          <p className="text-[10px] font-black" style={{ color: info.tc }}>C{i + 1}</p>
+                          <p className="text-lg font-black leading-none mt-1" style={{ color: info.cor }}>{nota}</p>
+                        </div>
+                      );
+                    })}
                   </div>
-
-                  {/* Análise por competência */}
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Análise por competência</p>
-                    <div className="space-y-3">
-                      {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
-                        const info = COMP_INFO[key];
-                        const justificativa = jarvisData.correcao_ia?.competencias?.[key]?.justificativa;
-                        if (!justificativa) return null;
-                        return (
-                          <div key={key} className="rounded-xl border p-3" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <span className="text-xs font-black" style={{ color: info.tc }}>C{i + 1}</span>
-                              <span className="text-xs text-slate-400">—</span>
-                              <span className="text-xs font-semibold text-slate-600">{info.label}</span>
-                            </div>
-                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{justificativa}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Pontos de atenção */}
-                  {jarvisData.correcao_ia?.sugestoes_objetivas?.length > 0 && (
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Pontos de atenção</p>
-                      <ul className="space-y-1.5">
-                        {(jarvisData.correcao_ia.sugestoes_objetivas as string[]).map((s, i) => (
-                          <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
-                            <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black">{i + 1}</span>
-                            {s}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Versão lapidada */}
-                  {jarvisData.correcao_ia?.versao_lapidada && (
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Versão lapidada</p>
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                        <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{jarvisData.correcao_ia.versao_lapidada}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Aviso */}
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                    <p className="text-xs text-amber-700 leading-relaxed">
-                      <strong>Atenção:</strong> estas são sugestões da IA e servem de apoio à sua análise. A correção final é de sua responsabilidade.
-                    </p>
+                  <div className="mt-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-center">
+                    <p className="text-xs text-violet-600 font-bold uppercase tracking-wide">Nota total</p>
+                    <p className="text-2xl font-black text-violet-800">{jarvisData.nota_total ?? 0}</p>
                   </div>
                 </div>
-              </TabsContent>
 
-              {/* Aba: Marcações de trecho */}
-              <TabsContent value="marcacoes" className="flex-1 overflow-y-auto px-6 py-4">
-                {redacao.texto ? (
-                  <MarcacoesJarvisPanel
-                    redacaoEnviadaId={redacao.id}
-                    texto={redacao.texto}
-                  />
-                ) : (
-                  <div className="text-center py-10 text-slate-400">
-                    <p className="text-sm">Marcações disponíveis apenas para redações digitadas.</p>
+                {/* Análise por competência */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Análise por competência</p>
+                  <div className="space-y-3">
+                    {(Object.keys(COMP_INFO) as (keyof typeof COMP_INFO)[]).map((key, i) => {
+                      const info = COMP_INFO[key];
+                      const justificativa = jarvisData.correcao_ia?.competencias?.[key]?.justificativa;
+                      if (!justificativa) return null;
+                      return (
+                        <div key={key} className="rounded-xl border p-3" style={{ backgroundColor: info.bg, borderColor: info.cor + '33' }}>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <span className="text-xs font-black" style={{ color: info.tc }}>C{i + 1}</span>
+                            <span className="text-xs text-slate-400">—</span>
+                            <span className="text-xs font-semibold text-slate-600">{info.label}</span>
+                          </div>
+                          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{justificativa}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Pontos de atenção */}
+                {jarvisData.correcao_ia?.sugestoes_objetivas?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Pontos de atenção</p>
+                    <ul className="space-y-1.5">
+                      {(jarvisData.correcao_ia.sugestoes_objetivas as string[]).map((s, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
+                          <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black">{i + 1}</span>
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
-              </TabsContent>
-            </Tabs>
+
+                {/* Versão lapidada */}
+                {jarvisData.correcao_ia?.versao_lapidada && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Versão lapidada</p>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{jarvisData.correcao_ia.versao_lapidada}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Aviso */}
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    <strong>Atenção:</strong> estas são sugestões da IA e servem de apoio à sua análise. A correção final é de sua responsabilidade.
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
         </SheetContent>
       </Sheet>
@@ -1143,361 +813,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog: detalhe de marcação ao clicar no highlight */}
-      <Dialog open={!!tooltipMarcacao} onOpenChange={(open) => !open && setTooltipMarcacao(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base flex items-center gap-2 flex-wrap">
-              {tooltipMarcacao && COMP_INFO[tooltipMarcacao.competencia as keyof typeof COMP_INFO] && (
-                <span
-                  className="text-xs font-black px-2 py-0.5 rounded-full"
-                  style={{
-                    backgroundColor: COMP_INFO[tooltipMarcacao.competencia as keyof typeof COMP_INFO].bg,
-                    color: COMP_INFO[tooltipMarcacao.competencia as keyof typeof COMP_INFO].tc,
-                  }}
-                >
-                  {tooltipMarcacao.competencia.toUpperCase()}
-                </span>
-              )}
-              <span>Marcação de trecho</span>
-              {tooltipMarcacao?.tipo && (
-                <Badge variant="outline" className="text-[10px] h-4 px-1.5">
-                  {TIPO_LABELS_FORM[tooltipMarcacao.tipo] ?? tooltipMarcacao.tipo}
-                </Badge>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          {tooltipMarcacao && (
-            <div className="space-y-3">
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Trecho</p>
-                <p className="text-sm italic text-slate-700">"{tooltipMarcacao.trecho}"</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Comentário</p>
-                <p className="text-sm text-slate-800 leading-relaxed">{tooltipMarcacao.comentario}</p>
-              </div>
-              {tooltipMarcacao.sugestao_reescrita && (
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 mb-1">Sugestão de reescrita</p>
-                  <p className="text-sm italic text-emerald-800">"{tooltipMarcacao.sugestao_reescrita}"</p>
-                </div>
-              )}
-              <p className="text-[10px] text-slate-400">
-                Origem: {tooltipMarcacao.origem === 'jarvis' ? 'Jarvis (IA)' : 'Corretor'}
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Painel flutuante: revisão de sugestão Jarvis (editar) ou nova marcação manual (nova) */}
-      {!!dialogAnotacao && (() => {
-        const compNum = COMP_STR_TO_NUM[dialogAnotacao.competencia] ?? 1;
-        const pill = PILLS_INFO[compNum - 1];
-        const compInfo = COMP_INFO[dialogAnotacao.competencia as keyof typeof COMP_INFO];
-        const borderColor = pill?.cor ?? '#7c3aed';
-        return (
-          <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
-            <div
-              className="absolute inset-0 bg-black/30"
-              style={{ pointerEvents: 'auto' }}
-              onClick={() => setDialogAnotacao(null)}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                left: `calc(50% + ${panelDragPos.x}px)`,
-                top: `calc(50% + ${panelDragPos.y}px)`,
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'auto',
-                width: '26rem',
-                maxWidth: '92vw',
-                borderTop: `4px solid ${borderColor}`,
-              }}
-              className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden"
-            >
-              {/* Header arrastável */}
-              <div
-                onMouseDown={panelHandleDragStart}
-                className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b cursor-grab active:cursor-grabbing select-none"
-              >
-                <div className="flex items-center gap-2">
-                  {pill && (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-black"
-                      style={{ backgroundColor: pill.cor + '20', color: pill.cor, border: `1px solid ${pill.cor}55` }}
-                    >
-                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: pill.cor }} />
-                      {pill.label}
-                    </span>
-                  )}
-                  <span className="text-sm font-bold text-slate-800">
-                    {dialogAnotacao.mode === 'editar'
-                      ? 'Revisar sugestão do Jarvis'
-                      : (compInfo?.label ?? (compNum === 6 ? 'Ponto de Atenção' : 'Nova Marcação'))
-                    }
-                  </span>
-                </div>
-                <button
-                  onClick={() => setDialogAnotacao(null)}
-                  className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="p-4 space-y-3">
-                {/* Trecho marcado pelo Jarvis (apenas modo editar) */}
-                {dialogAnotacao.mode === 'editar' && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Trecho marcado pelo Jarvis</p>
-                      {dialogAnotacao.paragrafo && (
-                        <span className="text-[10px] font-semibold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">¶{dialogAnotacao.paragrafo}</span>
-                      )}
-                    </div>
-                    <p className="text-xs italic text-slate-700">"{dialogAnotacao.trecho}"</p>
-                  </div>
-                )}
-
-                {/* Pills de competência */}
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Competência</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {PILLS_INFO.map(p => {
-                      const key = COMP_NUM_TO_STR[p.key];
-                      const selected = dialogAnotacao.competencia === key;
-                      return (
-                        <button
-                          key={p.key}
-                          onClick={() => setDialogAnotacao(prev => prev ? { ...prev, competencia: key } : null)}
-                          className={cn(
-                            "rounded-full px-2.5 py-0.5 text-xs font-bold border transition-all",
-                            selected ? "ring-2 ring-offset-1" : "opacity-60 hover:opacity-100"
-                          )}
-                          style={{
-                            backgroundColor: selected ? p.cor + '20' : 'white',
-                            borderColor: p.cor,
-                            color: p.cor,
-                          }}
-                        >
-                          {p.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Textarea com microfone */}
-                <div className="relative">
-                  <textarea
-                    ref={panelComentarioRef}
-                    placeholder="Digite seu comentário sobre esta marcação..."
-                    value={dialogAnotacao.comentario}
-                    onChange={(e) => setDialogAnotacao(prev => prev ? { ...prev, comentario: e.target.value } : null)}
-                    rows={4}
-                    autoFocus
-                    autoCapitalize="sentences"
-                    spellCheck={true}
-                    lang="pt-BR"
-                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={panelToggleMic}
-                    disabled={!panelMicSupported}
-                    className={cn(
-                      "absolute bottom-2 right-2 p-1.5 rounded-full transition-colors",
-                      panelMicRecording
-                        ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
-                        : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
-                      !panelMicSupported && "opacity-40 cursor-not-allowed"
-                    )}
-                  >
-                    {panelMicRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </button>
-                </div>
-                {panelMicRecording && <p className="text-xs text-red-500 font-medium animate-pulse">Ouvindo...</p>}
-
-                {/* Refinar clareza */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={panelRefinar}
-                    disabled={panelRefineLoading || !dialogAnotacao.comentario.trim()}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors"
-                  >
-                    {panelRefineLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
-                    {panelRefineLoading ? 'Refinando…' : 'Refinar clareza'}
-                  </button>
-                  {panelRefineSugestoes.length > 0 && (
-                    <button type="button" onClick={() => setPanelRefineSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-                      <X className="w-3 h-3" /> Ignorar
-                    </button>
-                  )}
-                </div>
-
-                {panelRefineSugestoes.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
-                    {panelRefineSugestoes.map((s, i) => (
-                      <button
-                        key={i} type="button"
-                        onClick={() => { setDialogAnotacao(prev => prev ? { ...prev, comentario: s } : null); setPanelRefineSugestoes([]); }}
-                        className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Assistente de correção */}
-                <div className="border-t pt-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPanelShowAssistente(prev => !prev);
-                      if (!panelShowAssistente) setTimeout(() => panelAssistenteRef.current?.focus(), 100);
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-colors",
-                      panelShowAssistente
-                        ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                        : "text-blue-700 border-blue-200 hover:bg-blue-50"
-                    )}
-                  >
-                    <Bot className="w-3.5 h-3.5" />
-                    Assistente de correção
-                  </button>
-
-                  {panelShowAssistente && (
-                    <div className="mt-2.5 rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
-                      {panelAssistenteHistorico.length > 0 && (
-                        <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                          {panelAssistenteHistorico.map((item, i) => (
-                            <div key={i} className="space-y-1">
-                              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide truncate">Você: {item.pergunta}</p>
-                              <div className="bg-white rounded-lg border border-blue-100 p-2.5 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                {item.resposta}
-                                <div className="mt-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => setDialogAnotacao(prev => prev
-                                      ? { ...prev, comentario: prev.comentario.trim() ? `${prev.comentario.trim()}\n\n${item.resposta}` : item.resposta }
-                                      : null
-                                    )}
-                                    className="text-[10px] font-bold text-violet-700 border border-violet-200 bg-violet-50 hover:bg-violet-100 px-2 py-0.5 rounded-lg transition-colors"
-                                  >
-                                    Inserir no comentário
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex gap-1.5 items-end">
-                        <div className="relative flex-1">
-                          <textarea
-                            ref={panelAssistenteRef}
-                            value={panelAssistentePergunta}
-                            onChange={(e) => setPanelAssistentePergunta(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); panelChamarAssistente(); }
-                            }}
-                            placeholder="Pergunte ao assistente… (Enter para enviar)"
-                            rows={2}
-                            disabled={panelAssistenteLoading}
-                            className="w-full resize-none rounded-xl border border-blue-200 bg-white p-2 pr-8 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-50"
-                          />
-                          <button
-                            type="button"
-                            onClick={panelAssistenteMicToggle}
-                            disabled={!panelAssistenteMicSupported || panelAssistenteLoading}
-                            className={cn(
-                              "absolute bottom-2 right-2 p-1 rounded-full transition-colors",
-                              panelAssistenteMicRecording
-                                ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
-                                : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
-                              (!panelAssistenteMicSupported || panelAssistenteLoading) && "opacity-40 cursor-not-allowed"
-                            )}
-                          >
-                            {panelAssistenteMicRecording ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={panelChamarAssistente}
-                          disabled={panelAssistenteLoading || !panelAssistentePergunta.trim()}
-                          className="self-end p-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                        >
-                          {panelAssistenteLoading
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <SendHorizontal className="w-3.5 h-3.5" />
-                          }
-                        </button>
-                      </div>
-                      {panelAssistenteMicRecording && <p className="text-[10px] text-red-500 font-medium animate-pulse">Ouvindo...</p>}
-                      {!panelAssistenteMicRecording && <p className="text-[10px] text-blue-400">Shift+Enter para nova linha · microfone para ditar</p>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center gap-2 pt-2 border-t">
-                  {dialogAnotacao.mode === 'editar' && (
-                    <button
-                      type="button"
-                      onClick={() => { ignorarMarcacao(dialogAnotacao.existingId!); setDialogAnotacao(null); }}
-                      className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-xl transition-colors"
-                    >
-                      <X className="w-3 h-3" /> Ignorar
-                    </button>
-                  )}
-                  <div className="flex gap-2 ml-auto">
-                    <button
-                      onClick={() => setDialogAnotacao(null)}
-                      className="text-xs px-3 py-1.5 rounded-xl border font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      disabled={!dialogAnotacao.comentario.trim() || isInsertingAnotacao || isSavingMarcacao}
-                      onClick={() => {
-                        if (dialogAnotacao.mode === 'editar') {
-                          confirmarMarcacao(dialogAnotacao.existingId!, {
-                            competencia: dialogAnotacao.competencia,
-                            tipo: dialogAnotacao.tipo,
-                            comentario: dialogAnotacao.comentario.trim(),
-                            sugestao_reescrita: dialogAnotacao.sugestao_reescrita?.trim() || undefined,
-                          });
-                        } else {
-                          inserirAnotacao({
-                            trecho: dialogAnotacao.trecho,
-                            inicio: dialogAnotacao.inicio,
-                            fim: dialogAnotacao.fim,
-                            competencia: dialogAnotacao.competencia,
-                            tipo: dialogAnotacao.tipo,
-                            comentario: dialogAnotacao.comentario.trim(),
-                          });
-                        }
-                        setDialogAnotacao(null);
-                      }}
-                      className="text-xs px-3 py-1.5 rounded-xl bg-violet-700 text-white font-semibold hover:bg-violet-800 disabled:opacity-50 transition-colors flex items-center gap-1.5"
-                    >
-                      {(isInsertingAnotacao || isSavingMarcacao) && <Loader2 className="w-3 h-3 animate-spin" />}
-                      {dialogAnotacao.mode === 'editar' ? 'Confirmar' : 'Salvar'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 };
