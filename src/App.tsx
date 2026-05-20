@@ -161,6 +161,7 @@ function App() {
                     <Route path="/atualizar-email" element={<AtualizarEmail />} />
                     <Route path="/processo-seletivo/inscricao/:formularioId" element={<ProcessoSeletivoInscricao />} />
                     <Route path="/correcao-publica/:token" element={<CorrecaoPublica />} />
+                    <Route path="/s/:token" element={<CorrecaoPublica />} />
 
                     <Route path="/app" element={<ProtectedStudentRoute><Index /></ProtectedStudentRoute>} />
                     <Route path="/desempenho" element={<ProtectedStudentRoute><Desempenho /></ProtectedStudentRoute>} />
