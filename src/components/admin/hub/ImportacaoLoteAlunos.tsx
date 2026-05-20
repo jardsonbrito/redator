@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Download, CheckCircle, AlertCircle, Loader2, Users } from 'lucide-react';
+import { Upload, Download, CheckCircle, AlertCircle, Loader2, Users, FileText, School } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type RowStatus = 'sera_criado' | 'sera_atualizado' | 'ja_vinculado' | 'email_invalido' | 'duplicado_csv';
@@ -37,12 +37,42 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-const STATUS_CONFIG: Record<RowStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  sera_criado: { label: 'Novo', variant: 'default' },
-  sera_atualizado: { label: 'Mover turma', variant: 'secondary' },
-  ja_vinculado: { label: 'Já vinculado', variant: 'outline' },
-  email_invalido: { label: 'E-mail inválido', variant: 'destructive' },
-  duplicado_csv: { label: 'Duplicado', variant: 'destructive' },
+const STATUS_CONFIG: Record<RowStatus, {
+  label: string;
+  observacao: string;
+  variant: 'default' | 'secondary' | 'destructive' | 'outline';
+  rowClass: string;
+}> = {
+  sera_criado: {
+    label: 'Válido',
+    observacao: 'Pronto para cadastrar',
+    variant: 'default',
+    rowClass: '',
+  },
+  sera_atualizado: {
+    label: 'Já existe',
+    observacao: 'Aluno já existe; será vinculado à turma',
+    variant: 'secondary',
+    rowClass: '',
+  },
+  ja_vinculado: {
+    label: 'Já vinculado',
+    observacao: 'Já está nesta turma; sem alteração',
+    variant: 'outline',
+    rowClass: 'text-muted-foreground',
+  },
+  email_invalido: {
+    label: 'Erro',
+    observacao: 'E-mail inválido',
+    variant: 'destructive',
+    rowClass: 'opacity-60',
+  },
+  duplicado_csv: {
+    label: 'Duplicado',
+    observacao: 'E-mail repetido na planilha',
+    variant: 'destructive',
+    rowClass: 'opacity-60',
+  },
 };
 
 export function ImportacaoLoteAlunos() {
@@ -51,9 +81,16 @@ export function ImportacaoLoteAlunos() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [turmaId, setTurmaId] = useState('');
+  const [turmaNome, setTurmaNome] = useState('');
+  const [fileName, setFileName] = useState('');
   const [step, setStep] = useState<'config' | 'validating' | 'preview' | 'importing' | 'done'>('config');
   const [validatedRows, setValidatedRows] = useState<ValidatedRow[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+
+  const handleTurmaChange = (id: string) => {
+    setTurmaId(id);
+    setTurmaNome(turmasDinamicas.find(t => t.id === id)?.label || '');
+  };
 
   const handleDownloadTemplate = () => {
     const csv = 'nome_completo,email\nJoão da Silva,joao@exemplo.com\nMaria Souza,maria@exemplo.com';
@@ -70,6 +107,7 @@ export function ImportacaoLoteAlunos() {
     const file = e.target.files?.[0];
     if (!file || !turmaId) return;
 
+    setFileName(file.name);
     setStep('validating');
 
     Papa.parse<CsvRow>(file, {
@@ -100,7 +138,7 @@ export function ImportacaoLoteAlunos() {
           const nome = (row.nome_completo || '').trim();
 
           if (!email || !isValidEmail(email)) {
-            return { nome_completo: nome, email, status: 'email_invalido' };
+            return { nome_completo: nome, email: row.email?.trim() || '', status: 'email_invalido' };
           }
           if ((emailCountMap.get(email) ?? 0) > 1) {
             return { nome_completo: nome, email, status: 'duplicado_csv' };
@@ -188,6 +226,8 @@ export function ImportacaoLoteAlunos() {
     setValidatedRows([]);
     setImportResult(null);
     setTurmaId('');
+    setTurmaNome('');
+    setFileName('');
   };
 
   const counts = {
@@ -197,6 +237,7 @@ export function ImportacaoLoteAlunos() {
     erros: validatedRows.filter(r => r.status === 'email_invalido' || r.status === 'duplicado_csv').length,
   };
 
+  // ── Tela de resultado ─────────────────────────────────────────────────────
   if (step === 'done' && importResult) {
     return (
       <div className="max-w-md">
@@ -249,11 +290,12 @@ export function ImportacaoLoteAlunos() {
         </CardHeader>
         <CardContent className="space-y-4">
 
+          {/* ── Etapa 1: configuração + upload ──────────────────────────── */}
           {(step === 'config' || step === 'validating') && (
             <>
               <div className="space-y-1">
                 <Label>Turma de destino *</Label>
-                <Select value={turmaId} onValueChange={setTurmaId}>
+                <Select value={turmaId} onValueChange={handleTurmaChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a turma..." />
                   </SelectTrigger>
@@ -306,48 +348,75 @@ export function ImportacaoLoteAlunos() {
             </>
           )}
 
+          {/* ── Etapa 2: prévia da importação ───────────────────────────── */}
           {step === 'preview' && (
             <>
-              <div className="flex flex-wrap gap-2">
-                {counts.criados > 0 && <Badge>{counts.criados} novos</Badge>}
-                {counts.atualizados > 0 && <Badge variant="secondary">{counts.atualizados} moverão de turma</Badge>}
-                {counts.ignorados > 0 && <Badge variant="outline">{counts.ignorados} já vinculados</Badge>}
-                {counts.erros > 0 && <Badge variant="destructive">{counts.erros} com erro</Badge>}
+              {/* Cabeçalho da prévia */}
+              <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-2">
+                <p className="text-sm font-semibold text-foreground">Prévia da importação</p>
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <School className="w-3.5 h-3.5" />
+                    <span className="font-medium text-foreground">{turmaNome}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    {fileName}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {counts.criados > 0 && (
+                    <Badge variant="default">{counts.criados} {counts.criados === 1 ? 'válido' : 'válidos'}</Badge>
+                  )}
+                  {counts.atualizados > 0 && (
+                    <Badge variant="secondary">{counts.atualizados} já {counts.atualizados === 1 ? 'existe' : 'existem'}</Badge>
+                  )}
+                  {counts.ignorados > 0 && (
+                    <Badge variant="outline">{counts.ignorados} já {counts.ignorados === 1 ? 'vinculado' : 'vinculados'}</Badge>
+                  )}
+                  {counts.erros > 0 && (
+                    <Badge variant="destructive">{counts.erros} com {counts.erros === 1 ? 'erro' : 'erros'}</Badge>
+                  )}
+                </div>
               </div>
 
-              <div className="rounded-lg border overflow-hidden max-h-96 overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>E-mail</TableHead>
-                      <TableHead>Ação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {validatedRows.map((row, i) => {
-                      const cfg = STATUS_CONFIG[row.status];
-                      return (
-                        <TableRow
-                          key={i}
-                          className={row.status === 'email_invalido' || row.status === 'duplicado_csv' ? 'opacity-50' : ''}
-                        >
-                          <TableCell className="text-sm">{row.nome_completo || '—'}</TableCell>
-                          <TableCell className="text-sm font-mono">{row.email}</TableCell>
-                          <TableCell>
-                            <Badge variant={cfg.variant}>{cfg.label}</Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+              {/* Tabela de prévia */}
+              <div className="rounded-lg border overflow-hidden">
+                <div className="max-h-96 overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-28">Status</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead>Observação</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {validatedRows.map((row, i) => {
+                        const cfg = STATUS_CONFIG[row.status];
+                        return (
+                          <TableRow key={i} className={cfg.rowClass}>
+                            <TableCell>
+                              <Badge variant={cfg.variant} className="whitespace-nowrap">
+                                {cfg.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">{row.nome_completo || '—'}</TableCell>
+                            <TableCell className="text-sm font-mono text-muted-foreground">{row.email || '—'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{cfg.observacao}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
 
               {counts.erros > 0 && (
                 <div className="flex items-start gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2 text-sm text-yellow-800">
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>Linhas com erro serão ignoradas na importação.</span>
+                  <span>Linhas com erro ou duplicadas serão ignoradas na importação.</span>
                 </div>
               )}
 
@@ -358,12 +427,13 @@ export function ImportacaoLoteAlunos() {
                   disabled={counts.criados + counts.atualizados === 0}
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Confirmar e importar ({counts.criados + counts.atualizados} alunos)
+                  Confirmar e importar ({counts.criados + counts.atualizados} {counts.criados + counts.atualizados === 1 ? 'aluno' : 'alunos'})
                 </Button>
               </div>
             </>
           )}
 
+          {/* ── Etapa 3: importando ─────────────────────────────────────── */}
           {step === 'importing' && (
             <div className="flex items-center justify-center gap-3 py-10 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin" />
