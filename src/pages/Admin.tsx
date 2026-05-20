@@ -116,6 +116,7 @@ import { TurmasAlunosManager } from "@/components/admin/TurmasAlunosManager";
 // Import corretor components
 import { CorretorForm } from "@/components/admin/CorretorForm";
 import { CorretorList } from "@/components/admin/CorretorList";
+import { CorretorIAConfig } from "@/components/admin/CorretorIAConfig";
 
 // Import professor components
 import { ProfessoresHub } from "@/components/admin/hub/ProfessoresHub";
@@ -965,6 +966,7 @@ const Admin = () => {
               <h1 className="text-3xl font-bold text-foreground">Corretores</h1>
               <p className="text-muted-foreground mt-1">Gerencie a equipe de corretores da plataforma</p>
             </div>
+            <CorretorIAConfig />
             <CorretorForm
               onSuccess={handleCorretorSuccess}
               corretorEditando={corretorEditando}
