@@ -15,7 +15,7 @@ import { RedacaoListTable } from "./RedacaoListTable";
 import { estaCongelada } from "@/utils/redacaoUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
-import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 
 export const RedacaoEnviadaForm = () => {
   const {
@@ -132,7 +132,10 @@ export const RedacaoEnviadaForm = () => {
     return matchNome && matchTurma && matchStatus && matchCorretor && matchMes;
   });
 
-  const turmasDisponiveis = TODAS_TURMAS; // ['A', 'B', 'C', 'D', 'E', 'VISITANTE']
+  const turmasDisponiveis = useMemo(
+    () => [...new Set(redacoes.map(r => r.turma).filter(Boolean))].sort() as string[],
+    [redacoes]
+  );
 
   const handleView = (redacao: RedacaoEnviada) => {
     setSelectedRedacao(redacao);
