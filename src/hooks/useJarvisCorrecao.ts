@@ -423,3 +423,90 @@ export const useReprocessarCorrecao = (professorEmail: string) => {
     },
   });
 };
+
+// Hook standalone para salvar edição manual da correção pelo professor
+// Usa RPC SECURITY DEFINER pois professor não usa Supabase Auth (auth.uid() = null)
+export const useSalvarCorrecaoRevisada = (professorEmail: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      correcaoId: string;
+      notaC1: number;
+      notaC2: number;
+      notaC3: number;
+      notaC4: number;
+      notaC5: number;
+      correcaoIaEditada: any;
+    }) => {
+      const { error } = await supabase.rpc("salvar_jarvis_correcao_revisada", {
+        p_correcao_id: data.correcaoId,
+        p_professor_email: professorEmail,
+        p_nota_c1: data.notaC1,
+        p_nota_c2: data.notaC2,
+        p_nota_c3: data.notaC3,
+        p_nota_c4: data.notaC4,
+        p_nota_c5: data.notaC5,
+        p_correcao_ia: data.correcaoIaEditada,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jarvis-correcoes"] });
+      toast.success("Revisão salva com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao salvar revisão: ${error.message}`);
+    },
+  });
+};
+
+// Hook standalone para salvar correção revisada como modelo de referência do Jarvis
+// Usa RPC SECURITY DEFINER pois professor não usa Supabase Auth
+export const useSalvarComoModeloReferencia = (professorEmail: string) => {
+  return useMutation({
+    mutationFn: async (data: {
+      titulo: string;
+      tema: string;
+      textoAluno: string;
+      notaTotal: number;
+      notaC1: number;
+      notaC2: number;
+      notaC3: number;
+      notaC4: number;
+      notaC5: number;
+      correcaoIA: any;
+    }) => {
+      const { error } = await supabase.rpc("salvar_jarvis_modelo_referencia", {
+        p_professor_email: professorEmail,
+        p_titulo: data.titulo,
+        p_tema: data.tema,
+        p_texto_aluno: data.textoAluno,
+        p_nota_total: data.notaTotal,
+        p_nota_c1: data.notaC1,
+        p_nota_c2: data.notaC2,
+        p_nota_c3: data.notaC3,
+        p_nota_c4: data.notaC4,
+        p_nota_c5: data.notaC5,
+        p_justificativa_c1: data.correcaoIA.competencias?.c1?.justificativa ?? null,
+        p_justificativa_c2: data.correcaoIA.competencias?.c2?.justificativa ?? null,
+        p_justificativa_c3: data.correcaoIA.competencias?.c3?.justificativa ?? null,
+        p_justificativa_c4: data.correcaoIA.competencias?.c4?.justificativa ?? null,
+        p_justificativa_c5: data.correcaoIA.competencias?.c5?.justificativa ?? null,
+        p_erros_identificados: data.correcaoIA.erros?.length
+          ? JSON.stringify(data.correcaoIA.erros)
+          : null,
+        p_sugestoes_melhoria: data.correcaoIA.sugestoes_objetivas?.length
+          ? data.correcaoIA.sugestoes_objetivas.join("\n")
+          : null,
+        p_comentario_pedagogico: data.correcaoIA.resumo_geral ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Correção salva como modelo de referência do Jarvis!");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao salvar modelo: ${error.message}`);
+    },
+  });
+};
