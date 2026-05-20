@@ -114,9 +114,7 @@ import { AlunosHub } from "@/components/admin/hub/AlunosHub";
 import { TurmasAlunosManager } from "@/components/admin/TurmasAlunosManager";
 
 // Import corretor components
-import { CorretorForm } from "@/components/admin/CorretorForm";
-import { CorretorList } from "@/components/admin/CorretorList";
-import { CorretorIAConfig } from "@/components/admin/CorretorIAConfig";
+import { CorretoresHub } from "@/components/admin/hub/CorretoresHub";
 
 // Import professor components
 import { ProfessoresHub } from "@/components/admin/hub/ProfessoresHub";
@@ -947,35 +945,13 @@ const Admin = () => {
   const renderContent = () => {
     switch (activeView) {
       case "corretores":
-        const handleCorretorSuccess = () => {
-          setRefreshCorretores(!refreshCorretores);
-          setCorretorEditando(null);
-        };
-
-        const handleEditCorretor = (corretor: any) => {
-          setCorretorEditando(corretor);
-        };
-
-        const handleCancelCorretorEdit = () => {
-          setCorretorEditando(null);
-        };
-
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Corretores</h1>
               <p className="text-muted-foreground mt-1">Gerencie a equipe de corretores da plataforma</p>
             </div>
-            <CorretorIAConfig />
-            <CorretorForm
-              onSuccess={handleCorretorSuccess}
-              corretorEditando={corretorEditando}
-              onCancelEdit={handleCancelCorretorEdit}
-            />
-            <CorretorList
-              refresh={refreshCorretores}
-              onEdit={handleEditCorretor}
-            />
+            <CorretoresHub />
           </div>
         );
 
