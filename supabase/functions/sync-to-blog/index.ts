@@ -212,7 +212,7 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const appClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const blogClient = createClient(Deno.env.get("BLOG_SUPABASE_URL")!, Deno.env.get("BLOG_SERVICE_ROLE_KEY")!);
+    const blogClient = appClient.schema("blog");
 
     // 1. Validar token
     const rawToken = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
