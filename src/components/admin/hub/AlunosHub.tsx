@@ -5,6 +5,8 @@ import { AlunoPerfilSheet, type AlunoHubItem } from './AlunoPerfilSheet';
 import ResumoTurma from '@/pages/admin/ResumoTurma';
 import { TurmasAlunosManager } from '@/components/admin/TurmasAlunosManager';
 import { LoginDashboardTab } from '@/components/admin/LoginDashboardTab';
+import { CadastroDiretoAluno } from './CadastroDiretoAluno';
+import { ImportacaoLoteAlunos } from './ImportacaoLoteAlunos';
 
 export function AlunosHub() {
   const [refresh, setRefresh] = useState(false);
@@ -24,7 +26,9 @@ export function AlunosHub() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="lista">Lista</TabsTrigger>
-          <TabsTrigger value="cadastramento">Cadastramento</TabsTrigger>
+          <TabsTrigger value="cadastramento">Convites</TabsTrigger>
+          <TabsTrigger value="cadastro-direto">Cadastro Direto</TabsTrigger>
+          <TabsTrigger value="importar-lote">Importar em Lote</TabsTrigger>
           <TabsTrigger value="desempenho">Desempenho Acadêmico</TabsTrigger>
           <TabsTrigger value="login">Login</TabsTrigger>
         </TabsList>
@@ -41,6 +45,16 @@ export function AlunosHub() {
         {/* Cadastramento: criação de turmas + geração de convites/acessos */}
         <TabsContent value="cadastramento">
           <TurmasAlunosManager />
+        </TabsContent>
+
+        {/* Cadastro direto: sem convite */}
+        <TabsContent value="cadastro-direto">
+          <CadastroDiretoAluno />
+        </TabsContent>
+
+        {/* Importação em lote via CSV */}
+        <TabsContent value="importar-lote">
+          <ImportacaoLoteAlunos />
         </TabsContent>
 
         {/* Desempenho acadêmico por turma */}
