@@ -173,14 +173,14 @@ export const HistoricoCorrecoes = ({
     }
   }, [correcoes, autoOpenCorrecaoId, onAutoOpenCleared]);
 
-  // Mantém correcaoSelecionada sincronizado com o polling — evita que o snapshot fique
-  // travado em "revisao_ocr" após o processamento atualizar o status no banco.
+  // Mantém correcaoSelecionada sincronizado com o polling e com salvamentos manuais.
+  // Sempre substitui pelo dado mais recente da lista (cobre mudança de status e de conteúdo).
   useEffect(() => {
     if (!correcoes) return;
     setCorrecaoSelecionada((prev) => {
       if (!prev) return prev;
       const updated = correcoes.find((c) => c.id === prev.id);
-      return updated && updated.status !== prev.status ? updated : prev;
+      return updated ?? prev;
     });
   }, [correcoes]);
 
