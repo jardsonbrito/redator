@@ -494,11 +494,11 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           {/* 1. Mensagem pedagógica */}
           <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
             <div className="px-4 py-3 border-b border-violet-50">
-              <h3 className="text-sm font-black text-slate-900">Mensagem pedagógica do corretor</h3>
+              <h3 className="text-sm font-black text-slate-900">Comentário geral para o aluno</h3>
             </div>
             <div className="p-4 space-y-2">
               <textarea
-                placeholder="Escreva aqui a mensagem pedagógica para o aluno…"
+                placeholder="Escreva aqui um comentário geral sobre a redação do aluno..."
                 value={comentarios.elogios}
                 onChange={(e) => atualizarComentario('elogios', e.target.value)}
                 className="w-full min-h-[130px] resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"

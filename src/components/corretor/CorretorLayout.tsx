@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays } from "lucide-react";
+import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays, ChevronDown } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
@@ -98,13 +98,15 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
               if (open) { setEditingNome(false); setNomeValue(corretor?.nome_completo || ""); }
             }}>
               <SheetTrigger asChild>
-                <button className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity rounded-xl p-1">
+                <button className="flex items-center gap-2 sm:gap-3 hover:bg-violet-50 transition-colors rounded-xl px-2 py-1.5 border border-transparent hover:border-violet-200">
                   <CorretorAvatar size="sm" showUpload={false} />
-                  {!isMobile && (
-                    <span className="text-foreground font-medium text-xs sm:text-sm truncate max-w-32 sm:max-w-none leading-tight">
+                  <div className="hidden sm:flex flex-col items-start min-w-0">
+                    <span className="text-foreground font-semibold text-xs sm:text-sm truncate max-w-32 sm:max-w-none leading-tight">
                       {corretor?.nome_completo || 'Corretor'}
                     </span>
-                  )}
+                    <span className="text-[10px] text-violet-500 font-medium leading-none mt-0.5">Corretor</span>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[310px] sm:w-[360px] overflow-y-auto">

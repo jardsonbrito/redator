@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, UserCheck, UserX, MoreVertical, Eye, EyeOff, FileImage, FileText } from "lucide-react";
+import { Edit, Trash2, UserCheck, UserX, MoreVertical, Eye, EyeOff, FileImage, FileText, Filter, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,8 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteTargetCorretor, setDeleteTargetCorretor] = useState<Corretor | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [turmaFiltro, setTurmaFiltro] = useState<string>("__all__");
+  const [turmasDisponiveis, setTurmasDisponiveis] = useState<string[]>([]);
   const { toast } = useToast();
 
   const fetchCorretores = async () => {
@@ -62,7 +65,15 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
 
       if (error) throw error;
 
-      setCorretores(data || []);
+      const lista = data || [];
+      setCorretores(lista);
+
+      // Coletar todas as turmas únicas de todos os corretores
+      const turmasSet = new Set<string>();
+      lista.forEach((c) => {
+        (c.turmas_autorizadas || []).forEach((t: string) => turmasSet.add(t));
+      });
+      setTurmasDisponiveis(Array.from(turmasSet).sort());
     } catch (error: any) {
       console.error("Erro ao buscar corretores:", error);
       toast({
@@ -78,6 +89,13 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   useEffect(() => {
     fetchCorretores();
   }, [refresh]);
+
+  const corretoresFiltrados = useMemo(() => {
+    if (turmaFiltro === "__all__") return corretores;
+    return corretores.filter((c) =>
+      Array.isArray(c.turmas_autorizadas) && c.turmas_autorizadas.includes(turmaFiltro)
+    );
+  }, [corretores, turmaFiltro]);
 
   const handleToggleStatus = async (corretor: Corretor) => {
     try {
@@ -168,16 +186,54 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Lista de Corretores ({corretores.length})</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardTitle>
+            Lista de Corretores ({corretoresFiltrados.length}
+            {turmaFiltro !== "__all__" && corretores.length !== corretoresFiltrados.length
+              ? ` de ${corretores.length}`
+              : ""})
+          </CardTitle>
+          {turmasDisponiveis.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Select value={turmaFiltro} onValueChange={setTurmaFiltro}>
+                <SelectTrigger className="w-52 h-8 text-xs">
+                  <SelectValue placeholder="Filtrar por turma..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todas as turmas</SelectItem>
+                  {turmasDisponiveis.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {formatTurmaDisplay(t)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {turmaFiltro !== "__all__" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setTurmaFiltro("__all__")}
+                  title="Limpar filtro"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        {corretores.length === 0 ? (
+        {corretoresFiltrados.length === 0 ? (
           <p className="text-muted-foreground text-center py-4">
-            Nenhum corretor cadastrado ainda.
+            {turmaFiltro !== "__all__"
+              ? "Nenhum corretor autorizado para esta turma."
+              : "Nenhum corretor cadastrado ainda."}
           </p>
         ) : (
           <div className="space-y-4">
-            {corretores.map((corretor) => (
+            {corretoresFiltrados.map((corretor) => (
               <div
                 key={corretor.id}
                 className="flex items-center justify-between p-4 border rounded-lg"

@@ -42,13 +42,13 @@ interface Config {
 }
 
 const DEFAULT_CONFIG: Config = {
-  provider: 'anthropic',
-  model: 'claude-3-5-sonnet-20241022',
+  provider: 'openai',
+  model: 'gpt-4o-mini',
   temperatura: 0.7,
-  max_tokens: 2000,
+  max_tokens: 600,
 };
 
-export const LaboratorioIAConfig = () => {
+export const CorretorIAConfig = () => {
   const { toast } = useToast();
   const [aberto, setAberto] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ export const LaboratorioIAConfig = () => {
       setLoading(true);
       try {
         const { data } = await supabase
-          .from('laboratorio_ia_config')
+          .from('corretor_ia_config')
           .select('*')
           .order('created_at', { ascending: true })
           .limit(1)
@@ -69,10 +69,10 @@ export const LaboratorioIAConfig = () => {
         if (data) {
           setConfig({
             id: data.id,
-            provider: (data.provider as Provider) || 'anthropic',
-            model: data.model || 'claude-3-5-sonnet-20241022',
+            provider: (data.provider as Provider) || 'openai',
+            model: data.model || 'gpt-4o-mini',
             temperatura: Number(data.temperatura ?? 0.7),
-            max_tokens: data.max_tokens ?? 2000,
+            max_tokens: data.max_tokens ?? 600,
           });
         }
       } finally {
@@ -82,7 +82,6 @@ export const LaboratorioIAConfig = () => {
     carregar();
   }, []);
 
-  // Quando provider muda, resetar model para o primeiro da lista
   const handleProviderChange = (provider: Provider) => {
     setConfig((prev) => ({
       ...prev,
@@ -97,17 +96,18 @@ export const LaboratorioIAConfig = () => {
       let error;
       if (config.id) {
         ({ error } = await supabase
-          .from('laboratorio_ia_config')
+          .from('corretor_ia_config')
           .update({
             provider: config.provider,
             model: config.model,
             temperatura: config.temperatura,
             max_tokens: config.max_tokens,
+            updated_at: new Date().toISOString(),
           })
           .eq('id', config.id));
       } else {
         const { data, error: e } = await supabase
-          .from('laboratorio_ia_config')
+          .from('corretor_ia_config')
           .insert({
             provider: config.provider,
             model: config.model,
@@ -122,7 +122,10 @@ export const LaboratorioIAConfig = () => {
 
       if (error) throw error;
 
-      toast({ title: '✅ Configuração salva', description: `Provider: ${PROVIDER_LABELS[config.provider]} · Modelo: ${config.model}` });
+      toast({
+        title: '✅ Configuração salva',
+        description: `Provider: ${PROVIDER_LABELS[config.provider]} · Modelo: ${config.model}`,
+      });
     } catch (err: any) {
       toast({ title: '❌ Erro ao salvar', description: err?.message, variant: 'destructive' });
     } finally {
@@ -132,39 +135,52 @@ export const LaboratorioIAConfig = () => {
 
   const modelsForProvider = PROVIDER_MODELS[config.provider];
   const modelValido = modelsForProvider.some((m) => m.value === config.model);
+  const modelLabel = modelsForProvider.find((m) => m.value === config.model)?.label ?? config.model;
 
   return (
-    <div className="border border-gray-200 rounded-xl bg-white overflow-hidden mb-6">
-      {/* Header clicável */}
+    <div className="border border-violet-200 rounded-xl bg-white overflow-hidden mb-6">
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-violet-50 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
             <Bot className="w-4 h-4 text-violet-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-800">Configuração de IA para Geração Automática</p>
+            <p className="text-sm font-semibold text-gray-800">Configuração de IA para o Fluxo do Corretor</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              {aberto ? 'Escolha o provider e modelo usado ao gerar aulas a partir dos temas' : `Provider atual: ${PROVIDER_LABELS[config.provider] || '—'} · ${config.model || '—'}`}
+              {loading
+                ? 'Carregando...'
+                : aberto
+                ? 'Controla "Refinar clareza", "Assistente de correção" e comentário geral'
+                : `Provider atual: ${PROVIDER_LABELS[config.provider] || '—'} · Modelo: ${modelLabel || config.model || '—'}`}
             </p>
           </div>
         </div>
-        {aberto ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+        {aberto ? (
+          <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        )}
       </button>
 
-      {/* Conteúdo expansível */}
       {aberto && (
-        <div className="border-t border-gray-100 px-5 py-5 space-y-5">
+        <div className="border-t border-violet-100 px-5 py-5 space-y-5">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" /> Carregando configuração...
             </div>
           ) : (
             <>
-              {/* Provider */}
+              <div className="rounded-lg bg-violet-50 border border-violet-200 px-4 py-3 text-xs text-violet-800">
+                Esta configuração controla os recursos de IA usados exclusivamente no fluxo de correção:
+                <strong> Refinar clareza</strong>,{' '}
+                <strong>Assistente de correção</strong> e geração de{' '}
+                <strong>comentário geral para o aluno</strong>.
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Provider</label>
                 <div className="flex flex-wrap gap-2">
@@ -186,7 +202,6 @@ export const LaboratorioIAConfig = () => {
                 </div>
               </div>
 
-              {/* Modelo */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Modelo</label>
                 <select
@@ -195,35 +210,48 @@ export const LaboratorioIAConfig = () => {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
                 >
                   {modelsForProvider.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {/* Temperatura */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Temperatura — <span className="font-mono text-violet-600">{config.temperatura.toFixed(2)}</span>
+                  Temperatura —{' '}
+                  <span className="font-mono text-violet-600">{config.temperatura.toFixed(2)}</span>
                   <span className="text-xs text-gray-400 ml-2">(0 = mais preciso · 1 = mais criativo)</span>
                 </label>
                 <input
                   type="range"
-                  min="0" max="1" step="0.05"
+                  min="0"
+                  max="1"
+                  step="0.05"
                   value={config.temperatura}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, temperatura: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setConfig((prev) => ({ ...prev, temperatura: Number(e.target.value) }))
+                  }
                   className="w-full accent-violet-600"
                 />
               </div>
 
-              {/* Max tokens */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Máximo de tokens de saída</label>
-                <p className="text-xs text-gray-400 mb-2">Controla o tamanho máximo da resposta da IA (2000–4000 é suficiente)</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Máximo de tokens de saída
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Controla o tamanho máximo da resposta da IA (400–1200 é suficiente para comentários)
+                </p>
                 <input
                   type="number"
-                  min="500" max="8000" step="100"
+                  min="200"
+                  max="4000"
+                  step="100"
                   value={config.max_tokens}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, max_tokens: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setConfig((prev) => ({ ...prev, max_tokens: Number(e.target.value) }))
+                  }
                   className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-violet-400"
                 />
               </div>
@@ -233,7 +261,14 @@ export const LaboratorioIAConfig = () => {
                 disabled={salvando}
                 className="bg-violet-600 hover:bg-violet-700 text-white"
               >
-                {salvando ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Salvando...</> : 'Salvar configuração'}
+                {salvando ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar configuração'
+                )}
               </Button>
             </>
           )}

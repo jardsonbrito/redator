@@ -28,9 +28,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Buscar configuração de IA do laboratório (provider + modelo configurável pelo admin)
+    // Buscar configuração de IA específica do fluxo do corretor
     const { data: config } = await supabaseClient
-      .from('laboratorio_ia_config')
+      .from('corretor_ia_config')
       .select('provider, model, temperatura, max_tokens')
       .order('created_at', { ascending: true })
       .limit(1)
