@@ -85,6 +85,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [showJarvisPanel, setShowJarvisPanel] = useState(false);
   const [jarvisData, setJarvisData] = useState<any>(null);
   const [loadingJarvis, setLoadingJarvis] = useState(false);
+  const [turmaExterna, setTurmaExterna] = useState(false);
 
   const anotacaoRef = useRef<RedacaoAnotacaoVisualRef>(null);
 
@@ -130,6 +131,16 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     carregarCorrecaoExistente();
     buscarTemaCompleto();
   }, [redacao.id]);
+
+  useEffect(() => {
+    if (!redacao.turma) return;
+    supabase
+      .from('turmas_alunos')
+      .select('gerenciada_por')
+      .eq('nome', redacao.turma)
+      .maybeSingle()
+      .then(({ data }) => setTurmaExterna(data?.gerenciada_por === 'externo'));
+  }, [redacao.turma]);
 
   useEffect(() => {
     if (!showJarvisPanel || !redacao.jarvis_precorrecao_id || jarvisData) return;
@@ -209,7 +220,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   };
 
   const salvarCorrecao = useCallback(async (status: 'incompleta' | 'corrigida') => {
-    if (status === 'corrigida') {
+    if (status === 'corrigida' && !turmaExterna) {
       const { data: marcacoesAtuais } = await refetchMarcacoesPEP();
       if (!marcacoesAtuais || marcacoesAtuais.length === 0) {
         toast({ title: 'Plano de Estudo não preenchido', description: 'Clique em "Gerar plano de estudo" e marque os aspectos identificados antes de finalizar.', variant: 'destructive' });
@@ -268,7 +279,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     } finally {
       setLoading(false);
     }
-  }, [redacao, notas, comentarios, toast, onSucesso, onRefreshList, refetchMarcacoesPEP, corretorNome, corretorEmail]);
+  }, [redacao, notas, comentarios, toast, onSucesso, onRefreshList, refetchMarcacoesPEP, corretorNome, corretorEmail, turmaExterna]);
 
   const atualizarNota = (competencia: keyof Omit<NotasCorrecao, 'total'>, valor: number) => {
     setNotas(prev => ({ ...prev, [competencia]: valor }));
@@ -553,26 +564,28 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </div>
 
-          {/* 3. Plano de Estudo (PEP) */}
-          <div className={`rounded-2xl border bg-white shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
-            <div className="p-4 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="text-sm font-black text-slate-900 leading-tight">Plano de Estudo (PEP)</h3>
-                <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                  {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
-                </p>
+          {/* 3. Plano de Estudo (PEP) — oculto para turmas externas */}
+          {!turmaExterna && (
+            <div className={`rounded-2xl border bg-white shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
+              <div className="p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-black text-slate-900 leading-tight">Plano de Estudo (PEP)</h3>
+                  <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setShowPEPModal(true)}
+                  size="sm"
+                  className={`shrink-0 gap-1.5 text-xs font-semibold ${marcacoesPEP.length === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'}`}
+                >
+                  <BookMarked className="w-3.5 h-3.5" />
+                  Preencher
+                </Button>
               </div>
-              <Button
-                type="button"
-                onClick={() => setShowPEPModal(true)}
-                size="sm"
-                className={`shrink-0 gap-1.5 text-xs font-semibold ${marcacoesPEP.length === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'}`}
-              >
-                <BookMarked className="w-3.5 h-3.5" />
-                Preencher
-              </Button>
             </div>
-          </div>
+          )}
 
           {/* Sugestão do Jarvis */}
           {redacao.jarvis_precorrecao_id && redacao.jarvis_precorrecao_status === 'corrigida' && (
@@ -627,8 +640,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               <button
                 onClick={() => salvarCorrecao('corrigida')}
                 disabled={loading || redacaoCongelada}
-                className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors ${marcacoesPEP.length === 0 ? 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'}`}
-                title={marcacoesPEP.length === 0 ? 'Preencha o PEP antes de finalizar' : undefined}
+                className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors ${!turmaExterna && marcacoesPEP.length === 0 ? 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'}`}
+                title={!turmaExterna && marcacoesPEP.length === 0 ? 'Preencha o PEP antes de finalizar' : undefined}
               >
                 {loading ? 'Salvando…' : 'Finalizar correção'}
               </button>
