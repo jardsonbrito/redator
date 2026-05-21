@@ -12,7 +12,6 @@ import {
   TrendingUp, Clock, FileText, CheckCircle2, ArrowRight,
   User, Calendar, BookOpen, Inbox, Loader2
 } from "lucide-react";
-import { AjudaRapidaCorretorCard } from "@/components/ajuda-rapida/AjudaRapidaCorretorCard";
 import { Top5Widget } from "@/components/shared/Top5Widget";
 import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { format, parseISO } from "date-fns";
@@ -268,43 +267,23 @@ const CorretorDashboard = () => {
         </Card>
 
         {/* ── FUNCIONALIDADES ──────────────────────────────────────────── */}
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          <div className="xl:col-span-1">
-            <AjudaRapidaCorretorCard />
-          </div>
+        {podeGerenciar && (
           <Card
-            className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer sm:col-span-1"
-            onClick={() => navigate('/corretor/redacoes-corretor')}
+            className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => navigate('/corretor/temas')}
           >
             <CardContent className="flex items-center gap-4 p-5">
-              <div className="bg-violet-100 p-3 rounded-xl">
-                <FileText className="w-5 h-5 text-violet-600" />
+              <div className="bg-fuchsia-100 p-3 rounded-xl">
+                <BookOpen className="w-5 h-5 text-fuchsia-600" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-slate-800 text-sm">Fila de redações</p>
-                <p className="text-xs text-slate-500">Acessar todas as correções</p>
+                <p className="font-semibold text-slate-800 text-sm">Temas</p>
+                <p className="text-xs text-slate-500">Explorar temas disponíveis</p>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-400" />
             </CardContent>
           </Card>
-          {podeGerenciar && (
-            <Card
-              className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate('/corretor/temas')}
-            >
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="bg-fuchsia-100 p-3 rounded-xl">
-                  <BookOpen className="w-5 h-5 text-fuchsia-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-800 text-sm">Temas</p>
-                  <p className="text-xs text-slate-500">Explorar temas disponíveis</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400" />
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        )}
 
         {/* ── GRÁFICOS ─────────────────────────────────────────────────── */}
         <div className="grid xl:grid-cols-2 gap-4">
