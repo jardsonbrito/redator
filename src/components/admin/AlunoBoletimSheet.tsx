@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -67,6 +67,9 @@ import { ptBR } from "date-fns/locale";
 import { useAlunoBoletim } from "@/hooks/useAlunoBoletim";
 import { useAlunoScoreHistorico } from "@/hooks/useAlunoScoreHistorico";
 import { exportarBoletimVisualPDF } from "@/utils/boletimVisualPDF";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { classificarScoreGeral } from "@/utils/radarScore";
 import { RADAR_CONFIG } from "@/config/radarConfig";
 
@@ -306,6 +309,9 @@ export function AlunoBoletimSheet({
   const [exportando, setExportando] = useState(false);
   const [modalJustificativas, setModalJustificativas] = useState(false);
   const [mensagemProfessor, setMensagemProfessor] = useState("");
+  const [salvandoMensagem, setSalvandoMensagem] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useAlunoBoletim(
     open ? email : null,
@@ -322,6 +328,31 @@ export function AlunoBoletimSheet({
   );
 
   const anos = Array.from({ length: 4 }, (_, i) => now.getFullYear() - 1 + i);
+
+  // Pré-popula a textarea com o valor salvo quando os dados carregam
+  useEffect(() => {
+    if (data?.aluno?.mensagem_boletim !== undefined) {
+      setMensagemProfessor(data.aluno.mensagem_boletim ?? "");
+    }
+  }, [data?.aluno?.mensagem_boletim]);
+
+  async function handleSalvarMensagem() {
+    if (!email) return;
+    setSalvandoMensagem(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ mensagem_boletim: mensagemProfessor.trim() || null })
+        .eq("email", email);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["alunoBoletim"] });
+      toast.success("Mensagem salva com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar a mensagem.");
+    } finally {
+      setSalvandoMensagem(false);
+    }
+  }
 
   async function handleExportarPDF() {
     if (!data) return;
@@ -414,14 +445,25 @@ export function AlunoBoletimSheet({
 
           {/* Mensagem personalizada do professor para o boletim */}
           <div className="mt-3 space-y-1">
-            <div className="flex items-center gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground font-medium">Mensagem do professor (aparece no PDF):</span>
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">Mensagem do professor no boletim:</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs px-2"
+                onClick={handleSalvarMensagem}
+                disabled={salvandoMensagem}
+              >
+                {salvandoMensagem ? <Loader2 className="h-3 w-3 animate-spin" /> : "Salvar"}
+              </Button>
             </div>
             <Textarea
               value={mensagemProfessor}
               onChange={(e) => setMensagemProfessor(e.target.value)}
-              placeholder="Digite uma mensagem personalizada para o aluno. Será exibida no boletim PDF assinada por Prof. Jardson Brito."
+              placeholder="Mensagem personalizada para o aluno. Aparece no boletim escolar e no PDF. Quando vazia, exibe a mensagem padrão."
               className="text-xs min-h-[64px] resize-none"
               maxLength={400}
             />

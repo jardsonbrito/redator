@@ -603,7 +603,9 @@ const DiarioOnline = () => {
                     <div className="flex gap-2.5">
                       <MessageSquareText className="w-5 h-5 shrink-0 text-foreground mt-0.5" />
                       <div>
-                        <p className="text-xs leading-relaxed text-muted-foreground">{MENSAGEM_PADRAO}</p>
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          {data.aluno?.mensagem_boletim ?? MENSAGEM_PADRAO}
+                        </p>
                         <p className="text-xs font-semibold italic text-foreground mt-3 text-right">
                           Prof. Jardson Brito
                         </p>

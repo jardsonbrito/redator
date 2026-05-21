@@ -114,6 +114,7 @@ export interface AlunoBoletimDados {
     avatar_url: string | null;
     escola: string | null;
     serie: string | null;
+    mensagem_boletim: string | null;
   } | null;
   redacoes: RedacaoBoletim[];
   exercicios: ExercicioBoletim[];
@@ -176,7 +177,7 @@ async function fetchBoletimData(
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, nome, sobrenome, email, turma, creditos, data_aprovacao, avatar_url, escola, serie")
+      .select("id, nome, sobrenome, email, turma, creditos, data_aprovacao, avatar_url, escola, serie, mensagem_boletim")
       .eq("email", email)
       .single(),
 
@@ -586,6 +587,7 @@ async function fetchBoletimData(
           avatar_url: (perfilRes.data as any).avatar_url ?? null,
           escola: (perfilRes.data as any).escola ?? null,
           serie: (perfilRes.data as any).serie ?? null,
+          mensagem_boletim: (perfilRes.data as any).mensagem_boletim ?? null,
         }
       : null,
     redacoes: todasRedacoes,
