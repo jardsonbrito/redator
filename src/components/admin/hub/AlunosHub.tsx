@@ -7,6 +7,10 @@ import { TurmasAlunosManager } from '@/components/admin/TurmasAlunosManager';
 import { LoginDashboardTab } from '@/components/admin/LoginDashboardTab';
 import { CadastroDiretoAluno } from './CadastroDiretoAluno';
 import { ImportacaoLoteAlunos } from './ImportacaoLoteAlunos';
+import { SubscriptionManagementClean } from '@/components/admin/SubscriptionManagementClean';
+import { PlansManager } from '@/components/admin/PlansManager';
+import { CreditManagement } from '@/components/admin/CreditManagement';
+import { DatabaseInitializer } from '@/components/DatabaseInitializer';
 
 export function AlunosHub() {
   const [refresh, setRefresh] = useState(false);
@@ -31,9 +35,11 @@ export function AlunosHub() {
           <TabsTrigger value="importar-lote">Importar em Lote</TabsTrigger>
           <TabsTrigger value="desempenho">Desempenho Acadêmico</TabsTrigger>
           <TabsTrigger value="login">Login</TabsTrigger>
+          <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
+          <TabsTrigger value="planos">Planos</TabsTrigger>
+          <TabsTrigger value="creditos">Créditos</TabsTrigger>
         </TabsList>
 
-        {/* Lista de alunos + visitantes */}
         <TabsContent value="lista">
           <AlunoList
             refresh={refresh}
@@ -42,29 +48,38 @@ export function AlunosHub() {
           />
         </TabsContent>
 
-        {/* Cadastramento: criação de turmas + geração de convites/acessos */}
         <TabsContent value="cadastramento">
           <TurmasAlunosManager />
         </TabsContent>
 
-        {/* Cadastro direto: sem convite */}
         <TabsContent value="cadastro-direto">
           <CadastroDiretoAluno />
         </TabsContent>
 
-        {/* Importação em lote via CSV */}
         <TabsContent value="importar-lote">
           <ImportacaoLoteAlunos />
         </TabsContent>
 
-        {/* Desempenho acadêmico por turma */}
         <TabsContent value="desempenho">
           <ResumoTurma />
         </TabsContent>
 
-        {/* Acesso / Login */}
         <TabsContent value="login">
           <LoginDashboardTab />
+        </TabsContent>
+
+        <TabsContent value="assinaturas">
+          <DatabaseInitializer>
+            <SubscriptionManagementClean />
+          </DatabaseInitializer>
+        </TabsContent>
+
+        <TabsContent value="planos">
+          <PlansManager tipo="aluno" />
+        </TabsContent>
+
+        <TabsContent value="creditos">
+          <CreditManagement />
         </TabsContent>
       </Tabs>
 

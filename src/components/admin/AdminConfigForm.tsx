@@ -8,12 +8,6 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { AppSettingsForm } from './AppSettingsForm';
-import { CreditManagement } from './CreditManagement';
-import { SubscriptionManagementClean } from './SubscriptionManagementClean';
-import { PlansManager } from './PlansManager';
-import { ProfessorFeaturesManager } from './ProfessorFeaturesManager';
-import { ProfessorSubscriptionManagement } from './ProfessorSubscriptionManagement';
-import { DatabaseInitializer } from '../DatabaseInitializer';
 import { Mail, Key, User, Clock, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -50,13 +44,10 @@ export const AdminConfigForm = () => {
   // Verificar parâmetro subtab para definir aba ativa
   useEffect(() => {
     const subtab = searchParams.get('subtab');
-    if (subtab && ['account', 'submissions', 'alunos', 'professores'].includes(subtab)) {
+    if (subtab && ['account', 'submissions'].includes(subtab)) {
       setActiveTab(subtab);
     }
   }, [searchParams]);
-
-  const [activeSubTab, setActiveSubTab] = useState('alunos');
-  const [activeProfSubTab, setActiveProfSubTab] = useState('assinaturas');
 
   const loadCurrentAdmin = async () => {
     setLoadingAdmin(true);
@@ -147,8 +138,6 @@ export const AdminConfigForm = () => {
         <TabsList>
           <TabsTrigger value="account">Conta</TabsTrigger>
           <TabsTrigger value="submissions">Envios</TabsTrigger>
-          <TabsTrigger value="alunos">Alunos</TabsTrigger>
-          <TabsTrigger value="professores">Professores</TabsTrigger>
         </TabsList>
 
         <TabsContent value="account" className="space-y-6">
@@ -324,48 +313,6 @@ export const AdminConfigForm = () => {
 
         <TabsContent value="submissions">
           <AppSettingsForm />
-        </TabsContent>
-
-        {/* ── Alunos ── */}
-        <TabsContent value="alunos">
-          <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
-              <TabsTrigger value="planos">Planos</TabsTrigger>
-              <TabsTrigger value="creditos">Créditos</TabsTrigger>
-            </TabsList>
-            <TabsContent value="assinaturas">
-              <DatabaseInitializer>
-                <SubscriptionManagementClean />
-              </DatabaseInitializer>
-            </TabsContent>
-            <TabsContent value="planos">
-              <PlansManager tipo="aluno" />
-            </TabsContent>
-            <TabsContent value="creditos">
-              <CreditManagement />
-            </TabsContent>
-          </Tabs>
-        </TabsContent>
-
-        {/* ── Professores ── */}
-        <TabsContent value="professores">
-          <Tabs value={activeProfSubTab} onValueChange={setActiveProfSubTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
-              <TabsTrigger value="planos">Planos</TabsTrigger>
-              <TabsTrigger value="funcionalidades">Funcionalidades</TabsTrigger>
-            </TabsList>
-            <TabsContent value="assinaturas">
-              <ProfessorSubscriptionManagement />
-            </TabsContent>
-            <TabsContent value="planos">
-              <PlansManager tipo="professor" />
-            </TabsContent>
-            <TabsContent value="funcionalidades">
-              <ProfessorFeaturesManager />
-            </TabsContent>
-          </Tabs>
         </TabsContent>
       </Tabs>
     </div>
