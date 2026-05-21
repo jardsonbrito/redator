@@ -410,18 +410,7 @@ const DiarioOnline = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleBaixarPDF}
-                disabled={!data || isLoading || exportando}
-                className="h-8 text-xs"
-              >
-                {exportando
-                  ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  : <FileDown className="h-3.5 w-3.5 mr-1.5" />}
-                Baixar PDF
-              </Button>
+              {/* PDF temporariamente desabilitado */}
             </div>
           </div>
 
