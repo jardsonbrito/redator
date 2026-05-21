@@ -40,68 +40,50 @@ function classificarNivelContagem(count: number, limites: [number, number, numbe
 }
 
 function gerarFrase(moduleKey: string, percent: number | null, count: number): string {
-  const fallback = "Dados ainda insuficientes para análise neste período.";
-  if (percent === null && count === 0) return fallback;
+  if (percent === null && count === 0) return "Sem registros neste período.";
 
-  const p = percent ?? Math.min(100, count * 15);
-
-  const frases: Record<string, (p: number, c: number) => string> = {
-    redacoes_regulares: (p) =>
-      p >= 80
-        ? `Média geral equivalente a ${p}%, com avanço consistente nas produções do período.`
-        : p >= 60
-        ? `Média de ${p}% nas redações. Há espaço para consolidar argumentação e repertório.`
-        : `Média de ${p}% nas redações. Regularidade e revisão das competências são recomendadas.`,
-    simulados: (p) =>
-      p >= 80
-        ? `Desempenho sólido nos simulados: ${p}%, demonstrando domínio das competências avaliadas.`
-        : p >= 60
-        ? `Rendimento de ${p}% nos simulados. Ampliar a estabilidade entre as competências pode elevar a nota.`
-        : `Resultado de ${p}% nos simulados. Reforçar o contato com a banca e simular mais vezes é recomendado.`,
+  const frases: Record<string, (p: number | null, c: number) => string> = {
+    redacoes_regulares: (p, c) =>
+      c === 0 ? "Nenhuma redação enviada neste período."
+        : p !== null && p >= 80 ? `Ótimo desempenho nas ${c} redação${c > 1 ? "ões" : ""} enviadas. Continue com consistência e repertório variado.`
+        : p !== null && p >= 60 ? `Há espaço para consolidar argumentação. Revise as competências com nota mais baixa.`
+        : p !== null ? `Regularidade e revisão das competências são recomendadas para elevar o desempenho.`
+        : `${c} redação${c > 1 ? "ões" : ""} enviada${c > 1 ? "s" : ""} no período. Aguardando correção.`,
+    simulados: (p, c) =>
+      c === 0 ? "Nenhum simulado enviado neste período."
+        : p !== null && p >= 80 ? `Desempenho sólido nos ${c} simulado${c > 1 ? "s" : ""} — domínio das competências avaliadas.`
+        : p !== null && p >= 60 ? `Rendimento pode melhorar. Ampliar a estabilidade entre competências eleva a nota.`
+        : p !== null ? `Reforce o contato com a banca e repita simulações para ganhar confiança.`
+        : `${c} simulado${c > 1 ? "s" : ""} enviado${c > 1 ? "s" : ""}. Aguardando correção.`,
     exercicios: (_, c) =>
-      c >= 8
-        ? `Realizou ${c} exercícios no período, demonstrando dedicação às atividades práticas.`
-        : c >= 4
-        ? `Completou ${c} exercícios. Aumentar a frequência pode acelerar a evolução argumentativa.`
-        : c > 0
-        ? `Realizou ${c} exercício${c > 1 ? "s" : ""} no período. Maior regularidade é recomendada.`
+      c >= 8 ? `${c} exercícios realizados — dedicação consistente às atividades práticas.`
+        : c >= 4 ? `${c} exercícios concluídos. Aumentar a frequência pode acelerar a evolução.`
+        : c > 0 ? `${c} exercício${c > 1 ? "s" : ""} realizado${c > 1 ? "s" : ""}. Maior regularidade é recomendada.`
         : "Sem registros de exercícios neste período.",
     lousa: (_, c) =>
-      c >= 6
-        ? `Participou de ${c} atividades de Lousa, demonstrando engajamento consistente.`
-        : c >= 3
-        ? `Participou de ${c} Lousas. Ampliar a participação pode reforçar as habilidades trabalhadas.`
-        : c > 0
-        ? `Registrou ${c} participação${c > 1 ? "ões" : ""} em Lousa. Há espaço para mais engajamento.`
+      c >= 6 ? `${c} atividades de Lousa concluídas — engajamento consistente.`
+        : c >= 3 ? `${c} Lousas concluídas. Ampliar a participação reforça as habilidades.`
+        : c > 0 ? `${c} participação${c > 1 ? "ões" : ""} em Lousa. Há espaço para mais engajamento.`
         : "Sem registros de Lousa neste período.",
     laboratorio_repertorio: (_, c) =>
-      c >= 10
-        ? `Concluiu ${c} conteúdos no Laboratório de Repertório, fortalecendo a base temática.`
-        : c >= 5
-        ? `Avançou ${c} itens no Laboratório. Maior consistência pode ampliar o repertório utilizado nas redações.`
-        : c > 0
-        ? `Iniciou o Laboratório com ${c} item${c > 1 ? "ns" : ""}. Manter o hábito é essencial para o crescimento.`
+      c >= 10 ? `${c} conteúdos concluídos no Laboratório — base temática bem desenvolvida.`
+        : c >= 5 ? `${c} itens avançados no Laboratório. Maior consistência amplia o repertório.`
+        : c > 0 ? `${c} item${c > 1 ? "ns" : ""} concluído${c > 1 ? "s" : ""}. Manter o hábito é essencial para o crescimento.`
         : "Sem registros no Laboratório de Repertório neste período.",
     videoteca: (_, c) =>
-      c >= 6
-        ? `Assistiu a ${c} conteúdos da Videoteca, enriquecendo o repertório sociocultural.`
-        : c >= 3
-        ? `Visualizou ${c} vídeos da Videoteca. O acesso regular contribui para a argumentação.`
-        : c > 0
-        ? `Acessou ${c} vídeo${c > 1 ? "s" : ""} da Videoteca. Ampliar esse uso pode enriquecer as redações.`
+      c >= 6 ? `${c} conteúdos da Videoteca assistidos — repertório sociocultural enriquecido.`
+        : c >= 3 ? `${c} vídeos assistidos. O acesso regular contribui para a argumentação.`
+        : c > 0 ? `${c} vídeo${c > 1 ? "s" : ""} assistido${c > 1 ? "s" : ""}. Ampliar esse uso enriquece as redações.`
         : "Sem registros na Videoteca neste período.",
     aulas_gravadas: (_, c) =>
-      c >= 6
-        ? `Assistiu a ${c} aulas gravadas, demonstrando comprometimento com o aprendizado autônomo.`
-        : c >= 3
-        ? `Acessou ${c} aulas gravadas. Aumentar o consumo de conteúdo pode acelerar o progresso.`
-        : c > 0
-        ? `Registrou ${c} acesso${c > 1 ? "s" : ""} a aulas gravadas no período.`
+      c >= 6 ? `${c} aulas gravadas assistidas — comprometimento com o aprendizado autônomo.`
+        : c >= 3 ? `${c} aulas gravadas acessadas. Mais consumo de conteúdo acelera o progresso.`
+        : c > 0 ? `${c} acesso${c > 1 ? "s" : ""} a aulas gravadas no período.`
         : "Sem registros de aulas gravadas neste período.",
   };
 
   const fn = frases[moduleKey];
-  return fn ? fn(p, count) : fallback;
+  return fn ? fn(percent, count) : "Sem dados suficientes para análise.";
 }
 
 function gerarProgressao(valor: number, pontos = 7): number[] {
@@ -231,7 +213,10 @@ function AvatarFallback({ nome, sobrenome }: { nome: string; sobrenome: string }
 interface PerformanceItem {
   moduleKey: string;
   title: string;
-  displayValue: string;
+  count: number;
+  countLabel: string;
+  avgGrade?: number | null;
+  grades?: (number | null)[];
   level: string;
   levelColor: string;
   summary: string;
@@ -242,13 +227,14 @@ interface PerformanceItem {
 
 function PerformanceCard({ item }: { item: PerformanceItem }) {
   const { Icon } = item;
+  const validGrades = (item.grades ?? []).filter((g): g is number => g !== null);
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "60px 1fr 140px",
+        gridTemplateColumns: "56px 1fr 136px",
         alignItems: "center",
-        gap: 12,
+        gap: 10,
         backgroundColor: "rgba(255,255,255,0.96)",
         borderRadius: 14,
         padding: "8px 12px",
@@ -257,30 +243,61 @@ function PerformanceCard({ item }: { item: PerformanceItem }) {
     >
       <div
         style={{
-          width: 60, height: 60, borderRadius: 12,
+          width: 56, height: 56, borderRadius: 12,
           backgroundColor: item.bgColor,
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}
       >
-        <Icon style={{ width: 30, height: 30, color: "#1e293b" }} strokeWidth={1.8} />
+        <Icon style={{ width: 28, height: 28, color: "#1e293b" }} strokeWidth={1.8} />
       </div>
 
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.03em", color: "#0f172a", lineHeight: 1.2 }}>
+        <div style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.03em", color: "#0f172a", lineHeight: 1.2 }}>
           {item.title}
         </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 3 }}>
-          <span style={{ fontSize: 22, fontWeight: 900, color: "#0f172a" }}>{item.displayValue}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: item.levelColor }}>| {item.level}</span>
+        {/* Contagem + nota média */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 20, fontWeight: 900, color: "#0f172a" }}>
+            {item.count}
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>
+            {item.countLabel}
+          </span>
+          {item.avgGrade !== null && item.avgGrade !== undefined && (
+            <span style={{ fontSize: 16, fontWeight: 900, color: item.levelColor }}>
+              {Math.round(item.avgGrade)} <span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8" }}>pts</span>
+            </span>
+          )}
+          <span style={{ fontSize: 10, fontWeight: 700, color: item.levelColor, backgroundColor: item.levelColor + "18", padding: "1px 6px", borderRadius: 4 }}>
+            {item.level}
+          </span>
         </div>
-        <div style={{ fontSize: 11, lineHeight: 1.4, color: "#475569", marginTop: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+        {/* Chips de notas individuais */}
+        {validGrades.length > 0 && (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 3 }}>
+            {validGrades.map((g, i) => (
+              <span key={i} style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4, backgroundColor: item.levelColor + "18", color: item.levelColor }}>
+                {Math.round(g)}
+              </span>
+            ))}
+          </div>
+        )}
+        <div style={{ fontSize: 10, lineHeight: 1.35, color: "#475569", marginTop: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
           {item.summary}
         </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Gráfico de progresso</span>
-        <ProgressChart data={item.chart} />
+        {item.chart.some(v => v > 0) ? (
+          <>
+            <span style={{ fontSize: 9, fontWeight: 600, color: "#475569", marginBottom: 3 }}>Progresso</span>
+            <ProgressChart data={item.chart} />
+          </>
+        ) : (
+          <div style={{ width: 132, height: 52, borderRadius: 10, border: "1px dashed #cbd5e1", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>Sem histórico</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -310,9 +327,11 @@ export interface BoletimVisualRenderProps {
   mensagemProfessor: string;
   mes: number;
   ano: number;
+  logoBase64?: string;
+  avatarBase64?: string;
 }
 
-export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: BoletimVisualRenderProps) {
+export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano, logoBase64, avatarBase64 }: BoletimVisualRenderProps) {
   const { aluno, metricas, evolucaoNotas } = dados;
 
   const notasReg = evolucaoNotas.filter((e) => e.tipo === "regular").map((e) => e.nota);
@@ -350,14 +369,20 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
   const niveisVid = classificarNivelContagem(metricas.totalVideoteca, [6, 4, 2, 1]);
   const niveisGra = classificarNivelContagem(metricas.totalAulasGravadas, [6, 4, 2, 1]);
 
+  const redacoesReg = dados.redacoes.filter(r => r.tipo === "regular");
+  const redacoesSim = dados.redacoes.filter(r => r.tipo === "simulado");
+
   const moduleCards: PerformanceItem[] = [
     {
       moduleKey: "redacoes_regulares",
       title: "Redações Regulares",
-      displayValue: pctRedacoes !== null ? `${pctRedacoes}%` : `${metricas.redacoes?.length ?? 0} env.`,
+      count: redacoesReg.length,
+      countLabel: redacoesReg.length === 1 ? "enviada" : "enviadas",
+      avgGrade: metricas.mediaPorTipo.regular,
+      grades: redacoesReg.map(r => r.nota_total),
       level: niveisRed.label,
       levelColor: niveisRed.color,
-      summary: gerarFrase("redacoes_regulares", pctRedacoes, dados.redacoes.filter(r => r.tipo === "regular").length),
+      summary: gerarFrase("redacoes_regulares", pctRedacoes, redacoesReg.length),
       chart: notasReg.length > 0 ? gerarProgressaoDeNotas(notasReg) : gerarProgressao(pctRedacoes ?? 0),
       bgColor: "#e0f2fe",
       Icon: FileText,
@@ -365,10 +390,13 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
     {
       moduleKey: "simulados",
       title: "Simulados",
-      displayValue: pctSimulados !== null ? `${pctSimulados}%` : `${dados.redacoes.filter(r => r.tipo === "simulado").length} env.`,
+      count: redacoesSim.length,
+      countLabel: redacoesSim.length === 1 ? "enviado" : "enviados",
+      avgGrade: metricas.mediaPorTipo.simulado,
+      grades: redacoesSim.map(r => r.nota_total),
       level: niveisSim.label,
       levelColor: niveisSim.color,
-      summary: gerarFrase("simulados", pctSimulados, dados.redacoes.filter(r => r.tipo === "simulado").length),
+      summary: gerarFrase("simulados", pctSimulados, redacoesSim.length),
       chart: notasSim.length > 0 ? gerarProgressaoDeNotas(notasSim) : gerarProgressao(pctSimulados ?? 0),
       bgColor: "#d1fae5",
       Icon: ClipboardCheck,
@@ -376,7 +404,9 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
     {
       moduleKey: "exercicios",
       title: "Exercícios",
-      displayValue: `${metricas.totalExercicios}`,
+      count: metricas.totalExercicios,
+      countLabel: metricas.totalExercicios === 1 ? "realizado" : "realizados",
+      grades: dados.exercicios.map(e => e.nota),
       level: niveisExe.label,
       levelColor: niveisExe.color,
       summary: gerarFrase("exercicios", null, metricas.totalExercicios),
@@ -387,7 +417,9 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
     {
       moduleKey: "lousa",
       title: "Lousa",
-      displayValue: `${metricas.totalLousas}`,
+      count: metricas.totalLousas,
+      countLabel: metricas.totalLousas === 1 ? "participação" : "participações",
+      grades: dados.lousas.map(l => l.nota),
       level: niveisLou.label,
       levelColor: niveisLou.color,
       summary: gerarFrase("lousa", null, metricas.totalLousas),
@@ -398,7 +430,8 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
     {
       moduleKey: "laboratorio_repertorio",
       title: "Laboratório de Repertório",
-      displayValue: `${labTotal}`,
+      count: labTotal,
+      countLabel: labTotal === 1 ? "concluído" : "concluídos",
       level: niveisLab.label,
       levelColor: niveisLab.color,
       summary: gerarFrase("laboratorio_repertorio", null, labTotal),
@@ -409,7 +442,8 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
     {
       moduleKey: "videoteca",
       title: "Videoteca",
-      displayValue: `${metricas.totalVideoteca}`,
+      count: metricas.totalVideoteca,
+      countLabel: metricas.totalVideoteca === 1 ? "vídeo assistido" : "vídeos assistidos",
       level: niveisVid.label,
       levelColor: niveisVid.color,
       summary: gerarFrase("videoteca", null, metricas.totalVideoteca),
@@ -420,7 +454,8 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
     {
       moduleKey: "aulas_gravadas",
       title: "Aulas Gravadas",
-      displayValue: `${metricas.totalAulasGravadas}`,
+      count: metricas.totalAulasGravadas,
+      countLabel: metricas.totalAulasGravadas === 1 ? "assistida" : "assistidas",
       level: niveisGra.label,
       levelColor: niveisGra.color,
       summary: gerarFrase("aulas_gravadas", null, metricas.totalAulasGravadas),
@@ -430,7 +465,9 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
     },
   ];
 
-  const nomeCompleto = aluno ? `${aluno.nome} ${aluno.sobrenome}`.toUpperCase() : "ALUNO";
+  const nomeCompleto = aluno
+    ? [aluno.nome, aluno.sobrenome].filter(Boolean).join(" ").toUpperCase()
+    : "ALUNO";
   const turmaLabel = aluno?.turma ?? "—";
   const frequenciaPercent = pctFrequencia ?? 0;
 
@@ -470,9 +507,10 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
             boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
           }}
         >
-          {aluno?.avatar_url ? (
+          {/* Avatar: base64 (PDF) > URL (web) > iniciais */}
+          {avatarBase64 || aluno?.avatar_url ? (
             <img
-              src={aluno.avatar_url}
+              src={avatarBase64 || aluno!.avatar_url!}
               alt="Foto do aluno"
               crossOrigin="anonymous"
               style={{
@@ -487,24 +525,47 @@ export function BoletimVisualRender({ dados, mensagemProfessor, mes, ano }: Bole
           )}
 
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-0.01em", color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {/* Nome sem truncamento — quebra linha se necessário */}
+            <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.01em", color: "#0f172a", lineHeight: 1.15, wordBreak: "break-word" }}>
               {nomeCompleto}
             </div>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#475569", marginTop: 3 }}>
               {turmaLabel}
             </div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>
-              Laboratório do Redator · Diário Online · {getNomeMes(mes)}/{ano}
+            {(aluno?.escola || aluno?.serie) && (
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {aluno.escola && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#0f172a", backgroundColor: "#f1f5f9", borderRadius: 6, padding: "2px 8px", border: "1px solid #e2e8f0" }}>
+                    🏫 {aluno.escola}
+                  </span>
+                )}
+                {aluno.serie && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#0f172a", backgroundColor: "#f1f5f9", borderRadius: 6, padding: "2px 8px", border: "1px solid #e2e8f0" }}>
+                    📚 {aluno.serie}
+                  </span>
+                )}
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+              Laboratório do Redator · Boletim Escolar · {getNomeMes(mes)}/{ano}
             </div>
           </div>
 
-          {/* Logo */}
-          <img
-            src="/lovable-uploads/680e47a8-eb97-4ceb-b36b-374cdf9f9c86.png"
-            alt="Laboratório do Redator"
-            style={{ height: 60, width: 60, borderRadius: 12, objectFit: "contain", flexShrink: 0 }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
+          {/* Logo: base64 (PDF) > imagem em URL */}
+          {logoBase64 ? (
+            <img
+              src={logoBase64}
+              alt="Laboratório do Redator"
+              style={{ height: 60, width: 60, borderRadius: 12, objectFit: "contain", flexShrink: 0 }}
+            />
+          ) : (
+            <img
+              src="/lovable-uploads/680e47a8-eb97-4ceb-b36b-374cdf9f9c86.png"
+              alt="Laboratório do Redator"
+              style={{ height: 60, width: 60, borderRadius: 12, objectFit: "contain", flexShrink: 0 }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
         </header>
 
         {/* Cards de módulos */}

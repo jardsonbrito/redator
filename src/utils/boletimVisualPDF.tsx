@@ -13,12 +13,34 @@ function getNomeMes(mes: number): string {
   return nomes[mes - 1] ?? "";
 }
 
+async function carregarBase64(url: string): Promise<string | undefined> {
+  try {
+    const resp = await fetch(url, { cache: "no-store" });
+    if (!resp.ok) return undefined;
+    const blob = await resp.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject();
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 export async function exportarBoletimVisualPDF(
   dados: AlunoBoletimDados,
   mes: number,
   ano: number,
   mensagemProfessor: string
 ): Promise<void> {
+  // Pré-carrega imagens como base64 para garantir renderização no html2canvas
+  const [logoBase64, avatarBase64] = await Promise.all([
+    carregarBase64("/lovable-uploads/680e47a8-eb97-4ceb-b36b-374cdf9f9c86.png"),
+    dados.aluno?.avatar_url ? carregarBase64(dados.aluno.avatar_url) : Promise.resolve(undefined),
+  ]);
+
   // Cria container fora da viewport
   const container = document.createElement("div");
   container.style.cssText =
@@ -33,6 +55,8 @@ export async function exportarBoletimVisualPDF(
       mes={mes}
       ano={ano}
       mensagemProfessor={mensagemProfessor}
+      logoBase64={logoBase64}
+      avatarBase64={avatarBase64}
     />
   );
 

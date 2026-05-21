@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FileText,
   ClipboardCheck,
@@ -12,6 +13,7 @@ import {
   Loader2,
   FileDown,
   Award,
+  School,
 } from "lucide-react";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { StudentHeader } from "@/components/StudentHeader";
@@ -64,45 +66,48 @@ function getNivelContagem(count: number, limites: [number, number, number, numbe
 
 function gerarFrase(key: string, percent: number | null, count: number): string {
   if (percent === null && count === 0) return "Sem registros neste período.";
-  const p = percent ?? Math.min(100, count * 15);
 
-  const map: Record<string, (p: number, c: number) => string> = {
-    redacoes_regulares: (p) =>
-      p >= 80 ? `Média geral de ${p}%, com avanço consistente nas últimas produções.`
-        : p >= 60 ? `Média de ${p}% nas redações. Há espaço para consolidar argumentação e repertório.`
-        : `Média de ${p}% nas redações. Regularidade e revisão das competências são recomendadas.`,
-    simulados: (p) =>
-      p >= 80 ? `Desempenho sólido nos simulados: ${p}%, com domínio das competências avaliadas.`
-        : p >= 60 ? `Rendimento de ${p}% nos simulados. Ampliar a estabilidade entre as competências pode elevar a nota.`
-        : `Resultado de ${p}%. Reforçar o contato com a banca e simular mais vezes é recomendado.`,
+  const map: Record<string, (p: number | null, c: number) => string> = {
+    redacoes_regulares: (p, c) =>
+      c === 0 ? "Nenhuma redação enviada neste período."
+        : p !== null && p >= 80 ? `Ótimo desempenho nas ${c} redação${c > 1 ? "ões" : ""} enviadas. Continue com consistência e repertório variado.`
+        : p !== null && p >= 60 ? `Há espaço para consolidar argumentação. Revise as competências com nota mais baixa.`
+        : p !== null ? `Regularidade e revisão das competências são recomendadas para elevar o desempenho.`
+        : `${c} redação${c > 1 ? "ões" : ""} enviada${c > 1 ? "s" : ""} no período. Aguardando correção.`,
+    simulados: (p, c) =>
+      c === 0 ? "Nenhum simulado enviado neste período."
+        : p !== null && p >= 80 ? `Desempenho sólido nos ${c} simulado${c > 1 ? "s" : ""} — domínio das competências avaliadas.`
+        : p !== null && p >= 60 ? `Rendimento nos simulados pode melhorar. Ampliar a estabilidade entre competências eleva a nota.`
+        : p !== null ? `Reforce o contato com a banca e repita simulações para ganhar confiança.`
+        : `${c} simulado${c > 1 ? "s" : ""} enviado${c > 1 ? "s" : ""}. Aguardando correção.`,
     exercicios: (_, c) =>
-      c >= 8 ? `${c} exercícios realizados, demonstrando dedicação às atividades práticas.`
+      c >= 8 ? `${c} exercícios realizados — dedicação consistente às atividades práticas.`
         : c >= 4 ? `${c} exercícios concluídos. Aumentar a frequência pode acelerar a evolução.`
-        : c > 0 ? `${c} exercício${c > 1 ? "s" : ""} realizados. Maior regularidade é recomendada.`
+        : c > 0 ? `${c} exercício${c > 1 ? "s" : ""} realizado${c > 1 ? "s" : ""}. Maior regularidade é recomendada.`
         : "Sem registros de exercícios neste período.",
     lousa: (_, c) =>
-      c >= 6 ? `${c} atividades de Lousa concluídas, com engajamento consistente.`
-        : c >= 3 ? `${c} Lousas concluídas. Ampliar a participação pode reforçar as habilidades.`
+      c >= 6 ? `${c} atividades de Lousa concluídas — engajamento consistente com as práticas do professor.`
+        : c >= 3 ? `${c} Lousas concluídas. Ampliar a participação reforça as habilidades trabalhadas.`
         : c > 0 ? `${c} participação${c > 1 ? "ões" : ""} em Lousa. Há espaço para maior engajamento.`
         : "Sem registros de Lousa neste período.",
     laboratorio_repertorio: (_, c) =>
-      c >= 10 ? `${c} conteúdos concluídos no Laboratório, fortalecendo a base temática.`
-        : c >= 5 ? `${c} itens avançados no Laboratório. Maior consistência amplia o repertório.`
+      c >= 10 ? `${c} conteúdos concluídos no Laboratório — base temática bem desenvolvida.`
+        : c >= 5 ? `${c} itens avançados no Laboratório. Maior consistência amplia o repertório nas redações.`
         : c > 0 ? `${c} item${c > 1 ? "ns" : ""} concluído${c > 1 ? "s" : ""}. Manter o hábito é essencial para o crescimento.`
         : "Sem registros no Laboratório de Repertório neste período.",
     videoteca: (_, c) =>
-      c >= 6 ? `${c} conteúdos da Videoteca assistidos, enriquecendo o repertório sociocultural.`
-        : c >= 3 ? `${c} vídeos assistidos. O acesso regular contribui para a argumentação.`
-        : c > 0 ? `${c} vídeo${c > 1 ? "s" : ""} assistido${c > 1 ? "s" : ""}. Ampliar esse uso pode enriquecer as redações.`
+      c >= 6 ? `${c} conteúdos da Videoteca assistidos — repertório sociocultural enriquecido.`
+        : c >= 3 ? `${c} vídeos assistidos. O acesso regular contribui para a qualidade argumentativa.`
+        : c > 0 ? `${c} vídeo${c > 1 ? "s" : ""} assistido${c > 1 ? "s" : ""}. Ampliar esse uso enriquece as redações.`
         : "Sem registros na Videoteca neste período.",
     aulas_gravadas: (_, c) =>
-      c >= 6 ? `${c} aulas gravadas assistidas, demonstrando comprometimento com o aprendizado autônomo.`
-        : c >= 3 ? `${c} aulas gravadas acessadas. Aumentar o consumo pode acelerar o progresso.`
+      c >= 6 ? `${c} aulas gravadas assistidas — comprometimento com o aprendizado autônomo.`
+        : c >= 3 ? `${c} aulas gravadas acessadas. Mais consumo de conteúdo acelera o progresso.`
         : c > 0 ? `${c} acesso${c > 1 ? "s" : ""} a aulas gravadas no período.`
         : "Sem registros de aulas gravadas neste período.",
   };
 
-  return map[key]?.(p, count) ?? "Sem dados suficientes para análise.";
+  return map[key]?.(percent, count) ?? "Sem dados suficientes para análise.";
 }
 
 // ── Sub-componentes ──────────────────────────────────────────────────────────
@@ -110,15 +115,18 @@ function gerarFrase(key: string, percent: number | null, count: number): string 
 interface ModuleCardProps {
   Icon: React.ElementType;
   title: string;
-  displayValue: string;
+  count: number;
+  countLabel: string;
+  avgGrade?: number | null;
   level: string;
   levelColor: string;
   summary: string;
   percent: number | null;
   bgColor: string;
+  grades?: (number | null)[];
 }
 
-function ModuleCard({ Icon, title, displayValue, level, levelColor, summary, percent, bgColor }: ModuleCardProps) {
+function ModuleCard({ Icon, title, count, countLabel, avgGrade, level, levelColor, summary, percent, bgColor, grades }: ModuleCardProps) {
   return (
     <div className="rounded-2xl border bg-card shadow-sm p-4 flex gap-3 items-start">
       <div className={`shrink-0 p-3 rounded-xl ${bgColor}`}>
@@ -134,8 +142,30 @@ function ModuleCard({ Icon, title, displayValue, level, levelColor, summary, per
             {level}
           </span>
         </div>
-        <p className="text-2xl font-black text-foreground mt-1">{displayValue}</p>
-        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{summary}</p>
+        <div className="flex items-baseline gap-3 mt-1 flex-wrap">
+          <p className="text-2xl font-black text-foreground">
+            {count} <span className="text-sm font-semibold text-muted-foreground">{countLabel}</span>
+          </p>
+          {avgGrade !== null && avgGrade !== undefined && (
+            <p className="text-lg font-black" style={{ color: levelColor }}>
+              {Math.round(avgGrade)} <span className="text-xs font-semibold text-muted-foreground">pts (média)</span>
+            </p>
+          )}
+        </div>
+        {grades && grades.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {grades.filter((g): g is number => g !== null).map((g, i) => (
+              <span
+                key={i}
+                className="text-xs font-bold px-2 py-0.5 rounded-md"
+                style={{ backgroundColor: levelColor + "18", color: levelColor }}
+              >
+                {Math.round(g)}
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{summary}</p>
         {percent !== null && percent > 0 && (
           <div className="mt-2.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
             <div
@@ -188,6 +218,7 @@ const DiarioOnline = () => {
   usePageTitle("Boletim Escolar");
 
   const { studentData } = useStudentAuth();
+  const navigate = useNavigate();
 
   const now = new Date();
   const defaultMes = now.getDate() <= 10
@@ -249,31 +280,43 @@ const DiarioOnline = () => {
     return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
   })();
 
+  const redacoesReg = data?.redacoes.filter(r => r.tipo === "regular") ?? [];
+  const redacoesSim = data?.redacoes.filter(r => r.tipo === "simulado") ?? [];
+  const redacoesExe = data?.redacoes.filter(r => r.tipo === "exercicio") ?? [];
+
   const moduleCards: ModuleCardProps[] = data ? [
     {
       Icon: FileText,
       title: "Redações Regulares",
-      displayValue: pctRedacoes !== null ? `${pctRedacoes}%` : `${data.redacoes.filter(r => r.tipo === "regular").length} enviadas`,
+      count: redacoesReg.length,
+      countLabel: redacoesReg.length === 1 ? "enviada" : "enviadas",
+      avgGrade: data.metricas.mediaPorTipo.regular,
+      grades: redacoesReg.map(r => r.nota_total),
       level: getNivel(pctRedacoes).label,
       levelColor: getNivel(pctRedacoes).color,
-      summary: gerarFrase("redacoes_regulares", pctRedacoes, data.redacoes.filter(r => r.tipo === "regular").length),
+      summary: gerarFrase("redacoes_regulares", pctRedacoes, redacoesReg.length),
       percent: pctRedacoes,
       bgColor: "bg-sky-100",
     },
     {
       Icon: ClipboardCheck,
       title: "Simulados",
-      displayValue: pctSimulados !== null ? `${pctSimulados}%` : `${data.redacoes.filter(r => r.tipo === "simulado").length} enviados`,
+      count: redacoesSim.length,
+      countLabel: redacoesSim.length === 1 ? "enviado" : "enviados",
+      avgGrade: data.metricas.mediaPorTipo.simulado,
+      grades: redacoesSim.map(r => r.nota_total),
       level: getNivel(pctSimulados).label,
       levelColor: getNivel(pctSimulados).color,
-      summary: gerarFrase("simulados", pctSimulados, data.redacoes.filter(r => r.tipo === "simulado").length),
+      summary: gerarFrase("simulados", pctSimulados, redacoesSim.length),
       percent: pctSimulados,
       bgColor: "bg-emerald-100",
     },
     {
       Icon: NotebookPen,
       title: "Exercícios",
-      displayValue: `${data.metricas.totalExercicios}`,
+      count: data.metricas.totalExercicios,
+      countLabel: data.metricas.totalExercicios === 1 ? "realizado" : "realizados",
+      grades: data.exercicios.map(e => e.nota),
       level: getNivelContagem(data.metricas.totalExercicios, [8, 5, 3, 1]).label,
       levelColor: getNivelContagem(data.metricas.totalExercicios, [8, 5, 3, 1]).color,
       summary: gerarFrase("exercicios", null, data.metricas.totalExercicios),
@@ -283,7 +326,9 @@ const DiarioOnline = () => {
     {
       Icon: Presentation,
       title: "Lousa",
-      displayValue: `${data.metricas.totalLousas}`,
+      count: data.metricas.totalLousas,
+      countLabel: data.metricas.totalLousas === 1 ? "participação" : "participações",
+      grades: data.lousas.map(l => l.nota),
       level: getNivelContagem(data.metricas.totalLousas, [6, 4, 2, 1]).label,
       levelColor: getNivelContagem(data.metricas.totalLousas, [6, 4, 2, 1]).color,
       summary: gerarFrase("lousa", null, data.metricas.totalLousas),
@@ -293,7 +338,8 @@ const DiarioOnline = () => {
     {
       Icon: LaboratorioIcon,
       title: "Laboratório de Repertório",
-      displayValue: `${labTotal}`,
+      count: labTotal,
+      countLabel: labTotal === 1 ? "concluído" : "concluídos",
       level: getNivelContagem(labTotal, [10, 6, 3, 1]).label,
       levelColor: getNivelContagem(labTotal, [10, 6, 3, 1]).color,
       summary: gerarFrase("laboratorio_repertorio", null, labTotal),
@@ -303,7 +349,8 @@ const DiarioOnline = () => {
     {
       Icon: Video,
       title: "Videoteca",
-      displayValue: `${data.metricas.totalVideoteca}`,
+      count: data.metricas.totalVideoteca,
+      countLabel: data.metricas.totalVideoteca === 1 ? "vídeo assistido" : "vídeos assistidos",
       level: getNivelContagem(data.metricas.totalVideoteca, [6, 4, 2, 1]).label,
       levelColor: getNivelContagem(data.metricas.totalVideoteca, [6, 4, 2, 1]).color,
       summary: gerarFrase("videoteca", null, data.metricas.totalVideoteca),
@@ -313,7 +360,8 @@ const DiarioOnline = () => {
     {
       Icon: GraduationCap,
       title: "Aulas Gravadas",
-      displayValue: `${data.metricas.totalAulasGravadas}`,
+      count: data.metricas.totalAulasGravadas,
+      countLabel: data.metricas.totalAulasGravadas === 1 ? "assistida" : "assistidas",
       level: getNivelContagem(data.metricas.totalAulasGravadas, [6, 4, 2, 1]).label,
       levelColor: getNivelContagem(data.metricas.totalAulasGravadas, [6, 4, 2, 1]).color,
       summary: gerarFrase("aulas_gravadas", null, data.metricas.totalAulasGravadas),
@@ -412,9 +460,19 @@ const DiarioOnline = () => {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Laboratório do Redator · {MESES[mes - 1]}/{ano}
                   </p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <Badge variant="secondary" className="text-xs">Escola de origem não informada</Badge>
-                  </div>
+                  {(data.aluno?.escola || data.aluno?.serie) && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {data.aluno.escola && (
+                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                          <School className="w-3 h-3" />
+                          {data.aluno.escola}
+                        </Badge>
+                      )}
+                      {data.aluno.serie && (
+                        <Badge variant="outline" className="text-xs">{data.aluno.serie}</Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <img
                   src="/lovable-uploads/680e47a8-eb97-4ceb-b36b-374cdf9f9c86.png"
@@ -434,7 +492,7 @@ const DiarioOnline = () => {
                   ))}
 
                   {/* Estado vazio */}
-                  {moduleCards.every(c => c.displayValue === "0" || c.displayValue.includes("0 ")) && (
+                  {moduleCards.every(c => c.count === 0) && (
                     <div className="rounded-2xl border border-dashed bg-muted/30 p-8 text-center text-muted-foreground">
                       <Award className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Nenhuma atividade registrada neste período.</p>
@@ -518,29 +576,37 @@ const DiarioOnline = () => {
 
                   {/* Top 5 */}
                   <MetricBlock title="Top 5">
-                    <div className="flex items-center gap-3">
-                      <div className="shrink-0 w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center">
-                        <Trophy className="w-7 h-7 text-slate-800" />
+                    <button
+                      className="w-full text-left"
+                      onClick={() => navigate("/top5")}
+                    >
+                      <div className="flex items-center gap-3 group">
+                        <div className="shrink-0 w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center">
+                          <Trophy className="w-7 h-7 text-slate-800" />
+                        </div>
+                        <div className="flex-1">
+                          {top5Posicao !== null ? (
+                            <>
+                              <p className="text-2xl font-black text-foreground">{top5Posicao}º lugar</p>
+                              <p className="text-xs font-semibold text-foreground">no ranking do período</p>
+                              <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                                Apareceu no Top 5 pela média de notas das redações.
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm font-bold text-muted-foreground">Ainda não no Top 5</p>
+                              <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                                Há evolução possível com maior regularidade de envio e atenção às competências.
+                              </p>
+                            </>
+                          )}
+                          <p className="text-xs text-primary font-semibold mt-1.5 group-hover:underline">
+                            Ver ranking completo →
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        {top5Posicao !== null ? (
-                          <>
-                            <p className="text-2xl font-black text-foreground">{top5Posicao}º lugar</p>
-                            <p className="text-xs font-semibold text-foreground">no ranking do período</p>
-                            <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                              Apareceu no Top 5 pela média de notas das redações.
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm font-bold text-muted-foreground">Ainda não no Top 5</p>
-                            <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                              Há evolução possível com maior regularidade de envio e atenção às competências.
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    </button>
                   </MetricBlock>
 
                   {/* Mensagem do professor */}
