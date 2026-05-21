@@ -1,306 +1,568 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { StudentHeader } from '@/components/StudentHeader';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { SubscriptionInfo } from '@/components/student/SubscriptionInfo';
-import { BookOpen, TrendingUp, Calendar, BarChart3, FileText, Trophy, CheckCircle } from 'lucide-react';
-import { useDiarioAluno } from '@/hooks/useDiario';
-import { useStudentAuth } from '@/hooks/useStudentAuth';
-import { usePageTitle } from '@/hooks/useBreadcrumbs';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import type { DiarioEtapa } from '@/types/diario';
+import { useState } from "react";
+import {
+  FileText,
+  ClipboardCheck,
+  NotebookPen,
+  Presentation,
+  Video,
+  GraduationCap,
+  CalendarCheck,
+  Trophy,
+  MessageSquareText,
+  Loader2,
+  FileDown,
+  Award,
+} from "lucide-react";
+import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { BottomNavigation } from "@/components/BottomNavigation";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useAlunoBoletim } from "@/hooks/useAlunoBoletim";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
+import { exportarBoletimVisualPDF } from "@/utils/boletimVisualPDF";
+
+// ── Constantes ───────────────────────────────────────────────────────────────
+
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+const MENSAGEM_PADRAO =
+  "Continue se dedicando. A consistência é o caminho para resultados mais fortes ao longo da preparação. Estamos juntos nessa jornada!";
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getNivel(percent: number | null): { label: string; color: string } {
+  if (percent === null) return { label: "Sem dados", color: "#94a3b8" };
+  if (percent >= 90) return { label: "Excelente", color: "#10b981" };
+  if (percent >= 75) return { label: "Muito bom", color: "#3b82f6" };
+  if (percent >= 60) return { label: "Bom desempenho", color: "#6366f1" };
+  if (percent >= 40) return { label: "Em evolução", color: "#f59e0b" };
+  return { label: "Atenção necessária", color: "#ef4444" };
+}
+
+function getNivelContagem(count: number, limites: [number, number, number, number]): { label: string; color: string } {
+  const [ex, mb, bom, ev] = limites;
+  if (count >= ex) return { label: "Excelente", color: "#10b981" };
+  if (count >= mb) return { label: "Muito bom", color: "#3b82f6" };
+  if (count >= bom) return { label: "Bom engajamento", color: "#6366f1" };
+  if (count >= ev) return { label: "Em evolução", color: "#f59e0b" };
+  return { label: "Sem dados", color: "#94a3b8" };
+}
+
+function gerarFrase(key: string, percent: number | null, count: number): string {
+  if (percent === null && count === 0) return "Sem registros neste período.";
+  const p = percent ?? Math.min(100, count * 15);
+
+  const map: Record<string, (p: number, c: number) => string> = {
+    redacoes_regulares: (p) =>
+      p >= 80 ? `Média geral de ${p}%, com avanço consistente nas últimas produções.`
+        : p >= 60 ? `Média de ${p}% nas redações. Há espaço para consolidar argumentação e repertório.`
+        : `Média de ${p}% nas redações. Regularidade e revisão das competências são recomendadas.`,
+    simulados: (p) =>
+      p >= 80 ? `Desempenho sólido nos simulados: ${p}%, com domínio das competências avaliadas.`
+        : p >= 60 ? `Rendimento de ${p}% nos simulados. Ampliar a estabilidade entre as competências pode elevar a nota.`
+        : `Resultado de ${p}%. Reforçar o contato com a banca e simular mais vezes é recomendado.`,
+    exercicios: (_, c) =>
+      c >= 8 ? `${c} exercícios realizados, demonstrando dedicação às atividades práticas.`
+        : c >= 4 ? `${c} exercícios concluídos. Aumentar a frequência pode acelerar a evolução.`
+        : c > 0 ? `${c} exercício${c > 1 ? "s" : ""} realizados. Maior regularidade é recomendada.`
+        : "Sem registros de exercícios neste período.",
+    lousa: (_, c) =>
+      c >= 6 ? `${c} atividades de Lousa concluídas, com engajamento consistente.`
+        : c >= 3 ? `${c} Lousas concluídas. Ampliar a participação pode reforçar as habilidades.`
+        : c > 0 ? `${c} participação${c > 1 ? "ões" : ""} em Lousa. Há espaço para maior engajamento.`
+        : "Sem registros de Lousa neste período.",
+    laboratorio_repertorio: (_, c) =>
+      c >= 10 ? `${c} conteúdos concluídos no Laboratório, fortalecendo a base temática.`
+        : c >= 5 ? `${c} itens avançados no Laboratório. Maior consistência amplia o repertório.`
+        : c > 0 ? `${c} item${c > 1 ? "ns" : ""} concluído${c > 1 ? "s" : ""}. Manter o hábito é essencial para o crescimento.`
+        : "Sem registros no Laboratório de Repertório neste período.",
+    videoteca: (_, c) =>
+      c >= 6 ? `${c} conteúdos da Videoteca assistidos, enriquecendo o repertório sociocultural.`
+        : c >= 3 ? `${c} vídeos assistidos. O acesso regular contribui para a argumentação.`
+        : c > 0 ? `${c} vídeo${c > 1 ? "s" : ""} assistido${c > 1 ? "s" : ""}. Ampliar esse uso pode enriquecer as redações.`
+        : "Sem registros na Videoteca neste período.",
+    aulas_gravadas: (_, c) =>
+      c >= 6 ? `${c} aulas gravadas assistidas, demonstrando comprometimento com o aprendizado autônomo.`
+        : c >= 3 ? `${c} aulas gravadas acessadas. Aumentar o consumo pode acelerar o progresso.`
+        : c > 0 ? `${c} acesso${c > 1 ? "s" : ""} a aulas gravadas no período.`
+        : "Sem registros de aulas gravadas neste período.",
+  };
+
+  return map[key]?.(p, count) ?? "Sem dados suficientes para análise.";
+}
+
+// ── Sub-componentes ──────────────────────────────────────────────────────────
+
+interface ModuleCardProps {
+  Icon: React.ElementType;
+  title: string;
+  displayValue: string;
+  level: string;
+  levelColor: string;
+  summary: string;
+  percent: number | null;
+  bgColor: string;
+}
+
+function ModuleCard({ Icon, title, displayValue, level, levelColor, summary, percent, bgColor }: ModuleCardProps) {
+  return (
+    <div className="rounded-2xl border bg-card shadow-sm p-4 flex gap-3 items-start">
+      <div className={`shrink-0 p-3 rounded-xl ${bgColor}`}>
+        <Icon className="w-6 h-6 text-slate-800" strokeWidth={1.8} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-1.5">
+          <h3 className="text-sm font-bold text-foreground">{title}</h3>
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: levelColor + "20", color: levelColor }}
+          >
+            {level}
+          </span>
+        </div>
+        <p className="text-2xl font-black text-foreground mt-1">{displayValue}</p>
+        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{summary}</p>
+        {percent !== null && percent > 0 && (
+          <div className="mt-2.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-1.5 rounded-full transition-all duration-700"
+              style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: levelColor }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetricBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border bg-card shadow-sm p-4">
+      <h3 className="text-xs font-black uppercase tracking-widest text-foreground mb-3">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function SkeletonBoletim() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-28 rounded-2xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="space-y-3">
+          {Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AvatarFallback({ nome, sobrenome }: { nome: string; sobrenome: string }) {
+  return (
+    <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-black shrink-0 border-4 border-background shadow-md">
+      {(nome?.[0] ?? "").toUpperCase()}{(sobrenome?.[0] ?? "").toUpperCase()}
+    </div>
+  );
+}
+
+// ── Componente principal ─────────────────────────────────────────────────────
 
 const DiarioOnline = () => {
-  usePageTitle('Diário Online');
-  
+  usePageTitle("Boletim Escolar");
+
   const { studentData } = useStudentAuth();
-  const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
-  
-  const { data: etapas, isLoading } = useDiarioAluno(
-    studentData?.email || '',
-    studentData?.turma || '',
-    selectedEtapa || undefined
+
+  const now = new Date();
+  const defaultMes = now.getDate() <= 10
+    ? (now.getMonth() === 0 ? 12 : now.getMonth())
+    : now.getMonth() + 1;
+  const defaultAno = now.getDate() <= 10 && now.getMonth() === 0
+    ? now.getFullYear() - 1
+    : now.getFullYear();
+
+  const [mes, setMes] = useState(defaultMes);
+  const [ano, setAno] = useState(defaultAno);
+  const [exportando, setExportando] = useState(false);
+
+  const anos = Array.from({ length: 4 }, (_, i) => now.getFullYear() - 1 + i);
+
+  const email = studentData?.email ?? null;
+  const turma = studentData?.turma ?? null;
+
+  const { data, isLoading } = useAlunoBoletim(
+    email,
+    turma,
+    mes,
+    ano
   );
 
-  // Selecionar automaticamente a etapa atual ou a última
-  useEffect(() => {
-    if (etapas && etapas.length > 0 && selectedEtapa === null) {
-      const hoje = new Date();
-      
-      // Procurar etapa atual
-      const etapaAtual = etapas.find(etapa => {
-        const inicio = new Date(etapa.data_inicio);
-        const fim = new Date(etapa.data_fim);
-        return hoje >= inicio && hoje <= fim;
-      });
-      
-      // Se não encontrar etapa atual, pegar a última
-      const etapaParaSelecionar = etapaAtual || etapas[etapas.length - 1];
-      setSelectedEtapa(etapaParaSelecionar.etapa_numero);
+  async function handleBaixarPDF() {
+    if (!data) return;
+    setExportando(true);
+    try {
+      await exportarBoletimVisualPDF(data, mes, ano, MENSAGEM_PADRAO);
+    } finally {
+      setExportando(false);
     }
-  }, [etapas, selectedEtapa]);
-
-  const formatPercentual = (valor: number) => `${valor.toFixed(1)}%`;
-  const formatNota = (valor: number) => valor > 0 ? valor.toFixed(1) : '-';
-
-  // Funções auxiliares para nova lógica de cálculo da média final
-  const converterPercentualParaNota = (percentual: number): number => {
-    return percentual / 10; // 90% -> 9.0
-  };
-
-  const converterNota1000ParaNota10 = (nota: number): number => {
-    return nota / 100; // 800 -> 8.0
-  };
-
-  const getStatusBadge = (percentual: number, tipo: 'frequencia' | 'participacao') => {
-    const limite = tipo === 'frequencia' ? 75 : 50;
-    
-    if (percentual >= limite) {
-      return <Badge className="bg-green-600">Excelente</Badge>;
-    } else if (percentual >= limite * 0.7) {
-      return <Badge className="bg-yellow-600">Regular</Badge>;
-    } else {
-      return <Badge variant="destructive">Atenção</Badge>;
-    }
-  };
-
-  const calcularMediaGeral = () => {
-    if (!etapas || etapas.length === 0) return 0;
-    const soma = etapas.reduce((acc, etapa) => acc + etapa.media_final, 0);
-    return soma / etapas.length;
-  };
-
-  const renderCardMetrica = (
-    titulo: string,
-    valor: string | number,
-    subtitulo?: string,
-    icon?: React.ReactNode,
-    badge?: React.ReactNode
-  ) => (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              {icon}
-              <span className="text-sm font-medium text-muted-foreground">{titulo}</span>
-            </div>
-            <div className="text-2xl font-bold">{valor}</div>
-            {subtitulo && (
-              <div className="text-xs text-muted-foreground">{subtitulo}</div>
-            )}
-          </div>
-          {badge && <div>{badge}</div>}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  if (!studentData) {
-    return <div>Carregando dados do estudante...</div>;
   }
+
+  // ── Cálculo dos dados dos cards ──────────────────────────────────────────
+
+  const pctRedacoes = data?.metricas.mediaPorTipo.regular !== null && data?.metricas.mediaPorTipo.regular !== undefined
+    ? Math.round(data.metricas.mediaPorTipo.regular / 10)
+    : null;
+  const pctSimulados = data?.metricas.mediaPorTipo.simulado !== null && data?.metricas.mediaPorTipo.simulado !== undefined
+    ? Math.round(data.metricas.mediaPorTipo.simulado / 10)
+    : null;
+
+  const labTotal = (data?.metricas.totalGuiasConcluidos ?? 0) + (data?.metricas.totalMicroItens ?? 0);
+
+  const frequenciaPercent = data?.metricas.taxaFrequencia ?? 0;
+  const { label: freqLabel, color: freqColor } = getNivel(frequenciaPercent > 0 ? frequenciaPercent : null);
+
+  const engPercent = (() => {
+    const vals = [
+      pctRedacoes,
+      pctSimulados,
+      frequenciaPercent > 0 ? frequenciaPercent : null,
+      (data?.metricas.totalLousas ?? 0) > 0 ? Math.min(100, (data?.metricas.totalLousas ?? 0) * 15) : null,
+      (data?.metricas.totalExercicios ?? 0) > 0 ? Math.min(100, (data?.metricas.totalExercicios ?? 0) * 12) : null,
+      labTotal > 0 ? Math.min(100, labTotal * 8) : null,
+    ].filter((v): v is number => v !== null);
+    return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+  })();
+
+  const moduleCards: ModuleCardProps[] = data ? [
+    {
+      Icon: FileText,
+      title: "Redações Regulares",
+      displayValue: pctRedacoes !== null ? `${pctRedacoes}%` : `${data.redacoes.filter(r => r.tipo === "regular").length} enviadas`,
+      level: getNivel(pctRedacoes).label,
+      levelColor: getNivel(pctRedacoes).color,
+      summary: gerarFrase("redacoes_regulares", pctRedacoes, data.redacoes.filter(r => r.tipo === "regular").length),
+      percent: pctRedacoes,
+      bgColor: "bg-sky-100",
+    },
+    {
+      Icon: ClipboardCheck,
+      title: "Simulados",
+      displayValue: pctSimulados !== null ? `${pctSimulados}%` : `${data.redacoes.filter(r => r.tipo === "simulado").length} enviados`,
+      level: getNivel(pctSimulados).label,
+      levelColor: getNivel(pctSimulados).color,
+      summary: gerarFrase("simulados", pctSimulados, data.redacoes.filter(r => r.tipo === "simulado").length),
+      percent: pctSimulados,
+      bgColor: "bg-emerald-100",
+    },
+    {
+      Icon: NotebookPen,
+      title: "Exercícios",
+      displayValue: `${data.metricas.totalExercicios}`,
+      level: getNivelContagem(data.metricas.totalExercicios, [8, 5, 3, 1]).label,
+      levelColor: getNivelContagem(data.metricas.totalExercicios, [8, 5, 3, 1]).color,
+      summary: gerarFrase("exercicios", null, data.metricas.totalExercicios),
+      percent: data.metricas.totalExercicios > 0 ? Math.min(100, data.metricas.totalExercicios * 12) : null,
+      bgColor: "bg-violet-100",
+    },
+    {
+      Icon: Presentation,
+      title: "Lousa",
+      displayValue: `${data.metricas.totalLousas}`,
+      level: getNivelContagem(data.metricas.totalLousas, [6, 4, 2, 1]).label,
+      levelColor: getNivelContagem(data.metricas.totalLousas, [6, 4, 2, 1]).color,
+      summary: gerarFrase("lousa", null, data.metricas.totalLousas),
+      percent: data.metricas.totalLousas > 0 ? Math.min(100, data.metricas.totalLousas * 15) : null,
+      bgColor: "bg-cyan-100",
+    },
+    {
+      Icon: LaboratorioIcon,
+      title: "Laboratório de Repertório",
+      displayValue: `${labTotal}`,
+      level: getNivelContagem(labTotal, [10, 6, 3, 1]).label,
+      levelColor: getNivelContagem(labTotal, [10, 6, 3, 1]).color,
+      summary: gerarFrase("laboratorio_repertorio", null, labTotal),
+      percent: labTotal > 0 ? Math.min(100, labTotal * 8) : null,
+      bgColor: "bg-amber-100",
+    },
+    {
+      Icon: Video,
+      title: "Videoteca",
+      displayValue: `${data.metricas.totalVideoteca}`,
+      level: getNivelContagem(data.metricas.totalVideoteca, [6, 4, 2, 1]).label,
+      levelColor: getNivelContagem(data.metricas.totalVideoteca, [6, 4, 2, 1]).color,
+      summary: gerarFrase("videoteca", null, data.metricas.totalVideoteca),
+      percent: data.metricas.totalVideoteca > 0 ? Math.min(100, data.metricas.totalVideoteca * 15) : null,
+      bgColor: "bg-orange-100",
+    },
+    {
+      Icon: GraduationCap,
+      title: "Aulas Gravadas",
+      displayValue: `${data.metricas.totalAulasGravadas}`,
+      level: getNivelContagem(data.metricas.totalAulasGravadas, [6, 4, 2, 1]).label,
+      levelColor: getNivelContagem(data.metricas.totalAulasGravadas, [6, 4, 2, 1]).color,
+      summary: gerarFrase("aulas_gravadas", null, data.metricas.totalAulasGravadas),
+      percent: data.metricas.totalAulasGravadas > 0 ? Math.min(100, data.metricas.totalAulasGravadas * 15) : null,
+      bgColor: "bg-purple-100",
+    },
+  ] : [];
+
+  const top5Posicao = data?.metricas.top5Posicao ?? null;
+  const nomeCompleto = data?.aluno
+    ? `${data.aluno.nome} ${data.aluno.sobrenome}`
+    : studentData?.nomeUsuario ?? "";
+  const turmaLabel = data?.aluno?.turma ?? turma ?? "—";
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <StudentHeader pageTitle="Diário Online" />
-        
-        <main className="container mx-auto px-4 py-6 space-y-6">
-          {/* Cabeçalho */}
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">Diário Online</h1>
-            <p className="text-muted-foreground">
-              Acompanhe seu desempenho acadêmico por etapa
-            </p>
-            <div className="flex justify-center items-center gap-2">
-              <Badge variant="outline">{studentData.turma}</Badge>
-              <Badge variant="secondary">{studentData.nome}</Badge>
+      <div className="min-h-screen bg-muted/30">
+        <StudentHeader pageTitle="Boletim Escolar" />
+
+        <main className="container mx-auto px-4 py-6 pb-24 max-w-5xl">
+
+          {/* ── Controles do período + PDF ─────────────────────────── */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-1.5">
+              <Award className="h-5 w-5 text-primary" />
+              <h1 className="text-lg font-bold text-foreground">Boletim Escolar</h1>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={mes.toString()} onValueChange={(v) => setMes(Number(v))}>
+                <SelectTrigger className="h-8 w-[120px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MESES.map((m, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()} className="text-xs">{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={ano.toString()} onValueChange={(v) => setAno(Number(v))}>
+                <SelectTrigger className="h-8 w-[80px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {anos.map((a) => (
+                    <SelectItem key={a} value={a.toString()} className="text-xs">{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleBaixarPDF}
+                disabled={!data || isLoading || exportando}
+                className="h-8 text-xs"
+              >
+                {exportando
+                  ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  : <FileDown className="h-3.5 w-3.5 mr-1.5" />}
+                Baixar PDF
+              </Button>
             </div>
           </div>
 
           {isLoading ? (
-            <div className="text-center py-12">
-              <div className="text-lg">Carregando seu diário...</div>
+            <SkeletonBoletim />
+          ) : !data ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+              <Award className="h-12 w-12 opacity-20" />
+              <p className="text-sm">Nenhum dado disponível para este período.</p>
             </div>
-          ) : !etapas || etapas.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Diário ainda não disponível</h3>
-                <p className="text-muted-foreground">
-                  As etapas ainda não foram configuradas para sua turma ou não há dados disponíveis.
-                </p>
-              </CardContent>
-            </Card>
           ) : (
-            <>
-              {/* Informações de Assinatura */}
-              <SubscriptionInfo userEmail={studentData.email} />
+            <div className="space-y-4">
 
-              {/* Resumo Geral */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Resumo Geral do Ano
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        {calcularMediaGeral().toFixed(1)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Nota Geral</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {etapas.length}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Etapas</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {etapas.reduce((acc, e) => acc + e.redacoes.total_redacoes, 0)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Redações</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {etapas.reduce((acc, e) => acc + e.simulados.total_simulados, 0)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Simulados</div>
-                    </div>
+              {/* ── Cabeçalho do aluno ──────────────────────────────── */}
+              <div className="rounded-2xl border bg-card shadow-sm p-4 flex flex-wrap items-center gap-4">
+                {data.aluno?.avatar_url ? (
+                  <img
+                    src={data.aluno.avatar_url}
+                    alt="Foto do aluno"
+                    className="w-20 h-20 rounded-full object-cover border-4 border-background shadow-md shrink-0"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  <AvatarFallback
+                    nome={data.aluno?.nome ?? studentData?.nomeUsuario?.split(" ")[0] ?? ""}
+                    sobrenome={data.aluno?.sobrenome ?? studentData?.nomeUsuario?.split(" ").slice(1).join(" ") ?? ""}
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-black text-foreground leading-tight break-words">
+                    {nomeCompleto || "Carregando..."}
+                  </h2>
+                  <p className="text-sm font-semibold text-muted-foreground mt-0.5">
+                    {turmaLabel}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Laboratório do Redator · {MESES[mes - 1]}/{ano}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <Badge variant="secondary" className="text-xs">Escola de origem não informada</Badge>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <img
+                  src="/lovable-uploads/680e47a8-eb97-4ceb-b36b-374cdf9f9c86.png"
+                  alt="Laboratório do Redator"
+                  className="h-14 w-14 rounded-xl object-contain shrink-0"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+              </div>
 
-              {/* Seletor de Etapas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Etapas do Ano Letivo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {etapas.map((etapa) => {
-                      const isSelected = selectedEtapa === etapa.etapa_numero;
-                      const hoje = new Date();
-                      const inicio = new Date(etapa.data_inicio);
-                      const fim = new Date(etapa.data_fim);
-                      const isAtual = hoje >= inicio && hoje <= fim;
-                      
-                      return (
-                        <Button
-                          key={etapa.etapa_numero}
-                          variant={isSelected ? "default" : "outline"}
-                          onClick={() => setSelectedEtapa(etapa.etapa_numero)}
-                          className="h-auto p-4 flex flex-col items-start"
-                        >
-                          <div className="flex items-center justify-between w-full mb-2">
-                            <span className="font-semibold">{etapa.etapa_nome}</span>
-                            {isAtual && <Badge className="bg-green-600 text-xs">Atual</Badge>}
-                          </div>
-                          <div className="text-xs opacity-70">
-                            {format(new Date(etapa.data_inicio), 'dd/MM', { locale: ptBR })} - {' '}
-                            {format(new Date(etapa.data_fim), 'dd/MM', { locale: ptBR })}
-                          </div>
-                          <div className="text-sm font-bold mt-1">
-                            Média: {etapa.media_final.toFixed(1)}
-                          </div>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+              {/* ── Layout principal: cards + sidebar ──────────────── */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 items-start">
 
-              {/* Detalhes da Etapa Selecionada */}
-              {selectedEtapa && (() => {
-                const etapaSelecionada = etapas.find(e => e.etapa_numero === selectedEtapa);
-                if (!etapaSelecionada) return null;
+                {/* Coluna de módulos */}
+                <div className="space-y-3">
+                  {moduleCards.map((card) => (
+                    <ModuleCard key={card.title} {...card} />
+                  ))}
 
-                return (
-                  <div className="space-y-6">
-                    {/* Cabeçalho da Etapa */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <BarChart3 className="w-5 h-5" />
-                          {etapaSelecionada.etapa_nome}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(etapaSelecionada.data_inicio), 'dd/MM/yyyy', { locale: ptBR })} até {' '}
-                          {format(new Date(etapaSelecionada.data_fim), 'dd/MM/yyyy', { locale: ptBR })}
+                  {/* Estado vazio */}
+                  {moduleCards.every(c => c.displayValue === "0" || c.displayValue.includes("0 ")) && (
+                    <div className="rounded-2xl border border-dashed bg-muted/30 p-8 text-center text-muted-foreground">
+                      <Award className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Nenhuma atividade registrada neste período.</p>
+                      <p className="text-xs mt-1 opacity-70">Tente selecionar outro mês.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sidebar de métricas */}
+                <div className="space-y-3">
+
+                  {/* Frequência + Engajamento */}
+                  <MetricBlock title="Métricas principais">
+                    {/* Frequência */}
+                    <div className="flex items-center gap-3 pb-3 border-b border-border">
+                      <div className="shrink-0 w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center">
+                        <CalendarCheck className="w-7 h-7 text-slate-800" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-2xl font-black text-foreground">{frequenciaPercent.toFixed(0)}%</p>
+                        <p className="text-xs font-semibold text-foreground leading-tight">frequência em aulas ao vivo</p>
+                        {data.metricas.totalAulasNoPeriodo > 0 ? (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {data.metricas.totalPresencas}/{data.metricas.totalAulasNoPeriodo} aulas
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-0.5">Nenhuma aula prevista.</p>
+                        )}
+                      </div>
+                    </div>
+                    {frequenciaPercent > 0 && (
+                      <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-1.5 rounded-full"
+                          style={{ width: `${Math.min(frequenciaPercent, 100)}%`, backgroundColor: freqColor }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Engajamento */}
+                    <div className="flex items-center gap-3 pt-3 mt-1">
+                      <div className="shrink-0 w-14 h-14 rounded-xl bg-indigo-100 flex items-center justify-center">
+                        <span className="text-xl font-black text-slate-800">{engPercent}%</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground">engajamento geral</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                          {engPercent === 0
+                            ? "Dados insuficientes para calcular o engajamento."
+                            : "Calculado a partir dos módulos com participação registrada."}
                         </p>
-                      </CardHeader>
-                    </Card>
-
-                    {/* Métricas da Etapa - 5 Critérios Convertidos */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* 1. Frequência (convertida para 0-10) */}
-                      {renderCardMetrica(
-                        'Frequência',
-                        converterPercentualParaNota(etapaSelecionada.frequencia.percentual_frequencia).toFixed(1),
-                        `${formatPercentual(etapaSelecionada.frequencia.percentual_frequencia)} → Nota 0-10`,
-                        <CheckCircle className="w-4 h-4 text-green-600" />,
-                        getStatusBadge(etapaSelecionada.frequencia.percentual_frequencia, 'frequencia')
-                      )}
-
-                      {/* 2. Participação (convertida para 0-10) */}
-                      {renderCardMetrica(
-                        'Participação',
-                        converterPercentualParaNota(etapaSelecionada.participacao.percentual_participacao).toFixed(1),
-                        `${formatPercentual(etapaSelecionada.participacao.percentual_participacao)} → Nota 0-10`,
-                        <BookOpen className="w-4 h-4 text-blue-600" />,
-                        getStatusBadge(etapaSelecionada.participacao.percentual_participacao, 'participacao')
-                      )}
-
-                      {/* 3. Redações (convertida para 0-10) */}
-                      {renderCardMetrica(
-                        'Redações',
-                        converterNota1000ParaNota10(etapaSelecionada.redacoes.nota_media).toFixed(1),
-                        `${etapaSelecionada.redacoes.total_redacoes} redações → Nota 0-10`,
-                        <FileText className="w-4 h-4 text-purple-600" />
-                      )}
-
-                      {/* 4. Lousas (já em escala 0-10) */}
-                      {renderCardMetrica(
-                        'Lousas',
-                        etapaSelecionada.lousas?.nota_media?.toFixed(1) || '0.0',
-                        `${etapaSelecionada.lousas?.total_lousas || 0} lousas → Nota 0-10`,
-                        <BookOpen className="w-4 h-4 text-indigo-600" />
-                      )}
-
-                      {/* 5. Simulados (convertida para 0-10) */}
-                      {renderCardMetrica(
-                        'Simulados',
-                        converterNota1000ParaNota10(etapaSelecionada.simulados.nota_media).toFixed(1),
-                        `${etapaSelecionada.simulados.total_simulados} simulados → Nota 0-10`,
-                        <Trophy className="w-4 h-4 text-orange-600" />
-                      )}
-
-                      {/* Nota Final da Etapa */}
-                      {renderCardMetrica(
-                        'Nota Final da Etapa',
-                        etapaSelecionada.media_final.toFixed(1),
-                        'Média de frequência + redações + lousas + simulados (÷ 4)',
-                        <TrendingUp className="w-4 h-4 text-primary" />,
-                        <Badge className="text-lg">{etapaSelecionada.media_final >= 7 ? '✓' : '!'}</Badge>
-                      )}
+                      </div>
                     </div>
+                    {engPercent > 0 && (
+                      <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-1.5 rounded-full bg-indigo-400"
+                          style={{ width: `${Math.min(engPercent, 100)}%` }}
+                        />
+                      </div>
+                    )}
+                  </MetricBlock>
 
-                  </div>
-                );
-              })()}
-            </>
+                  {/* Aulas ao vivo */}
+                  <MetricBlock title="Aulas ao vivo">
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center">
+                        <CalendarCheck className="w-7 h-7 text-slate-800" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-black text-foreground">{frequenciaPercent.toFixed(0)}%</p>
+                        <p className="text-xs font-semibold text-foreground">participação no período</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                          {data.metricas.totalAulasNoPeriodo === 0
+                            ? "Nenhuma aula prevista neste período."
+                            : `Participou de ${data.metricas.totalPresencas} das ${data.metricas.totalAulasNoPeriodo} aulas previstas.`}
+                        </p>
+                      </div>
+                    </div>
+                  </MetricBlock>
+
+                  {/* Top 5 */}
+                  <MetricBlock title="Top 5">
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center">
+                        <Trophy className="w-7 h-7 text-slate-800" />
+                      </div>
+                      <div>
+                        {top5Posicao !== null ? (
+                          <>
+                            <p className="text-2xl font-black text-foreground">{top5Posicao}º lugar</p>
+                            <p className="text-xs font-semibold text-foreground">no ranking do período</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                              Apareceu no Top 5 pela média de notas das redações.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-bold text-muted-foreground">Ainda não no Top 5</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                              Há evolução possível com maior regularidade de envio e atenção às competências.
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </MetricBlock>
+
+                  {/* Mensagem do professor */}
+                  <MetricBlock title="Mensagem do professor">
+                    <div className="flex gap-2.5">
+                      <MessageSquareText className="w-5 h-5 shrink-0 text-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs leading-relaxed text-muted-foreground">{MENSAGEM_PADRAO}</p>
+                        <p className="text-xs font-semibold italic text-foreground mt-3 text-right">
+                          Prof. Jardson Brito
+                        </p>
+                      </div>
+                    </div>
+                  </MetricBlock>
+
+                </div>
+              </div>
+            </div>
           )}
         </main>
+
+        <BottomNavigation />
       </div>
     </ProtectedRoute>
   );

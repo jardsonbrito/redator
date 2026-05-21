@@ -5,7 +5,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, Presentation, Gamepad2, Calendar, ClipboardList, Library, Map } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, Presentation, Gamepad2, Calendar, ClipboardList, Library, Map, Award } from "lucide-react";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
@@ -155,10 +155,10 @@ const Mais = () => {
       showAlways: true
     },
     {
-      title: "Diário Online",
+      title: "Boletim Escolar",
       path: "/diario-online",
-      icon: Calendar,
-      tooltip: "Visualize seu desempenho acadêmico dividido por etapas do ano letivo.",
+      icon: Award,
+      tooltip: "Veja seu boletim visual com desempenho em redações, simulados, frequência e engajamento.",
       showAlways: true
     },
     {

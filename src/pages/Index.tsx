@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Layers } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Layers, Award } from "lucide-react";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
@@ -220,10 +220,10 @@ const Index = () => {
       showAlways: true
     },
     {
-      title: "Diário Online",
+      title: "Boletim Escolar",
       path: "/diario-online",
-      icon: Calendar,
-      tooltip: "Visualize seu desempenho acadêmico dividido por etapas do ano letivo.",
+      icon: Award,
+      tooltip: "Veja seu boletim visual com desempenho em redações, simulados, frequência e engajamento.",
       showAlways: true
     },
     {
