@@ -70,6 +70,9 @@ export interface MetricasBoletim {
   totalGuiasConcluidos: number;
   totalMicroItens: number;
   totalFaltasJustificadas: number;
+  totalAulasGravadas: number;
+  totalVideoteca: number;
+  top5Posicao: number | null;
 }
 
 export interface EvolucaoNota {
@@ -108,6 +111,7 @@ export interface AlunoBoletimDados {
     turma: string | null;
     creditos: number | null;
     data_aprovacao: string | null;
+    avatar_url: string | null;
   } | null;
   redacoes: RedacaoBoletim[];
   exercicios: ExercicioBoletim[];
@@ -170,7 +174,7 @@ async function fetchBoletimData(
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, nome, sobrenome, email, turma, creditos, data_aprovacao")
+      .select("id, nome, sobrenome, email, turma, creditos, data_aprovacao, avatar_url")
       .eq("email", email)
       .single(),
 
@@ -247,6 +251,51 @@ async function fetchBoletimData(
   ]);
 
   const autorId: string | null = (perfilRes.data as any)?.id ?? null;
+
+  // Contagem de eventos de aulas gravadas e videoteca a partir dos eventos já buscados
+  const eventosData = eventosRes.data || [];
+  const totalAulasGravadas = eventosData.filter((e) => e.feature === "gravada").length;
+  const totalVideoteca = eventosData.filter((e) => e.feature === "videoteca" || e.feature === "video").length;
+
+  // Top 5: buscar ranking do período na turma por média de nota das redações
+  let top5Posicao: number | null = null;
+  if (turma) {
+    try {
+      const turmaEmailsRes = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("turma", turma);
+      const turmaEmails = ((turmaEmailsRes.data || []) as { email: string }[])
+        .map((p) => p.email)
+        .filter(Boolean);
+
+      if (turmaEmails.length > 0) {
+        const top5Res = await supabase
+          .from("redacoes_enviadas")
+          .select("email_aluno, nota_total")
+          .in("email_aluno", turmaEmails)
+          .eq("corrigida", true)
+          .gte("data_envio", monthStart)
+          .lte("data_envio", monthEnd)
+          .not("nota_total", "is", null);
+
+        const notasPorAluno: Record<string, number[]> = {};
+        for (const r of (top5Res.data || []) as { email_aluno: string; nota_total: number }[]) {
+          if (r.email_aluno && r.nota_total !== null) {
+            notasPorAluno[r.email_aluno] = notasPorAluno[r.email_aluno] || [];
+            notasPorAluno[r.email_aluno].push(r.nota_total);
+          }
+        }
+        const ranking = Object.entries(notasPorAluno)
+          .map(([e, notas]) => ({ email: e, media: notas.reduce((a, b) => a + b, 0) / notas.length }))
+          .sort((a, b) => b.media - a.media);
+        const idx = ranking.findIndex((a) => a.email === email);
+        if (idx >= 0 && idx < 5) top5Posicao = idx + 1;
+      }
+    } catch {
+      // fallback silencioso
+    }
+  }
 
   const guiasConcluídosRes = await (supabase as any)
     .from('guias_tematicos_conclusoes')
@@ -481,6 +530,9 @@ async function fetchBoletimData(
     totalGuiasConcluidos: new Set((guiasConcluídosRes.data || []).map((r: any) => r.guia_id)).size,
     totalMicroItens: microProgressoRes.count ?? 0,
     totalFaltasJustificadas,
+    totalAulasGravadas,
+    totalVideoteca,
+    top5Posicao,
   };
 
   // --- Evolução de notas (redações com nota, ordenadas por data) ---
@@ -529,6 +581,7 @@ async function fetchBoletimData(
           turma: perfilRes.data.turma,
           creditos: perfilRes.data.creditos,
           data_aprovacao: perfilRes.data.data_aprovacao,
+          avatar_url: (perfilRes.data as any).avatar_url ?? null,
         }
       : null,
     redacoes: todasRedacoes,

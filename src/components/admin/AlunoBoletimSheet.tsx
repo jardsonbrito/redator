@@ -46,7 +46,9 @@ import {
   TrendingDown,
   CheckCircle2,
   Info,
+  MessageSquare,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import {
   LineChart,
   Line,
@@ -64,7 +66,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAlunoBoletim } from "@/hooks/useAlunoBoletim";
 import { useAlunoScoreHistorico } from "@/hooks/useAlunoScoreHistorico";
-import { exportarBoletimPDF } from "@/utils/boletimPDF";
+import { exportarBoletimVisualPDF } from "@/utils/boletimVisualPDF";
 import { classificarScoreGeral } from "@/utils/radarScore";
 import { RADAR_CONFIG } from "@/config/radarConfig";
 
@@ -303,6 +305,7 @@ export function AlunoBoletimSheet({
   const [ano, setAno] = useState(defaultAno);
   const [exportando, setExportando] = useState(false);
   const [modalJustificativas, setModalJustificativas] = useState(false);
+  const [mensagemProfessor, setMensagemProfessor] = useState("");
 
   const { data, isLoading } = useAlunoBoletim(
     open ? email : null,
@@ -324,7 +327,7 @@ export function AlunoBoletimSheet({
     if (!data) return;
     setExportando(true);
     try {
-      await exportarBoletimPDF(data, mes, ano);
+      await exportarBoletimVisualPDF(data, mes, ano, mensagemProfessor);
     } finally {
       setExportando(false);
     }
@@ -407,6 +410,22 @@ export function AlunoBoletimSheet({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Mensagem personalizada do professor para o boletim */}
+          <div className="mt-3 space-y-1">
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">Mensagem do professor (aparece no PDF):</span>
+            </div>
+            <Textarea
+              value={mensagemProfessor}
+              onChange={(e) => setMensagemProfessor(e.target.value)}
+              placeholder="Digite uma mensagem personalizada para o aluno. Será exibida no boletim PDF assinada por Prof. Jardson Brito."
+              className="text-xs min-h-[64px] resize-none"
+              maxLength={400}
+            />
+            <p className="text-[10px] text-muted-foreground text-right">{mensagemProfessor.length}/400</p>
           </div>
         </SheetHeader>
 
