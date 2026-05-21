@@ -59,6 +59,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
       // Funcionalidades que estavam faltando no mapeamento:
       'Top 5': 'top_5',
       'Diário Online': 'diario_online',
+      'Boletim Escolar': 'diario_online',
       'Gamificação': 'gamificacao',
       'Repertório Orientado': 'repertorio_orientado',
       'Jarvis': 'jarvis',

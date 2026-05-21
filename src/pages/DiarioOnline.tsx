@@ -18,6 +18,7 @@ import {
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedFeatureRoute } from "@/components/ProtectedFeatureRoute";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -378,6 +379,7 @@ const DiarioOnline = () => {
 
   return (
     <ProtectedRoute>
+      <ProtectedFeatureRoute feature="diario_online" featureName="Boletim Escolar">
       <div className="min-h-screen bg-muted/30">
         <StudentHeader pageTitle="Boletim Escolar" />
 
@@ -621,6 +623,7 @@ const DiarioOnline = () => {
 
         <BottomNavigation />
       </div>
+      </ProtectedFeatureRoute>
     </ProtectedRoute>
   );
 };
