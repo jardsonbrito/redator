@@ -924,7 +924,7 @@ const Admin = () => {
         calendario_atividades: 'calendario',
         redacoes_exemplares:   'redacoes',
         redacoes_comentadas:   'redacoes',
-        diario_online:         'inbox',
+        diario_online:         'diario',
         gamificacao:           'gamificacao',
         jarvis:                'jarvis',
         jarvis_correcao:       'jarvis',
