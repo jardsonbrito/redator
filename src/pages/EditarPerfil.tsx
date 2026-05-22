@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2 } from "lucide-react";
+import { isPerfilCompleto } from "@/utils/perfilUtils";
 import { Link, useNavigate } from "react-router-dom";
 import { StudentHeader } from "@/components/StudentHeader";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -130,10 +131,54 @@ export default function EditarPerfil() {
         throw updateError;
       }
 
-      toast({
-        title: "Perfil atualizado!",
-        description: "Suas informações foram salvas com sucesso.",
-      });
+      // Verifica se perfil está completo e resolve mensagens bloqueantes pendentes
+      const perfilAtualizado = {
+        avatar_url: null as string | null, // será verificado abaixo
+        whatsapp: whatsapp.trim() || null,
+        data_nascimento: dataNascimento || null,
+        cidade: cidade.trim() || null,
+        escola: escola.trim() || null,
+        serie: serie.trim() || null,
+        gender: gender || null,
+      };
+
+      // Busca avatar_url atual (não está no state local)
+      const { data: profileAtual } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('email', emailAtual.trim())
+        .single();
+      perfilAtualizado.avatar_url = profileAtual?.avatar_url ?? null;
+
+      if (isPerfilCompleto(perfilAtualizado)) {
+        // Marca todas as mensagens "preencher_perfil" pendentes como respondidas
+        const { data: pendentes } = await supabase
+          .from('inbox_recipients')
+          .select('id, message_id, inbox_messages!inner(acao)')
+          .eq('student_email', emailAtual.trim())
+          .eq('status', 'pendente');
+
+        const ids = (pendentes || [])
+          .filter((r: any) => r.inbox_messages?.acao === 'preencher_perfil')
+          .map((r: any) => r.id);
+
+        if (ids.length > 0) {
+          await supabase
+            .from('inbox_recipients')
+            .update({ status: 'respondida', response_text: 'Perfil completado', responded_at: new Date().toISOString() })
+            .in('id', ids);
+        }
+
+        toast({
+          title: "Perfil completo!",
+          description: "Todas as informações foram salvas. Você pode continuar usando a plataforma.",
+        });
+      } else {
+        toast({
+          title: "Perfil atualizado!",
+          description: "Suas informações foram salvas com sucesso.",
+        });
+      }
 
       // Aguardar um pouco e redirecionar
       setTimeout(() => {

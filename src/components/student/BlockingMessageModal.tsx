@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { type StudentInboxMessage } from "@/hooks/useStudentInbox";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { isPerfilCompleto } from "@/utils/perfilUtils";
 
 interface BlockingMessageModalProps {
   message: StudentInboxMessage | null;
@@ -30,6 +31,31 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
   const isPreencherPerfil =
     message?.acao === "preencher_perfil";
 
+  // Auto-resolve: se o perfil já está completo, marca como respondida e fecha
+  useEffect(() => {
+    if (!isPreencherPerfil || !isOpen || !message) return;
+    const email = studentData.email || studentData.emailUsuario;
+    if (!email) return;
+
+    supabase
+      .from('profiles')
+      .select('avatar_url, whatsapp, data_nascimento, cidade, escola, serie, gender')
+      .eq('email', email)
+      .single()
+      .then(({ data }) => {
+        if (isPerfilCompleto(data)) {
+          supabase
+            .from('inbox_recipients')
+            .update({ status: 'respondida', response_text: 'Perfil completado', responded_at: new Date().toISOString() })
+            .eq('id', message.id)
+            .then(() => {
+              queryClient.invalidateQueries({ queryKey: ['student-inbox'] });
+              onClose();
+            });
+        }
+      });
+  }, [isPreencherPerfil, isOpen, message?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { data: aulaInfo } = useQuery({
     queryKey: ["aula-info-justificativa", message?.aula_id],
     queryFn: async () => {
@@ -46,30 +72,11 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
 
   if (!message) return null;
 
-  const handlePreencherPerfil = async () => {
-    setIsSending(true);
-    try {
-      // Marca a mensagem como respondida
-      const { error: inboxError } = await supabase
-        .from("inbox_recipients")
-        .update({
-          status: "respondida",
-          response_text: "Redirecionado para editar perfil",
-          responded_at: new Date().toISOString(),
-        })
-        .eq("id", message!.id);
-
-      if (inboxError) throw inboxError;
-
-      queryClient.invalidateQueries({ queryKey: ["student-inbox"] });
-      onClose();
-      navigate("/editar-perfil");
-    } catch (err: any) {
-      console.error("Erro ao processar redirecionamento:", err);
-      toast.error("Erro ao processar. Tente novamente.");
-    } finally {
-      setIsSending(false);
-    }
+  // Apenas navega para a página de perfil — a mensagem só será marcada
+  // como respondida quando o perfil estiver realmente completo (em EditarPerfil).
+  const handlePreencherPerfil = () => {
+    onClose();
+    navigate("/editar-perfil");
   };
 
   const handleRespond = async () => {
@@ -207,12 +214,12 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
         <div className="mt-4 flex justify-end">
           <Button
             onClick={isPreencherPerfil ? handlePreencherPerfil : handleRespond}
-            disabled={!isPreencherPerfil && !response.trim() || isSending}
+            disabled={!isPreencherPerfil && (!response.trim() || isSending)}
           >
             {isSending
-              ? "Processando..."
+              ? "Enviando..."
               : isPreencherPerfil
-              ? "Ir para Editar Perfil"
+              ? "Ir para Editar Perfil →"
               : isFaltaJustificativa
               ? "Enviar justificativa"
               : "Enviar Resposta"}
