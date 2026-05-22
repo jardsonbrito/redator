@@ -26,12 +26,16 @@ function removerAcentos(str: string): string {
   return str.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-// Usa o valor do banco quando disponível; cai no heurístico pelo nome como fallback
+// Usa o valor do banco quando disponível; cai no heurístico pelo nome como fallback.
+// Aceita tanto 'masculino'/'feminino' (tabela corretores) quanto 'M'/'F' (tabela profiles).
 export function resolverGenero(
   sexoBanco: string | null | undefined,
   nomeCompleto: string
 ): 'feminino' | 'masculino' {
-  if (sexoBanco === 'feminino' || sexoBanco === 'masculino') return sexoBanco;
+  if (sexoBanco === 'feminino' || sexoBanco === 'M' || sexoBanco === 'F') {
+    return (sexoBanco === 'feminino' || sexoBanco === 'F') ? 'feminino' : 'masculino';
+  }
+  if (sexoBanco === 'masculino') return 'masculino';
   return detectarGeneroNome(nomeCompleto);
 }
 

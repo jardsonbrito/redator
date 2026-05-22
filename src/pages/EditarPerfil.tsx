@@ -261,11 +261,11 @@ export default function EditarPerfil() {
 
                     {/* Gênero */}
                     <div className="space-y-2">
-                      <Label>Como prefere ser chamad{gender === 'feminino' ? 'a' : 'o'}?</Label>
+                      <Label>Como prefere ser chamad{gender === 'F' ? 'a' : 'o'}?</Label>
                       <div className="flex gap-3">
                         {[
-                          { value: 'masculino', label: 'Aluno' },
-                          { value: 'feminino',  label: 'Aluna' },
+                          { value: 'M', label: 'Aluno' },
+                          { value: 'F', label: 'Aluna' },
                         ].map(({ value, label }) => (
                           <button
                             key={value}
