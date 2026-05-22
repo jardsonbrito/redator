@@ -34,6 +34,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   const [editingNome, setEditingNome] = useState(false);
   const [nomeValue, setNomeValue] = useState("");
   const [savingNome, setSavingNome] = useState(false);
+  const [editingGenero, setEditingGenero] = useState(false);
 
   const generoCorretor = resolverGenero(corretor?.sexo, corretor?.nome_completo ?? '');
   const tituloLabel = tituloCorretor(generoCorretor);
@@ -99,7 +100,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
             {/* Sheet de perfil */}
             <Sheet open={perfilOpen} onOpenChange={(open) => {
               setPerfilOpen(open);
-              if (open) { setEditingNome(false); setNomeValue(corretor?.nome_completo || ""); }
+              if (open) { setEditingNome(false); setNomeValue(corretor?.nome_completo || ""); setEditingGenero(false); }
             }}>
               <SheetTrigger asChild>
                 <button className="flex items-center gap-2 sm:gap-3 hover:bg-violet-50 transition-colors rounded-xl px-2 py-1.5 border border-transparent hover:border-violet-200">
@@ -201,29 +202,47 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
 
                     {/* Gênero */}
                     <div className="space-y-1">
-                      <p className="text-xs text-slate-400">Como prefere ser chamad{generoCorretor === 'feminino' ? 'a' : 'o'}?</p>
-                      <div className="flex gap-2">
-                        {(['masculino', 'feminino'] as const).map((op) => (
+                      <p className="text-xs text-slate-400">Tratamento</p>
+                      {editingGenero ? (
+                        <div className="flex gap-2 items-center">
+                          {(['masculino', 'feminino'] as const).map((op) => (
+                            <button
+                              key={op}
+                              onClick={async () => {
+                                try {
+                                  await updateCorretorSexo(op);
+                                  toast({ title: "Atualizado!" });
+                                } catch {
+                                  toast({ title: "Erro ao salvar.", variant: "destructive" });
+                                } finally { setEditingGenero(false); }
+                              }}
+                              className={`flex-1 rounded-lg border py-1.5 text-xs font-medium transition-colors ${
+                                (corretor?.sexo ?? null) === op
+                                  ? 'bg-violet-600 text-white border-violet-600'
+                                  : 'border-slate-200 text-slate-600 hover:border-violet-300 hover:text-violet-700'
+                              }`}
+                            >
+                              {op === 'masculino' ? 'Corretor' : 'Corretora'}
+                            </button>
+                          ))}
                           <button
-                            key={op}
-                            onClick={async () => {
-                              try {
-                                await updateCorretorSexo(op);
-                                toast({ title: "Gênero atualizado!" });
-                              } catch {
-                                toast({ title: "Erro ao salvar.", variant: "destructive" });
-                              }
-                            }}
-                            className={`flex-1 rounded-lg border py-1.5 text-xs font-medium transition-colors ${
-                              (corretor?.sexo ?? null) === op
-                                ? 'bg-violet-600 text-white border-violet-600'
-                                : 'border-slate-200 text-slate-600 hover:border-violet-300 hover:text-violet-700'
-                            }`}
+                            onClick={() => setEditingGenero(false)}
+                            className="text-slate-400 hover:text-red-500 shrink-0"
                           >
-                            {op === 'masculino' ? 'Corretor' : 'Corretora'}
+                            <X className="w-4 h-4" />
                           </button>
-                        ))}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-800">{tituloLabel}</p>
+                          <button
+                            onClick={() => setEditingGenero(true)}
+                            className="text-slate-400 hover:text-violet-600 transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Tipo */}
