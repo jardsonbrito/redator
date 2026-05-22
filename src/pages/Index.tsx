@@ -18,6 +18,7 @@ import { CalendarioAtividades } from "@/components/CalendarioAtividades";
 import { StudentInboxManager } from "@/components/student/StudentInboxManager";
 import { AlertasAtividadesModal } from "@/components/AlertasAtividadesModal";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { JarvisFloatingButton } from "@/components/JarvisFloatingButton";
 import {
   Dialog,
   DialogContent,
@@ -286,6 +287,9 @@ const Index = () => {
 
           {/* Bottom Navigation */}
           <BottomNavigation />
+
+          {/* Botão flutuante do Jarvis */}
+          <JarvisFloatingButton />
 
           {/* Gerenciador de mensagens do Inbox */}
           <StudentInboxManager />

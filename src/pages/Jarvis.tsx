@@ -10,6 +10,7 @@ import { useJarvisHistorico } from "@/hooks/useJarvisHistorico";
 import { useJarvisModos } from "@/hooks/useJarvisModos";
 import type { CampoResposta } from "@/hooks/useJarvisModos";
 import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
+import { useSearchParams } from "react-router-dom";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { TutoriaView } from "@/components/tutoria/TutoriaView";
 import {
@@ -116,17 +117,33 @@ const Jarvis = () => {
     useJarvisHistorico(studentData?.email || "");
 
   const { modos, loading: loadingModos } = useJarvisModos();
+  const [searchParams] = useSearchParams();
 
   const resultRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const initializedRef = useRef(false);
   const showResult = !!currentResponse && !isLoading;
 
-  // Seleciona o primeiro modo ao carregar
+  // Seleciona o modo inicial considerando parâmetros de URL
   useEffect(() => {
-    if (modos.length > 0 && !activeView) {
-      setActiveView(modos[0].id);
+    if (modos.length > 0 && !initializedRef.current) {
+      initializedRef.current = true;
+      const viewParam = searchParams.get('view');
+      const modoIndexParam = searchParams.get('modoIndex');
+
+      if (viewParam === 'historico') {
+        setActiveView('historico');
+      } else if (modoIndexParam !== null) {
+        const idx = parseInt(modoIndexParam, 10);
+        const alvo = !isNaN(idx) && idx >= 0 && idx < modos.length
+          ? modos[idx].id
+          : modos[0].id;
+        setActiveView(alvo);
+      } else {
+        setActiveView(modos[0].id);
+      }
     }
-  }, [modos, activeView]);
+  }, [modos, searchParams]);
 
   // Verificar disponibilidade
   useEffect(() => {
