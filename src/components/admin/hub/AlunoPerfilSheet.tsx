@@ -83,6 +83,27 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
       toast({ title: 'Erro ao atualizar configuração', variant: 'destructive' });
     } else {
       setDispensarNotif(novoValor);
+
+      // Ao dispensar: resolve automaticamente mensagens de justificativa pendentes
+      if (novoValor && aluno?.email) {
+        const { data: pendentes } = await supabase
+          .from('inbox_recipients')
+          .select('id, inbox_messages!inner(acao)')
+          .eq('student_email', aluno.email)
+          .eq('status', 'pendente');
+
+        const ids = (pendentes || [])
+          .filter((r: any) => r.inbox_messages?.acao === 'justificativa_ausencia')
+          .map((r: any) => r.id);
+
+        if (ids.length > 0) {
+          await supabase
+            .from('inbox_recipients')
+            .update({ status: 'respondida', response_text: 'Dispensado de notificações de falta', responded_at: new Date().toISOString() })
+            .in('id', ids);
+        }
+      }
+
       toast({ title: novoValor ? 'Notificações de falta desativadas' : 'Notificações de falta reativadas' });
     }
     setLoadingDispensa(false);
