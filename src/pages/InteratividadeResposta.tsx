@@ -24,12 +24,18 @@ import {
   useResultadoInteracao,
   statusInteracao,
 } from '@/hooks/useInteratividade';
+import { useStudentAuth } from '@/hooks/useStudentAuth';
+import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 
 const InteratividadeResposta = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: interacoes = [], isLoading } = useInteracoesAtivas();
+  const { studentData } = useStudentAuth();
+  const { professor } = useProfessorAuth();
+  const turmaCode = professor?.turma_nome ?? studentData.turma ?? null;
+
+  const { data: interacoes = [], isLoading } = useInteracoesAtivas(turmaCode);
   const interacao = interacoes.find(i => i.id === id);
 
   const { data: minhasRespostas = [], isLoading: loadingResposta } = useMinhasRespostas(id ? [id] : []);
@@ -103,15 +109,19 @@ const InteratividadeResposta = () => {
       <TooltipProvider>
         <div className="min-h-screen bg-[#f1eefc] pb-28">
           <StudentHeader />
-          <main className="mx-auto max-w-3xl px-4 pt-5 text-center py-20">
-            <p className="text-slate-500">Interação não encontrada ou não está mais ativa.</p>
+          <main className="mx-auto max-w-3xl px-4 pt-5">
             <button
-              className="mt-4 flex items-center gap-2 mx-auto text-sm font-semibold text-slate-600"
               onClick={() => navigate('/interatividade')}
+              className="mb-7 flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Voltar
+              Interatividade
             </button>
+            <div className="rounded-3xl bg-white shadow-sm p-8 text-center">
+              <ClipboardList className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+              <p className="font-semibold text-slate-700">Interatividade encerrada</p>
+              <p className="text-sm text-slate-400 mt-1">Esta atividade não está mais disponível.</p>
+            </div>
           </main>
         </div>
       </TooltipProvider>
