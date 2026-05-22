@@ -186,6 +186,7 @@ async function fetchBoletimData(
       .select("id, frase_tematica, data_envio, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5")
       .eq("email_aluno", email)
       .eq("corrigida", true)
+      .is("deleted_at", null)
       .gte("data_envio", monthStart)
       .lte("data_envio", monthEnd),
 
@@ -194,6 +195,7 @@ async function fetchBoletimData(
       .select("id, data_envio, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5")
       .eq("email_aluno", email)
       .eq("corrigida", true)
+      .is("deleted_at", null)
       .gte("data_envio", monthStart)
       .lte("data_envio", monthEnd),
 
@@ -202,6 +204,7 @@ async function fetchBoletimData(
       .select("id, data_envio, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5")
       .eq("email_aluno", email)
       .eq("corrigida", true)
+      .is("deleted_at", null)
       .gte("data_envio", monthStart)
       .lte("data_envio", monthEnd),
 
@@ -278,6 +281,7 @@ async function fetchBoletimData(
           .select("email_aluno, nota_total")
           .in("email_aluno", turmaEmails)
           .eq("corrigida", true)
+          .is("deleted_at", null)
           .gte("data_envio", monthStart)
           .lte("data_envio", monthEnd)
           .not("nota_total", "is", null);
