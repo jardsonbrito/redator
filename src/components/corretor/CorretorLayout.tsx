@@ -15,6 +15,7 @@ import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { CorretorNavigationProvider } from "@/hooks/useCorretorNavigationContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { detectarGeneroNome, tituloCorretor } from "@/utils/generoUtils";
 
 interface CorretorLayoutProps {
   children: React.ReactNode;
@@ -33,6 +34,9 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   const [editingNome, setEditingNome] = useState(false);
   const [nomeValue, setNomeValue] = useState("");
   const [savingNome, setSavingNome] = useState(false);
+
+  const generoCorretor = detectarGeneroNome(corretor?.nome_completo ?? '');
+  const tituloLabel = tituloCorretor(generoCorretor);
 
   useEffect(() => {
     if (corretor?.email) {
@@ -86,7 +90,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
             
             <div className="min-w-0 flex-1">
               <h1 className="text-base sm:text-xl font-bold text-violet-700 truncate">
-                {isMobile ? "Corretor" : "Painel do Corretor"}
+                {isMobile ? tituloLabel : `Painel d${generoCorretor === 'feminino' ? 'a' : 'o'} ${tituloLabel}`}
               </h1>
             </div>
           </div>
@@ -102,9 +106,9 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
                   <CorretorAvatar size="sm" showUpload={false} />
                   <div className="hidden sm:flex flex-col items-start min-w-0">
                     <span className="text-foreground font-semibold text-xs sm:text-sm truncate max-w-32 sm:max-w-none leading-tight">
-                      {corretor?.nome_completo || 'Corretor'}
+                      {corretor?.nome_completo || tituloLabel}
                     </span>
-                    <span className="text-[10px] text-violet-500 font-medium leading-none mt-0.5">Corretor</span>
+                    <span className="text-[10px] text-violet-500 font-medium leading-none mt-0.5">{tituloLabel}</span>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
@@ -118,7 +122,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
                   {/* Avatar grande */}
                   <div className="flex flex-col items-center gap-2">
                     <CorretorAvatar size="lg" showUpload={true} />
-                    <p className="text-xs text-center text-violet-500 font-medium italic">Área do Corretor</p>
+                    <p className="text-xs text-center text-violet-500 font-medium italic">Área d{generoCorretor === 'feminino' ? 'a' : 'o'} {tituloLabel}</p>
                   </div>
 
                   <Separator />

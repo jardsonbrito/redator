@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight } from "lucide-react";
+import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2, Sparkles, ChevronRight, MessageSquare, Mic, Zap, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { tituloCorretor, detectarGeneroNome } from "@/utils/generoUtils";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { useJarvisAdmin } from "@/hooks/useJarvisAdmin";
 import { estaCongelada } from "@/utils/redacaoUtils";
@@ -86,6 +89,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [jarvisData, setJarvisData] = useState<any>(null);
   const [loadingJarvis, setLoadingJarvis] = useState(false);
   const [turmaExterna, setTurmaExterna] = useState(false);
+  const [sidebarMode, setSidebarMode] = useState<'collapsed' | 'single' | 'all'>('collapsed');
+  const [activeSidebarSection, setActiveSidebarSection] = useState('acoes');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const anotacaoRef = useRef<RedacaoAnotacaoVisualRef>(null);
 
@@ -343,6 +349,31 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     }
   };
 
+  const sidebarExpanded = sidebarMode !== 'collapsed';
+  const jarvisAvailable = !!(redacao.jarvis_precorrecao_id && redacao.jarvis_precorrecao_status === 'corrigida');
+
+  const showSection = (id: string) =>
+    sidebarMode === 'all' || (sidebarMode === 'single' && activeSidebarSection === id);
+
+  const handleSidebarIconClick = (sectionId: string) => {
+    if (!sidebarExpanded) {
+      setSidebarMode('single');
+      setActiveSidebarSection(sectionId);
+    } else if (sidebarMode === 'single' && activeSidebarSection === sectionId) {
+      setSidebarMode('collapsed');
+    } else {
+      setSidebarMode('single');
+      setActiveSidebarSection(sectionId);
+    }
+  };
+
+  const toggleSidebarAll = () => {
+    setSidebarMode(m => m === 'collapsed' ? 'all' : 'collapsed');
+  };
+
+  const generoCorretor = detectarGeneroNome(corretorNome);
+  const tituloLabel = tituloCorretor(generoCorretor);
+
   const hasImage = !!(redacao as any).redacao_imagem_gerada_url || !!redacao.redacao_manuscrita_url;
   const imagemUrl = (redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url;
   const isImagemGerada = !!(redacao as any).redacao_imagem_gerada_url;
@@ -376,7 +407,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 {redacao.nome_aluno}
                 {redacao.turma ? ` • ${redacao.turma}` : ''}
                 {` • ${dataFormatada}`}
-                {corretorNome ? ` • Corretor: ${corretorNome}` : ''}
+                {corretorNome ? ` • ${tituloLabel}: ${corretorNome}` : ''}
               </p>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -419,11 +450,11 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </div>
       </section>
 
-      {/* Layout de duas colunas */}
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px]">
+      {/* Layout principal + sidebar recolhível */}
+      <div className="flex gap-5 items-start">
 
         {/* ── COLUNA PRINCIPAL: REDAÇÃO ── */}
-        <main className="min-w-0 space-y-4">
+        <main className="min-w-0 flex-1 space-y-4">
           {redacaoCongelada && (
             <Alert variant="destructive" className="border-cyan-500 bg-cyan-50">
               <AlertTriangle className="h-4 w-4 text-cyan-600" />
@@ -500,155 +531,356 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           )}
         </main>
 
-        {/* ── SIDEBAR ── */}
-        <aside className="min-w-0 space-y-3">
-          {/* 1. Mensagem pedagógica */}
-          <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
-            <div className="px-4 py-3 border-b border-violet-50">
-              <h3 className="text-sm font-black text-slate-900">Comentário geral para o aluno</h3>
+        {/* ── SIDEBAR RECOLHÍVEL (desktop) ── */}
+        <div className="hidden xl:flex shrink-0 items-start gap-0 self-start sticky top-4">
+
+          {/* Rail de ícones */}
+          <div className="w-[52px] flex flex-col items-center gap-1.5 py-3 bg-white rounded-2xl border border-violet-100 shadow-sm">
+            <TooltipProvider delayDuration={200}>
+
+              {/* Botão expandir/recolher tudo */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={toggleSidebarAll}
+                    className={cn("rounded-xl p-2 transition-colors w-9 h-9 flex items-center justify-center",
+                      sidebarExpanded && sidebarMode === 'all' ? "bg-violet-100 text-violet-700" : "text-slate-400 hover:bg-violet-50 hover:text-violet-600"
+                    )}
+                  >
+                    {sidebarExpanded ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">{sidebarExpanded ? 'Recolher painel' : 'Expandir tudo'}</TooltipContent>
+              </Tooltip>
+
+              <div className="w-7 h-px bg-slate-100 my-0.5" />
+
+              {/* Comentário */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button onClick={() => handleSidebarIconClick('comentario')}
+                    className={cn("rounded-xl p-2 transition-colors w-9 h-9 flex items-center justify-center",
+                      sidebarMode === 'single' && activeSidebarSection === 'comentario' ? "bg-violet-100 text-violet-700 ring-2 ring-violet-200" : "text-slate-400 hover:bg-violet-50 hover:text-violet-600"
+                    )}>
+                    <MessageSquare size={17} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">Comentário geral</TooltipContent>
+              </Tooltip>
+
+              {/* Áudio */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button onClick={() => handleSidebarIconClick('audio')}
+                    className={cn("rounded-xl p-2 transition-colors w-9 h-9 flex items-center justify-center",
+                      sidebarMode === 'single' && activeSidebarSection === 'audio' ? "bg-red-100 text-red-600 ring-2 ring-red-200" : "text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    )}>
+                    <Mic size={17} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">Gravar mensagem</TooltipContent>
+              </Tooltip>
+
+              {/* PEP */}
+              {!turmaExterna && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button onClick={() => handleSidebarIconClick('pep')}
+                      className={cn("rounded-xl p-2 transition-colors w-9 h-9 flex items-center justify-center relative",
+                        sidebarMode === 'single' && activeSidebarSection === 'pep' ? "bg-amber-100 text-amber-700 ring-2 ring-amber-200" : "text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                      )}>
+                      <BookMarked size={17} />
+                      {marcacoesPEP.length === 0 && (
+                        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="text-xs">
+                    {marcacoesPEP.length === 0 ? 'PEP — pendente' : `PEP — ${marcacoesPEP.length} marcação(ões)`}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Jarvis */}
+              {jarvisAvailable && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button onClick={() => handleSidebarIconClick('jarvis')}
+                      className={cn("rounded-xl p-2 transition-colors w-9 h-9 flex items-center justify-center",
+                        sidebarMode === 'single' && activeSidebarSection === 'jarvis' ? "bg-violet-100 text-violet-700 ring-2 ring-violet-200" : "text-slate-400 hover:bg-violet-50 hover:text-violet-600"
+                      )}>
+                      <Sparkles size={17} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="text-xs">Sugestão do Jarvis</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Ações */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button onClick={() => handleSidebarIconClick('acoes')}
+                    className={cn("rounded-xl p-2 transition-colors w-9 h-9 flex items-center justify-center",
+                      sidebarMode === 'single' && activeSidebarSection === 'acoes' ? "bg-violet-100 text-violet-700 ring-2 ring-violet-200" : "text-slate-400 hover:bg-violet-50 hover:text-violet-600"
+                    )}>
+                    <Zap size={17} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">Ações da correção</TooltipContent>
+              </Tooltip>
+
+            </TooltipProvider>
+          </div>
+
+          {/* Painel de conteúdo (expande/recolhe) */}
+          <div
+            style={{
+              width: sidebarExpanded ? '292px' : '0px',
+              opacity: sidebarExpanded ? 1 : 0,
+              paddingLeft: sidebarExpanded ? '12px' : '0px',
+              overflow: 'hidden',
+              transition: 'width 300ms ease, opacity 200ms ease, padding-left 300ms ease',
+              pointerEvents: sidebarExpanded ? 'auto' : 'none',
+            }}
+          >
+            <div className="space-y-3 w-[280px]">
+              {showSection('comentario') && (
+                <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
+                  <div className="px-4 py-3 border-b border-violet-50">
+                    <h3 className="text-sm font-black text-slate-900">Comentário geral para o aluno</h3>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <textarea
+                      placeholder="Escreva aqui um comentário geral sobre a redação do aluno..."
+                      value={comentarios.elogios}
+                      onChange={(e) => atualizarComentario('elogios', e.target.value)}
+                      className="w-full min-h-[130px] resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={refinarElogios}
+                        disabled={refineElogiosLoading || !comentarios.elogios.trim()}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors">
+                        {refineElogiosLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
+                        {refineElogiosLoading ? 'Refinando…' : 'Refinar clareza'}
+                      </button>
+                      {refineElogiosSugestoes.length > 0 && (
+                        <button type="button" onClick={() => setRefineElogiosSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                          <X className="w-3 h-3" /> Ignorar
+                        </button>
+                      )}
+                    </div>
+                    {refineElogiosSugestoes.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
+                        {refineElogiosSugestoes.map((s, i) => (
+                          <button key={i} type="button"
+                            onClick={() => { atualizarComentario('elogios', s); setRefineElogiosSugestoes([]); }}
+                            className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors">
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {showSection('audio') && (
+                <div className="rounded-2xl border border-red-200 bg-white shadow-sm">
+                  <div className="px-4 py-3 border-b border-red-50">
+                    <h3 className="text-sm font-black text-slate-900">Gravar mensagem</h3>
+                    <p className="text-xs text-red-500 mt-0.5">Mensagem em áudio para o aluno</p>
+                  </div>
+                  <div className="p-4">
+                    <AudioRecorder
+                      redacaoId={redacao.id}
+                      tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                      onAudioSaved={(url) => setAudioUrl(url)}
+                      existingAudioUrl={audioUrl}
+                      ehCorretor1={redacao.eh_corretor_1}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!turmaExterna && showSection('pep') && (
+                <div className={`rounded-2xl border bg-white shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
+                  <div className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-black text-slate-900 leading-tight">Plano de Estudo (PEP)</h3>
+                      <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
+                      </p>
+                    </div>
+                    <Button type="button" onClick={() => setShowPEPModal(true)} size="sm"
+                      className={`shrink-0 gap-1.5 text-xs font-semibold ${marcacoesPEP.length === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'}`}>
+                      <BookMarked className="w-3.5 h-3.5" />
+                      Preencher
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {jarvisAvailable && showSection('jarvis') && (
+                <div className="rounded-2xl border border-violet-300 bg-gradient-to-br from-violet-50 to-fuchsia-50 shadow-sm">
+                  <div className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                        <h3 className="text-sm font-black text-violet-900 leading-tight">Sugestão do Jarvis</h3>
+                      </div>
+                      <p className="text-xs text-violet-600 mt-0.5">Pré-correção por IA disponível</p>
+                    </div>
+                    <Button type="button" onClick={() => setShowJarvisPanel(true)} size="sm"
+                      className="shrink-0 gap-1.5 text-xs font-semibold bg-violet-700 hover:bg-violet-800 text-white">
+                      Ver <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {showSection('acoes') && (
+                <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+                  <h3 className="text-sm font-black text-slate-900 mb-3">Ações da correção</h3>
+                  <div className="space-y-2">
+                    {isImagemGerada && (
+                      <button onClick={copiarRedacaoDigitada}
+                        className="w-full rounded-xl border px-3 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                        Copiar redação
+                      </button>
+                    )}
+                    <button onClick={() => salvarCorrecao('incompleta')}
+                      disabled={loading || redacaoCongelada}
+                      className="w-full rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-left text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50 transition-colors">
+                      Incompleta
+                    </button>
+                    <button onClick={() => setShowDevolverModal(true)}
+                      disabled={loading || redacaoCongelada}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-left text-xs font-bold text-slate-800 hover:bg-slate-50 disabled:opacity-50 transition-colors">
+                      Devolver redação
+                    </button>
+                    <button onClick={() => salvarCorrecao('corrigida')}
+                      disabled={loading || redacaoCongelada}
+                      className={cn("w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors",
+                        !turmaExterna && marcacoesPEP.length === 0 ? 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'
+                      )}
+                      title={!turmaExterna && marcacoesPEP.length === 0 ? 'Preencha o PEP antes de finalizar' : undefined}>
+                      {loading ? 'Salvando…' : 'Finalizar correção'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="p-4 space-y-2">
-              <textarea
-                placeholder="Escreva aqui um comentário geral sobre a redação do aluno..."
-                value={comentarios.elogios}
-                onChange={(e) => atualizarComentario('elogios', e.target.value)}
-                className="w-full min-h-[130px] resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"
-              />
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={refinarElogios}
-                  disabled={refineElogiosLoading || !comentarios.elogios.trim()}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors"
-                >
-                  {refineElogiosLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
-                  {refineElogiosLoading ? 'Refinando…' : 'Refinar clareza'}
-                </button>
-                {refineElogiosSugestoes.length > 0 && (
-                  <button type="button" onClick={() => setRefineElogiosSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-                    <X className="w-3 h-3" /> Ignorar
+          </div>
+        </div>
+      </div>
+
+      {/* ── FAB MOBILE (sidebar como drawer) ── */}
+      <button
+        className="xl:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-violet-700 shadow-xl flex items-center justify-center text-white hover:bg-violet-800 active:scale-95 transition-all"
+        onClick={() => setMobileSidebarOpen(true)}
+        aria-label="Abrir painel de correção"
+      >
+        <Zap className="w-5 h-5" />
+      </button>
+
+      {/* ── DRAWER MOBILE ── */}
+      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+        <SheetContent side="right" className="w-[300px] sm:w-[340px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-sm font-black">Painel de correção</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-3 pb-6">
+            <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
+              <div className="px-4 py-3 border-b border-violet-50">
+                <h3 className="text-sm font-black text-slate-900">Comentário geral para o aluno</h3>
+              </div>
+              <div className="p-4 space-y-2">
+                <textarea placeholder="Escreva aqui um comentário geral..."
+                  value={comentarios.elogios}
+                  onChange={(e) => atualizarComentario('elogios', e.target.value)}
+                  className="w-full min-h-[100px] resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"
+                />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-red-200 bg-white shadow-sm">
+              <div className="px-4 py-3 border-b border-red-50">
+                <h3 className="text-sm font-black text-slate-900">Gravar mensagem</h3>
+              </div>
+              <div className="p-4">
+                <AudioRecorder
+                  redacaoId={redacao.id}
+                  tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                  onAudioSaved={(url) => setAudioUrl(url)}
+                  existingAudioUrl={audioUrl}
+                  ehCorretor1={redacao.eh_corretor_1}
+                />
+              </div>
+            </div>
+            {!turmaExterna && (
+              <div className={`rounded-2xl border bg-white shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
+                <div className="p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">Plano de Estudo (PEP)</h3>
+                    <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                      {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
+                    </p>
+                  </div>
+                  <Button type="button" onClick={() => { setShowPEPModal(true); setMobileSidebarOpen(false); }} size="sm"
+                    className={`shrink-0 gap-1.5 text-xs ${marcacoesPEP.length === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'}`}>
+                    <BookMarked className="w-3.5 h-3.5" /> Preencher
+                  </Button>
+                </div>
+              </div>
+            )}
+            {jarvisAvailable && (
+              <div className="rounded-2xl border border-violet-300 bg-gradient-to-br from-violet-50 to-fuchsia-50 shadow-sm">
+                <div className="p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                      <h3 className="text-sm font-black text-violet-900">Sugestão do Jarvis</h3>
+                    </div>
+                    <p className="text-xs text-violet-600">Pré-correção por IA</p>
+                  </div>
+                  <Button type="button" onClick={() => { setShowJarvisPanel(true); setMobileSidebarOpen(false); }} size="sm"
+                    className="shrink-0 bg-violet-700 hover:bg-violet-800 text-white text-xs">
+                    Ver <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-black text-slate-900 mb-3">Ações da correção</h3>
+              <div className="space-y-2">
+                {isImagemGerada && (
+                  <button onClick={copiarRedacaoDigitada}
+                    className="w-full rounded-xl border px-3 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                    Copiar redação
                   </button>
                 )}
-              </div>
-              {refineElogiosSugestoes.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
-                  {refineElogiosSugestoes.map((s, i) => (
-                    <button
-                      key={i} type="button"
-                      onClick={() => { atualizarComentario('elogios', s); setRefineElogiosSugestoes([]); }}
-                      className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 2. Gravar mensagem */}
-          <div className="rounded-2xl border border-red-200 bg-white shadow-sm">
-            <div className="px-4 py-3 border-b border-red-50">
-              <h3 className="text-sm font-black text-slate-900">Gravar mensagem</h3>
-              <p className="text-xs text-red-500 mt-0.5">Mensagem em áudio para o aluno</p>
-            </div>
-            <div className="p-4">
-              <AudioRecorder
-                redacaoId={redacao.id}
-                tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                onAudioSaved={(url) => setAudioUrl(url)}
-                existingAudioUrl={audioUrl}
-                ehCorretor1={redacao.eh_corretor_1}
-              />
-            </div>
-          </div>
-
-          {/* 3. Plano de Estudo (PEP) — oculto para turmas externas */}
-          {!turmaExterna && (
-            <div className={`rounded-2xl border bg-white shadow-sm ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-200'}`}>
-              <div className="p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-black text-slate-900 leading-tight">Plano de Estudo (PEP)</h3>
-                  <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                    {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => setShowPEPModal(true)}
-                  size="sm"
-                  className={`shrink-0 gap-1.5 text-xs font-semibold ${marcacoesPEP.length === 0 ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'}`}
-                >
-                  <BookMarked className="w-3.5 h-3.5" />
-                  Preencher
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Sugestão do Jarvis */}
-          {redacao.jarvis_precorrecao_id && redacao.jarvis_precorrecao_status === 'corrigida' && (
-            <div className="rounded-2xl border border-violet-300 bg-gradient-to-br from-violet-50 to-fuchsia-50 shadow-sm">
-              <div className="p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <Sparkles className="w-3.5 h-3.5 text-violet-600" />
-                    <h3 className="text-sm font-black text-violet-900 leading-tight">Sugestão do Jarvis</h3>
-                  </div>
-                  <p className="text-xs text-violet-600 mt-0.5">Pré-correção por IA disponível</p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => setShowJarvisPanel(true)}
-                  size="sm"
-                  className="shrink-0 gap-1.5 text-xs font-semibold bg-violet-700 hover:bg-violet-800 text-white"
-                >
-                  Ver
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* 4. Ações da correção */}
-          <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-black text-slate-900 mb-3">Ações da correção</h3>
-            <div className="space-y-2">
-              {isImagemGerada && (
-                <button
-                  onClick={copiarRedacaoDigitada}
-                  className="w-full rounded-xl border px-3 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                >
-                  Copiar redação
+                <button onClick={() => salvarCorrecao('incompleta')}
+                  disabled={loading || redacaoCongelada}
+                  className="w-full rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-left text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50 transition-colors">
+                  Incompleta
                 </button>
-              )}
-              <button
-                onClick={() => salvarCorrecao('incompleta')}
-                disabled={loading || redacaoCongelada}
-                className="w-full rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-left text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50 transition-colors"
-              >
-                Incompleta
-              </button>
-              <button
-                onClick={() => setShowDevolverModal(true)}
-                disabled={loading || redacaoCongelada}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-left text-xs font-bold text-slate-800 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-              >
-                Devolver redação
-              </button>
-              <button
-                onClick={() => salvarCorrecao('corrigida')}
-                disabled={loading || redacaoCongelada}
-                className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors ${!turmaExterna && marcacoesPEP.length === 0 ? 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'}`}
-                title={!turmaExterna && marcacoesPEP.length === 0 ? 'Preencha o PEP antes de finalizar' : undefined}
-              >
-                {loading ? 'Salvando…' : 'Finalizar correção'}
-              </button>
+                <button onClick={() => setShowDevolverModal(true)}
+                  disabled={loading || redacaoCongelada}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-left text-xs font-bold text-slate-800 hover:bg-slate-50 disabled:opacity-50 transition-colors">
+                  Devolver redação
+                </button>
+                <button onClick={() => salvarCorrecao('corrigida')}
+                  disabled={loading || redacaoCongelada}
+                  className={cn("w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors",
+                    !turmaExterna && marcacoesPEP.length === 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'
+                  )}>
+                  {loading ? 'Salvando…' : 'Finalizar correção'}
+                </button>
+              </div>
             </div>
           </div>
-        </aside>
-      </div>
+        </SheetContent>
+      </Sheet>
 
       {/* ─── Modals ─── */}
       <RelatorioPedagogicoModal
