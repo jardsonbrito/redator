@@ -15,14 +15,14 @@ import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { CorretorNavigationProvider } from "@/hooks/useCorretorNavigationContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { detectarGeneroNome, tituloCorretor } from "@/utils/generoUtils";
+import { resolverGenero, tituloCorretor } from "@/utils/generoUtils";
 
 interface CorretorLayoutProps {
   children: React.ReactNode;
 }
 
 export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
-  const { corretor, logout, updateCorretorNome } = useCorretorAuth();
+  const { corretor, logout, updateCorretorNome, updateCorretorSexo } = useCorretorAuth();
   const { podeGerenciar } = useCorretorPermissoes();
   const { buscarMensagensNaoLidas } = useAjudaRapida();
   const { toast } = useToast();
@@ -35,7 +35,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   const [nomeValue, setNomeValue] = useState("");
   const [savingNome, setSavingNome] = useState(false);
 
-  const generoCorretor = detectarGeneroNome(corretor?.nome_completo ?? '');
+  const generoCorretor = resolverGenero(corretor?.sexo, corretor?.nome_completo ?? '');
   const tituloLabel = tituloCorretor(generoCorretor);
 
   useEffect(() => {
@@ -199,11 +199,38 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
                       <p className="text-sm text-slate-600">{corretor?.email || '—'}</p>
                     </div>
 
+                    {/* Gênero */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-400">Como prefere ser chamad{generoCorretor === 'feminino' ? 'a' : 'o'}?</p>
+                      <div className="flex gap-2">
+                        {(['masculino', 'feminino'] as const).map((op) => (
+                          <button
+                            key={op}
+                            onClick={async () => {
+                              try {
+                                await updateCorretorSexo(op);
+                                toast({ title: "Gênero atualizado!" });
+                              } catch {
+                                toast({ title: "Erro ao salvar.", variant: "destructive" });
+                              }
+                            }}
+                            className={`flex-1 rounded-lg border py-1.5 text-xs font-medium transition-colors ${
+                              (corretor?.sexo ?? null) === op
+                                ? 'bg-violet-600 text-white border-violet-600'
+                                : 'border-slate-200 text-slate-600 hover:border-violet-300 hover:text-violet-700'
+                            }`}
+                          >
+                            {op === 'masculino' ? 'Corretor' : 'Corretora'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Tipo */}
                     <div className="flex items-center gap-2 pt-1">
                       <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
                       <span className="text-xs text-slate-500">Tipo de usuário:</span>
-                      <Badge variant="secondary" className="text-xs px-2 py-0.5">Corretor</Badge>
+                      <Badge variant="secondary" className="text-xs px-2 py-0.5">{tituloLabel}</Badge>
                     </div>
                   </div>
 

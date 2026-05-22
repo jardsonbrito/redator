@@ -26,6 +26,15 @@ function removerAcentos(str: string): string {
   return str.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+// Usa o valor do banco quando disponível; cai no heurístico pelo nome como fallback
+export function resolverGenero(
+  sexoBanco: string | null | undefined,
+  nomeCompleto: string
+): 'feminino' | 'masculino' {
+  if (sexoBanco === 'feminino' || sexoBanco === 'masculino') return sexoBanco;
+  return detectarGeneroNome(nomeCompleto);
+}
+
 export function detectarGeneroNome(nomeCompleto: string): 'feminino' | 'masculino' {
   if (!nomeCompleto?.trim()) return 'masculino';
 
@@ -55,5 +64,13 @@ export function tituloCorretor(genero: 'feminino' | 'masculino'): string {
 }
 
 export function artigoCorretor(genero: 'feminino' | 'masculino'): string {
+  return genero === 'feminino' ? 'a' : 'o';
+}
+
+export function tituloAluno(genero: 'feminino' | 'masculino'): string {
+  return genero === 'feminino' ? 'Aluna' : 'Aluno';
+}
+
+export function artigoAluno(genero: 'feminino' | 'masculino'): string {
   return genero === 'feminino' ? 'a' : 'o';
 }

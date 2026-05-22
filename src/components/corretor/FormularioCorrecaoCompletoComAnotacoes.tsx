@@ -5,7 +5,7 @@ import { ArrowLeft, Copy, Maximize2, X, AlertTriangle, Info, BookMarked, Loader2
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { tituloCorretor, detectarGeneroNome } from "@/utils/generoUtils";
+import { tituloCorretor, resolverGenero } from "@/utils/generoUtils";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { useJarvisAdmin } from "@/hooks/useJarvisAdmin";
 import { estaCongelada } from "@/utils/redacaoUtils";
@@ -80,6 +80,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
   const [corretorId, setCorretorId] = useState<string>('');
   const [corretorNome, setCorretorNome] = useState<string>('');
+  const [corretorSexo, setCorretorSexo] = useState<string | null>(null);
   const [parUtilizado, setParUtilizado] = useState<string | null>(null);
   const [redacaoFinalizada, setRedacaoFinalizada] = useState(false);
   const [anotacoesCounts, setAnotacoesCounts] = useState<Record<number, number>>({});
@@ -115,13 +116,14 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       try {
         const { data } = await supabase
           .from('corretores')
-          .select('id, nome_completo')
+          .select('id, nome_completo, sexo')
           .eq('email', corretorEmail)
           .eq('ativo', true)
           .single();
         if (data?.id) {
           setCorretorId(data.id);
           setCorretorNome(data.nome_completo || corretorEmail);
+          setCorretorSexo((data as any).sexo ?? null);
         }
       } catch (_e) { /* silent */ }
     };
@@ -371,7 +373,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     setSidebarMode(m => m === 'collapsed' ? 'all' : 'collapsed');
   };
 
-  const generoCorretor = detectarGeneroNome(corretorNome);
+  const generoCorretor = resolverGenero(corretorSexo, corretorNome);
   const tituloLabel = tituloCorretor(generoCorretor);
 
   const hasImage = !!(redacao as any).redacao_imagem_gerada_url || !!redacao.redacao_manuscrita_url;

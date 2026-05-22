@@ -9,6 +9,7 @@ interface Corretor {
   email: string;
   ativo: boolean;
   turmas_autorizadas?: string[] | null;
+  sexo?: string | null;
 }
 
 interface CorretorAuthContextType {
@@ -18,6 +19,7 @@ interface CorretorAuthContextType {
   logout: () => void;
   isCorretor: boolean;
   updateCorretorNome: (nome: string) => Promise<void>;
+  updateCorretorSexo: (sexo: string | null) => Promise<void>;
 }
 
 const CorretorAuthContext = createContext<CorretorAuthContextType>({
@@ -27,6 +29,7 @@ const CorretorAuthContext = createContext<CorretorAuthContextType>({
   logout: () => {},
   isCorretor: false,
   updateCorretorNome: async () => {},
+  updateCorretorSexo: async () => {},
 });
 
 export const useCorretorAuth = () => {
@@ -50,16 +53,20 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         setCorretor(parsed);
         setLoading(false);
 
-        // Atualiza turmas_autorizadas do banco (sessão antiga pode não ter esse campo)
+        // Atualiza turmas_autorizadas e sexo do banco (sessão antiga pode não ter esses campos)
         if (parsed.id) {
           supabase
             .from('corretores')
-            .select('turmas_autorizadas')
+            .select('turmas_autorizadas, sexo')
             .eq('id', parsed.id)
             .maybeSingle()
             .then(({ data }) => {
               if (data) {
-                const updated = { ...parsed, turmas_autorizadas: (data.turmas_autorizadas as string[]) ?? null };
+                const updated = {
+                  ...parsed,
+                  turmas_autorizadas: (data.turmas_autorizadas as string[]) ?? null,
+                  sexo: (data as any).sexo ?? null,
+                };
                 setCorretor(updated);
                 localStorage.setItem('corretor_session', JSON.stringify(updated));
               }
@@ -94,6 +101,7 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         email: corretorData.email,
         ativo: corretorData.ativo,
         turmas_autorizadas: (corretorData.turmas_autorizadas as string[]) ?? null,
+        sexo: (corretorData as any).sexo ?? null,
       };
 
       setCorretor(corretorInfo);
@@ -119,6 +127,18 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
       .eq('id', corretor.id);
     if (error) throw error;
     const updated = { ...corretor, nome_completo: nome.trim() };
+    setCorretor(updated);
+    localStorage.setItem('corretor_session', JSON.stringify(updated));
+  };
+
+  const updateCorretorSexo = async (sexo: string | null) => {
+    if (!corretor) return;
+    const { error } = await supabase
+      .from('corretores')
+      .update({ sexo } as any)
+      .eq('id', corretor.id);
+    if (error) throw error;
+    const updated = { ...corretor, sexo };
     setCorretor(updated);
     localStorage.setItem('corretor_session', JSON.stringify(updated));
   };
@@ -158,6 +178,7 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         logout,
         isCorretor: !!corretor,
         updateCorretorNome,
+        updateCorretorSexo,
       }}
     >
       {children}

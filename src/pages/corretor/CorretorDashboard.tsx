@@ -13,7 +13,7 @@ import {
   User, Calendar, BookOpen, Inbox, Loader2
 } from "lucide-react";
 import { Top5Widget } from "@/components/shared/Top5Widget";
-import { detectarGeneroNome, tituloCorretor } from "@/utils/generoUtils";
+import { resolverGenero, tituloCorretor } from "@/utils/generoUtils";
 import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -110,7 +110,7 @@ const CorretorDashboard = () => {
   const { pendentes, emCorrecao, incompletas, corrigidas } = getRedacoesPorStatus();
   const filaAtiva = [...emCorrecao, ...pendentes, ...incompletas].slice(0, 8);
 
-  const generoCorretor = detectarGeneroNome(corretor.nome_completo ?? '');
+  const generoCorretor = resolverGenero(corretor.sexo, corretor.nome_completo ?? '');
   const firstName = corretor.nome_completo?.split(' ')[0] ?? tituloCorretor(generoCorretor);
   const nomeExibido = isMobile ? firstName : corretor.nome_completo;
 

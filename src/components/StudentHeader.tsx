@@ -15,6 +15,7 @@ import { usePlanos } from "@/hooks/usePlansAdmin";
 import { useTurmaBranding } from "@/hooks/useTurmaBranding";
 import { InboxNotificationIcon } from "@/components/student/InboxNotificationIcon";
 import { supabase } from "@/integrations/supabase/client";
+import { resolverGenero, tituloAluno } from "@/utils/generoUtils";
 import {
   Sheet,
   SheetContent,
@@ -162,7 +163,13 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                         : <StudentAvatar size="lg" showUpload={true} />
                       }
                       <p className="text-xs text-center font-medium text-primary/70 italic tracking-wide">
-                        {professor ? 'Área do Professor' : 'redação na prática, aprovação na certa!'}
+                        {professor
+                          ? 'Área do Professor'
+                          : (() => {
+                              const g = resolverGenero(profileData?.gender, nomeExibido);
+                              return `Área d${g === 'feminino' ? 'a' : 'o'} ${tituloAluno(g)}`;
+                            })()
+                        }
                       </p>
                     </div>
 

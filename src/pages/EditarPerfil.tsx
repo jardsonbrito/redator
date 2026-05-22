@@ -27,6 +27,7 @@ export default function EditarPerfil() {
   const [whatsapp, setWhatsapp] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
   const [cidade, setCidade] = useState("");
+  const [gender, setGender] = useState<string>("");
 
   // Seção 2 - Escolar
   const [escola, setEscola] = useState("");
@@ -62,6 +63,7 @@ export default function EditarPerfil() {
           setCidade(profileData.cidade || "");
           setEscola(profileData.escola || "");
           setSerie(profileData.serie || "");
+          setGender(profileData.gender || "");
         }
       }
     };
@@ -116,6 +118,7 @@ export default function EditarPerfil() {
       if (cidade.trim()) updateData.cidade = cidade.trim();
       if (escola.trim()) updateData.escola = escola.trim();
       if (serie.trim()) updateData.serie = serie.trim();
+      if (gender) updateData.gender = gender;
 
       // Atualizar dados na tabela profiles
       const { error: updateError } = await supabase
@@ -254,6 +257,31 @@ export default function EditarPerfil() {
                         placeholder="Sua cidade"
                         disabled={loading}
                       />
+                    </div>
+
+                    {/* Gênero */}
+                    <div className="space-y-2">
+                      <Label>Como prefere ser chamad{gender === 'feminino' ? 'a' : 'o'}?</Label>
+                      <div className="flex gap-3">
+                        {[
+                          { value: 'masculino', label: 'Aluno' },
+                          { value: 'feminino',  label: 'Aluna' },
+                        ].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            disabled={loading}
+                            onClick={() => setGender(value)}
+                            className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
+                              gender === value
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'border-input text-muted-foreground hover:border-primary/50 hover:text-primary'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </form>
