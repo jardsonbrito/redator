@@ -19,7 +19,7 @@ const STATUS_BADGE = {
 
 const Interatividade = () => {
   const navigate = useNavigate();
-  const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [filtro, setFiltro] = useState<Filtro>('abertas');
 
   const { studentData } = useStudentAuth();
   const { professor } = useProfessorAuth();

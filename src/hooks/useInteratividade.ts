@@ -237,7 +237,7 @@ export const useCreateInteracao = () => {
       if (errI) throw errI;
 
       if (alternativas.length > 0) {
-        const alts = alternativas.map(a => ({ ...a, interacao_id: novaInteracao.id }));
+        const alts = alternativas.map(a => ({ texto: a.texto, ordem: a.ordem, interacao_id: novaInteracao.id }));
         const { error: errA } = await supabase.from('interacoes_alternativas').insert(alts);
         if (errA) throw errA;
       }
@@ -302,7 +302,7 @@ export const useUpdateInteracao = () => {
       }
 
       // Insere novas alternativas
-      const novas = alternativas.filter(a => !a.id).map(a => ({ ...a, interacao_id: id }));
+      const novas = alternativas.filter(a => !a.id).map(a => ({ texto: a.texto, ordem: a.ordem, interacao_id: id }));
       if (novas.length > 0) {
         const { error: errA } = await supabase.from('interacoes_alternativas').insert(novas);
         if (errA) throw errA;
