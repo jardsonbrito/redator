@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Users, BookOpen, LayoutGrid } from 'lucide-react';
+import { Search, X, Users, BookOpen, LayoutGrid, Navigation } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
-  type: 'aluno' | 'tema' | 'funcionalidade';
+  type: 'aluno' | 'tema' | 'funcionalidade' | 'pagina';
   id: string;
   title: string;
   subtitle: string;
@@ -18,7 +18,57 @@ const TYPE_CONFIG = {
   aluno:          { icon: Users,       label: 'Aluno',          color: 'text-emerald-600' },
   tema:           { icon: BookOpen,    label: 'Tema',           color: 'text-orange-500'  },
   funcionalidade: { icon: LayoutGrid,  label: 'Funcionalidade', color: 'text-violet-600'  },
+  pagina:         { icon: Navigation,  label: 'Página',         color: 'text-blue-600'    },
 } as const;
+
+const ADMIN_PAGES: { id: string; title: string; keywords: string[] }[] = [
+  { id: 'alunos',              title: 'Alunos',                keywords: ['aluno', 'estudante', 'turma'] },
+  { id: 'turmas',              title: 'Turmas',                keywords: ['turma', 'classe', 'grupo'] },
+  { id: 'professores',         title: 'Professores',           keywords: ['professor', 'docente'] },
+  { id: 'corretores',          title: 'Corretores',            keywords: ['corretor', 'corrector'] },
+  { id: 'inbox',               title: 'Inbox',                 keywords: ['inbox', 'mensagem', 'recado', 'notificacao', 'notificação', 'aviso'] },
+  { id: 'avisos',              title: 'Avisos',                keywords: ['aviso', 'comunicado', 'notificacao'] },
+  { id: 'redacoes-enviadas',   title: 'Redações Enviadas',     keywords: ['redacao', 'redação', 'enviada', 'fila', 'corrigir'] },
+  { id: 'temas',               title: 'Temas',                 keywords: ['tema', 'proposta'] },
+  { id: 'aulas',               title: 'Aulas Gravadas',        keywords: ['aula', 'gravada', 'video', 'vídeo'] },
+  { id: 'salas-virtuais',      title: 'Aulas ao Vivo',         keywords: ['aula', 'vivo', 'sala', 'virtual', 'online'] },
+  { id: 'exercicios',          title: 'Exercícios',            keywords: ['exercicio', 'exercício', 'questao', 'questão'] },
+  { id: 'simulados',           title: 'Simulados',             keywords: ['simulado', 'prova', 'teste'] },
+  { id: 'biblioteca',          title: 'Biblioteca',            keywords: ['biblioteca', 'livro', 'leitura'] },
+  { id: 'videos',              title: 'Videoteca',             keywords: ['videoteca', 'video', 'vídeo'] },
+  { id: 'lousa',               title: 'Lousa',                 keywords: ['lousa', 'quadro', 'apresentacao'] },
+  { id: 'calendario',          title: 'Calendário',            keywords: ['calendario', 'calendário', 'agenda', 'evento'] },
+  { id: 'diario',              title: 'Diário Online',         keywords: ['diario', 'diário', 'online'] },
+  { id: 'radar',               title: 'Radar',                 keywords: ['radar', 'monitoramento', 'monitorar'] },
+  { id: 'jarvis',              title: 'Jarvis (IA)',            keywords: ['jarvis', 'ia', 'inteligencia', 'inteligência'] },
+  { id: 'ajuda-rapida',        title: 'Ajuda Rápida',          keywords: ['ajuda', 'rapida', 'rápida', 'suporte', 'chat'] },
+  { id: 'gamificacao',         title: 'Gamificação',           keywords: ['gamificacao', 'gamificação', 'pontos', 'ranking'] },
+  { id: 'top5',                title: 'Top 5',                 keywords: ['top', 'ranking', 'melhores'] },
+  { id: 'guia-tematico',       title: 'Guia Temático',         keywords: ['guia', 'tematico', 'temático'] },
+  { id: 'microaprendizagem',   title: 'Microaprendizagem',     keywords: ['micro', 'microaprendizagem', 'aprendizagem'] },
+  { id: 'interatividade',      title: 'Interatividade',        keywords: ['interatividade', 'interativo'] },
+  { id: 'repertorio-orientado',title: 'Repertório Orientado',  keywords: ['repertorio', 'repertório', 'orientado'] },
+  { id: 'laboratorio',         title: 'Laboratório de Repertório', keywords: ['laboratorio', 'laboratório'] },
+  { id: 'redacoes',            title: 'Redações Exemplares',   keywords: ['redacao', 'redação', 'exemplar', 'exemplo'] },
+  { id: 'redacoes-comentadas', title: 'Redações Comentadas',   keywords: ['redacao', 'redação', 'comentada', 'comentario'] },
+  { id: 'plano-estudo',        title: 'Plano de Estudo',       keywords: ['plano', 'estudo', 'cronograma'] },
+  { id: 'anotacoes',           title: 'Anotações',             keywords: ['anotacao', 'anotação', 'nota'] },
+  { id: 'processo-seletivo',   title: 'Processo Seletivo',     keywords: ['processo', 'seletivo', 'selecao', 'seleção', 'vestibular'] },
+  { id: 'exportacao',          title: 'Exportação',            keywords: ['exportacao', 'exportação', 'exportar', 'relatorio', 'relatório'] },
+  { id: 'configuracoes',       title: 'Configurações',         keywords: ['configuracao', 'configuração', 'config', 'ajuste'] },
+  { id: 'administradores',     title: 'Administradores',       keywords: ['admin', 'administrador', 'gestor'] },
+];
+
+function searchPages(q: string): SearchResult[] {
+  const term = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return ADMIN_PAGES
+    .filter(({ title, keywords }) => {
+      const t = title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return t.includes(term) || keywords.some(k => k.includes(term));
+    })
+    .slice(0, 4)
+    .map(({ id, title }) => ({ type: 'pagina' as const, id, title, subtitle: 'Navegar para a seção' }));
+}
 
 export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => {
   const [query, setQuery] = useState('');
@@ -51,7 +101,7 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
       setIsSearching(true);
       try {
         const searchTerm = `%${query.trim()}%`;
-        const found: SearchResult[] = [];
+        const found: SearchResult[] = [...searchPages(query.trim())];
 
         const [alunosRes, temasRes, funcsRes] = await Promise.all([
           supabase
@@ -132,7 +182,7 @@ export const AdminGlobalSearch = ({ onResultClick }: AdminGlobalSearchProps) => 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setIsOpen(true)}
-          placeholder="Buscar aluno, tema, funcionalidade..."
+          placeholder="Buscar aluno, página, tema..."
           className="w-full pl-9 pr-8 py-2 text-sm bg-gray-100 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 focus:bg-white transition-all placeholder:text-gray-400"
         />
         {query && (

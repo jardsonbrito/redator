@@ -909,6 +909,7 @@ const Admin = () => {
   };
 
   const handleSearchResultClick = (type: string, id: string) => {
+    if (type === 'pagina') { setActiveView(id); return; }
     if (type === 'aluno') { setActiveView('alunos'); return; }
     if (type === 'tema')  { setActiveView('temas');  return; }
     if (type === 'funcionalidade') {
