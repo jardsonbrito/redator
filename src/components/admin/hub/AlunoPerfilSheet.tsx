@@ -16,6 +16,7 @@ import { useTurmas } from '@/hooks/usePlansAdmin';
 import { Activity, Edit2, Save, X, MoveRight, BellOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { MigrarVisitanteModal } from '@/components/admin/MigrarVisitanteModal';
+import { BoletimEscolarView } from '@/components/shared/BoletimEscolarView';
 
 export interface AlunoHubItem {
   id: string;
@@ -185,12 +186,13 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
           </SheetHeader>
 
           <Tabs defaultValue="dados" className="mt-4">
-            <TabsList>
+            <TabsList className="flex-wrap h-auto">
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="assinatura" disabled={isVisitante}>Plano</TabsTrigger>
               <TabsTrigger value="creditos" disabled={isVisitante}>Créditos</TabsTrigger>
               <TabsTrigger value="funcionalidades" disabled={isVisitante}>Funções</TabsTrigger>
               <TabsTrigger value="atividade" disabled={isVisitante}>Atividade</TabsTrigger>
+              <TabsTrigger value="boletim" disabled={isVisitante}>Boletim</TabsTrigger>
             </TabsList>
 
             {/* Aba: Dados básicos */}
@@ -334,6 +336,17 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
                     Visualiza os últimos 30 dias de logins e sessões do aluno.
                   </p>
                 </>
+              )}
+            </TabsContent>
+
+            {/* Aba: Boletim */}
+            <TabsContent value="boletim" className="mt-4 pb-6">
+              {!isVisitante && (
+                <BoletimEscolarView
+                  email={aluno.email}
+                  turma={aluno.turma}
+                  enableTop5Navigate={false}
+                />
               )}
             </TabsContent>
           </Tabs>
