@@ -501,11 +501,6 @@ const Jarvis = () => {
                       <div className="leading-tight">
                         <p className="text-sm font-medium text-gray-700">Seus créditos</p>
                         <p className="text-xs text-gray-400">Cada interação consome 1 crédito</p>
-                        {valorPorInteracao !== null && valorPorInteracao > 0 && (
-                          <p className="text-xs text-gray-400">
-                            Valor por interação: R$ {valorPorInteracao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        )}
                       </div>
                     </div>
 
