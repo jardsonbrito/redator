@@ -22,8 +22,8 @@ export function BoletimIndividualTab() {
     supabase
       .from('profiles')
       .select('id, nome, sobrenome, email, turma')
-      .eq('tipo', 'aluno')
-      .eq('ativo', true)
+      .eq('user_type', 'aluno')
+      .eq('is_authenticated_student', true)
       .order('nome')
       .then(({ data }) => setAlunos((data as AlunoOpcao[]) ?? []));
   }, []);
