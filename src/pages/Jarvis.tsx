@@ -110,7 +110,7 @@ const Jarvis = () => {
   const [modalSemCreditos,         setModalSemCreditos]         = useState(false);
 
   const {
-    analisar, isLoading, currentResponse, currentModo, currentMetadata, credits, clearResponse,
+    analisar, isLoading, currentResponse, currentModo, currentMetadata, credits, essayCredits, clearResponse,
   } = useJarvis(studentData?.email || "");
 
   const { historico, loading: loadingHistorico, refreshHistorico } =
@@ -224,7 +224,7 @@ const Jarvis = () => {
 
   const handleSubmit = async () => {
     stopRecording();
-    if (credits < 1) {
+    if (credits < 1 && essayCredits < 1) {
       setModalSemCreditos(true);
       return;
     }

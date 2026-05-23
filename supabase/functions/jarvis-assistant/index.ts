@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     // ── Buscar usuário por email (sem Supabase Auth) ──────────────
     const { data: user, error: userError } = await supabaseClient
       .from('profiles')
-      .select('id, jarvis_creditos, nome, email')
+      .select('id, jarvis_creditos, creditos, nome, email')
       .eq('email', userEmail.toLowerCase().trim())
       .eq('user_type', 'aluno')
       .single();
@@ -118,16 +118,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Verificar créditos ────────────────────────────────────────
-    if ((user.jarvis_creditos || 0) < 1) {
+    // ── Verificar créditos (prioridade: Jarvis → redação) ─────────
+    const jarvisCreditos = user.jarvis_creditos || 0;
+    const redacaoCreditos = user.creditos || 0;
+
+    if (jarvisCreditos < 1 && redacaoCreditos < 1) {
       return new Response(
         JSON.stringify({
-          error: 'Créditos Jarvis insuficientes',
-          creditos_atuais: user.jarvis_creditos || 0
+          error: 'Créditos insuficientes',
+          creditos_jarvis: jarvisCreditos,
+          creditos_redacao: redacaoCreditos
         }),
         { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Fallback: sem crédito Jarvis mas com crédito de redação disponível
+    const usarCreditoRedacao = jarvisCreditos < 1 && redacaoCreditos >= 1;
+    console.log(usarCreditoRedacao
+      ? '🔄 Fallback: usando crédito de redação'
+      : `✅ Usando crédito Jarvis (saldo: ${jarvisCreditos})`
+    );
 
     // ── Chamar OpenAI com o prompt do modo ────────────────────────
     console.log('🤖 Chamando OpenAI com prompt do modo:', modo.nome);
@@ -212,22 +223,38 @@ Deno.serve(async (req) => {
     console.log('✅ Resposta validada. Campos presentes:', camposEsperados.join(', '));
 
     // ── Consumir crédito após resposta válida ─────────────────────
-    console.log('💳 Consumindo 1 crédito Jarvis...');
-    const { data: newJarvisCredits, error: creditError } = await supabaseClient
-      .rpc('consume_jarvis_credit', { target_user_id: user.id });
+    let newJarvisCredits: number | null = null;
+    let newRedacaoCredits: number | null = null;
 
-    if (creditError) {
-      console.error('❌ Erro ao consumir crédito:', creditError);
-      if (creditError.message?.includes('insuficientes')) {
-        return new Response(
-          JSON.stringify({ error: 'Créditos Jarvis insuficientes', creditos_atuais: user.jarvis_creditos || 0 }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    if (usarCreditoRedacao) {
+      console.log('💳 Consumindo 1 crédito de redação (fallback)...');
+      const { data: result, error: creditError } = await supabaseClient
+        .rpc('consume_credit_safe', { target_user_id: user.id });
+
+      if (creditError) {
+        console.error('❌ Erro ao consumir crédito de redação:', creditError);
+        throw creditError;
       }
-      throw creditError;
-    }
+      newRedacaoCredits = result;
+      console.log(`✅ Crédito de redação consumido. Saldo restante: ${newRedacaoCredits}`);
+    } else {
+      console.log('💳 Consumindo 1 crédito Jarvis...');
+      const { data: result, error: creditError } = await supabaseClient
+        .rpc('consume_jarvis_credit', { target_user_id: user.id });
 
-    console.log(`✅ Crédito consumido. Novos créditos: ${newJarvisCredits}`);
+      if (creditError) {
+        console.error('❌ Erro ao consumir crédito Jarvis:', creditError);
+        if (creditError.message?.includes('insuficientes')) {
+          return new Response(
+            JSON.stringify({ error: 'Créditos Jarvis insuficientes', creditos_atuais: jarvisCreditos }),
+            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        throw creditError;
+      }
+      newJarvisCredits = result;
+      console.log(`✅ Crédito Jarvis consumido. Saldo restante: ${newJarvisCredits}`);
+    }
 
     // ── Métricas ──────────────────────────────────────────────────
     const palavrasMelhoradas = aiResponse['versao_melhorada']
@@ -280,7 +307,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        jarvis_creditos_restantes: newJarvisCredits,
+        jarvis_creditos_restantes: usarCreditoRedacao ? jarvisCreditos : newJarvisCredits,
+        usou_credito_redacao: usarCreditoRedacao,
+        redacao_creditos_restantes: newRedacaoCredits,
         resposta: aiResponse,
         modo: {
           id:              modo.id,

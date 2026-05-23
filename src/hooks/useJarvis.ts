@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useJarvisCredits } from '@/hooks/useJarvisCredits';
+import { useCredits } from '@/hooks/useCredits';
 import type { CampoResposta } from '@/hooks/useJarvisModos';
 
 export interface JarvisModoInfo {
@@ -27,6 +28,7 @@ interface UseJarvisReturn {
   currentModo: JarvisModoInfo | null;
   currentMetadata: JarvisMetadata | null;
   credits: number;
+  essayCredits: number;
   clearResponse: () => void;
 }
 
@@ -37,6 +39,7 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
   const [currentMetadata, setCurrentMetadata] = useState<JarvisMetadata | null>(null);
   const { toast } = useToast();
   const { credits, refreshCredits } = useJarvisCredits(userEmail);
+  const { credits: essayCredits, refreshCredits: refreshEssayCredits } = useCredits(userEmail);
 
   const analisar = async (texto: string, modoId: string): Promise<Record<string, string> | null> => {
     if (!texto.trim()) {
@@ -64,13 +67,24 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
       return null;
     }
 
-    if (credits < 1) {
+    // Prioridade: crédito Jarvis → crédito de redação como fallback
+    if (credits < 1 && essayCredits < 1) {
       toast({
         title: "Créditos insuficientes",
-        description: "Você precisa de 1 crédito Jarvis para fazer uma análise",
+        description: "Você não possui créditos Jarvis nem créditos de redação disponíveis.",
         variant: "destructive"
       });
       return null;
+    }
+
+    // Aviso antes da chamada quando o fallback será usado
+    if (credits < 1 && essayCredits >= 1) {
+      toast({
+        title: "Sem créditos Jarvis",
+        description: "Você está sem créditos do Jarvis. Esta análise utilizará 1 crédito de redação.",
+        className: "border-amber-200 bg-amber-50 text-amber-900",
+        duration: 6000
+      });
     }
 
     setIsLoading(true);
@@ -102,18 +116,33 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
       setCurrentModo(data.modo);
       setCurrentMetadata(data.metadados);
 
-      toast({
-        title: "✅ Análise concluída!",
-        description: `${data.jarvis_creditos_restantes} créditos Jarvis restantes`,
-        className: "border-green-200 bg-green-50 text-green-900"
-      });
+      if (data.usou_credito_redacao) {
+        toast({
+          title: "✅ Análise concluída!",
+          description: `1 crédito de redação utilizado • Saldo restante: ${data.redacao_creditos_restantes} crédito(s) de redação`,
+          className: "border-amber-200 bg-amber-50 text-amber-900"
+        });
+        await refreshEssayCredits();
+        window.dispatchEvent(new CustomEvent('credits-updated', {
+          detail: {
+            userEmail: userEmail.toLowerCase().trim(),
+            newCredits: data.redacao_creditos_restantes
+          }
+        }));
+      } else {
+        toast({
+          title: "✅ Análise concluída!",
+          description: `${data.jarvis_creditos_restantes} créditos Jarvis restantes`,
+          className: "border-green-200 bg-green-50 text-green-900"
+        });
+      }
 
       await refreshCredits();
 
       window.dispatchEvent(new CustomEvent('jarvis-credits-updated', {
         detail: {
           userEmail: userEmail.toLowerCase().trim(),
-          newCredits: data.jarvis_creditos_restantes
+          newCredits: data.jarvis_creditos_restantes ?? credits
         }
       }));
 
@@ -157,6 +186,7 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
     currentModo,
     currentMetadata,
     credits,
+    essayCredits,
     clearResponse
   };
 };
