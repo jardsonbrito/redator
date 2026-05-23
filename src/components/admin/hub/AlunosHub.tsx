@@ -11,6 +11,7 @@ import { SubscriptionManagementClean } from '@/components/admin/SubscriptionMana
 import { PlansManager } from '@/components/admin/PlansManager';
 import { CreditManagement } from '@/components/admin/CreditManagement';
 import { DatabaseInitializer } from '@/components/DatabaseInitializer';
+import { BoletimIndividualTab } from './BoletimIndividualTab';
 
 export function AlunosHub() {
   const [refresh, setRefresh] = useState(false);
@@ -61,7 +62,18 @@ export function AlunosHub() {
         </TabsContent>
 
         <TabsContent value="desempenho">
-          <ResumoTurma />
+          <Tabs defaultValue="resumo" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="resumo">Resumo por Turma</TabsTrigger>
+              <TabsTrigger value="boletim">Boletim Individual</TabsTrigger>
+            </TabsList>
+            <TabsContent value="resumo">
+              <ResumoTurma />
+            </TabsContent>
+            <TabsContent value="boletim">
+              <BoletimIndividualTab />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="login">
