@@ -35,7 +35,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
   const { isBlockedResource } = useTurmaERestrictions();
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
-  const { isFeatureEnabled, funcionalidadesOrdenadas, isPSCandidate, isVisitante } = usePlanFeatures(studentData.email);
+  const { isFeatureEnabled, funcionalidadesOrdenadas, isPSCandidate, isVisitante, isLoading: planLoading } = usePlanFeatures(studentData.email);
   const { professor } = useProfessorAuth();
   const isProfessor = !!professor;
 
@@ -128,7 +128,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridPr
           // Verificar se a funcionalidade está desabilitada pelo plano/override
           // Professores têm acesso a todos os módulos sem restrição de plano
           const functionalityName = getFunctionalityName(item.title);
-          const isPlanFeatureDisabled = !isProfessor && functionalityName && !isFeatureEnabled(functionalityName);
+          const isPlanFeatureDisabled = !isProfessor && !planLoading && functionalityName && !isFeatureEnabled(functionalityName);
 
           // "Minhas Redações" nunca fica indisponível: o aluno sempre deve acessar histórico e correções.
           // Para todos os outros cards, o plano tem controle total.
