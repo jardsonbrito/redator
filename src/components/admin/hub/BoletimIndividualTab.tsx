@@ -103,7 +103,6 @@ export function BoletimIndividualTab() {
                 <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary">
                   {a.nome} {a.sobrenome}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">{a.email}</p>
                 <Badge variant="outline" className="text-[10px] mt-0.5">{a.turma}</Badge>
               </div>
             </div>
