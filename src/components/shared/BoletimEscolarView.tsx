@@ -527,19 +527,14 @@ export function BoletimEscolarView({ email, turma, enableTop5Navigate = true }: 
                         <p className="text-xs font-semibold text-foreground">
                           {data.jarvis.totalInteracoes === 1 ? "interação" : "interações"} com o Jarvis
                         </p>
-                        {data.jarvis.totalCreditos > 0 && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {data.jarvis.totalCreditos} crédito{data.jarvis.totalCreditos !== 1 ? "s" : ""} consumido{data.jarvis.totalCreditos !== 1 ? "s" : ""}
-                          </p>
-                        )}
                         {data.jarvis.modos.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
-                            {data.jarvis.modos.slice(0, 3).map((m) => (
+                            {data.jarvis.modos.map(({ label, count }) => (
                               <span
-                                key={m}
-                                className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700"
+                                key={label}
+                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700"
                               >
-                                {m}
+                                {label} ×{count}
                               </span>
                             ))}
                           </div>

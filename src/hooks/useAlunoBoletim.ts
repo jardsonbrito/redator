@@ -105,8 +105,7 @@ export interface JustificativaBoletim {
 
 export interface JarvisBoletim {
   totalInteracoes: number;
-  totalCreditos: number;
-  modos: string[];
+  modos: { label: string; count: number }[];
 }
 
 export interface AlunoBoletimDados {
@@ -274,10 +273,12 @@ async function fetchBoletimData(
 
   // Dados do Jarvis para o boletim
   const jarvisRow = (jarvisBoletimRes.data as any)?.[0] ?? null;
+  const modosContagem = (jarvisRow?.modos_contagem ?? {}) as Record<string, number>;
   const jarvis: JarvisBoletim = {
     totalInteracoes: Number(jarvisRow?.total_interacoes ?? 0),
-    totalCreditos:   Number(jarvisRow?.total_creditos ?? 0),
-    modos: (jarvisRow?.modos_distintos ?? []) as string[],
+    modos: Object.entries(modosContagem)
+      .map(([label, count]) => ({ label, count: Number(count) }))
+      .sort((a, b) => b.count - a.count),
   };
 
   // Contagem de eventos de aulas gravadas e videoteca a partir dos eventos já buscados
