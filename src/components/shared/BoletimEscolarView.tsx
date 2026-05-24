@@ -12,9 +12,9 @@ import {
   MessageSquareText,
   Award,
   School,
-  Sparkles,
 } from "lucide-react";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -513,10 +513,10 @@ export function BoletimEscolarView({ email, turma, enableTop5Navigate = true }: 
               </MetricBlock>
 
               {/* Jarvis */}
-              <MetricBlock title="Jarvis IA">
+              <MetricBlock title="Jarvis">
                 <div className="flex items-center gap-3">
                   <div className="shrink-0 w-14 h-14 rounded-xl bg-violet-100 flex items-center justify-center">
-                    <Sparkles className="w-7 h-7 text-violet-700" />
+                    <JarvisIcon size={28} className="text-violet-700" />
                   </div>
                   <div className="flex-1 min-w-0">
                     {data.jarvis.totalInteracoes > 0 ? (
