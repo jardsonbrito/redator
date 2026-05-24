@@ -12,6 +12,7 @@ import {
   MessageSquareText,
   Award,
   School,
+  Sparkles,
 } from "lucide-react";
 import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { Badge } from "@/components/ui/badge";
@@ -511,20 +512,47 @@ export function BoletimEscolarView({ email, turma, enableTop5Navigate = true }: 
                 )}
               </MetricBlock>
 
-              {/* Aulas ao vivo */}
-              <MetricBlock title="Aulas ao vivo">
+              {/* Jarvis */}
+              <MetricBlock title="Jarvis IA">
                 <div className="flex items-center gap-3">
-                  <div className="shrink-0 w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center">
-                    <CalendarCheck className="w-7 h-7 text-slate-800" />
+                  <div className="shrink-0 w-14 h-14 rounded-xl bg-violet-100 flex items-center justify-center">
+                    <Sparkles className="w-7 h-7 text-violet-700" />
                   </div>
-                  <div>
-                    <p className="text-2xl font-black text-foreground">{frequenciaPercent.toFixed(0)}%</p>
-                    <p className="text-xs font-semibold text-foreground">participação no período</p>
-                    <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                      {data.metricas.totalAulasNoPeriodo === 0
-                        ? "Nenhuma aula prevista neste período."
-                        : `Participou de ${data.metricas.totalPresencas} das ${data.metricas.totalAulasNoPeriodo} aulas previstas.`}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    {data.jarvis.totalInteracoes > 0 ? (
+                      <>
+                        <p className="text-2xl font-black text-foreground">
+                          {data.jarvis.totalInteracoes}
+                        </p>
+                        <p className="text-xs font-semibold text-foreground">
+                          {data.jarvis.totalInteracoes === 1 ? "interação" : "interações"} com o Jarvis
+                        </p>
+                        {data.jarvis.totalCreditos > 0 && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {data.jarvis.totalCreditos} crédito{data.jarvis.totalCreditos !== 1 ? "s" : ""} consumido{data.jarvis.totalCreditos !== 1 ? "s" : ""}
+                          </p>
+                        )}
+                        {data.jarvis.modos.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {data.jarvis.modos.slice(0, 3).map((m) => (
+                              <span
+                                key={m}
+                                className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700"
+                              >
+                                {m}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-bold text-muted-foreground">Sem uso neste período</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                          O Jarvis auxilia na escrita, análise e correção de redações com IA.
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </MetricBlock>

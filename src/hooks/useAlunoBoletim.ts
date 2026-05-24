@@ -103,6 +103,12 @@ export interface JustificativaBoletim {
   criado_em: string;
 }
 
+export interface JarvisBoletim {
+  totalInteracoes: number;
+  totalCreditos: number;
+  modos: string[];
+}
+
 export interface AlunoBoletimDados {
   aluno: {
     nome: string;
@@ -126,6 +132,7 @@ export interface AlunoBoletimDados {
   mediasPorCompetencia: MediaCompetencia[];
   engajamento: DadoEngajamento[];
   justificativas: JustificativaBoletim[];
+  jarvis: JarvisBoletim;
 }
 
 function calcularMedia(valores: (number | null)[]): number | null {
@@ -174,6 +181,7 @@ async function fetchBoletimData(
     lousasRes,
     eventosRes,
     microProgressoRes,
+    jarvisBoletimRes,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -254,9 +262,23 @@ async function fetchBoletimData(
       .eq("status", "concluido")
       .gte("concluido_em", monthStart)
       .lte("concluido_em", monthEnd),
+
+    supabase.rpc("get_jarvis_boletim_by_email", {
+      p_email: email,
+      p_mes: mes,
+      p_ano: ano,
+    }),
   ]);
 
   const autorId: string | null = (perfilRes.data as any)?.id ?? null;
+
+  // Dados do Jarvis para o boletim
+  const jarvisRow = (jarvisBoletimRes.data as any)?.[0] ?? null;
+  const jarvis: JarvisBoletim = {
+    totalInteracoes: Number(jarvisRow?.total_interacoes ?? 0),
+    totalCreditos:   Number(jarvisRow?.total_creditos ?? 0),
+    modos: (jarvisRow?.modos_distintos ?? []) as string[],
+  };
 
   // Contagem de eventos de aulas gravadas e videoteca a partir dos eventos já buscados
   const eventosData = eventosRes.data || [];
@@ -604,6 +626,7 @@ async function fetchBoletimData(
     mediasPorCompetencia,
     engajamento,
     justificativas,
+    jarvis,
   };
 }
 
