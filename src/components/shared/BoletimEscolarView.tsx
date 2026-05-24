@@ -209,11 +209,9 @@ function AvatarFallback({ nome, sobrenome }: { nome: string; sobrenome: string }
 interface BoletimEscolarViewProps {
   email: string | null;
   turma: string | null;
-  /** Quando false, o card Top 5 não exibirá link de navegação (contexto admin) */
-  enableTop5Navigate?: boolean;
 }
 
-export function BoletimEscolarView({ email, turma, enableTop5Navigate = true }: BoletimEscolarViewProps) {
+export function BoletimEscolarView({ email, turma }: BoletimEscolarViewProps) {
   const navigate = useNavigate();
 
   const now = new Date();
@@ -554,29 +552,26 @@ export function BoletimEscolarView({ email, turma, enableTop5Navigate = true }: 
 
               {/* Top 5 */}
               <MetricBlock title="Top 5">
-                {enableTop5Navigate ? (
-                  <button className="w-full text-left" onClick={() => navigate("/top5")}>
+                {top5Posicao !== null ? (
+                  <button
+                    className="w-full text-left"
+                    onClick={() => {
+                      const mesFormatado = new Date(ano, mes - 1, 1)
+                        .toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+                      const mesCapitalizado = mesFormatado.charAt(0).toUpperCase() + mesFormatado.slice(1);
+                      navigate(`/top5?mes=${encodeURIComponent(mesCapitalizado)}&tipo=regular`);
+                    }}
+                  >
                     <div className="flex items-center gap-3 group">
                       <div className="shrink-0 w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center">
                         <Trophy className="w-7 h-7 text-slate-800" />
                       </div>
                       <div className="flex-1">
-                        {top5Posicao !== null ? (
-                          <>
-                            <p className="text-2xl font-black text-foreground">{top5Posicao}º lugar</p>
-                            <p className="text-xs font-semibold text-foreground">no ranking do período</p>
-                            <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                              Apareceu no Top 5 pela média de notas das redações.
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm font-bold text-muted-foreground">Ainda não no Top 5</p>
-                            <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                              Há evolução possível com maior regularidade de envio e atenção às competências.
-                            </p>
-                          </>
-                        )}
+                        <p className="text-2xl font-black text-foreground">{top5Posicao}º lugar</p>
+                        <p className="text-xs font-semibold text-foreground">no ranking do período</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                          Apareceu no Top 5 pela média de notas das redações.
+                        </p>
                         <p className="text-xs text-primary font-semibold mt-1.5 group-hover:underline">
                           Ver ranking completo →
                         </p>
@@ -589,22 +584,10 @@ export function BoletimEscolarView({ email, turma, enableTop5Navigate = true }: 
                       <Trophy className="w-7 h-7 text-slate-800" />
                     </div>
                     <div className="flex-1">
-                      {top5Posicao !== null ? (
-                        <>
-                          <p className="text-2xl font-black text-foreground">{top5Posicao}º lugar</p>
-                          <p className="text-xs font-semibold text-foreground">no ranking do período</p>
-                          <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                            Apareceu no Top 5 pela média de notas das redações.
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-bold text-muted-foreground">Ainda não no Top 5</p>
-                          <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                            Há evolução possível com maior regularidade de envio e atenção às competências.
-                          </p>
-                        </>
-                      )}
+                      <p className="text-sm font-bold text-muted-foreground">Ainda não no Top 5</p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                        Há evolução possível com maior regularidade de envio e atenção às competências.
+                      </p>
                     </div>
                   </div>
                 )}

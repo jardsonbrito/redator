@@ -345,7 +345,6 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
                 <BoletimEscolarView
                   email={aluno.email}
                   turma={aluno.turma}
-                  enableTop5Navigate={false}
                 />
               )}
             </TabsContent>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,9 +71,12 @@ interface Top5WidgetProps {
 }
 
 export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter, horizontal = false, turmasPermitidas }: Top5WidgetProps) => {
-  const [selectedType, setSelectedType] = useState<"simulado" | "regular" | "avulsa">("simulado");
+  const [searchParams] = useSearchParams();
+  const [selectedType, setSelectedType] = useState<"simulado" | "regular" | "avulsa">(
+    searchParams.get("tipo") === "regular" ? "regular" : "simulado"
+  );
   const [selectedSimulado, setSelectedSimulado] = useState<string>("");
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(searchParams.get("mes") ?? "");
   const [selectedTurma, setSelectedTurma] = useState<string>("todas");
   const [showHistorico, setShowHistorico] = useState<boolean>(false);
   const [showSimuladoHistorico, setShowSimuladoHistorico] = useState<boolean>(false);
@@ -342,11 +346,11 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   const mesesDisponiveis = mesesDisponiveisData?.anoAtual || [];
   const mesesHistorico = mesesDisponiveisData?.historico || [];
 
-  // Auto-selecionar o mês mais recente quando a lista de meses mudar
+  // Auto-selecionar mês: prioriza parâmetro da URL, depois o mais recente
   useEffect(() => {
-    if (mesesDisponiveisData && mesesDisponiveisData.anoAtual.length > 0 && !selectedMonth) {
-      setSelectedMonth(mesesDisponiveisData.anoAtual[0]); // Primeiro mês do ano atual = mais recente
-    }
+    if (!mesesDisponiveisData || mesesDisponiveisData.anoAtual.length === 0) return;
+    if (selectedMonth) return; // já definido (URL param ou interação do usuário)
+    setSelectedMonth(mesesDisponiveisData.anoAtual[0]);
   }, [mesesDisponiveisData]);
 
   // Buscar ranking baseado no tipo selecionado

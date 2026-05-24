@@ -61,7 +61,6 @@ export function BoletimIndividualTab() {
         <BoletimEscolarView
           email={selecionado.email}
           turma={selecionado.turma}
-          enableTop5Navigate={false}
         />
       </div>
     );

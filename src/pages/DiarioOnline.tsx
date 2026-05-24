@@ -19,7 +19,7 @@ const DiarioOnline = () => {
         <div className="min-h-screen bg-muted/30">
           <StudentHeader pageTitle="Boletim Escolar" />
           <main className="container mx-auto px-4 py-6 pb-24 max-w-5xl">
-            <BoletimEscolarView email={email} turma={turma} enableTop5Navigate />
+            <BoletimEscolarView email={email} turma={turma} />
           </main>
           <BottomNavigation />
         </div>
