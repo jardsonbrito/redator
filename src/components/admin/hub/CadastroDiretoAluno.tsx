@@ -88,6 +88,7 @@ export function CadastroDiretoAluno() {
         const { error: insertErr } = await supabase
           .from('profiles')
           .insert({
+            id: crypto.randomUUID(),
             nome: primeiro,
             sobrenome,
             email,
@@ -95,7 +96,7 @@ export function CadastroDiretoAluno() {
             turma_id: turma.id,
             user_type: 'aluno',
             ativo: true,
-            is_authenticated_student: false,
+            is_authenticated_student: true,
           });
 
         if (insertErr) throw insertErr;
