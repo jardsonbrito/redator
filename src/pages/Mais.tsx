@@ -43,6 +43,13 @@ const Mais = () => {
       showAlways: true
     },
     {
+      title: "Tutor Jarvis",
+      path: "/jarvis/tutor",
+      icon: JarvisIcon as any,
+      tooltip: "Professor particular de português e redação ENEM. Tire dúvidas, analise frases e pratique em conversa contínua.",
+      showAlways: true
+    },
+    {
       title: "Temas",
       path: "/temas",
       icon: BookOpen,
