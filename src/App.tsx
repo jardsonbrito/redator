@@ -92,6 +92,7 @@ const RedacaoComentadaDetalhes = lazy(() => import("./pages/RedacaoComentadaDeta
 const GuiaTematico            = lazy(() => import("./pages/GuiaTematico"));
 const GuiaTematicoAdmin       = lazy(() => import("./pages/admin/GuiaTematicoAdmin"));
 const Jarvis                  = lazy(() => import("./pages/Jarvis"));
+const TutorJarvis             = lazy(() => import("./pages/TutorJarvis"));
 const CorrecaoPublica         = lazy(() => import("./pages/CorrecaoPublica"));
 const PlanoEstudo             = lazy(() => import("./pages/PlanoEstudo"));
 const PlanoEstudoAdmin        = lazy(() => import("./pages/admin/PlanoEstudoAdmin"));
@@ -204,6 +205,7 @@ function App() {
                     <Route path="/guia-tematico" element={<ProtectedStudentRoute><GuiaTematico /></ProtectedStudentRoute>} />
                     <Route path="/guia-tematico/:id" element={<ProtectedStudentRoute><GuiaTematicoView /></ProtectedStudentRoute>} />
                     <Route path="/jarvis" element={<ProtectedStudentRoute><Jarvis /></ProtectedStudentRoute>} />
+                    <Route path="/jarvis/tutor" element={<ProtectedStudentRoute><TutorJarvis /></ProtectedStudentRoute>} />
                     <Route path="/plano-estudo" element={<ProtectedStudentRoute><PlanoEstudo /></ProtectedStudentRoute>} />
                     <Route path="/repertorio-orientado" element={<ProtectedStudentRoute><RepertorioOrientado /></ProtectedStudentRoute>} />
                     <Route path="/laboratorio-repertorio" element={<ProtectedStudentRoute><LaboratorioRepertorio /></ProtectedStudentRoute>} />
