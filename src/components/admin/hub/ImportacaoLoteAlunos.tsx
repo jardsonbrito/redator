@@ -50,10 +50,10 @@ const STATUS_CONFIG: Record<RowStatus, {
     rowClass: '',
   },
   sera_atualizado: {
-    label: 'Já existe',
-    observacao: 'Aluno já existe; será vinculado à turma',
+    label: 'Já cadastrado',
+    observacao: 'Aluno já cadastrado em outra turma; será ignorado',
     variant: 'secondary',
-    rowClass: '',
+    rowClass: 'text-muted-foreground',
   },
   ja_vinculado: {
     label: 'Já vinculado',
@@ -185,21 +185,16 @@ export function ImportacaoLoteAlunos() {
 
     for (const row of validatedRows) {
       if (row.status === 'ja_vinculado') { ignorados++; continue; }
+      if (row.status === 'sera_atualizado') { atualizados++; continue; }
       if (row.status === 'email_invalido' || row.status === 'duplicado_csv') { erros++; continue; }
 
       try {
-        if (row.status === 'sera_atualizado' && row.perfilId) {
-          const { error } = await supabase
-            .from('profiles')
-            .update({ turma: turma.nome, turma_id: turma.id, ativo: true })
-            .eq('id', row.perfilId);
-          if (error) throw error;
-          atualizados++;
-        } else if (row.status === 'sera_criado') {
+        if (row.status === 'sera_criado') {
           const partes = row.nome_completo.split(' ');
           const { error } = await supabase
             .from('profiles')
             .insert({
+              id: crypto.randomUUID(),
               nome: partes[0] || row.nome_completo,
               sobrenome: partes.slice(1).join(' ') || '-',
               email: row.email,
@@ -212,7 +207,8 @@ export function ImportacaoLoteAlunos() {
           if (error) throw error;
           criados++;
         }
-      } catch {
+      } catch (err) {
+        console.error('[ImportacaoLote] erro ao inserir:', err);
         erros++;
       }
     }
@@ -254,9 +250,9 @@ export function ImportacaoLoteAlunos() {
                 <div className="text-2xl font-bold text-green-700">{importResult.criados}</div>
                 <div className="text-xs text-green-600">Alunos criados</div>
               </div>
-              <div className="rounded-lg bg-blue-50 p-3 text-center">
-                <div className="text-2xl font-bold text-blue-700">{importResult.atualizados}</div>
-                <div className="text-xs text-blue-600">Turma atualizada</div>
+              <div className="rounded-lg bg-gray-50 p-3 text-center">
+                <div className="text-2xl font-bold text-gray-600">{importResult.atualizados}</div>
+                <div className="text-xs text-gray-500">Já cadastrados (ignorados)</div>
               </div>
               <div className="rounded-lg bg-gray-50 p-3 text-center">
                 <div className="text-2xl font-bold text-gray-600">{importResult.ignorados}</div>
@@ -369,7 +365,7 @@ export function ImportacaoLoteAlunos() {
                     <Badge variant="default">{counts.criados} {counts.criados === 1 ? 'válido' : 'válidos'}</Badge>
                   )}
                   {counts.atualizados > 0 && (
-                    <Badge variant="secondary">{counts.atualizados} já {counts.atualizados === 1 ? 'existe' : 'existem'}</Badge>
+                    <Badge variant="secondary">{counts.atualizados} já {counts.atualizados === 1 ? 'cadastrado' : 'cadastrados'} (ignorado{counts.atualizados > 1 ? 's' : ''})</Badge>
                   )}
                   {counts.ignorados > 0 && (
                     <Badge variant="outline">{counts.ignorados} já {counts.ignorados === 1 ? 'vinculado' : 'vinculados'}</Badge>
@@ -424,10 +420,10 @@ export function ImportacaoLoteAlunos() {
                 <Button variant="outline" onClick={handleReset}>Cancelar</Button>
                 <Button
                   onClick={handleImport}
-                  disabled={counts.criados + counts.atualizados === 0}
+                  disabled={counts.criados === 0}
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Confirmar e importar ({counts.criados + counts.atualizados} {counts.criados + counts.atualizados === 1 ? 'aluno' : 'alunos'})
+                  Confirmar e importar ({counts.criados} {counts.criados === 1 ? 'aluno' : 'alunos'})
                 </Button>
               </div>
             </>
