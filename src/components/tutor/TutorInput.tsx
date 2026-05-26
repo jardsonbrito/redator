@@ -14,7 +14,7 @@ interface TutorInputProps {
 export function TutorInput({ value, onChange, onSend, isLoading, disabled }: TutorInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { isRecording, isSupported, toggleRecording } =
+  const { isRecording, isSupported, toggleRecording, stopRecording } =
     useVoiceTranscription(onChange, value, textareaRef);
 
   useEffect(() => {
@@ -27,7 +27,17 @@ export function TutorInput({ value, onChange, onSend, isLoading, disabled }: Tut
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (!isLoading && !disabled && value.trim()) onSend();
+      if (!isLoading && !disabled && value.trim()) {
+        stopRecording(); // para o ditado antes de enviar
+        onSend();
+      }
+    }
+  };
+
+  const handleSend = () => {
+    if (!isLoading && !disabled && value.trim()) {
+      stopRecording(); // para o ditado antes de enviar
+      onSend();
     }
   };
 
@@ -83,7 +93,7 @@ export function TutorInput({ value, onChange, onSend, isLoading, disabled }: Tut
 
         {/* Botão de enviar */}
         <button
-          onClick={onSend}
+          onClick={handleSend}
           disabled={!canSend}
           className={cn(
             'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors shadow-sm',

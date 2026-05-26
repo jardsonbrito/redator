@@ -27,6 +27,10 @@ export function TutorChat({
   );
 
   useEffect(() => {
+    setInputValue('');
+  }, [conversationId]);
+
+  useEffect(() => {
     onCreditosUpdate?.(creditosRestantes);
   }, [creditosRestantes]);
 

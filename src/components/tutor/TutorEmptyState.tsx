@@ -23,14 +23,11 @@ export function TutorEmptyState({ onQuickAction }: TutorEmptyStateProps) {
       <div className="rounded-3xl bg-gradient-to-br from-purple-700 to-violet-600 text-white p-6 shadow-md mb-8">
         <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs mb-4">
           <Sparkles className="w-3.5 h-3.5" />
-          Professor particular de redação e português
+          Jarvis — tutor de redação
         </div>
         <h2 className="text-2xl font-semibold leading-tight">
-          Vamos melhorar essa redação juntos.
+          Redação na prática, aprovação na certa.
         </h2>
-        <p className="text-purple-100 mt-2 text-sm leading-relaxed max-w-lg">
-          Envie frases, teses, argumentos ou dúvidas gramaticais. O Tutor Jarvis analisa item por item e explica como melhorar sua escrita.
-        </p>
       </div>
 
       {/* Quick actions */}

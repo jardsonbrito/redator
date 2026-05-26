@@ -15,14 +15,15 @@ export const useVoiceTranscription = (
   const [isRecording, setIsRecording] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
 
-  const recognitionRef = useRef<any>(null);
-  const currentTextRef = useRef<string>(currentText);
+  const recognitionRef  = useRef<any>(null);
+  const currentTextRef  = useRef<string>(currentText);
+  const isStoppedRef    = useRef<boolean>(false);
 
   // Partes do texto capturadas no momento de iniciar a gravação
   const beforeCursorRef = useRef<string>('');
-  const afterCursorRef = useRef<string>('');
+  const afterCursorRef  = useRef<string>('');
   // Texto ditado confirmado (finais) acumulado na sessão atual
-  const accumulatedRef = useRef<string>('');
+  const accumulatedRef  = useRef<string>('');
 
   useEffect(() => {
     currentTextRef.current = currentText;
@@ -34,6 +35,7 @@ export const useVoiceTranscription = (
   }, []);
 
   const stopRecording = useCallback(() => {
+    isStoppedRef.current = true;
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
@@ -46,6 +48,8 @@ export const useVoiceTranscription = (
     if (!SR) return;
 
     // Captura posição do cursor para inserir no lugar certo
+    isStoppedRef.current = false;
+
     const text = currentTextRef.current;
     let cursorStart = text.length;
     let cursorEnd = text.length;
@@ -63,6 +67,8 @@ export const useVoiceTranscription = (
     recognition.interimResults = true;
 
     recognition.onresult = (event: any) => {
+      if (isStoppedRef.current) return;
+
       let finalTranscript = '';
       let interimTranscript = '';
 
