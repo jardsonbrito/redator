@@ -75,7 +75,8 @@ export function CadastroDiretoAluno() {
         const { error: updateErr } = await supabase
           .from('profiles')
           .update({
-            turma: turma.codigo_acesso,
+            turma: turma.nome,
+            turma_codigo: turma.codigo_acesso,
             turma_id: turma.id,
             ativo: true,
           })
@@ -92,7 +93,8 @@ export function CadastroDiretoAluno() {
             nome: primeiro,
             sobrenome,
             email,
-            turma: turma.codigo_acesso,
+            turma: turma.nome,
+            turma_codigo: turma.codigo_acesso,
             turma_id: turma.id,
             user_type: 'aluno',
             ativo: true,
