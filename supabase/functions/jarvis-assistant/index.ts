@@ -63,7 +63,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('👤 Usuário:', user.nome, '| Créditos:', user.jarvis_creditos);
+    console.log('👤 Usuário:', user.nome, '| Créditos Jarvis:', user.jarvis_creditos, '| Créditos redação:', user.creditos);
+
+    // ── 2.5. Verificar permissão de plano ─────────────────────────
+    const { data: temAcessoJarvis } = await supabaseClient
+      .rpc('check_aluno_jarvis_access', { p_aluno_email: userEmail.toLowerCase().trim() });
+
+    if (!temAcessoJarvis) {
+      return new Response(
+        JSON.stringify({ error: 'O Jarvis não está disponível no seu plano atual.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ── 2.6. Verificar se o plano permite fallback de crédito ──────
+    const { data: fallbackPermitido } = await supabaseClient
+      .rpc('get_aluno_jarvis_fallback', { p_aluno_email: userEmail.toLowerCase().trim() });
+
+    const fallbackAtivo = fallbackPermitido ?? true;
 
     // ── Buscar configuração global ────────────────────────────────
     const { data: config, error: configError } = await supabaseClient
@@ -79,7 +96,6 @@ Deno.serve(async (req) => {
     }
 
     // ── Buscar modo ───────────────────────────────────────────────
-    // Se modo_id não foi enviado (clientes antigos), usa o modo "analisar".
     let modoQuery = supabaseClient
       .from('jarvis_modos')
       .select('id, nome, label, system_prompt, campos_resposta')
@@ -118,23 +134,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Verificar créditos (prioridade: Jarvis → redação) ─────────
-    const jarvisCreditos = user.jarvis_creditos || 0;
+    // ── Verificar créditos (prioridade: Jarvis → redação via toggle) ─
+    const jarvisCreditos  = user.jarvis_creditos || 0;
     const redacaoCreditos = user.creditos || 0;
 
-    if (jarvisCreditos < 1 && redacaoCreditos < 1) {
+    const podeUsarFallback = fallbackAtivo && redacaoCreditos >= 1;
+    const temCreditoSuficiente = jarvisCreditos >= 1 || podeUsarFallback;
+
+    if (!temCreditoSuficiente) {
       return new Response(
         JSON.stringify({
           error: 'Créditos insuficientes',
-          creditos_jarvis: jarvisCreditos,
-          creditos_redacao: redacaoCreditos
+          creditos_jarvis:  jarvisCreditos,
+          creditos_redacao: redacaoCreditos,
+          fallback_habilitado: fallbackAtivo,
         }),
         { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fallback: sem crédito Jarvis mas com crédito de redação disponível
-    const usarCreditoRedacao = jarvisCreditos < 1 && redacaoCreditos >= 1;
+    const usarCreditoRedacao = jarvisCreditos < 1 && podeUsarFallback;
     console.log(usarCreditoRedacao
       ? '🔄 Fallback: usando crédito de redação'
       : `✅ Usando crédito Jarvis (saldo: ${jarvisCreditos})`
@@ -179,7 +198,6 @@ Deno.serve(async (req) => {
     const content = openaiData.choices[0].message.content;
     const aiRaw: Record<string, unknown> = JSON.parse(content);
 
-    // Normaliza todos os valores para string simples, independente do que a IA retornar
     function normalizarParaString(valor: unknown): string {
       if (typeof valor === 'string') return valor;
       if (valor === null || valor === undefined) return '';
@@ -188,7 +206,6 @@ Deno.serve(async (req) => {
           if (typeof item === 'string') return item;
           if (item && typeof item === 'object') {
             const obj = item as Record<string, unknown>;
-            // Extrai campos textuais comuns usados pela IA em diagnósticos estruturados
             const partes: string[] = [];
             if (obj['subcategoria']) partes.push(String(obj['subcategoria']));
             if (obj['explicação'] || obj['explicacao']) partes.push(String(obj['explicação'] ?? obj['explicacao']));
@@ -278,7 +295,6 @@ Deno.serve(async (req) => {
         texto_original:     texto,
         palavras_original:  palavras,
         resposta_json:      aiResponse,
-        // Campos específicos do modo "analisar" para retrocompatibilidade
         diagnostico:        aiResponse['diagnostico']        ?? null,
         explicacao:         aiResponse['explicacao']         ?? null,
         sugestao_reescrita: aiResponse['sugestao_reescrita'] ?? null,
@@ -307,8 +323,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        jarvis_creditos_restantes: usarCreditoRedacao ? jarvisCreditos : newJarvisCredits,
-        usou_credito_redacao: usarCreditoRedacao,
+        jarvis_creditos_restantes:  usarCreditoRedacao ? jarvisCreditos : newJarvisCredits,
+        usou_credito_redacao:       usarCreditoRedacao,
         redacao_creditos_restantes: newRedacaoCredits,
         resposta: aiResponse,
         modo: {

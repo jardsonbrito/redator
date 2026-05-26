@@ -72,6 +72,7 @@ import {
   AlertCircle,
   ChevronRight,
   Loader2,
+  CreditCard,
 } from 'lucide-react';
 
 // ── SortablePlanItem ─────────────────────────────────────────────────────────
@@ -613,6 +614,40 @@ export const PlansManager = ({ tipo }: PlansManagerProps = {}) => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Configurações do Jarvis — apenas para planos de aluno */}
+            {selectedPlan.tipo === 'aluno' && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Créditos do Jarvis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-md border border-border bg-card">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Fallback de crédito de redação</p>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        Permite usar créditos de envio de redação quando os créditos do Jarvis esgotarem
+                      </p>
+                    </div>
+                    {mut.toggleJarvisFallback.isPending && mut.toggleJarvisFallback.variables?.id === selectedPlan.id
+                      ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground shrink-0" />
+                      : (
+                        <Switch
+                          checked={selectedPlan.jarvis_fallback_credito_redacao}
+                          onCheckedChange={(v) =>
+                            mut.toggleJarvisFallback.mutate({ id: selectedPlan.id, value: v })
+                          }
+                          className="shrink-0"
+                        />
+                      )
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Cards / funcionalidades do plano */}
             <Card>

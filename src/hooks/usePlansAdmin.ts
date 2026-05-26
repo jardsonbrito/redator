@@ -10,6 +10,7 @@ export interface PlanoAdmin {
   ativo: boolean;
   ordem: number;
   tipo: 'aluno' | 'professor';
+  jarvis_fallback_credito_redacao: boolean;
 }
 
 export interface FuncionalidadeAdmin {
@@ -57,10 +58,14 @@ export const usePlanos = () =>
     queryFn: async (): Promise<PlanoAdmin[]> => {
       const { data, error } = await supabase
         .from('planos')
-        .select('id, nome, nome_exibicao, descricao, ativo, ordem, tipo')
+        .select('id, nome, nome_exibicao, descricao, ativo, ordem, tipo, jarvis_fallback_credito_redacao')
         .order('ordem');
       if (error) throw error;
-      return (data ?? []).map(p => ({ ...p, tipo: p.tipo ?? 'aluno' })) as PlanoAdmin[];
+      return (data ?? []).map(p => ({
+        ...p,
+        tipo: p.tipo ?? 'aluno',
+        jarvis_fallback_credito_redacao: p.jarvis_fallback_credito_redacao ?? true,
+      })) as PlanoAdmin[];
     },
     staleTime: 0,
   });
@@ -290,6 +295,31 @@ export const usePlansAdminMutations = () => {
     onError: () => toast.error('Erro ao atualizar plano'),
   });
 
+  // Toggle do fallback de crédito de redação para o Jarvis
+  const toggleJarvisFallback = useMutation({
+    mutationFn: async ({ id, value }: { id: string; value: boolean }) => {
+      const { error } = await supabase.rpc('toggle_plano_jarvis_fallback', { p_id: id, p_value: value });
+      if (error) throw error;
+      return { id, value };
+    },
+    onMutate: async ({ id, value }) => {
+      await qc.cancelQueries({ queryKey: PLANOS_KEY });
+      const prev = qc.getQueryData<PlanoAdmin[]>(PLANOS_KEY);
+      qc.setQueryData(PLANOS_KEY, (old: PlanoAdmin[] = []) =>
+        old.map(p => p.id === id ? { ...p, jarvis_fallback_credito_redacao: value } : p)
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx) qc.setQueryData(PLANOS_KEY, ctx.prev);
+      toast.error('Erro ao atualizar configuração de fallback — revertido');
+    },
+    onSuccess: ({ value }) => {
+      qc.invalidateQueries({ queryKey: PLANOS_KEY });
+      toast.success(value ? 'Fallback de crédito habilitado' : 'Fallback de crédito desabilitado');
+    },
+  });
+
   // Criar novo plano (com ou sem cópia de features)
   const createPlano = useMutation({
     mutationFn: async ({ nome, nome_exibicao, descricao, copiar_de_id, tipo }: {
@@ -346,5 +376,6 @@ export const usePlansAdminMutations = () => {
     togglePlanActive,
     updatePlano,
     createPlano,
+    toggleJarvisFallback,
   };
 };

@@ -30,7 +30,6 @@ function json(body: unknown, status = 200): Response {
 }
 
 // ── Detecção de intenção pedagógica ──────────────────────────────────────────
-// Retorna qual seção da redação o aluno está perguntando (ou null se nenhuma)
 function detectarIntencaoPedagogica(mensagem: string): 'introducao' | 'desenvolvimento' | 'conclusao' | null {
   const msg = mensagem.toLowerCase();
 
@@ -45,9 +44,6 @@ function detectarIntencaoPedagogica(mensagem: string): 'introducao' | 'desenvolv
 }
 
 // ── Busca contexto pedagógico da base interna do sistema ─────────────────────
-// Consulta calibração e modelos de referência da Tutoria; retorna bloco de texto
-// formatado para injeção como contexto antes da chamada à OpenAI.
-// Nunca bloqueia o fluxo — retorna null em caso de erro ou sem dados.
 async function buscarContextoPedagogico(
   supabase: ReturnType<typeof createClient>,
   mensagem: string,
@@ -56,7 +52,6 @@ async function buscarContextoPedagogico(
   if (!intencao) return null;
 
   try {
-    // Busca subtab
     const { data: subtab } = await supabase
       .from('jarvis_tutoria_subtabs')
       .select('id, label')
@@ -66,7 +61,6 @@ async function buscarContextoPedagogico(
 
     if (!subtab) return null;
 
-    // Busca calibração e modelos em paralelo
     const [calibRes, modelosRes] = await Promise.all([
       supabase
         .from('jarvis_tutoria_calibracao')
@@ -105,7 +99,6 @@ async function buscarContextoPedagogico(
         for (const r of regras.restricoes as string[]) bloco += `- ${r}\n`;
       }
 
-      // Elementos C5 (conclusão)
       const c5 = calib.criterios_proposta_intervencao as Record<string, any> | null;
       if (c5?.elementos_c5?.length) {
         bloco += '\nElementos C5 obrigatórios (proposta de intervenção):\n';
@@ -115,7 +108,6 @@ async function buscarContextoPedagogico(
         }
       }
 
-      // Célula argumentativa (desenvolvimento)
       const cel = calib.criterios_celula_argumentativa as Record<string, any> | null;
       if (cel?.elementos_obrigatorios?.length) {
         bloco += '\nCélula argumentativa — elementos obrigatórios:\n';
@@ -138,7 +130,6 @@ async function buscarContextoPedagogico(
     console.log(`📚 Contexto pedagógico injetado: ${intencao} (~${estimarTokens(bloco)} tokens)`);
     return bloco;
   } catch (err) {
-    // Nunca bloqueia o fluxo principal
     console.warn('⚠️ Erro ao buscar contexto pedagógico:', err);
     return null;
   }
@@ -176,7 +167,7 @@ Deno.serve(async (req) => {
     // ── 1. Buscar aluno por email ────────────────────────────────
     const { data: aluno, error: alunoError } = await supabase
       .from('profiles')
-      .select('id, nome, email, jarvis_creditos')
+      .select('id, nome, email, jarvis_creditos, creditos')
       .eq('email', aluno_email.toLowerCase().trim())
       .eq('user_type', 'aluno')
       .single();
@@ -185,7 +176,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Aluno não encontrado' }, 404);
     }
 
-    console.log('👤', aluno.nome, '| Créditos:', aluno.jarvis_creditos);
+    console.log('👤', aluno.nome, '| Créditos Jarvis:', aluno.jarvis_creditos, '| Créditos redação:', aluno.creditos);
 
     // ── 2. Verificar se módulo está habilitado ───────────────────
     const { data: habilitadoCfg } = await supabase
@@ -207,13 +198,17 @@ Deno.serve(async (req) => {
       return json({ error: 'O Jarvis não está disponível no seu plano atual.' }, 403);
     }
 
-    // ── 3. Buscar configurações de IA ────────────────────────────
-    const { data: configIA } = await supabase
-      .rpc('get_active_jarvis_config')
-      .single();
+    // ── 2.6. Verificar se o plano permite fallback de crédito ─────
+    const [configIA, fallbackResult] = await Promise.all([
+      supabase.rpc('get_active_jarvis_config').single(),
+      supabase.rpc('get_aluno_jarvis_fallback', { p_aluno_email: aluno_email.toLowerCase().trim() }),
+    ]);
 
-    const modeloIA = configIA?.model      ?? 'gpt-4o-mini';
-    const tempIA   = configIA?.temperatura ?? 0.7;
+    const fallbackPermitido = fallbackResult.data ?? true;
+
+    // ── 3. Buscar configurações de IA ────────────────────────────
+    const modeloIA = configIA.data?.model      ?? 'gpt-4o-mini';
+    const tempIA   = configIA.data?.temperatura ?? 0.7;
 
     const cfgMap = await supabase
       .from('jarvis_system_config')
@@ -284,7 +279,6 @@ Deno.serve(async (req) => {
     console.log('📚 Histórico:', historico.length, 'mensagens');
 
     // ── 5b. Buscar contexto pedagógico da base interna ───────────
-    // (em paralelo com o pré-check de créditos abaixo)
     const contextoPedagogicoPromise = buscarContextoPedagogico(supabase, mensagem.trim());
 
     // ── 6. Pré-check de créditos ─────────────────────────────────
@@ -302,17 +296,31 @@ Deno.serve(async (req) => {
     const estimativaTotal = estimativaInput + Math.min(maxTokens, 700);
     const projecao        = acumuladorAtual + estimativaTotal;
     const creditosNecessarios = Math.floor(projecao / limiar);
-    const saldoAtual      = aluno.jarvis_creditos ?? 0;
+    const saldoJarvis     = aluno.jarvis_creditos ?? 0;
+    const saldoRedacao    = aluno.creditos ?? 0;
 
-    console.log(`💰 Acum: ${acumuladorAtual} | Projeção: ${projecao} | Limiar: ${limiar} | Créditos necessários: ${creditosNecessarios} | Saldo: ${saldoAtual}`);
+    console.log(`💰 Acum: ${acumuladorAtual} | Projeção: ${projecao} | Limiar: ${limiar} | Créditos necessários: ${creditosNecessarios} | Saldo Jarvis: ${saldoJarvis} | Saldo Redação: ${saldoRedacao} | Fallback: ${fallbackPermitido}`);
 
-    if (creditosNecessarios > 0 && saldoAtual < creditosNecessarios) {
+    // Decide qual saldo usar: jarvis primeiro, fallback se permitido
+    const usarFallback = creditosNecessarios > 0
+      && saldoJarvis < creditosNecessarios
+      && fallbackPermitido
+      && saldoRedacao >= creditosNecessarios;
+
+    if (creditosNecessarios > 0 && saldoJarvis < creditosNecessarios && !usarFallback) {
       return json({
         error: 'Créditos insuficientes para continuar o estudo',
-        creditos_atuais:      saldoAtual,
-        creditos_necessarios: creditosNecessarios,
+        creditos_atuais:        saldoJarvis,
+        creditos_necessarios:   creditosNecessarios,
+        creditos_redacao:       saldoRedacao,
+        fallback_habilitado:    fallbackPermitido,
       }, 402);
     }
+
+    console.log(usarFallback
+      ? `🔄 Usando fallback: ${creditosNecessarios} crédito(s) de redação`
+      : `✅ Usando créditos Jarvis`
+    );
 
     // ── 7. Salvar mensagem do usuário (antes da chamada à IA) ─────
     await supabase.from('jarvis_messages').insert({
@@ -329,7 +337,6 @@ Deno.serve(async (req) => {
       ...historico,
     ];
 
-    // Injeção de contexto pedagógico (quando detectado) — vem antes da msg do aluno
     if (contextoPedagogico) {
       messages.push({ role: 'system', content: contextoPedagogico });
     }
@@ -384,11 +391,12 @@ Deno.serve(async (req) => {
     // ── 10. Processar créditos (acumulador progressivo) ───────────
     let creditosDebitados = 0;
     let novoAcumulador    = acumuladorAtual + tokensTotal;
-    let saldoRestante     = saldoAtual;
+    let saldoRestante     = usarFallback ? saldoRedacao : saldoJarvis;
 
     try {
+      const rpcName = usarFallback ? 'process_tutor_credit_redacao' : 'process_tutor_credit';
       const { data: creditResult, error: creditError } = await supabase
-        .rpc('process_tutor_credit', {
+        .rpc(rpcName, {
           p_aluno_id:     aluno.id,
           p_modulo:       modulo,
           p_tokens_novos: tokensTotal,
@@ -400,7 +408,7 @@ Deno.serve(async (req) => {
         creditosDebitados = creditResult[0].creditos_debitados;
         novoAcumulador    = creditResult[0].acumulador_atual;
         saldoRestante     = creditResult[0].saldo_restante;
-        console.log(`💳 Débito: ${creditosDebitados} | Acum: ${novoAcumulador} | Saldo: ${saldoRestante}`);
+        console.log(`💳 ${usarFallback ? '[FALLBACK]' : ''} Débito: ${creditosDebitados} | Acum: ${novoAcumulador} | Saldo: ${saldoRestante}`);
       }
     } catch (err) {
       console.error('⚠️ Exceção ao processar créditos:', err);
@@ -421,6 +429,7 @@ Deno.serve(async (req) => {
       tokens_usados:      tokensTotal,
       creditos_debitados: creditosDebitados,
       creditos_restantes: saldoRestante,
+      usou_fallback:      usarFallback,
       acumulador_tokens:  novoAcumulador,
       tempo_resposta_ms:  tempoResposta,
     });
