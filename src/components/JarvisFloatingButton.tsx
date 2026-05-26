@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { History, Sparkles, PenLine, ScanSearch, ExternalLink, X, GraduationCap } from "lucide-react";
+import { History, Sparkles, PenLine, ScanSearch, X, GraduationCap } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { cn } from "@/lib/utils";
 
@@ -29,11 +29,6 @@ const actions = [
     label: "Ver histórico",
     icon: History,
     href: "/jarvis?view=historico",
-  },
-  {
-    label: "Abrir Jarvis completo",
-    icon: ExternalLink,
-    href: "/jarvis",
   },
 ];
 
@@ -89,7 +84,7 @@ export const JarvisFloatingButton = () => {
           <div className="py-1">
             {actions.map((action) => {
               const Icon = action.icon;
-              const isLast = action.href === "/jarvis";
+              const isLast = false;
               return (
                 <button
                   key={action.href}
