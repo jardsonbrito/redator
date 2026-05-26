@@ -198,6 +198,15 @@ Deno.serve(async (req) => {
       return json({ error: 'O Tutor Jarvis está temporariamente desabilitado' }, 403);
     }
 
+    // ── 2.5. Verificar permissão de plano ────────────────────────
+    // Permissão vem antes de crédito — aluno sem acesso não consome nada.
+    const { data: temAcessoJarvis } = await supabase
+      .rpc('check_aluno_jarvis_access', { p_aluno_email: aluno_email.toLowerCase().trim() });
+
+    if (!temAcessoJarvis) {
+      return json({ error: 'O Jarvis não está disponível no seu plano atual.' }, 403);
+    }
+
     // ── 3. Buscar configurações de IA ────────────────────────────
     const { data: configIA } = await supabase
       .rpc('get_active_jarvis_config')

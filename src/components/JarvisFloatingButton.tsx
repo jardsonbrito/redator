@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { History, Sparkles, PenLine, ScanSearch, X, GraduationCap } from "lucide-react";
+import { History, Sparkles, PenLine, ScanSearch, X, GraduationCap, Lock } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { cn } from "@/lib/utils";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useToast } from "@/hooks/use-toast";
+
+const JARVIS_BLOQUEADO_MSG =
+  'O Jarvis não está disponível no seu plano atual. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos e liberar o uso.';
 
 const actions = [
   {
@@ -34,9 +40,18 @@ const actions = [
 
 export const JarvisFloatingButton = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
+  const navigate             = useNavigate();
+  const { toast }            = useToast();
+  const { studentData }                       = useStudentAuth();
+  const { isFeatureEnabled, isLoading }       = usePlanFeatures(studentData.email ?? '');
+  const jarvisDisponivel                      = !isLoading && isFeatureEnabled('jarvis');
+  const jarvisBloqueado                       = !isLoading && !isFeatureEnabled('jarvis');
 
   const handleAction = (href: string) => {
+    if (jarvisBloqueado) {
+      toast({ title: 'Jarvis indisponível', description: JARVIS_BLOQUEADO_MSG, variant: 'destructive' });
+      return;
+    }
     setIsOpen(false);
     navigate(href);
   };
@@ -80,28 +95,31 @@ export const JarvisFloatingButton = () => {
             </button>
           </div>
 
-          {/* Lista de ações */}
-          <div className="py-1">
-            {actions.map((action) => {
-              const Icon = action.icon;
-              const isLast = false;
-              return (
-                <button
-                  key={action.href}
-                  onClick={() => handleAction(action.href)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors",
-                    isLast
-                      ? "text-indigo-600 hover:bg-indigo-50 border-t border-gray-100 mt-1 pt-3"
-                      : "text-gray-700 hover:bg-purple-50 hover:text-indigo-700"
-                  )}
-                >
-                  <Icon className="w-4 h-4 shrink-0 text-indigo-400" />
-                  {action.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Lista de ações ou mensagem de bloqueio */}
+          {jarvisBloqueado ? (
+            <div className="px-4 py-4 flex flex-col items-center gap-2 text-center">
+              <Lock className="w-5 h-5 text-slate-400" />
+              <p className="text-xs text-slate-500 leading-snug">
+                O Jarvis não está disponível no seu plano atual.
+              </p>
+            </div>
+          ) : (
+            <div className="py-1">
+              {actions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.href}
+                    onClick={() => handleAction(action.href)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 hover:bg-purple-50 hover:text-indigo-700 transition-colors"
+                  >
+                    <Icon className="w-4 h-4 shrink-0 text-indigo-400" />
+                    {action.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Botão flutuante principal */}

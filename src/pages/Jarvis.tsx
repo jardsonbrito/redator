@@ -19,7 +19,11 @@ import {
   Mic, MicOff, Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { supabase } from "@/integrations/supabase/client";
+
+const JARVIS_BLOQUEADO_MSG =
+  'O Jarvis não está disponível no seu plano atual. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos e liberar o uso.';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -93,8 +97,10 @@ const CardResposta = ({
 // ── Componente principal ──────────────────────────────────────────
 const Jarvis = () => {
   usePageTitle("Jarvis - Assistente de Escrita");
-  const { studentData } = useStudentAuth();
-  const { toast } = useToast();
+  const { studentData }                                = useStudentAuth();
+  const { toast }                                      = useToast();
+  const { isFeatureEnabled, isLoading: planLoading }   = usePlanFeatures(studentData?.email || '');
+  const planBloqueado                                  = !planLoading && !isFeatureEnabled('jarvis');
 
   // activeView: ID de um modo (string) ou 'historico'
   const [activeView, setActiveView] = useState<string>('');
@@ -144,6 +150,13 @@ const Jarvis = () => {
       }
     }
   }, [modos, searchParams]);
+
+  // Toast de bloqueio por plano
+  useEffect(() => {
+    if (planBloqueado && studentData?.email) {
+      toast({ title: 'Jarvis indisponível', description: JARVIS_BLOQUEADO_MSG, variant: 'destructive' });
+    }
+  }, [planBloqueado, studentData?.email]);
 
   // Verificar disponibilidade
   useEffect(() => {
@@ -299,10 +312,17 @@ const Jarvis = () => {
             </div>
           </div>
 
-          {loadingDisponibilidade ? (
+          {loadingDisponibilidade || planLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : planBloqueado ? (
+            <Alert className="border-slate-200 bg-slate-50">
+              <Lock className="h-5 w-5 text-slate-500" />
+              <AlertDescription className="text-slate-700">
+                <p>{JARVIS_BLOQUEADO_MSG}</p>
+              </AlertDescription>
+            </Alert>
           ) : !disponivel ? (
             <Alert className="border-amber-200 bg-amber-50">
               <Lock className="h-5 w-5 text-amber-600" />

@@ -1,11 +1,16 @@
-import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, Lock } from 'lucide-react';
 import { StudentHeader } from '@/components/StudentHeader';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
 import { useTutorConversas } from '@/hooks/useTutorConversas';
 import { TutorSidebar } from '@/components/tutor/TutorSidebar';
 import { TutorChat } from '@/components/tutor/TutorChat';
 import { cn } from '@/lib/utils';
+import { usePlanFeatures } from '@/hooks/usePlanFeatures';
+import { useToast } from '@/hooks/use-toast';
+
+const JARVIS_BLOQUEADO_MSG =
+  'O Jarvis não está disponível no seu plano atual. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos e liberar o uso.';
 
 export default function TutorJarvis() {
   const { studentData }                                   = useStudentAuth();
@@ -13,8 +18,18 @@ export default function TutorJarvis() {
   const [activeConversationId, setActiveId]               = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen]                     = useState(false);
   const [creditosRestantes, setCreditosRestantes]         = useState<number>(0);
+  const { toast }                                         = useToast();
+
+  const { isFeatureEnabled, isLoading: planLoading }      = usePlanFeatures(alunoEmail);
+  const jarvisBloqueado                                   = !planLoading && !isFeatureEnabled('jarvis');
 
   const { conversas, loading, refetch, deletar } = useTutorConversas(alunoEmail);
+
+  useEffect(() => {
+    if (jarvisBloqueado && alunoEmail) {
+      toast({ title: 'Jarvis indisponível', description: JARVIS_BLOQUEADO_MSG, variant: 'destructive' });
+    }
+  }, [jarvisBloqueado, alunoEmail]);
 
   const handleSelectConversa = (id: string) => {
     setActiveId(id);
@@ -40,52 +55,64 @@ export default function TutorJarvis() {
     <div className="flex flex-col h-screen bg-white overflow-hidden">
       <StudentHeader />
 
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Overlay mobile */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/30 z-20 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <div
-          className={cn(
-            'absolute md:relative z-30 md:z-auto h-full transition-transform duration-200',
-            'md:translate-x-0',
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      {jarvisBloqueado ? (
+        <div className="flex flex-1 items-center justify-center bg-slate-50 px-6">
+          <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
+              <Lock className="w-6 h-6 text-slate-400" />
+            </div>
+            <h2 className="text-base font-semibold text-slate-700">Jarvis indisponível</h2>
+            <p className="text-sm text-slate-500 leading-relaxed">{JARVIS_BLOQUEADO_MSG}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden relative">
+          {/* Overlay mobile */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/30 z-20 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
           )}
-        >
-          <TutorSidebar
-            conversas={conversas}
-            loading={loading}
-            activeConversationId={activeConversationId}
-            onSelect={handleSelectConversa}
-            onNew={handleNovaConversa}
-            onDeletar={handleDeletar}
-            creditosRestantes={creditosRestantes}
-          />
-        </div>
 
-        {/* Área principal */}
-        <div className="flex-1 flex flex-col overflow-hidden relative">
-          {/* Botão hamburguer — mobile */}
-          <button
-            className="md:hidden absolute top-3 left-3 z-10 p-2 rounded-lg bg-white border border-slate-200 shadow-sm"
-            onClick={() => setSidebarOpen(v => !v)}
+          {/* Sidebar */}
+          <div
+            className={cn(
+              'absolute md:relative z-30 md:z-auto h-full transition-transform duration-200',
+              'md:translate-x-0',
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            )}
           >
-            {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </button>
+            <TutorSidebar
+              conversas={conversas}
+              loading={loading}
+              activeConversationId={activeConversationId}
+              onSelect={handleSelectConversa}
+              onNew={handleNovaConversa}
+              onDeletar={handleDeletar}
+              creditosRestantes={creditosRestantes}
+            />
+          </div>
 
-          <TutorChat
-            alunoEmail={alunoEmail}
-            conversationId={activeConversationId}
-            onConversationCreated={handleConversationCreated}
-            onCreditosUpdate={setCreditosRestantes}
-          />
+          {/* Área principal */}
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            {/* Botão hamburguer — mobile */}
+            <button
+              className="md:hidden absolute top-3 left-3 z-10 p-2 rounded-lg bg-white border border-slate-200 shadow-sm"
+              onClick={() => setSidebarOpen(v => !v)}
+            >
+              {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+
+            <TutorChat
+              alunoEmail={alunoEmail}
+              conversationId={activeConversationId}
+              onConversationCreated={handleConversationCreated}
+              onCreditosUpdate={setCreditosRestantes}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
