@@ -34,13 +34,13 @@ export const useTutorConversas = (alunoEmail: string, modulo = 'tutor') => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const arquivar = async (conversationId: string): Promise<void> => {
-    await supabase.rpc('archive_tutor_conversa', {
+  const deletar = async (conversationId: string): Promise<void> => {
+    await supabase.rpc('delete_tutor_conversa' as any, {
       p_conversation_id: conversationId,
       p_aluno_email:     alunoEmail.toLowerCase().trim(),
     });
     await carregar();
   };
 
-  return { conversas, loading, refetch: carregar, arquivar };
+  return { conversas, loading, refetch: carregar, deletar };
 };

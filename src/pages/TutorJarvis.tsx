@@ -8,12 +8,13 @@ import { TutorChat } from '@/components/tutor/TutorChat';
 import { cn } from '@/lib/utils';
 
 export default function TutorJarvis() {
-  const { studentData }                          = useStudentAuth();
-  const alunoEmail                               = studentData.email ?? '';
-  const [activeConversationId, setActiveId]      = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen]            = useState(false);
+  const { studentData }                                   = useStudentAuth();
+  const alunoEmail                                        = studentData.email ?? '';
+  const [activeConversationId, setActiveId]               = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen]                     = useState(false);
+  const [creditosRestantes, setCreditosRestantes]         = useState<number>(0);
 
-  const { conversas, loading, refetch, arquivar } = useTutorConversas(alunoEmail);
+  const { conversas, loading, refetch, deletar } = useTutorConversas(alunoEmail);
 
   const handleSelectConversa = (id: string) => {
     setActiveId(id);
@@ -30,8 +31,8 @@ export default function TutorJarvis() {
     refetch();
   };
 
-  const handleArquivar = async (id: string) => {
-    await arquivar(id);
+  const handleDeletar = async (id: string) => {
+    await deletar(id);
     if (activeConversationId === id) setActiveId(null);
   };
 
@@ -40,7 +41,7 @@ export default function TutorJarvis() {
       <StudentHeader />
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* ── Overlay mobile ───────────────────────────────────────── */}
+        {/* Overlay mobile */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 bg-black/30 z-20 md:hidden"
@@ -48,7 +49,7 @@ export default function TutorJarvis() {
           />
         )}
 
-        {/* ── Sidebar ──────────────────────────────────────────────── */}
+        {/* Sidebar */}
         <div
           className={cn(
             'absolute md:relative z-30 md:z-auto h-full transition-transform duration-200',
@@ -62,15 +63,16 @@ export default function TutorJarvis() {
             activeConversationId={activeConversationId}
             onSelect={handleSelectConversa}
             onNew={handleNovaConversa}
-            onArquivar={handleArquivar}
+            onDeletar={handleDeletar}
+            creditosRestantes={creditosRestantes}
           />
         </div>
 
-        {/* ── Área principal ───────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Área principal */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Botão hamburguer — mobile */}
           <button
-            className="md:hidden absolute top-3 left-3 z-10 p-2 rounded-lg bg-white border border-gray-200 shadow-sm"
+            className="md:hidden absolute top-3 left-3 z-10 p-2 rounded-lg bg-white border border-slate-200 shadow-sm"
             onClick={() => setSidebarOpen(v => !v)}
           >
             {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -80,6 +82,7 @@ export default function TutorJarvis() {
             alunoEmail={alunoEmail}
             conversationId={activeConversationId}
             onConversationCreated={handleConversationCreated}
+            onCreditosUpdate={setCreditosRestantes}
           />
         </div>
       </div>
