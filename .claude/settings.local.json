@@ -101,7 +101,22 @@
       "Bash(Sort-Object LastWriteTime -Descending)",
       "Bash(Select-Object -First 20 Name)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\jards\\\\OneDrive\\\\Área de Trabalho\\\\Site\\\\redator\\\\src\\\\pages\" -Recurse | Where-Object {$_.Extension -in '.tsx', '.ts', '.jsx', '.js'} | Select-Object FullName)",
-      "Bash(awk '/^      [a-z_]*: \\\\{/,/^      [a-z]/ {print NR\": \"$0}' \"C:\\\\Users\\\\jards\\\\OneDrive\\\\Área de Trabalho\\\\Site\\\\redator\\\\src\\\\integrations\\\\supabase\\\\types.ts\")"
+      "Bash(awk '/^      [a-z_]*: \\\\{/,/^      [a-z]/ {print NR\": \"$0}' \"C:\\\\Users\\\\jards\\\\OneDrive\\\\Área de Trabalho\\\\Site\\\\redator\\\\src\\\\integrations\\\\supabase\\\\types.ts\")",
+      "Bash(Get-Content \"C:\\\\Users\\\\jards\\\\OneDrive\\\\Área de Trabalho\\\\Site\\\\redator\\\\supabase\\\\functions\\\\jarvis-correcao-processar-v5\\\\index.ts\")",
+      "Bash(Measure-Object -Line)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\jards\\\\OneDrive\\\\Área de Trabalho\\\\Site\\\\redator\\\\supabase\\\\functions\\\\jarvis-correcao-processar-v5\\\\index.ts\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(supabase *)",
+      "Bash(Remove-Item \"src\\\\components\\\\corretor\\\\MarcacoesJarvisPanel.tsx\")",
+      "Bash(Remove-Item \"src\\\\hooks\\\\useComentariosTrechoCorrecao.ts\")",
+      "Bash(Remove-Item \"src\\\\components\\\\TextoRedacaoComMarcacoes.tsx\")",
+      "Bash(Write-Host \"OK\")",
+      "Bash(Select-Object Name, Mode)",
+      "PowerShell(New-Item *)",
+      "PowerShell(Get-ChildItem *)",
+      "Bash(gh search *)",
+      "Bash(where gh *)",
+      "PowerShell(Get-Date *)",
+      "Bash(Select-Object -First 50)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { Coins } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TutorMessage, TutorThinkingIndicator } from './TutorMessage';
 import { TutorInput } from './TutorInput';
@@ -46,11 +45,12 @@ export function TutorChat({ alunoEmail, conversationId, onConversationCreated }:
     <div className="flex flex-col flex-1 overflow-hidden bg-gray-50">
       {/* Barra superior com saldo de créditos */}
       <div className="flex items-center justify-end px-4 py-2 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <Coins className="w-3.5 h-3.5 text-amber-500" />
-          <span>
-            <span className="font-semibold text-gray-700">{creditosRestantes}</span> créditos Jarvis
-          </span>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold text-indigo-600">{creditosRestantes}</span>
+          <div className="leading-tight">
+            <p className="text-xs font-medium text-gray-700">Seus créditos</p>
+            <p className="text-[10px] text-gray-400">Compartilhados com o Jarvis</p>
+          </div>
         </div>
       </div>
 

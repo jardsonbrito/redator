@@ -1,6 +1,7 @@
 import { useRef, useEffect, KeyboardEvent } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Mic, MicOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useVoiceTranscription } from '@/hooks/useVoiceTranscription';
 
 interface TutorInputProps {
   value:       string;
@@ -12,6 +13,9 @@ interface TutorInputProps {
 
 export function TutorInput({ value, onChange, onSend, isLoading, disabled }: TutorInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { isRecording, isSupported, toggleRecording } =
+    useVoiceTranscription(onChange, value, textareaRef);
 
   // Auto-resize do textarea conforme o conteúdo cresce
   useEffect(() => {
@@ -47,6 +51,31 @@ export function TutorInput({ value, onChange, onSend, isLoading, disabled }: Tut
             'disabled:opacity-60 max-h-[200px] overflow-y-auto',
           )}
         />
+
+        {/* Botão de voz */}
+        <button
+          type="button"
+          onClick={toggleRecording}
+          disabled={!isSupported || isLoading || disabled}
+          title={
+            !isSupported
+              ? 'Seu navegador não suporta reconhecimento de voz'
+              : isRecording
+              ? 'Parar gravação'
+              : 'Ditar texto por voz'
+          }
+          className={cn(
+            'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors mb-0.5',
+            isRecording
+              ? 'bg-red-100 text-red-600 animate-pulse hover:bg-red-200'
+              : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600',
+            (!isSupported || isLoading || disabled) && 'opacity-40 cursor-not-allowed',
+          )}
+        >
+          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </button>
+
+        {/* Botão de enviar */}
         <button
           onClick={onSend}
           disabled={!canSend}
@@ -63,9 +92,17 @@ export function TutorInput({ value, onChange, onSend, isLoading, disabled }: Tut
           }
         </button>
       </div>
-      <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-        Enter para enviar · Shift+Enter para nova linha
-      </p>
+
+      {isRecording && (
+        <p className="text-xs text-red-500 font-medium animate-pulse mt-1.5 text-center">
+          Jarvis está ouvindo…
+        </p>
+      )}
+      {!isRecording && (
+        <p className="text-[10px] text-gray-400 mt-1.5 text-center">
+          Enter para enviar · Shift+Enter para nova linha
+        </p>
+      )}
     </div>
   );
 }

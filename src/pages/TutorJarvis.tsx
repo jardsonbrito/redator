@@ -8,8 +8,8 @@ import { TutorChat } from '@/components/tutor/TutorChat';
 import { cn } from '@/lib/utils';
 
 export default function TutorJarvis() {
-  const { aluno }                                = useStudentAuth();
-  const alunoEmail                               = aluno?.email ?? '';
+  const { studentData }                          = useStudentAuth();
+  const alunoEmail                               = studentData.email ?? '';
   const [activeConversationId, setActiveId]      = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen]            = useState(false);
 

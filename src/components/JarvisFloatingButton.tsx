@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { History, Sparkles, PenLine, ScanSearch, ExternalLink, X } from "lucide-react";
+import { History, Sparkles, PenLine, ScanSearch, ExternalLink, X, GraduationCap } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,11 @@ const actions = [
     label: "Me ajudar a começar",
     icon: PenLine,
     href: "/jarvis?modoIndex=2",
+  },
+  {
+    label: "Tutor Jarvis",
+    icon: GraduationCap,
+    href: "/jarvis/tutor",
   },
   {
     label: "Ver histórico",

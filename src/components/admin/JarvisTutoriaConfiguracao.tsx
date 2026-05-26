@@ -7,7 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Edit, Trash2, Save, CheckSquare, Square } from 'lucide-react';
+import {
+  Plus, Edit, Trash2, Save, CheckSquare, Square,
+  BookOpen, Link2, FileText, Lightbulb, HelpCircle,
+  AlignLeft, Star, MessageSquare, PenLine, Type, Search, CheckCircle,
+  ChevronUp, ChevronDown, type LucideIcon,
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -98,6 +103,35 @@ interface TemaConfig {
   exemplos_temas: string[];
 }
 
+interface QuickAction {
+  id: string;
+  label: string;
+  texto: string;
+  icone: string;
+  ordem: number;
+  ativo: boolean;
+}
+
+const QA_ICON_MAP: Record<string, LucideIcon> = {
+  FileText, AlignLeft, Link2, Lightbulb, HelpCircle,
+  BookOpen, Star, MessageSquare, PenLine, Type, Search, CheckCircle,
+};
+
+const QA_ICONS_DISPONIVEIS = [
+  { nome: 'FileText',     label: 'Arquivo de texto' },
+  { nome: 'AlignLeft',   label: 'Texto alinhado' },
+  { nome: 'Link2',       label: 'Conectivo/link' },
+  { nome: 'Lightbulb',   label: 'Ideia/argumento' },
+  { nome: 'HelpCircle',  label: 'Dúvida' },
+  { nome: 'BookOpen',    label: 'Parágrafo/leitura' },
+  { nome: 'Star',        label: 'Repertório/destaque' },
+  { nome: 'MessageSquare', label: 'Conversa/mensagem' },
+  { nome: 'PenLine',     label: 'Escrita/revisão' },
+  { nome: 'Type',        label: 'Texto/gramática' },
+  { nome: 'Search',      label: 'Busca/análise' },
+  { nome: 'CheckCircle', label: 'Verificação' },
+];
+
 export const JarvisTutoriaConfiguracao = () => {
   const { toast } = useToast();
   const [calibracoes, setCalibracoes] = useState<Calibracao[]>([]);
@@ -120,8 +154,17 @@ export const JarvisTutoriaConfiguracao = () => {
   const [salvandoTemaConfig, setSalvandoTemaConfig] = useState(false);
   const [novoExemplo, setNovoExemplo] = useState('');
 
+  // Quick Actions state
+  const [quickActions, setQuickActions]   = useState<QuickAction[]>([]);
+  const [editandoQA, setEditandoQA]       = useState<string | null>(null);
+  const [qaForm, setQaForm]               = useState({ label: '', texto: '', icone: 'HelpCircle' });
+  const [adicionandoQA, setAdicionandoQA] = useState(false);
+  const [qaNovaForm, setQaNovaForm]       = useState({ label: '', texto: '', icone: 'HelpCircle' });
+  const [salvandoQA, setSalvandoQA]       = useState(false);
+
   useEffect(() => {
     loadData();
+    loadQuickActions();
   }, []);
 
   const loadData = async () => {
@@ -184,6 +227,109 @@ export const JarvisTutoriaConfiguracao = () => {
       setLoading(false);
     }
   };
+
+  // ─── Quick Actions ─────────────────────────────────────────────
+
+  const loadQuickActions = async () => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('tutor_quick_actions')
+        .select('*')
+        .order('ordem', { ascending: true });
+      if (error) throw error;
+      setQuickActions((data as QuickAction[]) ?? []);
+    } catch (error) {
+      console.error('Erro ao carregar ações rápidas:', error);
+    }
+  };
+
+  const toggleQAAtivo = async (qa: QuickAction) => {
+    const { error } = await (supabase as any)
+      .from('tutor_quick_actions')
+      .update({ ativo: !qa.ativo, updated_at: new Date().toISOString() })
+      .eq('id', qa.id);
+    if (error) {
+      toast({ title: 'Erro', description: String(error.message), variant: 'destructive' });
+    } else {
+      loadQuickActions();
+    }
+  };
+
+  const moveQA = async (qa: QuickAction, dir: -1 | 1) => {
+    const sorted = [...quickActions];
+    const idx = sorted.findIndex(a => a.id === qa.id);
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const other = sorted[swapIdx];
+    await Promise.all([
+      (supabase as any).from('tutor_quick_actions').update({ ordem: other.ordem, updated_at: new Date().toISOString() }).eq('id', qa.id),
+      (supabase as any).from('tutor_quick_actions').update({ ordem: qa.ordem, updated_at: new Date().toISOString() }).eq('id', other.id),
+    ]);
+    loadQuickActions();
+  };
+
+  const iniciarEditQA = (qa: QuickAction) => {
+    setEditandoQA(qa.id);
+    setQaForm({ label: qa.label, texto: qa.texto, icone: qa.icone });
+  };
+
+  const salvarQA = async () => {
+    if (!editandoQA) return;
+    setSalvandoQA(true);
+    try {
+      const { error } = await (supabase as any)
+        .from('tutor_quick_actions')
+        .update({ label: qaForm.label, texto: qaForm.texto, icone: qaForm.icone, updated_at: new Date().toISOString() })
+        .eq('id', editandoQA);
+      if (error) throw error;
+      toast({ title: '✅ Ação salva', className: 'border-green-200 bg-green-50 text-green-900' });
+      setEditandoQA(null);
+      loadQuickActions();
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setSalvandoQA(false);
+    }
+  };
+
+  const criarQA = async () => {
+    if (!qaNovaForm.label.trim() || !qaNovaForm.texto.trim()) {
+      toast({ title: 'Campos obrigatórios', description: 'Preencha o rótulo e o texto da ação.', variant: 'destructive' });
+      return;
+    }
+    setSalvandoQA(true);
+    try {
+      const maxOrdem = quickActions.length > 0 ? Math.max(...quickActions.map(a => a.ordem)) : 0;
+      const { error } = await (supabase as any)
+        .from('tutor_quick_actions')
+        .insert({ label: qaNovaForm.label.trim(), texto: qaNovaForm.texto, icone: qaNovaForm.icone, ordem: maxOrdem + 1 });
+      if (error) throw error;
+      toast({ title: '✅ Ação criada', className: 'border-green-200 bg-green-50 text-green-900' });
+      setAdicionandoQA(false);
+      setQaNovaForm({ label: '', texto: '', icone: 'HelpCircle' });
+      loadQuickActions();
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setSalvandoQA(false);
+    }
+  };
+
+  const deletarQA = async (qa: QuickAction) => {
+    if (!confirm(`Remover a ação "${qa.label}"?`)) return;
+    const { error } = await (supabase as any)
+      .from('tutor_quick_actions')
+      .delete()
+      .eq('id', qa.id);
+    if (error) {
+      toast({ title: 'Erro', description: String(error.message), variant: 'destructive' });
+    } else {
+      toast({ title: 'Ação removida' });
+      loadQuickActions();
+    }
+  };
+
+  // ─── Frase Temática ─────────────────────────────────────────────
 
   const salvarTemaConfig = async () => {
     if (!temaConfig) return;
@@ -474,6 +620,7 @@ export const JarvisTutoriaConfiguracao = () => {
         <TabsTrigger value="calibracao">Calibração Pedagógica</TabsTrigger>
         <TabsTrigger value="modelos">Modelos de Referência</TabsTrigger>
         <TabsTrigger value="tema">Frase Temática</TabsTrigger>
+        <TabsTrigger value="acoes-rapidas">Ações Rápidas</TabsTrigger>
       </TabsList>
 
       {/* ─── ABA: CALIBRAÇÃO ───────────────────────────────────── */}
@@ -1102,6 +1249,216 @@ export const JarvisTutoriaConfiguracao = () => {
                   </Button>
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* ─── ABA: AÇÕES RÁPIDAS ─────────────────────────────────── */}
+      <TabsContent value="acoes-rapidas" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Ações Rápidas do Tutor</CardTitle>
+                <CardDescription>
+                  Chips de atalho exibidos ao aluno quando a conversa está vazia.
+                  Defina o rótulo, o texto que será inserido automaticamente e o ícone.
+                </CardDescription>
+              </div>
+              <Button onClick={() => { setAdicionandoQA(true); setQaNovaForm({ label: '', texto: '', icone: 'HelpCircle' }); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova ação
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+
+            {/* Formulário nova ação */}
+            {adicionandoQA && (
+              <div className="border border-dashed border-indigo-300 rounded-lg p-4 space-y-3 bg-indigo-50/40">
+                <p className="text-sm font-semibold text-indigo-800">Nova ação rápida</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Rótulo (exibido no chip)</Label>
+                    <Input
+                      value={qaNovaForm.label}
+                      onChange={e => setQaNovaForm({ ...qaNovaForm, label: e.target.value })}
+                      placeholder="Ex: Corrigir tese"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Ícone</Label>
+                    <Select value={qaNovaForm.icone} onValueChange={v => setQaNovaForm({ ...qaNovaForm, icone: v })}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {QA_ICONS_DISPONIVEIS.map(({ nome, label }) => {
+                          const Icon = QA_ICON_MAP[nome] ?? HelpCircle;
+                          return (
+                            <SelectItem key={nome} value={nome}>
+                              <span className="flex items-center gap-2">
+                                <Icon className="h-4 w-4 text-indigo-500" />
+                                {label}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Texto inserido ao clicar</Label>
+                  <Textarea
+                    value={qaNovaForm.texto}
+                    onChange={e => setQaNovaForm({ ...qaNovaForm, texto: e.target.value })}
+                    placeholder="Ex: Quero que você analise minha tese:\n\n"
+                    rows={2}
+                    className="mt-1 text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Use \n para quebras de linha que serão inseridas no campo do aluno.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={criarQA} disabled={salvandoQA}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Criar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setAdicionandoQA(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista de ações */}
+            {quickActions.length === 0 && !adicionandoQA ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                Nenhuma ação cadastrada. Clique em "Nova ação" para começar.
+              </div>
+            ) : (
+              quickActions.map((qa, idx) => {
+                const Icon = QA_ICON_MAP[qa.icone] ?? HelpCircle;
+                const isEditing = editandoQA === qa.id;
+                return (
+                  <div key={qa.id} className={`border rounded-lg p-4 space-y-3 ${qa.ativo ? '' : 'opacity-60'}`}>
+                    {/* Cabeçalho da linha */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {/* Reordenar */}
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            onClick={() => moveQA(qa, -1)}
+                            disabled={idx === 0}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                            title="Mover para cima"
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => moveQA(qa, 1)}
+                            disabled={idx === quickActions.length - 1}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                            title="Mover para baixo"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <Icon className="h-4 w-4 text-indigo-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{qa.label}</p>
+                          <p className="text-xs text-muted-foreground truncate">{qa.texto.replace(/\n/g, '↵')}</p>
+                        </div>
+                        <Badge
+                          variant={qa.ativo ? 'default' : 'outline'}
+                          className={qa.ativo
+                            ? 'bg-green-100 text-green-800 border-green-200 text-xs shrink-0'
+                            : 'text-xs text-muted-foreground shrink-0'}
+                        >
+                          {qa.ativo ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant={qa.ativo ? 'outline' : 'default'}
+                          onClick={() => toggleQAAtivo(qa)}
+                          title={qa.ativo ? 'Desativar' : 'Ativar'}
+                        >
+                          {qa.ativo ? 'Desativar' : 'Ativar'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => isEditing ? setEditandoQA(null) : iniciarEditQA(qa)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => deletarQA(qa)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Formulário inline de edição */}
+                    {isEditing && (
+                      <div className="space-y-3 pt-3 border-t">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">Rótulo</Label>
+                            <Input
+                              value={qaForm.label}
+                              onChange={e => setQaForm({ ...qaForm, label: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Ícone</Label>
+                            <Select value={qaForm.icone} onValueChange={v => setQaForm({ ...qaForm, icone: v })}>
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {QA_ICONS_DISPONIVEIS.map(({ nome, label }) => {
+                                  const IcoOpt = QA_ICON_MAP[nome] ?? HelpCircle;
+                                  return (
+                                    <SelectItem key={nome} value={nome}>
+                                      <span className="flex items-center gap-2">
+                                        <IcoOpt className="h-4 w-4 text-indigo-500" />
+                                        {label}
+                                      </span>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Texto inserido ao clicar</Label>
+                          <Textarea
+                            value={qaForm.texto}
+                            onChange={e => setQaForm({ ...qaForm, texto: e.target.value })}
+                            rows={2}
+                            className="mt-1 text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={salvarQA} disabled={salvandoQA}>
+                            <Save className="h-4 w-4 mr-2" />
+                            Salvar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditandoQA(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </CardContent>
         </Card>

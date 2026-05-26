@@ -58,6 +58,12 @@ export const JarvisConfigManagement = () => {
   const [mensagemSemCreditos,  setMensagemSemCreditos]  = useState('');
   const [loadingMessages,      setLoadingMessages]      = useState(false);
 
+  // Tutor parameters state
+  const [tutorTokensCredito,   setTutorTokensCredito]   = useState('3000');
+  const [tutorMaxTokens,       setTutorMaxTokens]       = useState('1500');
+  const [tutorMaxHistorico,    setTutorMaxHistorico]    = useState('20');
+  const [salvandoTutor,        setSalvandoTutor]        = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     nome: '',
@@ -77,6 +83,7 @@ export const JarvisConfigManagement = () => {
   useEffect(() => {
     loadConfigs();
     loadSystemMessages();
+    loadTutorParams();
   }, []);
 
   const loadConfigs = async () => {
@@ -118,6 +125,46 @@ export const JarvisConfigManagement = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar mensagens do sistema:', error);
+    }
+  };
+
+  const loadTutorParams = async () => {
+    try {
+      const { data } = await supabase
+        .from('jarvis_system_config')
+        .select('chave, valor')
+        .in('chave', ['jarvis_credito_tokens_tutor', 'tutor_max_tokens_resposta', 'tutor_max_historico_msgs']);
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach(r => { map[r.chave] = r.valor; });
+        if (map['jarvis_credito_tokens_tutor'])   setTutorTokensCredito(map['jarvis_credito_tokens_tutor']);
+        if (map['tutor_max_tokens_resposta'])      setTutorMaxTokens(map['tutor_max_tokens_resposta']);
+        if (map['tutor_max_historico_msgs'])       setTutorMaxHistorico(map['tutor_max_historico_msgs']);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar parâmetros do Tutor:', err);
+    }
+  };
+
+  const saveTutorParams = async () => {
+    setSalvandoTutor(true);
+    try {
+      const now = new Date().toISOString();
+      const rows = [
+        { chave: 'jarvis_credito_tokens_tutor', valor: tutorTokensCredito,  atualizado_em: now },
+        { chave: 'tutor_max_tokens_resposta',   valor: tutorMaxTokens,       atualizado_em: now },
+        { chave: 'tutor_max_historico_msgs',    valor: tutorMaxHistorico,    atualizado_em: now },
+      ];
+      const results = await Promise.all(
+        rows.map(r => supabase.from('jarvis_system_config').upsert(r, { onConflict: 'chave' }))
+      );
+      const err = results.find(r => r.error)?.error;
+      if (err) throw err;
+      toast({ title: '✅ Parâmetros do Tutor salvos', className: 'border-green-200 bg-green-50 text-green-900' });
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    } finally {
+      setSalvandoTutor(false);
     }
   };
 
@@ -515,6 +562,72 @@ REGRAS OBRIGATÓRIAS:
 
           <Button onClick={saveSystemMessages} disabled={loadingMessages}>
             {loadingMessages ? 'Salvando...' : 'Salvar Mensagens'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Card de Parâmetros do Tutor Jarvis */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-indigo-600" />
+            Parâmetros do Tutor Jarvis
+          </CardTitle>
+          <CardDescription>
+            Configurações de tokens e histórico usadas pela função <code>tutor-chat</code>.
+            Os créditos são debitados progressivamente conforme tokens acumulados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="tutor_tokens_credito">Tokens por crédito (Tutor)</Label>
+              <Input
+                id="tutor_tokens_credito"
+                type="number"
+                min={100}
+                step={100}
+                value={tutorTokensCredito}
+                onChange={e => setTutorTokensCredito(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Acumula tokens; debita 1 crédito ao ultrapassar este limiar. Padrão: 3000.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="tutor_max_tokens">Máx. tokens por resposta</Label>
+              <Input
+                id="tutor_max_tokens"
+                type="number"
+                min={100}
+                step={100}
+                value={tutorMaxTokens}
+                onChange={e => setTutorMaxTokens(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Limite de tokens que a IA pode usar por resposta. Padrão: 1500.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="tutor_max_historico">Máx. mensagens no histórico</Label>
+              <Input
+                id="tutor_max_historico"
+                type="number"
+                min={4}
+                step={2}
+                value={tutorMaxHistorico}
+                onChange={e => setTutorMaxHistorico(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Janela deslizante de mensagens enviadas ao contexto da IA. Padrão: 20.
+              </p>
+            </div>
+          </div>
+          <Button onClick={saveTutorParams} disabled={salvandoTutor}>
+            {salvandoTutor
+              ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Salvando...</>
+              : <><Check className="h-4 w-4 mr-2" />Salvar parâmetros do Tutor</>
+            }
           </Button>
         </CardContent>
       </Card>
