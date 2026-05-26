@@ -202,7 +202,7 @@ export function ImportacaoLoteAlunos() {
               turma_id: turma.id,
               user_type: 'aluno',
               ativo: true,
-              is_authenticated_student: false,
+              is_authenticated_student: true,
             });
           if (error) throw error;
           criados++;
