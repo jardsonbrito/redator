@@ -71,7 +71,7 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
     if (credits < 1 && essayCredits < 1) {
       toast({
         title: "Créditos insuficientes",
-        description: "Você não tem créditos suficientes. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos.",
+        description: "Contate: 85.99216.0605 para adquirir créditos.",
         variant: "destructive"
       });
       return null;
@@ -159,7 +159,7 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
         errorMessage = 'Você atingiu o limite de 5 consultas por hora. Tente novamente mais tarde.';
       } else if (err.message?.includes('402') || err.message?.includes('insuficientes')) {
         errorTitle = 'Créditos insuficientes';
-        errorMessage = 'Você não tem créditos suficientes. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos.';
+        errorMessage = 'Contate: 85.99216.0605 para adquirir créditos.';
       } else if (err.message?.includes('400') || err.message?.includes('muito longo')) {
         errorTitle = 'Texto inválido';
         errorMessage = 'Seu texto excede o limite de 500 palavras.';

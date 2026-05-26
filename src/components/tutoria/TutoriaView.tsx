@@ -131,7 +131,7 @@ export const TutoriaView = ({ modo, userEmail, onGerou }: TutoriaViewProps) => {
         if (data.creditos_atuais !== undefined) {
           toast({
             title: 'Créditos insuficientes',
-            description: 'Você não tem créditos suficientes. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos.',
+            description: 'Contate: 85.99216.0605 para adquirir créditos.',
             variant: 'destructive',
           });
           return null;
@@ -164,7 +164,7 @@ export const TutoriaView = ({ modo, userEmail, onGerou }: TutoriaViewProps) => {
       if (data.creditos_atuais !== undefined) {
         toast({
           title: 'Créditos insuficientes',
-          description: 'Você não tem créditos suficientes. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos.',
+          description: 'Contate: 85.99216.0605 para adquirir créditos.',
           variant: 'destructive',
         });
         return null;

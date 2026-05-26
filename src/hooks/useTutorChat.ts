@@ -120,7 +120,7 @@ export const useTutorChat = (
 
       if (errMsg.includes('402') || errMsg.includes('insuficientes')) {
         title       = 'Créditos insuficientes';
-        description = 'Você não tem créditos suficientes para continuar. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos.';
+        description = 'Contate: 85.99216.0605 para adquirir créditos.';
       } else if (errMsg.includes('403') || errMsg.includes('desabilitado')) {
         title       = 'Tutor indisponível';
         description = 'O Tutor Jarvis está temporariamente desabilitado.';
