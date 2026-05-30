@@ -19,15 +19,17 @@ export function TutorEmptyState({ onQuickAction }: TutorEmptyStateProps) {
 
   return (
     <div className="flex flex-col h-full px-6 py-8 select-none">
-      {/* Banner hero */}
-      <div className="rounded-3xl bg-gradient-to-br from-purple-700 to-violet-600 text-white p-6 shadow-md mb-8">
-        <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs mb-4">
-          <Sparkles className="w-3.5 h-3.5" />
-          Jarvis — tutor de redação
+      {/* Header leve */}
+      <div className="flex items-center gap-3 mb-8">
+        <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0" />
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800 leading-tight">
+            Jarvis — tutor de redação
+          </h2>
+          <p className="text-sm text-slate-400 mt-0.5 font-normal">
+            Redação na prática, aprovação na certa.
+          </p>
         </div>
-        <h2 className="text-2xl font-semibold leading-tight">
-          Redação na prática, aprovação na certa.
-        </h2>
       </div>
 
       {/* Quick actions */}
@@ -60,8 +62,8 @@ export function TutorEmptyState({ onQuickAction }: TutorEmptyStateProps) {
               );
             })}
           </div>
-          <p className="text-xs text-slate-400 mt-4">
-            Clique em um atalho ou escreva sua pergunta abaixo
+          <p className="text-xs text-slate-400 mt-4 max-w-lg leading-relaxed">
+            Os atalhos são apenas sugestões. Você pode perguntar livremente sobre redação, gramática, ENEM ou enviar um texto para análise.
           </p>
         </div>
       )}
