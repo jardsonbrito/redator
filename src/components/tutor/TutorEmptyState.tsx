@@ -48,12 +48,9 @@ export function TutorEmptyState({ onQuickAction }: TutorEmptyStateProps) {
         </div>
       ) : actions.length > 0 && (
         <div>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               Atalhos rápidos
-            </p>
-            <p className="hidden sm:block text-[12px] text-slate-400">
-              Escolha um ponto de partida ou pergunte livremente.
             </p>
           </div>
 
