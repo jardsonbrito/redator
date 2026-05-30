@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Plus, Trash2, MessageSquare, Loader2 } from 'lucide-react';
-import { JarvisIcon } from '@/components/icons/JarvisIcon';
 import type { TutorConversa } from '@/hooks/useTutorConversas';
 import { cn } from '@/lib/utils';
 import {
@@ -61,17 +60,7 @@ export function TutorSidebar({
     <aside className="w-[240px] flex-shrink-0 border-r border-slate-200 bg-white flex flex-col h-full">
       {/* Cabeçalho */}
       <div className="px-4 pt-5 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-            <div className="w-5 h-5">
-              <JarvisIcon />
-            </div>
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-semibold text-slate-900 text-sm leading-tight">Tutor Jarvis</h1>
-            <p className="text-[11px] text-slate-500 mt-0.5 truncate">Jarvis — tutor de redação</p>
-          </div>
-        </div>
+        <h1 className="font-semibold text-slate-900 text-sm">Jarvis</h1>
       </div>
 
       {/* Botão nova conversa */}

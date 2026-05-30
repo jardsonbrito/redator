@@ -44,6 +44,12 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     const homeHref = isProfessorPath ? '/professor/dashboard' : '/app';
     const crumbs: BreadcrumbItem[] = [{ label: 'Início', href: homeHref }];
 
+    // Sub-rotas que não devem gerar nível próprio no breadcrumb
+    const pathOverrides: Record<string, BreadcrumbItem[]> = {
+      '/jarvis/tutor': [{ label: 'Início', href: homeHref }, { label: 'Jarvis' }],
+    };
+    if (pathOverrides[pathname]) return pathOverrides[pathname];
+
     // Mapeamento de rotas para labels
     const routeLabels: Record<string, string> = {
       'exercicios': 'Exercícios',
