@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { History, Sparkles, PenLine, ScanSearch, X, GraduationCap, Lock } from "lucide-react";
+import { History, Sparkles, PenLine, ScanSearch, X, GraduationCap, Lock, ChevronDown } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import { cn } from "@/lib/utils";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -10,49 +10,33 @@ import { useToast } from "@/hooks/use-toast";
 const JARVIS_BLOQUEADO_MSG =
   'O Jarvis não está disponível no seu plano atual. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos e liberar o uso.';
 
-const actions = [
-  {
-    label: "Analisar minha redação",
-    icon: ScanSearch,
-    href: "/jarvis?modoIndex=0",
-  },
-  {
-    label: "Melhorar meu texto",
-    icon: Sparkles,
-    href: "/jarvis?modoIndex=1",
-  },
-  {
-    label: "Me ajudar a começar",
-    icon: PenLine,
-    href: "/jarvis?modoIndex=2",
-  },
-  {
-    label: "Tutor Jarvis",
-    icon: GraduationCap,
-    href: "/jarvis/tutor",
-  },
-  {
-    label: "Ver histórico",
-    icon: History,
-    href: "/jarvis?view=historico",
-  },
+const extraActions = [
+  { label: "Analisar minha redação", icon: ScanSearch, href: "/jarvis?modoIndex=0" },
+  { label: "Melhorar meu texto",     icon: Sparkles,   href: "/jarvis?modoIndex=1" },
+  { label: "Me ajudar a começar",    icon: PenLine,    href: "/jarvis?modoIndex=2" },
+  { label: "Ver histórico",          icon: History,    href: "/jarvis?view=historico" },
 ];
 
 export const JarvisFloatingButton = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const navigate             = useNavigate();
-  const { toast }            = useToast();
-  const { studentData }                       = useStudentAuth();
-  const { isFeatureEnabled, isLoading }       = usePlanFeatures(studentData.email ?? '');
-  const jarvisDisponivel                      = !isLoading && isFeatureEnabled('jarvis');
-  const jarvisBloqueado                       = !isLoading && !isFeatureEnabled('jarvis');
+  const [isOpen, setIsOpen]           = useState(false);
+  const [collapseOpen, setCollapseOpen] = useState(false);
+  const navigate                      = useNavigate();
+  const { toast }                     = useToast();
+  const { studentData }               = useStudentAuth();
+  const { isFeatureEnabled, isLoading } = usePlanFeatures(studentData.email ?? '');
+  const jarvisBloqueado               = !isLoading && !isFeatureEnabled('jarvis');
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setCollapseOpen(false);
+  };
 
   const handleAction = (href: string) => {
     if (jarvisBloqueado) {
       toast({ title: 'Jarvis indisponível', description: JARVIS_BLOQUEADO_MSG, variant: 'destructive' });
       return;
     }
-    setIsOpen(false);
+    handleClose();
     navigate(href);
   };
 
@@ -62,7 +46,7 @@ export const JarvisFloatingButton = () => {
       {isOpen && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
+          onClick={handleClose}
           aria-hidden="true"
         />
       )}
@@ -80,14 +64,11 @@ export const JarvisFloatingButton = () => {
           )}
           style={{ minWidth: "220px" }}
         >
-          {/* Cabeçalho do painel */}
+          {/* Cabeçalho — só texto, sem ícone */}
           <div className="flex items-center justify-between px-4 py-3 bg-indigo-700 text-white">
-            <div className="flex items-center gap-2">
-              <JarvisIcon size={18} className="text-white" />
-              <span className="text-sm font-semibold">Jarvis</span>
-            </div>
+            <span className="text-base font-semibold tracking-wide">Jarvis</span>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="text-white/70 hover:text-white transition-colors"
               aria-label="Fechar painel Jarvis"
             >
@@ -95,7 +76,7 @@ export const JarvisFloatingButton = () => {
             </button>
           </div>
 
-          {/* Lista de ações ou mensagem de bloqueio */}
+          {/* Conteúdo */}
           {jarvisBloqueado ? (
             <div className="px-4 py-4 flex flex-col items-center gap-2 text-center">
               <Lock className="w-5 h-5 text-slate-400" />
@@ -105,19 +86,50 @@ export const JarvisFloatingButton = () => {
             </div>
           ) : (
             <div className="py-1">
-              {actions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.href}
-                    onClick={() => handleAction(action.href)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 hover:bg-purple-50 hover:text-indigo-700 transition-colors"
-                  >
-                    <Icon className="w-4 h-4 shrink-0 text-indigo-400" />
-                    {action.label}
-                  </button>
-                );
-              })}
+              {/* Tutor Jarvis — ação principal sempre visível */}
+              <button
+                onClick={() => handleAction("/jarvis/tutor")}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 hover:bg-purple-50 hover:text-indigo-700 transition-colors"
+              >
+                <GraduationCap className="w-4 h-4 shrink-0 text-indigo-400" />
+                Tutor Jarvis
+              </button>
+
+              {/* Toggle de opções extras */}
+              <button
+                onClick={() => setCollapseOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-4 py-1.5 text-xs text-slate-400 hover:text-indigo-500 transition-colors border-t border-slate-100"
+              >
+                <span>Mais opções</span>
+                <ChevronDown
+                  className={cn(
+                    "w-3.5 h-3.5 transition-transform duration-200",
+                    collapseOpen && "rotate-180"
+                  )}
+                />
+              </button>
+
+              {/* Opções colapsáveis */}
+              <div
+                className={cn(
+                  "overflow-hidden transition-all duration-200",
+                  collapseOpen ? "max-h-60" : "max-h-0"
+                )}
+              >
+                {extraActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={action.href}
+                      onClick={() => handleAction(action.href)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 hover:bg-purple-50 hover:text-indigo-700 transition-colors"
+                    >
+                      <Icon className="w-4 h-4 shrink-0 text-indigo-400" />
+                      {action.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
