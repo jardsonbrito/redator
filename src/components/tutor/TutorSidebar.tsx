@@ -107,7 +107,7 @@ export function TutorSidebar({
                   'w-2 h-2 rounded-full flex-shrink-0',
                   activeSubtabId === s.id ? 'bg-white/70' : 'bg-purple-400'
                 )} />
-                <span className="leading-snug">Especialista em {s.label}</span>
+                <span className="leading-snug">{s.label}</span>
               </button>
             ))}
           </div>
