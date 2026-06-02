@@ -104,7 +104,7 @@ export function TutorSidebar({
                 )}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
-                {s.label}
+                Especialista em {s.label}
               </button>
             ))}
           </div>

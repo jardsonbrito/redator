@@ -32,7 +32,7 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
             </h1>
             {subtabLabel ? (
               <p className="mt-1 text-sm font-medium text-purple-600">
-                Modo especializado: {subtabLabel}
+                Especialista em {subtabLabel}
               </p>
             ) : (
               <p className="mt-1 text-sm text-slate-400 font-normal">
