@@ -15,28 +15,48 @@ interface TutorChatRequest {
   gerar_sintese?:  boolean;
 }
 
-const SINTESE_PROMPT = `Você é o Tutor Jarvis. Analise o histórico completo desta sessão de tutoria e gere uma Síntese Pedagógica estruturada.
+const SINTESE_PROMPT = `Você é o Tutor Jarvis. Analise o histórico COMPLETO desta sessão de tutoria e gere uma Síntese Pedagógica Detalhada.
 
-Use EXATAMENTE este formato, sem introduções ou comentários adicionais:
+REGRAS OBRIGATÓRIAS:
+- Baseie-se EXCLUSIVAMENTE no que aconteceu nesta conversa. Cite exemplos reais, erros reais, acertos reais.
+- Nunca escreva conclusões genéricas desconectadas da sessão.
+- As dificuldades devem descrever situações observadas, não apenas nomear o problema.
+- O nível de cada habilidade deve refletir o desempenho real demonstrado.
+- Use EXATAMENTE o formato abaixo, sem introduções ou comentários adicionais.
+
+---
 
 ## Síntese da Sessão de Tutoria
 
 **O que foi estudado nesta sessão:**
-[Descreva os tópicos, exercícios e conteúdos abordados]
+[Descreva especificamente os tópicos, exercícios e conteúdos abordados. Mencione exemplos concretos quando houver.]
 
 **O que o aluno demonstrou saber:**
-[Liste os pontos em que o aluno mostrou compreensão ou acerto]
+[Cite habilidades com evidências observadas na conversa. Ex: "Demonstrou segurança ao... como evidenciado quando..."]
 
 **Dificuldades identificadas:**
-[Liste os pontos onde o aluno apresentou dificuldade, erro ou confusão]
+[Descreva cada dificuldade de forma específica e baseada na interação. Ex: "Durante os exercícios realizados, o aluno apresentou dificuldade em X, como evidenciado quando Y."]
+
+**Nível estimado das habilidades trabalhadas:**
+[Para cada habilidade trabalhada durante a sessão, atribua um nível com base no desempenho real observado:]
+🟢 [Habilidade] — Bom domínio
+🟡 [Habilidade] — Em desenvolvimento
+🔴 [Habilidade] — Necessita reforço
+[Inclua apenas as habilidades efetivamente trabalhadas nesta sessão]
 
 **Próximos passos recomendados:**
-[Liste 3 a 5 ações concretas e específicas para o aluno praticar]
+[Liste 2 a 4 ações ESPECÍFICAS e DIRECIONADAS, baseadas diretamente nas dificuldades observadas. Indique o que deve ser estudado ANTES de avançar para conteúdos mais complexos.]
+
+**Participação na sessão:**
+[Preencha com os dados fornecidos no campo DADOS DA SESSÃO abaixo]
+• Tempo de estudo: [duração em minutos]
+• Mensagens trocadas: [total]
+• Exercícios realizados: [estimativa baseada na conversa]
 
 ---
 
 **Orientação ao Professor**
-[Escreva um parágrafo direto ao professor descrevendo o desempenho observado, as dificuldades específicas identificadas e o que deve ser reforçado pedagogicamente. Tom: técnico, objetivo e colaborativo.]`;
+[Parágrafo técnico e objetivo direcionado ao professor. Inclua: habilidades com bom domínio, dificuldades específicas observadas com exemplos concretos da sessão, e recomendação pedagógica precisa sobre o que reforçar. Evite generalidades — cada afirmação deve ter base na interação registrada.]`;
 
 interface OpenAIMessage {
   role:    'system' | 'user' | 'assistant';
@@ -342,20 +362,30 @@ Deno.serve(async (req) => {
     // ── 5. Buscar histórico recente (janela deslizante) ──────────
     const { data: historicoRaw } = await supabase
       .from('jarvis_messages')
-      .select('role, conteudo')
+      .select('role, conteudo, created_at')
       .eq('conversation_id', activeConversationId)
       .eq('status', 'active')
       .in('role', ['user', 'assistant'])
       .order('created_at', { ascending: false })
       .limit(maxHistorico);
 
-    const historico: OpenAIMessage[] = (historicoRaw ?? [])
-      .reverse()
-      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.conteudo }));
+    const historicoOrdenado = (historicoRaw ?? []).reverse();
+    const historico: OpenAIMessage[] = historicoOrdenado
+      .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.conteudo }));
 
     console.log('📚 Histórico:', historico.length, 'mensagens');
 
-    // ── 5b. Contexto pedagógico ──────────────────────────────────────────────
+    // ── 5b. Dados de participação (injetados na síntese) ─────────
+    let dadosSessao = '';
+    if (gerar_sintese && historicoOrdenado.length > 0) {
+      const primeira  = new Date((historicoOrdenado[0] as any).created_at);
+      const ultima    = new Date((historicoOrdenado[historicoOrdenado.length - 1] as any).created_at);
+      const duracaoMin = Math.max(1, Math.round((ultima.getTime() - primeira.getTime()) / 60000));
+      const totalMsgs  = historicoOrdenado.length;
+      dadosSessao = `\nDADOS DA SESSÃO (use no campo Participação na sessão):\n• Tempo de estudo: aproximadamente ${duracaoMin} minuto${duracaoMin !== 1 ? 's' : ''}\n• Mensagens trocadas: ${totalMsgs}\n• Exercícios realizados: [estime com base na conversa]`;
+    }
+
+    // ── 5c. Contexto pedagógico ──────────────────────────────────────────────
     // Síntese ou prompt_tutor configurado: sem injeção extra
     // Sem prompt_tutor mas com subtab: injeta calibração da subtab específica
     // Modo livre: detecta intenção por regex
@@ -423,9 +453,14 @@ Deno.serve(async (req) => {
       messages.push({ role: 'system', content: contextoPedagogico });
     }
 
-    messages.push({ role: 'user', content: mensagem.trim() });
+    // Na síntese, injeta os dados da sessão junto com o trigger
+    const userContent = gerar_sintese && dadosSessao
+      ? `Gere a síntese pedagógica desta sessão.${dadosSessao}`
+      : mensagem.trim();
 
-    console.log('🤖 Chamando OpenAI:', modeloIA, contextoPedagogico ? '+ contexto pedagógico' : '');
+    messages.push({ role: 'user', content: userContent });
+
+    console.log('🤖 Chamando OpenAI:', modeloIA, gerar_sintese ? '+ síntese' : contextoPedagogico ? '+ contexto pedagógico' : '');
     const t0 = Date.now();
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -438,7 +473,7 @@ Deno.serve(async (req) => {
         model:       modeloIA,
         messages,
         temperature: tempIA,
-        max_tokens:  maxTokens,
+        max_tokens:  gerar_sintese ? Math.max(maxTokens, 2000) : maxTokens,
       }),
     });
 
