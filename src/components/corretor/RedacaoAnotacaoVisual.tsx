@@ -676,6 +676,47 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           anno.on('createSelection', onCreateSelection);
           cleanupFunctions.push(() => { if (anno) anno.off('createSelection', onCreateSelection); });
 
+          const onUpdateAnnotation = async (annotation: any) => {
+            const selectorValue = annotation.target?.selector?.value || '';
+            let x: number, y: number, width: number, height: number;
+
+            if (selectorValue.includes('xywh=percent:')) {
+              const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+              if (!match || match.length !== 5) return;
+              const [, xP, yP, wP, hP] = match.map(parseFloat);
+              x = Math.round(xP / 100 * imageDimensions.width);
+              y = Math.round(yP / 100 * imageDimensions.height);
+              width = Math.round(wP / 100 * imageDimensions.width);
+              height = Math.round(hP / 100 * imageDimensions.height);
+            } else if (selectorValue.includes('xywh=pixel:')) {
+              const match = selectorValue.match(/xywh=pixel:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+              if (!match || match.length !== 5) return;
+              [, x, y, width, height] = match.map(parseFloat);
+            } else {
+              return;
+            }
+
+            if (width <= 0 || height <= 0) return;
+
+            try {
+              const { error } = await supabase
+                .from('marcacoes_visuais')
+                .update({ x_start: x, y_start: y, x_end: x + width, y_end: y + height })
+                .eq('id', annotation.id);
+              if (error) throw error;
+              setAnotacoes(prev => prev.map(a =>
+                a.id === annotation.id
+                  ? { ...a, x_start: x, y_start: y, x_end: x + width, y_end: y + height }
+                  : a
+              ));
+            } catch (err) {
+              console.error('Erro ao salvar redimensionamento:', err);
+            }
+          };
+
+          anno.on('updateAnnotation', onUpdateAnnotation);
+          cleanupFunctions.push(() => { if (anno) anno.off('updateAnnotation', onUpdateAnnotation); });
+
           setTimeout(() => {
             const editors = document.querySelectorAll('.r6o-editor, .r6o-widget, .r6o-popup');
             editors.forEach(el => {
@@ -773,6 +814,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             competencia: competenciaFinal,
             cor_marcacao: CORES_COMPETENCIAS[competenciaFinal as keyof typeof CORES_COMPETENCIAS].cor,
             comentario: comentarioTemp.trim(),
+            x_start: bounds.x,
+            y_start: bounds.y,
+            x_end: bounds.x + bounds.width,
+            y_end: bounds.y + bounds.height,
           })
           .eq('id', editandoAnotacao.id);
         if (error) throw error;
