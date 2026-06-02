@@ -1,11 +1,15 @@
 import { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { ExpiredSubscriptionModal } from './student/ExpiredSubscriptionModal';
+import { JarvisFloatingButton } from './JarvisFloatingButton';
 import { useSubscriptionGuard } from '@/hooks/useSubscriptionGuard';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, MessageCircle } from 'lucide-react';
+
+const JARVIS_PATHS = ['/jarvis', '/jarvis/tutor'];
 
 interface ProtectedStudentRouteProps {
   children: ReactNode;
@@ -13,6 +17,8 @@ interface ProtectedStudentRouteProps {
 
 export const ProtectedStudentRoute = ({ children }: ProtectedStudentRouteProps) => {
   const { studentData } = useStudentAuth();
+  const { pathname } = useLocation();
+  const mostrarJarvis = !JARVIS_PATHS.some(p => pathname.startsWith(p));
   const {
     isBlocked,
     shouldShowModal,
@@ -70,6 +76,7 @@ export const ProtectedStudentRoute = ({ children }: ProtectedStudentRouteProps) 
   return (
     <ProtectedRoute>
       {children}
+      {mostrarJarvis && <JarvisFloatingButton />}
       <ExpiredSubscriptionModal
         open={shouldShowModal}
         onOpenChange={(open) => !open && dismissModal()}
