@@ -53,33 +53,47 @@ function MarkdownContent({ text }: { text: string }) {
       continue;
     }
 
-    // Lista ordenada (suporta itens de uma linha e multi-linha)
+    // Lista ordenada (suporta itens de uma linha e multi-linha com linhas em branco internas)
     if (/^\d+\.(\s|$)/.test(line)) {
       const listItems: React.ReactNode[] = [];
       let itemNum = 1;
+
+      // Avança linhas em branco entre itens
+      const skipBlanks = () => {
+        while (i < lines.length && lines[i].trim() === '') i++;
+      };
 
       while (i < lines.length && /^\d+\.(\s|$)/.test(lines[i])) {
         const firstContent = lines[i].replace(/^\d+\.\s*/, '').trim();
         i++;
 
-        // Coleta linhas de continuação do mesmo item
         const contentLines: string[] = [];
         if (firstContent) contentLines.push(firstContent);
 
+        // Coleta linhas até encontrar o próximo \d+. ou fim do bloco
         while (i < lines.length) {
           const cur = lines[i];
-          if (/^\d+\.(\s|$)/.test(cur)) break;          // próximo item
-          if (/^(\s*[-•]\s)/.test(cur)) break;           // lista não-ordenada
-          if (/^#{1,4}\s/.test(cur)) break;              // heading
+
+          // Para em estruturas que não são continuação de item
+          if (/^\d+\.(\s|$)/.test(cur)) break;
+          if (/^(\s*[-•]\s)/.test(cur)) break;
+          if (/^#{1,4}\s/.test(cur)) break;
+
           if (cur.trim() === '') {
-            // linha em branco: verifica se próxima linha é outro item da lista
+            // Linha em branco: espia o que vem depois
             let j = i + 1;
             while (j < lines.length && lines[j].trim() === '') j++;
-            if (j < lines.length && /^\d+\.(\s|$)/.test(lines[j])) {
-              i = j; break;    // avança até o próximo item
+
+            if (j >= lines.length || /^\d+\.(\s|$)/.test(lines[j])) {
+              // Fim do item: avança i até o próximo \d+. (para o outer while continuar)
+              i = j;
+              break;
             }
-            break;             // fim deste item
+            // Conteúdo não-numerado vem depois: linha em branco é interna ao item
+            i++;
+            continue;
           }
+
           contentLines.push(cur.trim());
           i++;
         }
@@ -95,10 +109,11 @@ function MarkdownContent({ text }: { text: string }) {
           </li>
         );
         itemNum++;
+        skipBlanks(); // pula linhas em branco entre itens antes do próximo \d+.
       }
 
       elements.push(
-        <ul key={`ol-${i}`} className="space-y-2 my-2">
+        <ul key={`ol-${i}`} className="space-y-3 my-2">
           {listItems}
         </ul>
       );
@@ -119,10 +134,11 @@ function MarkdownContent({ text }: { text: string }) {
 // ── Componente de mensagem ─────────────────────────────────────────
 
 interface TutorMessageProps {
-  mensagem: TutorMensagem;
+  mensagem:   TutorMensagem;
+  isSintese?: boolean;
 }
 
-export function TutorMessage({ mensagem }: TutorMessageProps) {
+export function TutorMessage({ mensagem, isSintese }: TutorMessageProps) {
   const isUser = mensagem.role === 'user';
   const [copied, setCopied] = useState(false);
 
@@ -164,18 +180,20 @@ export function TutorMessage({ mensagem }: TutorMessageProps) {
           <MarkdownContent text={mensagem.conteudo} />
         </div>
 
-        {/* Botão copiar — visível no hover */}
+        {/* Botão copiar — sempre visível na síntese, hover nos demais */}
         <button
           onClick={handleCopy}
           className={cn(
-            'self-start flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 transition-colors px-1 mt-0.5',
-            'opacity-0 group-hover:opacity-100',
+            'self-start flex items-center gap-1 transition-colors px-2 py-1 mt-1 rounded-lg',
+            isSintese
+              ? 'text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100'
+              : 'text-[10px] text-slate-400 hover:text-slate-600 opacity-0 group-hover:opacity-100 px-1',
           )}
-          title="Copiar resposta"
+          title="Copiar relatório"
         >
           {copied
-            ? <><Check className="w-3 h-3 text-green-500" /> Copiado</>
-            : <><Copy className="w-3 h-3" /> Copiar</>
+            ? <><Check className={cn('w-3 h-3', isSintese ? 'text-green-600' : 'text-green-500')} /> {isSintese ? 'Copiado!' : 'Copiado'}</>
+            : <><Copy className="w-3 h-3" /> {isSintese ? 'Copiar relatório' : 'Copiar'}</>
           }
         </button>
       </div>

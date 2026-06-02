@@ -12,7 +12,31 @@ interface TutorChatRequest {
   mensagem:        string;
   modulo?:         string;
   subtab_id?:      string | null;
+  gerar_sintese?:  boolean;
 }
+
+const SINTESE_PROMPT = `Você é o Tutor Jarvis. Analise o histórico completo desta sessão de tutoria e gere uma Síntese Pedagógica estruturada.
+
+Use EXATAMENTE este formato, sem introduções ou comentários adicionais:
+
+## Síntese da Sessão de Tutoria
+
+**O que foi estudado nesta sessão:**
+[Descreva os tópicos, exercícios e conteúdos abordados]
+
+**O que o aluno demonstrou saber:**
+[Liste os pontos em que o aluno mostrou compreensão ou acerto]
+
+**Dificuldades identificadas:**
+[Liste os pontos onde o aluno apresentou dificuldade, erro ou confusão]
+
+**Próximos passos recomendados:**
+[Liste 3 a 5 ações concretas e específicas para o aluno praticar]
+
+---
+
+**Orientação ao Professor**
+[Escreva um parágrafo direto ao professor descrevendo o desempenho observado, as dificuldades específicas identificadas e o que deve ser reforçado pedagogicamente. Tom: técnico, objetivo e colaborativo.]`;
 
 interface OpenAIMessage {
   role:    'system' | 'user' | 'assistant';
@@ -176,6 +200,7 @@ Deno.serve(async (req) => {
       mensagem,
       modulo = 'tutor',
       subtab_id: subtabIdReq = null,
+      gerar_sintese = false,
     }: TutorChatRequest = await req.json();
 
     if (!aluno_email?.trim() || !mensagem?.trim()) {
@@ -284,6 +309,12 @@ Deno.serve(async (req) => {
       activeSubtabId = (convExiste as any).subtab_id ?? null;
     }
 
+    // ── 4.3. Síntese da sessão ───────────────────────────────────
+    if (gerar_sintese) {
+      systemPrompt = SINTESE_PROMPT;
+      console.log('📋 Gerando síntese da sessão');
+    }
+
     // ── 4.5. Carregar prompt_tutor da subtab (modo especializado) ──
     let promptTutorConfigurado = false;
     if (activeSubtabId) {
@@ -324,10 +355,10 @@ Deno.serve(async (req) => {
     console.log('📚 Histórico:', historico.length, 'mensagens');
 
     // ── 5b. Contexto pedagógico ──────────────────────────────────────────────
-    // Com prompt_tutor configurado: não injeta (admin controla tudo via prompt)
+    // Síntese ou prompt_tutor configurado: sem injeção extra
     // Sem prompt_tutor mas com subtab: injeta calibração da subtab específica
     // Modo livre: detecta intenção por regex
-    const contextoPedagogicoPromise = promptTutorConfigurado
+    const contextoPedagogicoPromise = (gerar_sintese || promptTutorConfigurado)
       ? Promise.resolve(null)
       : buscarContextoPedagogico(supabase, mensagem.trim(), activeSubtabId);
 

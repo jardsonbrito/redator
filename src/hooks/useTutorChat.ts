@@ -12,11 +12,12 @@ export interface TutorMensagem {
 }
 
 interface UseTutorChatReturn {
-  mensagens:        TutorMensagem[];
-  isLoading:        boolean;
-  enviar:           (texto: string) => Promise<string | null>;
+  mensagens:         TutorMensagem[];
+  isLoading:         boolean;
+  enviar:            (texto: string) => Promise<string | null>;
+  gerarSintese:      () => Promise<void>;
   creditosRestantes: number;
-  acumuladorTokens: number;
+  acumuladorTokens:  number;
 }
 
 export const useTutorChat = (
@@ -135,5 +136,30 @@ export const useTutorChat = (
     }
   };
 
-  return { mensagens, isLoading, enviar, creditosRestantes: credits, acumuladorTokens };
+  const gerarSintese = async (): Promise<void> => {
+    if (!conversationId || isLoading || mensagens.length === 0) return;
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('tutor-chat', {
+        body: {
+          aluno_email:     alunoEmail,
+          conversation_id: conversationId,
+          mensagem:        '__sintese__',
+          modulo:          'tutor',
+          subtab_id:       subtabId ?? null,
+          gerar_sintese:   true,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        await carregarMensagens(conversationId);
+      }
+    } catch (err) {
+      console.error('Erro ao gerar síntese:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { mensagens, isLoading, enviar, gerarSintese, creditosRestantes: credits, acumuladorTokens };
 };
