@@ -48,17 +48,32 @@ function detectarIntencaoPedagogica(mensagem: string): 'introducao' | 'desenvolv
 async function buscarContextoPedagogico(
   supabase: ReturnType<typeof createClient>,
   mensagem: string,
+  forcedSubtabId?: string | null,
 ): Promise<string | null> {
-  const intencao = detectarIntencaoPedagogica(mensagem);
-  if (!intencao) return null;
-
   try {
-    const { data: subtab } = await supabase
-      .from('jarvis_tutoria_subtabs')
-      .select('id, label')
-      .eq('nome', intencao)
-      .eq('habilitada', true)
-      .single();
+    let subtab: { id: string; label: string } | null = null;
+
+    if (forcedSubtabId) {
+      // Modo especialista: carrega subtab diretamente pelo id
+      const { data } = await supabase
+        .from('jarvis_tutoria_subtabs')
+        .select('id, label')
+        .eq('id', forcedSubtabId)
+        .eq('habilitada', true)
+        .single();
+      subtab = data ?? null;
+    } else {
+      // Modo conversacional: detecta intenção por regex
+      const intencao = detectarIntencaoPedagogica(mensagem);
+      if (!intencao) return null;
+      const { data } = await supabase
+        .from('jarvis_tutoria_subtabs')
+        .select('id, label')
+        .eq('nome', intencao)
+        .eq('habilitada', true)
+        .single();
+      subtab = data ?? null;
+    }
 
     if (!subtab) return null;
 
@@ -128,7 +143,8 @@ async function buscarContextoPedagogico(
       }
     }
 
-    console.log(`📚 Contexto pedagógico injetado: ${intencao} (~${estimarTokens(bloco)} tokens)`);
+    const modo = forcedSubtabId ? subtab.label : subtab.label;
+    console.log(`📚 Contexto pedagógico injetado: ${modo} (~${estimarTokens(bloco)} tokens)`);
     return bloco;
   } catch (err) {
     console.warn('⚠️ Erro ao buscar contexto pedagógico:', err);
@@ -237,16 +253,23 @@ Deno.serve(async (req) => {
       ?? 'Você é o Tutor Jarvis, professor particular de português e redação ENEM. Ensine com profundidade, corrija com justificativa e estimule reflexão.';
 
     // ── 3.5. Carregar prompt_tutor da subtab (modo especializado) ──
+    let promptTutorConfigurado = false;
     if (activeSubtabId) {
       try {
         const { data: calibSubtab } = await supabase
           .from('jarvis_tutoria_calibracao')
-          .select('prompt_tutor')
+          .select('prompt_tutor, jarvis_tutoria_subtabs!inner(label)')
           .eq('subtab_id', activeSubtabId)
           .single();
+        const subtabLabel = (calibSubtab as any)?.jarvis_tutoria_subtabs?.label ?? 'etapa';
         if (calibSubtab?.prompt_tutor?.trim()) {
           systemPrompt = calibSubtab.prompt_tutor.trim();
-          console.log(`🎯 Modo especializado ativo (subtab: ${activeSubtabId})`);
+          promptTutorConfigurado = true;
+          console.log(`🎯 prompt_tutor configurado: ${subtabLabel}`);
+        } else {
+          // Sem prompt_tutor: anuncia o modo no prompt padrão
+          systemPrompt += `\n\nMODO ESPECIALISTA — ${subtabLabel.toUpperCase()}\nVocê está atuando exclusivamente como especialista em ${subtabLabel} de redação ENEM. Todas as suas respostas, exemplos, exercícios e correções devem girar em torno desta etapa. Quando o aluno enviar um texto ou dúvida, analise sempre sob a ótica de ${subtabLabel}.`;
+          console.log(`🎯 Modo especialista sem prompt_tutor: ${subtabLabel} (usando fallback)`);
         }
       } catch (err) {
         console.warn('⚠️ Erro ao carregar prompt_tutor:', err);
@@ -300,11 +323,13 @@ Deno.serve(async (req) => {
 
     console.log('📚 Histórico:', historico.length, 'mensagens');
 
-    // ── 5b. Contexto pedagógico: só injeta se NÃO tiver modo especializado ──
-    // Com modo especializado, o prompt_tutor já encapsula todo o contexto
-    const contextoPedagogicoPromise = activeSubtabId
+    // ── 5b. Contexto pedagógico ──────────────────────────────────────────────
+    // Com prompt_tutor configurado: não injeta (admin controla tudo via prompt)
+    // Sem prompt_tutor mas com subtab: injeta calibração da subtab específica
+    // Modo livre: detecta intenção por regex
+    const contextoPedagogicoPromise = promptTutorConfigurado
       ? Promise.resolve(null)
-      : buscarContextoPedagogico(supabase, mensagem.trim());
+      : buscarContextoPedagogico(supabase, mensagem.trim(), activeSubtabId);
 
     // ── 6. Pré-check de créditos ─────────────────────────────────
     const { data: acumuladorRow } = await supabase
