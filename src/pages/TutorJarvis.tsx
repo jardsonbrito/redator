@@ -8,6 +8,14 @@ import { TutorChat } from '@/components/tutor/TutorChat';
 import { cn } from '@/lib/utils';
 import { usePlanFeatures } from '@/hooks/usePlanFeatures';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SubtabSimples {
+  id:        string;
+  label:     string;
+  habilitada: boolean;
+  ordem:     number;
+}
 
 const JARVIS_BLOQUEADO_MSG =
   'O Jarvis não está disponível no seu plano atual. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos e liberar o uso.';
@@ -24,6 +32,18 @@ export default function TutorJarvis() {
   const jarvisBloqueado                                   = !planLoading && !isFeatureEnabled('jarvis');
 
   const { conversas, loading, refetch, deletar } = useTutorConversas(alunoEmail);
+  const [subtabs, setSubtabs]                     = useState<SubtabSimples[]>([]);
+  const [activeSubtabId, setActiveSubtabId]       = useState<string | null>(null);
+  const [activeSubtabLabel, setActiveSubtabLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from('jarvis_tutoria_subtabs')
+      .select('id, label, habilitada, ordem')
+      .eq('habilitada', true)
+      .order('ordem')
+      .then(({ data }) => { if (data) setSubtabs(data as SubtabSimples[]); });
+  }, []);
 
   useEffect(() => {
     if (jarvisBloqueado && alunoEmail) {
@@ -33,16 +53,29 @@ export default function TutorJarvis() {
 
   const handleSelectConversa = (id: string) => {
     setActiveId(id);
+    setActiveSubtabId(null);
+    setActiveSubtabLabel(null);
     setSidebarOpen(false);
   };
 
   const handleNovaConversa = () => {
     setActiveId(null);
+    setActiveSubtabId(null);
+    setActiveSubtabLabel(null);
+    setSidebarOpen(false);
+  };
+
+  const handleSelecionarSubtab = (subtabId: string, subtabLabel: string) => {
+    setActiveId(null);
+    setActiveSubtabId(subtabId);
+    setActiveSubtabLabel(subtabLabel);
     setSidebarOpen(false);
   };
 
   const handleConversationCreated = (novoId: string) => {
     setActiveId(novoId);
+    // subtabId já foi enviado na criação — mantém label para exibição, limpa o id pendente
+    setActiveSubtabId(null);
     refetch();
   };
 
@@ -91,6 +124,9 @@ export default function TutorJarvis() {
               onNew={handleNovaConversa}
               onDeletar={handleDeletar}
               creditosRestantes={creditosRestantes}
+              subtabs={subtabs.filter(s => s.habilitada)}
+              activeSubtabId={activeSubtabId}
+              onSelectSubtab={handleSelecionarSubtab}
             />
           </div>
 
@@ -109,6 +145,8 @@ export default function TutorJarvis() {
               conversationId={activeConversationId}
               onConversationCreated={handleConversationCreated}
               onCreditosUpdate={setCreditosRestantes}
+              subtabId={activeSubtabId}
+              subtabLabel={activeSubtabLabel}
             />
           </div>
         </div>

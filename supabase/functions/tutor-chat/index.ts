@@ -11,6 +11,7 @@ interface TutorChatRequest {
   conversation_id: string | null;
   mensagem:        string;
   modulo?:         string;
+  subtab_id?:      string | null;
 }
 
 interface OpenAIMessage {
@@ -158,6 +159,7 @@ Deno.serve(async (req) => {
       conversation_id,
       mensagem,
       modulo = 'tutor',
+      subtab_id: subtabIdReq = null,
     }: TutorChatRequest = await req.json();
 
     if (!aluno_email?.trim() || !mensagem?.trim()) {
@@ -231,17 +233,35 @@ Deno.serve(async (req) => {
       cfg['jarvis_credito_tokens_default']   ??
       '3000'
     );
-    const systemPrompt = cfg['tutor_system_prompt']
+    let systemPrompt = cfg['tutor_system_prompt']
       ?? 'Você é o Tutor Jarvis, professor particular de português e redação ENEM. Ensine com profundidade, corrija com justificativa e estimule reflexão.';
+
+    // ── 3.5. Carregar prompt_tutor da subtab (modo especializado) ──
+    if (activeSubtabId) {
+      try {
+        const { data: calibSubtab } = await supabase
+          .from('jarvis_tutoria_calibracao')
+          .select('prompt_tutor')
+          .eq('subtab_id', activeSubtabId)
+          .single();
+        if (calibSubtab?.prompt_tutor?.trim()) {
+          systemPrompt = calibSubtab.prompt_tutor.trim();
+          console.log(`🎯 Modo especializado ativo (subtab: ${activeSubtabId})`);
+        }
+      } catch (err) {
+        console.warn('⚠️ Erro ao carregar prompt_tutor:', err);
+      }
+    }
 
     // ── 4. Buscar ou criar conversa ──────────────────────────────
     let activeConversationId = conversation_id;
+    let activeSubtabId: string | null = null;
 
     if (!activeConversationId) {
       const titulo = mensagem.trim().slice(0, 70).replace(/[.!?,;:]+$/, '').trim() || 'Nova conversa';
       const { data: nova, error: novaCfgErr } = await supabase
         .from('jarvis_conversations')
-        .insert({ aluno_id: aluno.id, modulo, titulo, provider: 'openai', modelo: modeloIA })
+        .insert({ aluno_id: aluno.id, modulo, titulo, provider: 'openai', modelo: modeloIA, subtab_id: subtabIdReq })
         .select('id')
         .single();
 
@@ -250,16 +270,18 @@ Deno.serve(async (req) => {
         throw new Error('Erro ao criar conversa');
       }
       activeConversationId = nova.id;
-      console.log('💬 Nova conversa:', activeConversationId);
+      activeSubtabId = subtabIdReq;
+      console.log('💬 Nova conversa:', activeConversationId, activeSubtabId ? `(subtab: ${activeSubtabId})` : '');
     } else {
       const { data: convExiste } = await supabase
         .from('jarvis_conversations')
-        .select('id')
+        .select('id, subtab_id')
         .eq('id', activeConversationId)
         .eq('aluno_id', aluno.id)
         .single();
 
       if (!convExiste) return json({ error: 'Conversa não encontrada' }, 404);
+      activeSubtabId = (convExiste as any).subtab_id ?? null;
     }
 
     // ── 5. Buscar histórico recente (janela deslizante) ──────────
@@ -278,8 +300,11 @@ Deno.serve(async (req) => {
 
     console.log('📚 Histórico:', historico.length, 'mensagens');
 
-    // ── 5b. Buscar contexto pedagógico da base interna ───────────
-    const contextoPedagogicoPromise = buscarContextoPedagogico(supabase, mensagem.trim());
+    // ── 5b. Contexto pedagógico: só injeta se NÃO tiver modo especializado ──
+    // Com modo especializado, o prompt_tutor já encapsula todo o contexto
+    const contextoPedagogicoPromise = activeSubtabId
+      ? Promise.resolve(null)
+      : buscarContextoPedagogico(supabase, mensagem.trim());
 
     // ── 6. Pré-check de créditos ─────────────────────────────────
     const { data: acumuladorRow } = await supabase

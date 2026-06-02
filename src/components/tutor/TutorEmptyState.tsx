@@ -12,9 +12,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 interface TutorEmptyStateProps {
   onQuickAction: (texto: string) => void;
+  subtabLabel?:  string | null;
 }
 
-export function TutorEmptyState({ onQuickAction }: TutorEmptyStateProps) {
+export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateProps) {
   const { actions, isLoading } = useTutorQuickActions();
 
   return (
@@ -29,9 +30,15 @@ export function TutorEmptyState({ onQuickAction }: TutorEmptyStateProps) {
             <h1 className="text-[22px] leading-tight font-semibold tracking-[-0.02em] text-slate-950">
               Jarvis — tutor de redação
             </h1>
-            <p className="mt-1 text-sm text-slate-400 font-normal">
-              Redação na prática, aprovação na certa.
-            </p>
+            {subtabLabel ? (
+              <p className="mt-1 text-sm font-medium text-purple-600">
+                Modo especializado: {subtabLabel}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-slate-400 font-normal">
+                Redação na prática, aprovação na certa.
+              </p>
+            )}
           </div>
         </div>
       </header>

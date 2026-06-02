@@ -48,6 +48,7 @@ interface Calibracao {
   linhas_max_estimadas: number | null;
   regras_composicao: any;
   instrucoes_geracao: string;
+  prompt_tutor: string;
   validacao_automatica: boolean;
   max_tentativas_geracao: number;
   criterios_celula_argumentativa: CriteriosCelulaArgumentativa | null;
@@ -403,6 +404,7 @@ export const JarvisTutoriaConfiguracao = () => {
           palavras_max: calibracao.palavras_max,
           linhas_max_estimadas: calibracao.linhas_max_estimadas,
           instrucoes_geracao: calibracao.instrucoes_geracao,
+          prompt_tutor: calibracao.prompt_tutor,
           validacao_automatica: calibracao.validacao_automatica,
           max_tentativas_geracao: calibracao.max_tentativas_geracao,
           criterios_celula_argumentativa: calibracao.criterios_celula_argumentativa,
@@ -1042,6 +1044,29 @@ export const JarvisTutoriaConfiguracao = () => {
                         rows={4}
                         placeholder="Instruções adicionais para calibrar o estilo e a estrutura da resposta..."
                         className="mt-1"
+                      />
+                    </div>
+
+                    {/* Prompt Tutor — modo especializado de conversa */}
+                    <div>
+                      <Separator className="my-2" />
+                      <Label className="font-semibold text-purple-800">
+                        Prompt Tutor — Modo Especializado
+                      </Label>
+                      <p className="text-xs text-slate-500 mt-0.5 mb-1">
+                        System prompt usado quando o aluno inicia uma conversa especializada nesta etapa.
+                        Define comportamento, metodologia, tom, exercícios e progressão pedagógica.
+                        Deixe vazio para usar o prompt padrão do Jarvis.
+                      </p>
+                      <Textarea
+                        value={editandoCalibracao.prompt_tutor ?? ''}
+                        onChange={(e) => setEditandoCalibracao({
+                          ...editandoCalibracao,
+                          prompt_tutor: e.target.value
+                        })}
+                        rows={10}
+                        placeholder={`Você é o Jarvis, tutor especializado em ${editandoCalibracao.subtab_nome}...\n\nDefina aqui:\n- Comportamento e tom\n- Metodologia de ensino\n- Como propor e corrigir exercícios\n- Progressão pedagógica\n- Perguntas diagnósticas`}
+                        className="mt-1 font-mono text-xs"
                       />
                     </div>
 

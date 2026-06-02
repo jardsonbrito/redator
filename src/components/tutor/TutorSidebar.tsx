@@ -13,6 +13,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+interface SubtabItem {
+  id:    string;
+  label: string;
+}
+
 interface TutorSidebarProps {
   conversas:            TutorConversa[];
   loading:              boolean;
@@ -21,6 +26,9 @@ interface TutorSidebarProps {
   onNew:                () => void;
   onDeletar:            (id: string) => Promise<void>;
   creditosRestantes?:   number;
+  subtabs?:             SubtabItem[];
+  activeSubtabId?:      string | null;
+  onSelectSubtab?:      (id: string, label: string) => void;
 }
 
 export function TutorSidebar({
@@ -31,6 +39,9 @@ export function TutorSidebar({
   onNew,
   onDeletar,
   creditosRestantes,
+  subtabs = [],
+  activeSubtabId,
+  onSelectSubtab,
 }: TutorSidebarProps) {
   const [hoveredId, setHoveredId]        = useState<string | null>(null);
   const [deletandoId, setDeletandoId]    = useState<string | null>(null);
@@ -73,6 +84,32 @@ export function TutorSidebar({
           Nova conversa
         </button>
       </div>
+
+      {/* Modos especializados */}
+      {subtabs.length > 0 && onSelectSubtab && (
+        <div className="px-3 pb-3">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-1 mb-1.5">
+            Modo especializado
+          </p>
+          <div className="space-y-1">
+            {subtabs.map(s => (
+              <button
+                key={s.id}
+                onClick={() => onSelectSubtab(s.id, s.label)}
+                className={cn(
+                  'w-full h-9 rounded-lg text-xs font-medium px-3 flex items-center gap-2 border transition-all',
+                  activeSubtabId === s.id
+                    ? 'bg-purple-50 border-purple-200 text-purple-800'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-purple-200 hover:bg-purple-50/50'
+                )}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Label */}
       {conversas.length > 0 && (

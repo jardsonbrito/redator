@@ -23,6 +23,7 @@ export const useTutorChat = (
   alunoEmail:            string,
   conversationId:        string | null,
   onConversationCreated?: (id: string) => void,
+  subtabId?:             string | null,
 ): UseTutorChatReturn => {
   const [mensagens, setMensagens]           = useState<TutorMensagem[]>([]);
   const [isLoading, setIsLoading]           = useState(false);
@@ -73,6 +74,7 @@ export const useTutorChat = (
           conversation_id: conversationId,
           mensagem:        texto.trim(),
           modulo:          'tutor',
+          subtab_id:       subtabId ?? null,
         },
       });
 

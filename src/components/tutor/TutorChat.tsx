@@ -9,6 +9,8 @@ interface TutorChatProps {
   conversationId:        string | null;
   onConversationCreated: (id: string) => void;
   onCreditosUpdate?:     (creditos: number) => void;
+  subtabId?:             string | null;
+  subtabLabel?:          string | null;
 }
 
 export function TutorChat({
@@ -16,6 +18,8 @@ export function TutorChat({
   conversationId,
   onConversationCreated,
   onCreditosUpdate,
+  subtabId,
+  subtabLabel,
 }: TutorChatProps) {
   const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -24,6 +28,7 @@ export function TutorChat({
     alunoEmail,
     conversationId,
     (novoId) => { onConversationCreated(novoId); },
+    subtabId,
   );
 
   useEffect(() => {
@@ -56,7 +61,7 @@ export function TutorChat({
       {/* Área de mensagens com scroll */}
       <div className="flex-1 overflow-y-auto">
         {semMensagens ? (
-          <TutorEmptyState onQuickAction={handleQuickAction} />
+          <TutorEmptyState onQuickAction={handleQuickAction} subtabLabel={subtabLabel} />
         ) : (
           <div className="py-6">
             {mensagens.map(msg => (
