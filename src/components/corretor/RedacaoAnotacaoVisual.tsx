@@ -285,6 +285,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const imageDimensionsRef = useRef({ width: 0, height: 0 });
   const miniCardHoverRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedAnnotationIdRef = useRef<string | null>(null);
+  const isSuppressClickRef = useRef(false);
 
   // Manter refs sincronizados
   useEffect(() => { anotacoesRef.current = anotacoes; }, [anotacoes]);
@@ -588,37 +590,40 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           ]
         });
 
-        // Hover para mini-card (funciona em ambos os modos)
+        // Hover: entra em modo edição para mostrar alças de redimensionamento
         const onMouseEnter = (annotation: any) => {
-          if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-          const pos = calcMiniCardPosition(annotation.id);
-          if (pos) {
-            setMiniCard(prev => prev?.pinned ? prev : { id: annotation.id, pinned: false, editing: false, position: pos });
-          }
+          selectedAnnotationIdRef.current = annotation.id;
+          isSuppressClickRef.current = true;
+          annotoriousRef.current?.selectAnnotation(annotation.id);
         };
 
-        const onMouseLeave = (annotation: any) => {
-          hideTimerRef.current = setTimeout(() => {
-            if (!miniCardHoverRef.current) {
-              setMiniCard(prev => (!prev?.pinned && prev?.id === annotation.id) ? null : prev);
-            }
-          }, 250);
+        const onMouseLeave = () => {
+          // Mantém alças visíveis; deselect ocorre ao clicar fora
         };
 
+        // 1º clique: suprimido (disparado pelo selectAnnotation do hover)
+        // Clique subsequente na anotação já selecionada: tratado pelo onDocMouseUp abaixo
         const onClickAnnotation = (annotation: any) => {
+          if (isSuppressClickRef.current) {
+            isSuppressClickRef.current = false;
+            return;
+          }
           if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
           const pos = calcMiniCardPosition(annotation.id);
           if (pos) {
             setMiniCard({ id: annotation.id, pinned: true, editing: false, position: pos });
           }
-          // Destaque na lista inferior também
           if (annotation.id) destacarComentario(annotation.id);
         };
 
+        anno.on('mouseEnterAnnotation', onMouseEnter);
+        anno.on('mouseLeaveAnnotation', onMouseLeave);
         anno.on('clickAnnotation', onClickAnnotation);
 
         cleanupFunctions.push(() => {
           if (anno) {
+            anno.off('mouseEnterAnnotation', onMouseEnter);
+            anno.off('mouseLeaveAnnotation', onMouseLeave);
             anno.off('clickAnnotation', onClickAnnotation);
           }
         });
@@ -712,6 +717,79 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
           anno.on('updateAnnotation', onUpdateAnnotation);
           cleanupFunctions.push(() => { if (anno) anno.off('updateAnnotation', onUpdateAnnotation); });
+
+          // ---- Salvar redimensionamento: lê geometria direto do SVG no mouseUp ----
+          const salvarRedimensionamento = async (annotationId: string) => {
+            const editableElem = document.querySelector('.a9s-annotation.editable.selected') as SVGElement | null;
+            if (!editableElem || editableElem.getAttribute('data-id') !== annotationId) return;
+            const innerRect = editableElem.querySelector('.a9s-inner') as SVGRectElement | null;
+            if (!innerRect) return;
+            const svgX = parseFloat(innerRect.getAttribute('x') || '0');
+            const svgY = parseFloat(innerRect.getAttribute('y') || '0');
+            const svgW = parseFloat(innerRect.getAttribute('width') || '0');
+            const svgH = parseFloat(innerRect.getAttribute('height') || '0');
+            if (svgW <= 0 || svgH <= 0) return;
+            const naturalW = imageRef.current?.naturalWidth || imageDimensions.width;
+            const naturalH = imageRef.current?.naturalHeight || imageDimensions.height;
+            const dims = imageDimensionsRef.current;
+            const x = Math.round(svgX / naturalW * dims.width);
+            const y = Math.round(svgY / naturalH * dims.height);
+            const w = Math.round(svgW / naturalW * dims.width);
+            const h = Math.round(svgH / naturalH * dims.height);
+            const stored = anotacoesRef.current.find(a => a.id === annotationId);
+            if (!stored) return;
+            if (stored.x_start === x && stored.y_start === y && stored.x_end === x + w && stored.y_end === y + h) return;
+            try {
+              const { error } = await supabase
+                .from('marcacoes_visuais')
+                .update({ x_start: x, y_start: y, x_end: x + w, y_end: y + h })
+                .eq('id', annotationId);
+              if (error) throw error;
+              setAnotacoes(prev => prev.map(a =>
+                a.id === annotationId
+                  ? { ...a, x_start: x, y_start: y, x_end: x + w, y_end: y + h }
+                  : a
+              ));
+            } catch (err) {
+              console.error('Erro ao salvar redimensionamento:', err);
+            }
+          };
+
+          const docPos = { x: 0, y: 0 };
+          const onDocMouseDown = (evt: MouseEvent) => {
+            docPos.x = evt.clientX;
+            docPos.y = evt.clientY;
+          };
+          const onDocMouseUp = async (evt: MouseEvent) => {
+            const dx = Math.abs(evt.clientX - docPos.x);
+            const dy = Math.abs(evt.clientY - docPos.y);
+            const isClick = dx < 5 && dy < 5;
+            const annotId = selectedAnnotationIdRef.current;
+            if (!annotId) return;
+            if (!isClick) {
+              // Drag terminou — salva nova geometria
+              await salvarRedimensionamento(annotId);
+            } else {
+              // Clique curto: se for na anotação já selecionada, abre mini-card
+              const target = evt.target as Element;
+              const annotElem = target?.closest('.a9s-annotation');
+              if (annotElem && annotElem.getAttribute('data-id') === annotId) {
+                const pos = calcMiniCardPosition(annotId);
+                if (pos) {
+                  setMiniCard({ id: annotId, pinned: true, editing: false, position: pos });
+                  destacarComentario(annotId);
+                }
+              } else if (!annotElem) {
+                selectedAnnotationIdRef.current = null;
+              }
+            }
+          };
+          document.addEventListener('mousedown', onDocMouseDown);
+          document.addEventListener('mouseup', onDocMouseUp);
+          cleanupFunctions.push(() => {
+            document.removeEventListener('mousedown', onDocMouseDown);
+            document.removeEventListener('mouseup', onDocMouseUp);
+          });
 
           setTimeout(() => {
             const editors = document.querySelectorAll('.r6o-editor, .r6o-widget, .r6o-popup');
