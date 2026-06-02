@@ -249,32 +249,9 @@ Deno.serve(async (req) => {
       cfg['jarvis_credito_tokens_default']   ??
       '3000'
     );
-    let systemPrompt = cfg['tutor_system_prompt']
+    const systemPromptBase = cfg['tutor_system_prompt']
       ?? 'Você é o Tutor Jarvis, professor particular de português e redação ENEM. Ensine com profundidade, corrija com justificativa e estimule reflexão.';
-
-    // ── 3.5. Carregar prompt_tutor da subtab (modo especializado) ──
-    let promptTutorConfigurado = false;
-    if (activeSubtabId) {
-      try {
-        const { data: calibSubtab } = await supabase
-          .from('jarvis_tutoria_calibracao')
-          .select('prompt_tutor, jarvis_tutoria_subtabs!inner(label)')
-          .eq('subtab_id', activeSubtabId)
-          .single();
-        const subtabLabel = (calibSubtab as any)?.jarvis_tutoria_subtabs?.label ?? 'etapa';
-        if (calibSubtab?.prompt_tutor?.trim()) {
-          systemPrompt = calibSubtab.prompt_tutor.trim();
-          promptTutorConfigurado = true;
-          console.log(`🎯 prompt_tutor configurado: ${subtabLabel}`);
-        } else {
-          // Sem prompt_tutor: anuncia o modo no prompt padrão
-          systemPrompt += `\n\nMODO ESPECIALISTA — ${subtabLabel.toUpperCase()}\nVocê está atuando exclusivamente como especialista em ${subtabLabel} de redação ENEM. Todas as suas respostas, exemplos, exercícios e correções devem girar em torno desta etapa. Quando o aluno enviar um texto ou dúvida, analise sempre sob a ótica de ${subtabLabel}.`;
-          console.log(`🎯 Modo especialista sem prompt_tutor: ${subtabLabel} (usando fallback)`);
-        }
-      } catch (err) {
-        console.warn('⚠️ Erro ao carregar prompt_tutor:', err);
-      }
-    }
+    let systemPrompt = systemPromptBase;
 
     // ── 4. Buscar ou criar conversa ──────────────────────────────
     let activeConversationId = conversation_id;
@@ -305,6 +282,29 @@ Deno.serve(async (req) => {
 
       if (!convExiste) return json({ error: 'Conversa não encontrada' }, 404);
       activeSubtabId = (convExiste as any).subtab_id ?? null;
+    }
+
+    // ── 4.5. Carregar prompt_tutor da subtab (modo especializado) ──
+    let promptTutorConfigurado = false;
+    if (activeSubtabId) {
+      try {
+        const { data: calibSubtab } = await supabase
+          .from('jarvis_tutoria_calibracao')
+          .select('prompt_tutor, jarvis_tutoria_subtabs!inner(label)')
+          .eq('subtab_id', activeSubtabId)
+          .single();
+        const subtabLabel = (calibSubtab as any)?.jarvis_tutoria_subtabs?.label ?? 'etapa';
+        if (calibSubtab?.prompt_tutor?.trim()) {
+          systemPrompt = calibSubtab.prompt_tutor.trim();
+          promptTutorConfigurado = true;
+          console.log(`🎯 prompt_tutor configurado: ${subtabLabel}`);
+        } else {
+          systemPrompt = systemPromptBase + `\n\nMODO ESPECIALISTA — ${subtabLabel.toUpperCase()}\nVocê está atuando exclusivamente como especialista em ${subtabLabel} de redação ENEM. Todas as suas respostas, exemplos, exercícios e correções devem girar em torno desta etapa.`;
+          console.log(`🎯 Modo especialista sem prompt_tutor: ${subtabLabel} (fallback)`);
+        }
+      } catch (err) {
+        console.warn('⚠️ Erro ao carregar prompt_tutor:', err);
+      }
     }
 
     // ── 5. Buscar histórico recente (janela deslizante) ──────────
