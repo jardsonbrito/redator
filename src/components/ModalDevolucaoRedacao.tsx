@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useVisualizacaoRedacao } from '@/hooks/useVisualizacaoRedacao';
 
 interface ModalDevolucaoProps {
@@ -86,102 +85,51 @@ export function ModalDevolucaoRedacao({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
   console.log('🟡 Modal: Renderizando modal com isOpen:', isOpen);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader className="space-y-3">
-          <DialogTitle className="text-xl font-semibold text-center text-red-600 flex items-center justify-center gap-2">
-            <AlertCircle className="w-6 h-6" />
-            Redação Devolvida
+        <DialogHeader className="space-y-2 pb-2">
+          <DialogTitle className="text-2xl font-semibold text-[#374151]">
+            Redação devolvida
           </DialogTitle>
-          <p className="text-sm text-muted-foreground text-center">
-            {redacao.frase_tematica}
-          </p>
-          <p className="text-xs text-muted-foreground text-center">
-            Enviado em: {formatDate(redacao.data_envio)}
+          <p className="text-[15px] text-[#6b7280] italic">
+            "{redacao.frase_tematica}"
           </p>
         </DialogHeader>
-        
-        <div className="space-y-6 py-4">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border border-yellow-200 dark:border-yellow-800">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-              <div className="space-y-3">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Sua redação foi devolvida pelo corretor com a seguinte justificativa:
-                </p>
-                
-                <div className="bg-white dark:bg-gray-800 p-4 rounded border-l-4 border-yellow-400">
-                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
-                    "{redacao.justificativa_devolucao || 'Motivo não especificado'}"
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-blue-800 dark:text-blue-200 text-sm flex items-start gap-2">
-              <span className="text-base">💡</span>
-              <span>
-                <strong>Próximos passos:</strong> Corrija os pontos indicados 
-                e reenvie sua redação para nova avaliação.
-              </span>
+        <div className="py-4">
+          <p className="text-[14px] font-semibold text-[#6b7280] mb-3">
+            Orientação do corretor
+          </p>
+          <div className="border-l-4 border-yellow-400 px-[18px] py-4 bg-white">
+            <p className="text-[15px] text-[#374151] leading-[1.8]">
+              {redacao.justificativa_devolucao || 'Nenhuma orientação registrada.'}
             </p>
           </div>
-          
-          {/* Mensagem de sucesso */}
+
           {jaVisualizou && (
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 text-center">
-              <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300">
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="font-semibold">Marcado como ciente com sucesso!</span>
-              </div>
-              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                O corretor foi notificado que você visualizou a devolução.
-              </p>
-            </div>
+            <p className="text-sm text-green-600 text-center mt-4">
+              Marcado como ciente com sucesso.
+            </p>
           )}
-          
-          <div className="flex justify-center pt-2">
-            <Button 
-              onClick={(e) => {
-                console.log('🟡 Modal: Botão clicado!', e);
-                console.log('🟡 Modal: Estado antes do clique:', { isRegistrando, jaVisualizou });
-                e.preventDefault();
-                e.stopPropagation();
-                handleEntendi();
-              }}
-              disabled={isRegistrando}
-              className={`
-                px-8 py-3 text-base font-medium transition-all
-                ${jaVisualizou 
-                  ? 'bg-primary hover:bg-primary/90' 
-                  : isRegistrando
-                    ? 'bg-primary/50 hover:bg-primary/50 cursor-not-allowed'
-                    : 'bg-primary hover:bg-primary/90'
-                }
-              `}
-            >
-              {jaVisualizou ? (
-                <><CheckCircle2 className="w-4 h-4 mr-2" /> Marcado como Ciente</>
-              ) : isRegistrando ? (
-                <>⏳ Registrando...</>
-              ) : (
-                <>👍 Entendi</>
-              )}
-            </Button>
-          </div>
+        </div>
+
+        <div className="mt-[28px] flex justify-center">
+          <Button
+            onClick={(e) => {
+              console.log('🟡 Modal: Botão clicado!', e);
+              console.log('🟡 Modal: Estado antes do clique:', { isRegistrando, jaVisualizou });
+              e.preventDefault();
+              e.stopPropagation();
+              handleEntendi();
+            }}
+            disabled={isRegistrando}
+            className="px-[34px] py-3 rounded-[10px] font-medium"
+          >
+            {isRegistrando ? 'Registrando...' : 'Entendi'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
