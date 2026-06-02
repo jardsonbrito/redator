@@ -316,8 +316,9 @@ Deno.serve(async (req) => {
     }
 
     // ── 4.5. Carregar prompt_tutor da subtab (modo especializado) ──
+    // Ignorado quando gerando síntese (SINTESE_PROMPT já foi aplicado)
     let promptTutorConfigurado = false;
-    if (activeSubtabId) {
+    if (activeSubtabId && !gerar_sintese) {
       try {
         const { data: calibSubtab } = await supabase
           .from('jarvis_tutoria_calibracao')
