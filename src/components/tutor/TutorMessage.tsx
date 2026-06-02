@@ -56,15 +56,22 @@ function MarkdownContent({ text }: { text: string }) {
     // Lista ordenada
     if (/^\d+\.\s/.test(line)) {
       const listItems: React.ReactNode[] = [];
+      let itemNum = 1;
       while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
         const content = lines[i].replace(/^\d+\.\s/, '');
-        listItems.push(<li key={i} className="ml-1">{renderInline(content)}</li>);
+        listItems.push(
+          <li key={i} className="flex gap-2">
+            <span className="flex-shrink-0 font-medium text-slate-500 w-4 text-right">{itemNum}.</span>
+            <span>{renderInline(content)}</span>
+          </li>
+        );
         i++;
+        itemNum++;
       }
       elements.push(
-        <ol key={`ol-${i}`} className="list-decimal list-inside space-y-0.5 my-1.5">
+        <ul key={`ol-${i}`} className="space-y-0.5 my-1.5">
           {listItems}
-        </ol>
+        </ul>
       );
       continue;
     }
