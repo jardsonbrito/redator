@@ -89,7 +89,7 @@ export function TutorSidebar({
       {subtabs.length > 0 && onSelectSubtab && (
         <div className="px-3 pb-3">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-1 mb-2">
-            Especialistas
+            Modo Especialista
           </p>
           <div className="space-y-1.5">
             {subtabs.map(s => (
