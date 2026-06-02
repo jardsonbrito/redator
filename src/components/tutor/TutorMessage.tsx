@@ -53,68 +53,44 @@ function MarkdownContent({ text }: { text: string }) {
       continue;
     }
 
-    // Lista ordenada (suporta itens de uma linha e multi-linha com linhas em branco internas)
+    // Lista ordenada — scan de dois passos para garantir numeração sequencial
     if (/^\d+\.(\s|$)/.test(line)) {
-      const listItems: React.ReactNode[] = [];
-      let itemNum = 1;
+      const items: string[][] = [];
+      let si = i;
 
-      // Avança linhas em branco entre itens
-      const skipBlanks = () => {
-        while (i < lines.length && lines[i].trim() === '') i++;
-      };
+      while (si < lines.length && /^\d+\.(\s|$)/.test(lines[si])) {
+        // Primeira linha do item (pode ter conteúdo na mesma linha)
+        const firstLine = lines[si].replace(/^\d+\.\s*/, '').trim();
+        const itemContent: string[] = firstLine ? [firstLine] : [];
+        si++;
 
-      while (i < lines.length && /^\d+\.(\s|$)/.test(lines[i])) {
-        const firstContent = lines[i].replace(/^\d+\.\s*/, '').trim();
-        i++;
-
-        const contentLines: string[] = [];
-        if (firstContent) contentLines.push(firstContent);
-
-        // Coleta linhas até encontrar o próximo \d+. ou fim do bloco
-        while (i < lines.length) {
-          const cur = lines[i];
-
-          // Para em estruturas que não são continuação de item
-          if (/^\d+\.(\s|$)/.test(cur)) break;
-          if (/^(\s*[-•]\s)/.test(cur)) break;
-          if (/^#{1,4}\s/.test(cur)) break;
-
-          if (cur.trim() === '') {
-            // Linha em branco: espia o que vem depois
-            let j = i + 1;
-            while (j < lines.length && lines[j].trim() === '') j++;
-
-            if (j >= lines.length || /^\d+\.(\s|$)/.test(lines[j])) {
-              // Fim do item: avança i até o próximo \d+. (para o outer while continuar)
-              i = j;
-              break;
-            }
-            // Conteúdo não-numerado vem depois: linha em branco é interna ao item
-            i++;
-            continue;
-          }
-
-          contentLines.push(cur.trim());
-          i++;
+        // Coleta conteúdo do item até o próximo marcador \d+. ou contexto diferente
+        while (si < lines.length && !/^\d+\.(\s|$)/.test(lines[si])) {
+          const l = lines[si];
+          if (/^#{1,4}\s/.test(l) || /^---+$/.test(l.trim())) break; // heading/separador = fim da lista
+          if (l.trim()) itemContent.push(l.trim());
+          si++;
         }
 
-        listItems.push(
-          <li key={itemNum} className="flex gap-2 items-start">
-            <span className="flex-shrink-0 font-semibold text-slate-500 min-w-[1.1rem] text-right leading-relaxed">{itemNum}.</span>
-            <div className="flex-1 space-y-0.5">
-              {contentLines.map((cl, j) => (
-                <p key={j} className="leading-relaxed">{renderInline(cl)}</p>
-              ))}
-            </div>
-          </li>
-        );
-        itemNum++;
-        skipBlanks(); // pula linhas em branco entre itens antes do próximo \d+.
+        items.push(itemContent);
       }
+
+      i = si; // avança o ponteiro principal para após o bloco inteiro
 
       elements.push(
         <ul key={`ol-${i}`} className="space-y-3 my-2">
-          {listItems}
+          {items.map((itemLines, idx) => (
+            <li key={idx} className="flex gap-2 items-start">
+              <span className="flex-shrink-0 font-semibold text-slate-500 min-w-[1.1rem] text-right leading-relaxed">
+                {idx + 1}.
+              </span>
+              <div className="flex-1 space-y-0.5">
+                {itemLines.map((cl, j) => (
+                  <p key={j} className="leading-relaxed">{renderInline(cl)}</p>
+                ))}
+              </div>
+            </li>
+          ))}
         </ul>
       );
       continue;
