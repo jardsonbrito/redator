@@ -53,23 +53,52 @@ function MarkdownContent({ text }: { text: string }) {
       continue;
     }
 
-    // Lista ordenada
-    if (/^\d+\.\s/.test(line)) {
+    // Lista ordenada (suporta itens de uma linha e multi-linha)
+    if (/^\d+\.(\s|$)/.test(line)) {
       const listItems: React.ReactNode[] = [];
       let itemNum = 1;
-      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
-        const content = lines[i].replace(/^\d+\.\s/, '');
+
+      while (i < lines.length && /^\d+\.(\s|$)/.test(lines[i])) {
+        const firstContent = lines[i].replace(/^\d+\.\s*/, '').trim();
+        i++;
+
+        // Coleta linhas de continuação do mesmo item
+        const contentLines: string[] = [];
+        if (firstContent) contentLines.push(firstContent);
+
+        while (i < lines.length) {
+          const cur = lines[i];
+          if (/^\d+\.(\s|$)/.test(cur)) break;          // próximo item
+          if (/^(\s*[-•]\s)/.test(cur)) break;           // lista não-ordenada
+          if (/^#{1,4}\s/.test(cur)) break;              // heading
+          if (cur.trim() === '') {
+            // linha em branco: verifica se próxima linha é outro item da lista
+            let j = i + 1;
+            while (j < lines.length && lines[j].trim() === '') j++;
+            if (j < lines.length && /^\d+\.(\s|$)/.test(lines[j])) {
+              i = j; break;    // avança até o próximo item
+            }
+            break;             // fim deste item
+          }
+          contentLines.push(cur.trim());
+          i++;
+        }
+
         listItems.push(
-          <li key={i} className="flex gap-2">
-            <span className="flex-shrink-0 font-medium text-slate-500 w-4 text-right">{itemNum}.</span>
-            <span>{renderInline(content)}</span>
+          <li key={itemNum} className="flex gap-2 items-start">
+            <span className="flex-shrink-0 font-semibold text-slate-500 min-w-[1.1rem] text-right leading-relaxed">{itemNum}.</span>
+            <div className="flex-1 space-y-0.5">
+              {contentLines.map((cl, j) => (
+                <p key={j} className="leading-relaxed">{renderInline(cl)}</p>
+              ))}
+            </div>
           </li>
         );
-        i++;
         itemNum++;
       }
+
       elements.push(
-        <ul key={`ol-${i}`} className="space-y-0.5 my-1.5">
+        <ul key={`ol-${i}`} className="space-y-2 my-2">
           {listItems}
         </ul>
       );
