@@ -88,23 +88,26 @@ export function TutorSidebar({
       {/* Modos especializados */}
       {subtabs.length > 0 && onSelectSubtab && (
         <div className="px-3 pb-3">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-1 mb-1.5">
-            Modo especializado
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-1 mb-2">
+            Especialistas
           </p>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {subtabs.map(s => (
               <button
                 key={s.id}
                 onClick={() => onSelectSubtab(s.id, s.label)}
                 className={cn(
-                  'w-full h-9 rounded-lg text-xs font-medium px-3 flex items-center gap-2 border transition-all',
+                  'w-full rounded-xl text-xs font-semibold px-3 py-2.5 flex items-center gap-2.5 border transition-all text-left',
                   activeSubtabId === s.id
-                    ? 'bg-purple-50 border-purple-200 text-purple-800'
-                    : 'bg-white border-slate-200 text-slate-700 hover:border-purple-200 hover:bg-purple-50/50'
+                    ? 'bg-purple-600 border-purple-600 text-white shadow-sm'
+                    : 'bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100 hover:border-purple-200'
                 )}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
-                Especialista em {s.label}
+                <span className={cn(
+                  'w-2 h-2 rounded-full flex-shrink-0',
+                  activeSubtabId === s.id ? 'bg-white/70' : 'bg-purple-400'
+                )} />
+                <span className="leading-snug">Especialista em {s.label}</span>
               </button>
             ))}
           </div>
