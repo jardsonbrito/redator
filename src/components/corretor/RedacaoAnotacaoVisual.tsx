@@ -615,14 +615,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           if (annotation.id) destacarComentario(annotation.id);
         };
 
-        anno.on('mouseEnterAnnotation', onMouseEnter);
-        anno.on('mouseLeaveAnnotation', onMouseLeave);
         anno.on('clickAnnotation', onClickAnnotation);
 
         cleanupFunctions.push(() => {
           if (anno) {
-            anno.off('mouseEnterAnnotation', onMouseEnter);
-            anno.off('mouseLeaveAnnotation', onMouseLeave);
             anno.off('clickAnnotation', onClickAnnotation);
           }
         });
