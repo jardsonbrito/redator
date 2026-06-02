@@ -270,8 +270,9 @@ Deno.serve(async (req) => {
     const fallbackPermitido = fallbackResult.data ?? true;
 
     // ── 3. Buscar configurações de IA ────────────────────────────
-    const modeloIA = configIA.data?.model      ?? 'gpt-4o-mini';
-    const tempIA   = configIA.data?.temperatura ?? 0.7;
+    const modeloIA   = configIA.data?.model      ?? 'gpt-4o-mini';
+    const tempIA     = configIA.data?.temperatura ?? 0.7;
+    const providerIA = (configIA.data?.provider ?? 'openai').toLowerCase();
 
     const cfgMap = await supabase
       .from('jarvis_system_config')
@@ -460,35 +461,73 @@ Deno.serve(async (req) => {
 
     messages.push({ role: 'user', content: userContent });
 
-    console.log('🤖 Chamando OpenAI:', modeloIA, gerar_sintese ? '+ síntese' : contextoPedagogico ? '+ contexto pedagógico' : '');
+    const maxTokensFinal = gerar_sintese ? Math.max(maxTokens, 2000) : maxTokens;
+    console.log(`🤖 Chamando ${providerIA}/${modeloIA}`, gerar_sintese ? '+ síntese' : contextoPedagogico ? '+ contexto pedagógico' : '');
     const t0 = Date.now();
 
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model:       modeloIA,
-        messages,
-        temperature: tempIA,
-        max_tokens:  gerar_sintese ? Math.max(maxTokens, 2000) : maxTokens,
-      }),
-    });
+    let respostaTexto: string;
+    let tokensInput = 0, tokensOutput = 0, tokensTotal = 0;
 
-    if (!openaiResponse.ok) {
-      const errData = await openaiResponse.json();
-      console.error('❌ OpenAI error:', errData);
-      throw new Error(`OpenAI API Error: ${errData.error?.message ?? 'Unknown error'}`);
+    if (providerIA === 'anthropic') {
+      // ── Anthropic Claude ──────────────────────────────────────────
+      const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+      if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY não configurada');
+
+      // Anthropic separa system das mensagens
+      const systemMsg = messages.find(m => m.role === 'system')?.content ?? '';
+      const userMsgs  = messages.filter(m => m.role !== 'system');
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method:  'POST',
+        headers: {
+          'Content-Type':      'application/json',
+          'x-api-key':         ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model:      modeloIA,
+          max_tokens: maxTokensFinal,
+          system:     systemMsg,
+          messages:   userMsgs,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(`Anthropic API Error: ${err.error?.message ?? JSON.stringify(err)}`);
+      }
+      const data = await resp.json();
+      respostaTexto = data.content?.[0]?.text ?? '';
+      tokensInput   = data.usage?.input_tokens  ?? 0;
+      tokensOutput  = data.usage?.output_tokens ?? 0;
+      tokensTotal   = tokensInput + tokensOutput;
+
+    } else {
+      // ── OpenAI (padrão) ───────────────────────────────────────────
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model:       modeloIA,
+          messages,
+          temperature: tempIA,
+          max_tokens:  maxTokensFinal,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(`OpenAI API Error: ${err.error?.message ?? 'Unknown error'}`);
+      }
+      const data  = await resp.json();
+      respostaTexto = data.choices[0].message.content as string;
+      tokensInput   = data.usage?.prompt_tokens     ?? 0;
+      tokensOutput  = data.usage?.completion_tokens ?? 0;
+      tokensTotal   = data.usage?.total_tokens      ?? 0;
     }
 
-    const openaiData    = await openaiResponse.json();
     const tempoResposta = Date.now() - t0;
-    const respostaTexto = openaiData.choices[0].message.content as string;
-    const tokensInput   = openaiData.usage?.prompt_tokens     ?? 0;
-    const tokensOutput  = openaiData.usage?.completion_tokens ?? 0;
-    const tokensTotal   = openaiData.usage?.total_tokens      ?? 0;
 
     console.log(`⏱️ ${tempoResposta}ms | tokens: ${tokensTotal} (in:${tokensInput} out:${tokensOutput})`);
 
