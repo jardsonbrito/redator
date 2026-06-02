@@ -115,13 +115,11 @@ export function TutorSidebar({
       )}
 
       {/* Label */}
-      {conversas.length > 0 && (
-        <div className="px-4 pb-1.5 pt-1">
-          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-            Conversas recentes
-          </span>
-        </div>
-      )}
+      <div className="px-4 pb-1.5 pt-1">
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+          Modo Conversacional
+        </span>
+      </div>
 
       {/* Lista de conversas */}
       <div className="flex-1 overflow-y-auto px-2 pb-4">
