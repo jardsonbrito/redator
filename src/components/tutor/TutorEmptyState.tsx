@@ -45,22 +45,13 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
 
       {/* Quick actions */}
       {isLoading ? (
-        <div>
-          <div className="h-3 w-32 rounded bg-slate-200 animate-pulse mb-4" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-[58px] rounded-2xl bg-slate-100 animate-pulse" />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[58px] rounded-2xl bg-slate-100 animate-pulse" />
+          ))}
         </div>
       ) : actions.length > 0 && (
         <div>
-          <div className="mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              Atalhos rápidos
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {actions.map(({ id, icone, label, texto }) => {
               const Icon = ICON_MAP[icone] ?? HelpCircle;
@@ -83,7 +74,7 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
 
           <div className="mt-6 rounded-2xl border border-purple-100 bg-purple-50/50 px-5 py-4">
             <p className="text-sm leading-relaxed text-slate-600">
-              Os atalhos são apenas sugestões. Você pode perguntar livremente sobre redação, gramática, ENEM ou enviar um texto para análise.
+              Clique em uma sugestão para começar. Você também pode perguntar livremente sobre redação, gramática ou ENEM.
             </p>
           </div>
         </div>

@@ -58,8 +58,9 @@ export function TutorChat({
     await enviar(texto);
   };
 
-  const handleQuickAction = (texto: string) => {
-    setInputValue(texto);
+  const handleQuickAction = async (texto: string) => {
+    if (!texto.trim() || isLoading) return;
+    await enviar(texto.trim());
   };
 
   const semMensagens = mensagens.length === 0 && !isLoading;
