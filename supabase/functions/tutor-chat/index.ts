@@ -304,12 +304,16 @@ Deno.serve(async (req) => {
     // ── 4. Buscar ou criar conversa ──────────────────────────────
     let activeConversationId = conversation_id;
     let activeSubtabId: string | null = null;
+    let instrucaoInterna: string | null = instrucao_interna?.trim() || null;
 
     if (!activeConversationId) {
       const titulo = mensagem.trim().slice(0, 70).replace(/[.!?,;:]+$/, '').trim() || 'Nova conversa';
       const { data: nova, error: novaCfgErr } = await supabase
         .from('jarvis_conversations')
-        .insert({ aluno_id: aluno.id, modulo, titulo, provider: 'openai', modelo: modeloIA, subtab_id: subtabIdReq })
+        .insert({
+          aluno_id: aluno.id, modulo, titulo, provider: providerIA, modelo: modeloIA,
+          subtab_id: subtabIdReq, instrucao_interna: instrucaoInterna,
+        })
         .select('id')
         .single();
 
@@ -319,17 +323,19 @@ Deno.serve(async (req) => {
       }
       activeConversationId = nova.id;
       activeSubtabId = subtabIdReq;
-      console.log('💬 Nova conversa:', activeConversationId, activeSubtabId ? `(subtab: ${activeSubtabId})` : '');
+      console.log('💬 Nova conversa:', activeConversationId, instrucaoInterna ? '+ instrução interna' : '');
     } else {
       const { data: convExiste } = await supabase
         .from('jarvis_conversations')
-        .select('id, subtab_id')
+        .select('id, subtab_id, instrucao_interna')
         .eq('id', activeConversationId)
         .eq('aluno_id', aluno.id)
         .single();
 
       if (!convExiste) return json({ error: 'Conversa não encontrada' }, 404);
       activeSubtabId = (convExiste as any).subtab_id ?? null;
+      // Reutiliza a instrução salva na conversa (garante persistência em todos os turnos)
+      instrucaoInterna = instrucaoInterna || (convExiste as any).instrucao_interna || null;
     }
 
     // ── 4.3. Síntese da sessão ───────────────────────────────────
@@ -389,9 +395,8 @@ Deno.serve(async (req) => {
     }
 
     // ── 5c. Contexto pedagógico ──────────────────────────────────────────────
-    // instrucao_interna presente = ação rápida com instrução técnica separada do rótulo
-    // Nunca injetar calibração automática nesse caso para evitar conflito
-    const ehAtalhoInstrucao = !gerar_sintese && !!instrucao_interna?.trim();
+    // instrucaoInterna presente (request ou DB) = reinjetar como system em todo turno
+    const ehAtalhoInstrucao = !gerar_sintese && !!instrucaoInterna;
 
     const contextoPedagogicoPromise = (gerar_sintese || promptTutorConfigurado || ehAtalhoInstrucao)
       ? Promise.resolve(null)
@@ -459,10 +464,10 @@ Deno.serve(async (req) => {
 
     // Montagem final das mensagens
     if (ehAtalhoInstrucao) {
-      // Ação rápida: instrução técnica como system, rótulo como mensagem visível do user
-      messages.push({ role: 'system', content: instrucao_interna!.trim() });
-      messages.push({ role: 'user', content: mensagem.trim() }); // label amigável
-      console.log(`📎 Ação rápida: label="${mensagem.trim().slice(0,60)}" instrução=${instrucao_interna!.length} chars`);
+      // Reinjetar instrução como system em TODOS os turnos da conversa
+      messages.push({ role: 'system', content: instrucaoInterna! });
+      messages.push({ role: 'user', content: mensagem.trim() });
+      console.log(`📎 Instrução interna: ${instrucaoInterna!.length} chars (turno ${Math.floor(historico.length/2) + 1})`);
     } else if (gerar_sintese && dadosSessao) {
       messages.push({ role: 'user', content: `Gere a síntese pedagógica desta sessão.${dadosSessao}` });
     } else {
