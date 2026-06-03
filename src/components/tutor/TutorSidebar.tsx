@@ -117,7 +117,7 @@ export function TutorSidebar({
       {/* Label */}
       <div className="px-4 pb-1.5 pt-1">
         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-          Modo Conversacional
+          Histórico
         </span>
       </div>
 
