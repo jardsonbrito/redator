@@ -387,10 +387,11 @@ Deno.serve(async (req) => {
     }
 
     // ── 5c. Contexto pedagógico ──────────────────────────────────────────────
-    // Síntese ou prompt_tutor configurado: sem injeção extra
-    // Sem prompt_tutor mas com subtab: injeta calibração da subtab específica
-    // Modo livre: detecta intenção por regex
-    const contextoPedagogicoPromise = (gerar_sintese || promptTutorConfigurado)
+    // Mensagens longas (> 300 chars) são atalhos com instruções configuradas pelo admin.
+    // Injetar calibração por regex causaria conflito de contexto — desabilitado.
+    const ehAtalhoInstrucao = !gerar_sintese && !activeSubtabId && mensagem.trim().length > 300;
+
+    const contextoPedagogicoPromise = (gerar_sintese || promptTutorConfigurado || ehAtalhoInstrucao)
       ? Promise.resolve(null)
       : buscarContextoPedagogico(supabase, mensagem.trim(), activeSubtabId);
 
@@ -459,7 +460,14 @@ Deno.serve(async (req) => {
       ? `Gere a síntese pedagógica desta sessão.${dadosSessao}`
       : mensagem.trim();
 
-    messages.push({ role: 'user', content: userContent });
+    if (ehAtalhoInstrucao) {
+      // Atalho com instruções: injeta o texto como system para garantir que a IA siga o processo
+      messages.push({ role: 'system', content: userContent });
+      messages.push({ role: 'user', content: 'Olá, vamos começar.' });
+      console.log(`📎 Atalho com instruções detectado (${userContent.length} chars) — injetado como system`);
+    } else {
+      messages.push({ role: 'user', content: userContent });
+    }
 
     const maxTokensFinal = gerar_sintese ? Math.max(maxTokens, 2000) : maxTokens;
     console.log(`🤖 Chamando ${providerIA}/${modeloIA}`, gerar_sintese ? '+ síntese' : contextoPedagogico ? '+ contexto pedagógico' : '');
