@@ -7,12 +7,13 @@ const corsHeaders = {
 };
 
 interface TutorChatRequest {
-  aluno_email:     string;
-  conversation_id: string | null;
-  mensagem:        string;
-  modulo?:         string;
-  subtab_id?:      string | null;
-  gerar_sintese?:  boolean;
+  aluno_email:       string;
+  conversation_id:   string | null;
+  mensagem:          string;
+  modulo?:           string;
+  subtab_id?:        string | null;
+  gerar_sintese?:    boolean;
+  instrucao_interna?: string | null;
 }
 
 const SINTESE_PROMPT = `Você é o Tutor Jarvis. Analise o histórico COMPLETO desta sessão de tutoria e gere uma Síntese Pedagógica Detalhada.
@@ -221,6 +222,7 @@ Deno.serve(async (req) => {
       modulo = 'tutor',
       subtab_id: subtabIdReq = null,
       gerar_sintese = false,
+      instrucao_interna = null,
     }: TutorChatRequest = await req.json();
 
     if (!aluno_email?.trim() || !mensagem?.trim()) {
@@ -387,9 +389,9 @@ Deno.serve(async (req) => {
     }
 
     // ── 5c. Contexto pedagógico ──────────────────────────────────────────────
-    // Mensagens longas (> 300 chars) são atalhos com instruções configuradas pelo admin.
-    // Injetar calibração por regex causaria conflito de contexto — desabilitado.
-    const ehAtalhoInstrucao = !gerar_sintese && !activeSubtabId && mensagem.trim().length > 300;
+    // instrucao_interna presente = ação rápida com instrução técnica separada do rótulo
+    // Nunca injetar calibração automática nesse caso para evitar conflito
+    const ehAtalhoInstrucao = !gerar_sintese && !!instrucao_interna?.trim();
 
     const contextoPedagogicoPromise = (gerar_sintese || promptTutorConfigurado || ehAtalhoInstrucao)
       ? Promise.resolve(null)
@@ -455,18 +457,16 @@ Deno.serve(async (req) => {
       messages.push({ role: 'system', content: contextoPedagogico });
     }
 
-    // Na síntese, injeta os dados da sessão junto com o trigger
-    const userContent = gerar_sintese && dadosSessao
-      ? `Gere a síntese pedagógica desta sessão.${dadosSessao}`
-      : mensagem.trim();
-
+    // Montagem final das mensagens
     if (ehAtalhoInstrucao) {
-      // Atalho com instruções: injeta o texto como system para garantir que a IA siga o processo
-      messages.push({ role: 'system', content: userContent });
-      messages.push({ role: 'user', content: 'Olá, vamos começar.' });
-      console.log(`📎 Atalho com instruções detectado (${userContent.length} chars) — injetado como system`);
+      // Ação rápida: instrução técnica como system, rótulo como mensagem visível do user
+      messages.push({ role: 'system', content: instrucao_interna!.trim() });
+      messages.push({ role: 'user', content: mensagem.trim() }); // label amigável
+      console.log(`📎 Ação rápida: label="${mensagem.trim().slice(0,60)}" instrução=${instrucao_interna!.length} chars`);
+    } else if (gerar_sintese && dadosSessao) {
+      messages.push({ role: 'user', content: `Gere a síntese pedagógica desta sessão.${dadosSessao}` });
     } else {
-      messages.push({ role: 'user', content: userContent });
+      messages.push({ role: 'user', content: mensagem.trim() });
     }
 
     const maxTokensFinal = gerar_sintese ? Math.max(maxTokens, 2000) : maxTokens;

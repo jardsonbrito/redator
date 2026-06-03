@@ -11,7 +11,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 interface TutorEmptyStateProps {
-  onQuickAction: (texto: string) => void;
+  onQuickAction: (label: string, instrucao: string) => void;
   subtabLabel?:  string | null;
 }
 
@@ -58,7 +58,7 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
               return (
                 <button
                   key={id}
-                  onClick={() => onQuickAction(texto)}
+                  onClick={() => onQuickAction(label, texto)}
                   className="group h-[58px] rounded-2xl border border-slate-200 bg-white px-5 flex items-center gap-4 text-left shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-[0_12px_28px_rgba(126,34,206,0.10)] hover:bg-purple-50/30"
                 >
                   <span className="h-9 w-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0 transition-colors group-hover:bg-purple-100">

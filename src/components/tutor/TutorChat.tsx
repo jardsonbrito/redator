@@ -58,9 +58,10 @@ export function TutorChat({
     await enviar(texto);
   };
 
-  const handleQuickAction = async (texto: string) => {
-    if (!texto.trim() || isLoading) return;
-    await enviar(texto.trim());
+  const handleQuickAction = async (label: string, instrucao: string) => {
+    if (!label.trim() || isLoading) return;
+    // label = mensagem visível no chat; instrucao = prompt técnico enviado à IA
+    await enviar(label.trim(), instrucao.trim() || undefined);
   };
 
   const semMensagens = mensagens.length === 0 && !isLoading;
@@ -70,7 +71,10 @@ export function TutorChat({
       {/* Área de mensagens com scroll */}
       <div className="flex-1 overflow-y-auto">
         {semMensagens ? (
-          <TutorEmptyState onQuickAction={handleQuickAction} subtabLabel={subtabLabel} />
+          <TutorEmptyState
+            onQuickAction={handleQuickAction}
+            subtabLabel={subtabLabel}
+          />
         ) : (
           <div className="py-6">
             {mensagens.map((msg, idx) => {

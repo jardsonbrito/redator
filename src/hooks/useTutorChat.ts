@@ -14,7 +14,7 @@ export interface TutorMensagem {
 interface UseTutorChatReturn {
   mensagens:         TutorMensagem[];
   isLoading:         boolean;
-  enviar:            (texto: string) => Promise<string | null>;
+  enviar:            (texto: string, instrucaoInterna?: string) => Promise<string | null>;
   gerarSintese:      () => Promise<void>;
   creditosRestantes: number;
   acumuladorTokens:  number;
@@ -53,7 +53,7 @@ export const useTutorChat = (
     }
   }, [conversationId, carregarMensagens]);
 
-  const enviar = async (texto: string): Promise<string | null> => {
+  const enviar = async (texto: string, instrucaoInterna?: string): Promise<string | null> => {
     if (!texto.trim() || isLoading) return null;
 
     // Mensagem otimista do usuário
@@ -71,11 +71,12 @@ export const useTutorChat = (
     try {
       const { data, error } = await supabase.functions.invoke('tutor-chat', {
         body: {
-          aluno_email:     alunoEmail,
-          conversation_id: conversationId,
-          mensagem:        texto.trim(),
-          modulo:          'tutor',
-          subtab_id:       subtabId ?? null,
+          aluno_email:       alunoEmail,
+          conversation_id:   conversationId,
+          mensagem:          texto.trim(),
+          modulo:            'tutor',
+          subtab_id:         subtabId ?? null,
+          instrucao_interna: instrucaoInterna ?? null,
         },
       });
 
