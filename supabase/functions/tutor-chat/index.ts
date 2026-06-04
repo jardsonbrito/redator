@@ -401,8 +401,10 @@ Deno.serve(async (req) => {
       cfg['jarvis_credito_tokens_default']   ??
       '3000'
     );
-    const systemPromptBase = cfg['tutor_system_prompt']
-      ?? 'Você é o Tutor Jarvis, professor particular de português e redação ENEM. Ensine com profundidade, corrija com justificativa e estimule reflexão.';
+    const nomeDoAluno = (aluno as any).nome?.trim() || null;
+    const systemPromptBase = (cfg['tutor_system_prompt']
+      ?? 'Você é o Tutor Jarvis, professor particular de português e redação ENEM. Ensine com profundidade, corrija com justificativa e estimule reflexão.')
+      + (nomeDoAluno ? `\n\nO nome do aluno é ${nomeDoAluno}. Use o primeiro nome para se dirigir a ele durante toda a conversa.` : '');
     let systemPrompt = systemPromptBase;
 
     // ── 4. Buscar ou criar conversa ──────────────────────────────
