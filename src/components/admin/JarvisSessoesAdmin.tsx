@@ -2,22 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronDown, ChevronUp, Clock, MessageSquare, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, MessageSquare, Search, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
-// Converte segunda pessoa para terceira usando o nome do aluno
 function humanizarParaTerceiraPessoa(texto: string, nome: string | null): string {
   const ref = nome ? nome.split(' ')[0] : 'O aluno';
   return texto
-    .replace(/\bVocê\b/g, ref)
-    .replace(/\bvocê\b/g, ref.toLowerCase())
-    .replace(/\bSeu\b/g, `De ${ref}`)
-    .replace(/\bseu\b/g, `de ${ref}`)
-    .replace(/\bSua\b/g, `De ${ref}`)
-    .replace(/\bsua\b/g, `de ${ref}`);
+    .replace(/\bVocê\b/g, ref).replace(/\bvocê\b/g, ref.toLowerCase())
+    .replace(/\bSeu\b/g, `De ${ref}`).replace(/\bseu\b/g, `de ${ref}`)
+    .replace(/\bSua\b/g, `De ${ref}`).replace(/\bsua\b/g, `de ${ref}`);
 }
 
 interface Sessao {
@@ -51,43 +54,52 @@ const SUBTAB_LABEL: Record<string, string> = {
   repertorio: 'Repertório', gramatica: 'Gramática',
 };
 
-function SessaoRow({ sessao }: { sessao: Sessao }) {
+interface SessaoRowProps {
+  sessao: Sessao;
+  selected: boolean;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function SessaoRow({ sessao, selected, onToggle, onDelete }: SessaoRowProps) {
   const [expandida, setExpandida] = useState(false);
 
   return (
     <>
-      <tr
-        className="border-b hover:bg-slate-50 cursor-pointer"
-        onClick={() => setExpandida(v => !v)}
-      >
-        <td className="px-4 py-3">
+      <tr className={cn('border-b', selected ? 'bg-red-50' : 'hover:bg-slate-50')}>
+        {/* Checkbox */}
+        <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onToggle(sessao.id)}
+          />
+        </td>
+
+        {/* Dados — clicável para expandir */}
+        <td className="px-4 py-3 cursor-pointer" onClick={() => setExpandida(v => !v)}>
           <div className="font-medium text-sm text-slate-800">{sessao.aluno_nome || sessao.aluno_email}</div>
           <div className="text-xs text-slate-400">{sessao.aluno_email}</div>
         </td>
-        <td className="px-4 py-3 text-xs text-slate-500">{sessao.turma ?? '—'}</td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 text-xs text-slate-500 cursor-pointer" onClick={() => setExpandida(v => !v)}>{sessao.turma ?? '—'}</td>
+        <td className="px-4 py-3 cursor-pointer" onClick={() => setExpandida(v => !v)}>
           <Badge variant="outline" className="text-xs">
             {sessao.subtab_nome ? (SUBTAB_LABEL[sessao.subtab_nome] ?? sessao.subtab_nome) : 'Livre'}
           </Badge>
         </td>
-        <td className="px-4 py-3 text-xs text-slate-500">
+        <td className="px-4 py-3 text-xs text-slate-500 cursor-pointer" onClick={() => setExpandida(v => !v)}>
           {format(new Date(sessao.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
         </td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 cursor-pointer" onClick={() => setExpandida(v => !v)}>
           <div className="flex items-center gap-2 text-xs text-slate-500">
             {sessao.duracao_minutos > 0 && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />{sessao.duracao_minutos}min
-              </span>
+              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{sessao.duracao_minutos}min</span>
             )}
             {sessao.total_mensagens > 0 && (
-              <span className="flex items-center gap-1">
-                <MessageSquare className="w-3 h-3" />{sessao.total_mensagens}
-              </span>
+              <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{sessao.total_mensagens}</span>
             )}
           </div>
         </td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 cursor-pointer" onClick={() => setExpandida(v => !v)}>
           <div className="flex flex-wrap gap-1">
             {sessao.habilidades.slice(0, 3).map((h, i) => (
               <span key={i} className={cn('text-[10px] px-1.5 py-0.5 rounded-full border font-medium', NIVEL_COR[h.nivel])}>
@@ -96,27 +108,34 @@ function SessaoRow({ sessao }: { sessao: Sessao }) {
             ))}
           </div>
         </td>
-        <td className="px-4 py-3 text-center">
-          {expandida ? <ChevronUp className="w-4 h-4 text-slate-400 mx-auto" /> : <ChevronDown className="w-4 h-4 text-slate-400 mx-auto" />}
+
+        {/* Ações */}
+        <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onDelete(sessao.id)}
+              className="p-1.5 rounded hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors"
+              title="Deletar sessão"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setExpandida(v => !v)} className="p-1.5 rounded hover:bg-slate-100">
+              {expandida ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+          </div>
         </td>
       </tr>
 
       {expandida && (
-        <tr className="bg-slate-50 border-b">
-          <td colSpan={7} className="px-6 py-5">
+        <tr className={cn('border-b', selected ? 'bg-red-50' : 'bg-slate-50')}>
+          <td colSpan={8} className="px-6 py-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-              {/* Resumo */}
               {sessao.resumo && (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">O que foi estudado</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">
-                    {humanizarParaTerceiraPessoa(sessao.resumo, sessao.aluno_nome ?? null)}
-                  </p>
+                  <p className="text-sm text-slate-700 leading-relaxed">{humanizarParaTerceiraPessoa(sessao.resumo, sessao.aluno_nome ?? null)}</p>
                 </div>
               )}
-
-              {/* Dificuldades */}
               {sessao.dificuldades.length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Dificuldades</p>
@@ -130,8 +149,6 @@ function SessaoRow({ sessao }: { sessao: Sessao }) {
                   </ul>
                 </div>
               )}
-
-              {/* Próximos passos */}
               {sessao.proximos_passos.length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Próximos passos</p>
@@ -145,16 +162,12 @@ function SessaoRow({ sessao }: { sessao: Sessao }) {
                   </ul>
                 </div>
               )}
-
-              {/* Orientação ao professor */}
               {sessao.orientacao_professor && (
                 <div className="md:col-span-2 bg-white rounded-xl border border-slate-200 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Orientação ao Professor</p>
                   <p className="text-sm text-slate-700 leading-relaxed">{sessao.orientacao_professor}</p>
                 </div>
               )}
-
-              {/* Tags PEP */}
               {sessao.tags_dificuldades.length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Tags (base para PEP)</p>
@@ -181,6 +194,8 @@ export function JarvisSessoesAdmin() {
   const [turmaFiltro, setTurmaFiltro] = useState('todas');
   const [sessoes, setSessoes] = useState<Sessao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
 
   const meses = [
     { v: 1, l: 'Janeiro' }, { v: 2, l: 'Fevereiro' }, { v: 3, l: 'Março' },
@@ -192,19 +207,15 @@ export function JarvisSessoesAdmin() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    setSelectedIds(new Set());
     try {
       const inicio = new Date(ano, mes - 1, 1).toISOString();
       const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString();
-
       let query = (supabase as any)
-        .from('jarvis_sessoes_sintetizadas')
-        .select('*')
-        .gte('created_at', inicio)
-        .lte('created_at', fim)
+        .from('jarvis_sessoes_sintetizadas').select('*')
+        .gte('created_at', inicio).lte('created_at', fim)
         .order('created_at', { ascending: false });
-
       if (turmaFiltro !== 'todas') query = query.eq('turma', turmaFiltro);
-
       const { data } = await query;
       setSessoes(data ?? []);
     } catch (err) {
@@ -224,6 +235,32 @@ export function JarvisSessoesAdmin() {
         (s.aluno_nome ?? '').toLowerCase().includes(busca.toLowerCase())
       )
     : sessoes;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === sessoesFiltradas.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sessoesFiltradas.map(s => s.id)));
+    }
+  };
+
+  const executarDelete = async (ids: string[]) => {
+    await (supabase as any).from('jarvis_sessoes_sintetizadas').delete().in('id', ids);
+    setConfirmDelete(null);
+    setSelectedIds(new Set());
+    await carregar();
+  };
+
+  const allSelected = sessoesFiltradas.length > 0 && selectedIds.size === sessoesFiltradas.length;
+  const someSelected = selectedIds.size > 0;
 
   return (
     <div className="space-y-4">
@@ -248,14 +285,22 @@ export function JarvisSessoesAdmin() {
         )}
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-          <Input
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-            placeholder="Buscar aluno..."
-            className="pl-9"
-          />
+          <Input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar aluno..." className="pl-9" />
         </div>
         <span className="text-sm text-slate-500">{sessoesFiltradas.length} {sessoesFiltradas.length === 1 ? 'sessão' : 'sessões'}</span>
+
+        {/* Botão deletar selecionados */}
+        {someSelected && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmDelete([...selectedIds])}
+            className="gap-2"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Deletar {selectedIds.size} {selectedIds.size === 1 ? 'sessão' : 'sessões'}
+          </Button>
+        )}
       </div>
 
       {/* Tabela */}
@@ -263,26 +308,62 @@ export function JarvisSessoesAdmin() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
+              <th className="px-3 py-3 w-10">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Selecionar todos"
+                />
+              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Aluno</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Turma</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assunto</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Data</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Duração</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Habilidades</th>
-              <th className="px-4 py-3" />
+              <th className="px-4 py-3 w-20" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">Carregando...</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">Carregando...</td></tr>
             ) : sessoesFiltradas.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">Nenhuma sessão neste período.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">Nenhuma sessão neste período.</td></tr>
             ) : (
-              sessoesFiltradas.map(s => <SessaoRow key={s.id} sessao={s} />)
+              sessoesFiltradas.map(s => (
+                <SessaoRow
+                  key={s.id}
+                  sessao={s}
+                  selected={selectedIds.has(s.id)}
+                  onToggle={toggleSelect}
+                  onDelete={id => setConfirmDelete([id])}
+                />
+              ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Confirmação de delete */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={open => { if (!open) setConfirmDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar {confirmDelete?.length === 1 ? 'sessão' : `${confirmDelete?.length} sessões`}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente. {confirmDelete?.length === 1 ? 'A sessão' : 'As sessões'} e todos os dados pedagógicos serão excluídos do banco.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => confirmDelete && executarDelete(confirmDelete)}
+            >
+              Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
