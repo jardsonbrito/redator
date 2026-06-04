@@ -149,7 +149,6 @@ export function TutorMessage({ mensagem, isSintese }: TutorMessageProps) {
       <div className="flex flex-col gap-1 max-w-[86%]">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-semibold text-slate-700">Tutor Jarvis</span>
-          <span className="text-[10px] text-slate-400">análise pedagógica</span>
         </div>
 
         <div className="rounded-3xl rounded-tl-sm bg-white border border-slate-200 shadow-sm px-5 py-4 text-sm leading-relaxed text-slate-800">
