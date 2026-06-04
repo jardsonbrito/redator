@@ -93,10 +93,18 @@ const ELEMENTOS_C5 = [
 ] as const;
 
 const SUBTAB_LABELS: Record<string, string> = {
-  introducao: 'Introdução',
+  introducao:    'Introdução',
   desenvolvimento: 'Desenvolvimento',
-  conclusao: 'Conclusão',
+  conclusao:     'Conclusão',
+  analisar:      'Analisar Texto',
+  melhorar:      'Melhorar Texto',
+  repertorio:    'Repertório',
+  gramatica:     'Gramática',
 };
+
+// Modos com parâmetros estruturais de geração (períodos, palavras, critérios)
+// Os demais modos usam apenas o Prompt Tutor
+const MODOS_ESTRUTURAIS = new Set(['introducao', 'desenvolvimento', 'conclusao']);
 
 interface TemaConfig {
   id: string;
@@ -629,10 +637,10 @@ export const JarvisTutoriaConfiguracao = () => {
       <TabsContent value="calibracao" className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Parâmetros Estruturais</CardTitle>
+            <CardTitle>Modos Especialistas</CardTitle>
             <CardDescription>
-              Configure períodos, palavras e critérios de validação para cada tipo de parágrafo.
-              O Jarvis consulta esses parâmetros antes de gerar qualquer resposta ao aluno.
+              Configure o comportamento do Tutor Jarvis em cada modo. Para Introdução, Desenvolvimento e Conclusão,
+              defina também os parâmetros estruturais de geração. Para os demais modos, configure apenas o Prompt Tutor.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -655,9 +663,11 @@ export const JarvisTutoriaConfiguracao = () => {
                           {calib.subtab_habilitada ? '🔓 Disponível' : '🔒 Bloqueada'}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {calib.periodos_exatos} períodos • {calib.palavras_min}–{calib.palavras_max} palavras
-                      </p>
+                      {MODOS_ESTRUTURAIS.has(calib.subtab_nome) && (
+                        <p className="text-sm text-muted-foreground">
+                          {calib.periodos_exatos} períodos • {calib.palavras_min}–{calib.palavras_max} palavras
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -725,8 +735,8 @@ export const JarvisTutoriaConfiguracao = () => {
                 {editandoCalibracao?.id === calib.id && (
                   <div className="space-y-5 mt-4 pt-4 border-t">
 
-                    {/* Parâmetros comuns */}
-                    <div>
+                    {/* Parâmetros estruturais — apenas para modos de geração */}
+                    {MODOS_ESTRUTURAIS.has(calib.subtab_nome) && <div>
                       <p className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                         Parâmetros estruturais
                       </p>
@@ -1046,15 +1056,16 @@ export const JarvisTutoriaConfiguracao = () => {
                         className="mt-1"
                       />
                     </div>
+                    </div>}
 
-                    {/* Prompt Tutor — modo especializado de conversa */}
+                    {/* Prompt Tutor — campo principal para todos os modos */}
                     <div>
-                      <Separator className="my-2" />
+                      {MODOS_ESTRUTURAIS.has(editandoCalibracao.subtab_nome) && <Separator className="my-2" />}
                       <Label className="font-semibold text-purple-800">
-                        Prompt Tutor — Modo Especializado
+                        Prompt Tutor
                       </Label>
                       <p className="text-xs text-slate-500 mt-0.5 mb-1">
-                        System prompt usado quando o aluno inicia uma conversa especializada nesta etapa.
+                        System prompt usado quando o aluno inicia uma conversa neste modo.
                         Define comportamento, metodologia, tom, exercícios e progressão pedagógica.
                         Deixe vazio para usar o prompt padrão do Jarvis.
                       </p>
