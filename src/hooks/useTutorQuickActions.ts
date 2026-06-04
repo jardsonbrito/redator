@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface TutorQuickAction {
   id: string;
   label: string;
+  descricao?: string | null;
   texto: string;
   icone: string;
   ordem: number;
@@ -19,7 +20,7 @@ export const useTutorQuickActions = () => {
       setLoading(true);
       const { data, error } = await (supabase as any)
         .from('tutor_quick_actions')
-        .select('id, label, texto, icone, ordem')
+        .select('id, label, descricao, texto, icone, ordem')
         .eq('ativo', true)
         .order('ordem', { ascending: true });
       if (error) throw error;
