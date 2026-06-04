@@ -43,14 +43,14 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
         </div>
       </header>
 
-      {/* Quick actions */}
-      {isLoading ? (
+      {/* Quick actions — ocultos quando modo especialista está ativo */}
+      {!subtabLabel && isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-[58px] rounded-2xl bg-slate-100 animate-pulse" />
           ))}
         </div>
-      ) : actions.length > 0 && (
+      ) : !subtabLabel && actions.length > 0 && (
         <div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {actions.map(({ id, icone, label, texto }) => {
