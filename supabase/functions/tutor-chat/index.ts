@@ -138,17 +138,21 @@ async function salvarSessaoSintetizada(
   try {
     const parsed = parsearSintese(params.texto_completo);
 
-    // Busca turma do aluno
+    // Busca turma e nome do aluno (mesma query, sem chamada extra)
     const { data: perfil } = await supabase
       .from('profiles')
-      .select('turma')
+      .select('turma, nome, sobrenome')
       .eq('id', params.aluno_id)
       .single();
+
+    const nomeAluno = [(perfil as any)?.nome, (perfil as any)?.sobrenome]
+      .filter(Boolean).join(' ') || null;
 
     await supabase.from('jarvis_sessoes_sintetizadas').insert({
       conversa_id:          params.conversa_id,
       aluno_id:             params.aluno_id,
       aluno_email:          params.aluno_email.toLowerCase().trim(),
+      aluno_nome:           nomeAluno,
       turma:                (perfil as any)?.turma ?? null,
       subtab_nome:          params.subtab_nome,
       resumo:               parsed.resumo,

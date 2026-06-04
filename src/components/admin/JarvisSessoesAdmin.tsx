@@ -8,10 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// Converte segunda pessoa para terceira usando o nome do aluno
+function humanizarParaTerceiraPessoa(texto: string, nome: string | null): string {
+  const ref = nome ? nome.split(' ')[0] : 'O aluno';
+  return texto
+    .replace(/\bVocê\b/g, ref)
+    .replace(/\bvocê\b/g, ref.toLowerCase())
+    .replace(/\bSeu\b/g, `De ${ref}`)
+    .replace(/\bseu\b/g, `de ${ref}`)
+    .replace(/\bSua\b/g, `De ${ref}`)
+    .replace(/\bsua\b/g, `de ${ref}`);
+}
+
 interface Sessao {
   id: string;
   aluno_email: string;
-  aluno_nome?: string;
+  aluno_nome?: string | null;
   turma: string | null;
   subtab_nome: string | null;
   resumo: string | null;
@@ -98,7 +110,9 @@ function SessaoRow({ sessao }: { sessao: Sessao }) {
               {sessao.resumo && (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">O que foi estudado</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{sessao.resumo}</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    {humanizarParaTerceiraPessoa(sessao.resumo, sessao.aluno_nome ?? null)}
+                  </p>
                 </div>
               )}
 
@@ -109,7 +123,8 @@ function SessaoRow({ sessao }: { sessao: Sessao }) {
                   <ul className="space-y-1">
                     {sessao.dificuldades.map((d, i) => (
                       <li key={i} className="text-sm text-slate-700 flex gap-2">
-                        <span className="text-red-400 flex-shrink-0">•</span>{d}
+                        <span className="text-red-400 flex-shrink-0">•</span>
+                        {humanizarParaTerceiraPessoa(d, sessao.aluno_nome ?? null)}
                       </li>
                     ))}
                   </ul>
@@ -123,7 +138,8 @@ function SessaoRow({ sessao }: { sessao: Sessao }) {
                   <ul className="space-y-1">
                     {sessao.proximos_passos.map((p, i) => (
                       <li key={i} className="text-sm text-slate-700 flex gap-2">
-                        <span className="text-purple-400 flex-shrink-0">→</span>{p}
+                        <span className="text-purple-400 flex-shrink-0">→</span>
+                        {humanizarParaTerceiraPessoa(p, sessao.aluno_nome ?? null)}
                       </li>
                     ))}
                   </ul>
@@ -182,7 +198,7 @@ export function JarvisSessoesAdmin() {
 
       let query = (supabase as any)
         .from('jarvis_sessoes_sintetizadas')
-        .select(`*, profiles!jarvis_sessoes_sintetizadas_aluno_id_fkey(nome, sobrenome)`)
+        .select('*')
         .gte('created_at', inicio)
         .lte('created_at', fim)
         .order('created_at', { ascending: false });
@@ -190,14 +206,7 @@ export function JarvisSessoesAdmin() {
       if (turmaFiltro !== 'todas') query = query.eq('turma', turmaFiltro);
 
       const { data } = await query;
-
-      const mapped = (data ?? []).map((s: any) => ({
-        ...s,
-        aluno_nome: s.profiles
-          ? `${s.profiles.nome ?? ''} ${s.profiles.sobrenome ?? ''}`.trim()
-          : null,
-      }));
-      setSessoes(mapped);
+      setSessoes(data ?? []);
     } catch (err) {
       console.error(err);
     } finally {
