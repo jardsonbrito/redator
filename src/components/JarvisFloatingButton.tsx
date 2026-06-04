@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { History, Sparkles, PenLine, ScanSearch, X, GraduationCap, Lock, ChevronDown } from "lucide-react";
+import { Lock } from "lucide-react";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
-import { cn } from "@/lib/utils";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { useToast } from "@/hooks/use-toast";
@@ -10,143 +8,36 @@ import { useToast } from "@/hooks/use-toast";
 const JARVIS_BLOQUEADO_MSG =
   'O Jarvis não está disponível no seu plano atual. Entre em contato pelo WhatsApp (85) 99216-0605 para solicitar a compra de créditos e liberar o uso.';
 
-const extraActions = [
-  { label: "Analisar minha redação", icon: ScanSearch, href: "/jarvis?modoIndex=0" },
-  { label: "Melhorar meu texto",     icon: Sparkles,   href: "/jarvis?modoIndex=1" },
-  { label: "Me ajudar a começar",    icon: PenLine,    href: "/jarvis?modoIndex=2" },
-  { label: "Ver histórico",          icon: History,    href: "/jarvis?view=historico" },
-];
-
 export const JarvisFloatingButton = () => {
-  const [isOpen, setIsOpen]           = useState(false);
-  const [collapseOpen, setCollapseOpen] = useState(false);
-  const navigate                      = useNavigate();
-  const { toast }                     = useToast();
-  const { studentData }               = useStudentAuth();
+  const navigate                        = useNavigate();
+  const { toast }                       = useToast();
+  const { studentData }                 = useStudentAuth();
   const { isFeatureEnabled, isLoading } = usePlanFeatures(studentData.email ?? '');
-  const jarvisBloqueado               = !isLoading && !isFeatureEnabled('jarvis');
+  const jarvisBloqueado                 = !isLoading && !isFeatureEnabled('jarvis');
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setCollapseOpen(false);
-  };
-
-  const handleAction = (href: string) => {
+  const handleClick = () => {
     if (jarvisBloqueado) {
       toast({ title: 'Jarvis indisponível', description: JARVIS_BLOQUEADO_MSG, variant: 'destructive' });
       return;
     }
-    handleClose();
-    navigate(href);
+    navigate('/jarvis/tutor');
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={handleClose}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Container fixo — empilha painel e botão verticalmente */}
-      <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3">
-
-        {/* Painel de ações rápidas */}
-        <div
-          className={cn(
-            "bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden transition-all duration-200 origin-bottom-right",
-            isOpen
-              ? "opacity-100 scale-100 pointer-events-auto"
-              : "opacity-0 scale-95 pointer-events-none"
-          )}
-          style={{ minWidth: "220px" }}
-        >
-          {/* Cabeçalho — só texto, sem ícone */}
-          <div className="flex items-center justify-between px-4 py-3 bg-indigo-700 text-white">
-            <span className="text-base font-semibold tracking-wide">Jarvis</span>
-            <button
-              onClick={handleClose}
-              className="text-white/70 hover:text-white transition-colors"
-              aria-label="Fechar painel Jarvis"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Conteúdo */}
-          {jarvisBloqueado ? (
-            <div className="px-4 py-4 flex flex-col items-center gap-2 text-center">
-              <Lock className="w-5 h-5 text-slate-400" />
-              <p className="text-xs text-slate-500 leading-snug">
-                O Jarvis não está disponível no seu plano atual.
-              </p>
-            </div>
-          ) : (
-            <div className="py-1">
-              {/* Tutor Jarvis — ação principal sempre visível */}
-              <button
-                onClick={() => handleAction("/jarvis/tutor")}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 hover:bg-purple-50 hover:text-indigo-700 transition-colors"
-              >
-                <GraduationCap className="w-4 h-4 shrink-0 text-indigo-400" />
-                Tutor Jarvis
-              </button>
-
-              {/* Toggle de opções extras */}
-              <button
-                onClick={() => setCollapseOpen((prev) => !prev)}
-                className="w-full flex items-center justify-between px-4 py-1.5 text-xs text-slate-400 hover:text-indigo-500 transition-colors border-t border-slate-100"
-              >
-                <span>Mais opções</span>
-                <ChevronDown
-                  className={cn(
-                    "w-3.5 h-3.5 transition-transform duration-200",
-                    collapseOpen && "rotate-180"
-                  )}
-                />
-              </button>
-
-              {/* Opções colapsáveis */}
-              <div
-                className={cn(
-                  "overflow-hidden transition-all duration-200",
-                  collapseOpen ? "max-h-60" : "max-h-0"
-                )}
-              >
-                {extraActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={action.href}
-                      onClick={() => handleAction(action.href)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-gray-700 hover:bg-purple-50 hover:text-indigo-700 transition-colors"
-                    >
-                      <Icon className="w-4 h-4 shrink-0 text-indigo-400" />
-                      {action.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Botão flutuante principal */}
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          aria-label={isOpen ? "Fechar Jarvis" : "Abrir Jarvis"}
-          className={cn(
-            "w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200",
-            "bg-indigo-700 hover:bg-indigo-800 text-white",
-            isOpen && "ring-4 ring-indigo-300"
-          )}
-        >
-          <JarvisIcon size={26} className="text-white" />
-        </button>
-      </div>
-    </>
+    <div className="fixed bottom-20 right-4 z-50">
+      <button
+        onClick={handleClick}
+        aria-label="Abrir Tutor Jarvis"
+        title={jarvisBloqueado ? 'Jarvis indisponível' : 'Tutor Jarvis'}
+        className="relative w-14 h-14 rounded-full shadow-lg flex items-center justify-center
+                   bg-indigo-700 hover:bg-indigo-800 active:scale-95 transition-all duration-150
+                   text-white ring-0 hover:ring-4 hover:ring-indigo-300"
+      >
+        {jarvisBloqueado
+          ? <Lock className="w-5 h-5 text-white/70" />
+          : <JarvisIcon size={26} className="text-white" />
+        }
+      </button>
+    </div>
   );
 };

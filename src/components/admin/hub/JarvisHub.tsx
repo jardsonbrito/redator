@@ -26,15 +26,18 @@ export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
       <TabsContent value="tutor">
         <Tabs defaultValue="sessoes" className="w-full">
           <TabsList className="mb-4">
+            {/* Monitoramento */}
             <TabsTrigger value="sessoes">Sessões</TabsTrigger>
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
-            <TabsTrigger value="configuracao">Calibração Pedagógica</TabsTrigger>
+            {/* Configuração */}
+            <TabsTrigger value="configuracao-pedagogica">Configuração Pedagógica</TabsTrigger>
+            <TabsTrigger value="modos">Modos do Jarvis</TabsTrigger>
             <TabsTrigger value="parametros">Parâmetros IA</TabsTrigger>
-            <TabsTrigger value="modos">Modos</TabsTrigger>
+            {/* Legado */}
             <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
 
-          {/* Sessões — visão principal de acompanhamento */}
+          {/* Sessões — acompanhamento pedagógico em tempo real */}
           <TabsContent value="sessoes" className="space-y-6">
             <JarvisSessoesAdmin />
           </TabsContent>
@@ -44,19 +47,30 @@ export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
             <JarvisCreditManagementBulk />
           </TabsContent>
 
-          {/* Calibração Pedagógica — configuração do comportamento do Tutor */}
-          <TabsContent value="configuracao" className="space-y-6">
+          {/*
+            Configuração Pedagógica
+            — Todo o conhecimento e comportamento do Tutor:
+              • Modos Especialistas (Introdução, Desenvolvimento, Conclusão + prompt_tutor)
+              • Modelos de Referência (few-shot learning)
+              • Frase Temática (base de temas ENEM)
+              • Ações Rápidas (atalhos para os alunos — operacional, não estrutural)
+          */}
+          <TabsContent value="configuracao-pedagogica" className="space-y-6">
             <JarvisTutoriaConfiguracao />
           </TabsContent>
 
-          {/* Parâmetros de IA */}
-          <TabsContent value="parametros" className="space-y-6">
-            <JarvisConfigManagement />
-          </TabsContent>
-
-          {/* Modos simples (lapidação, análise) */}
+          {/*
+            Modos do Jarvis
+            — Modos operacionais com system prompts próprios
+              (lapidação textual, análise, assistente de escrita, etc.)
+          */}
           <TabsContent value="modos" className="space-y-6">
             <JarvisModosManagement />
+          </TabsContent>
+
+          {/* Parâmetros de IA — modelo, temperatura, tokens */}
+          <TabsContent value="parametros" className="space-y-6">
+            <JarvisConfigManagement />
           </TabsContent>
 
           {/* Histórico de interações (modos simples — legado) */}
@@ -75,23 +89,15 @@ export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
             <TabsTrigger value="configuracao">Configuração</TabsTrigger>
             <TabsTrigger value="video">Vídeo de Instrução</TabsTrigger>
           </TabsList>
-
-          {/* Histórico de correções */}
           <TabsContent value="correcoes" className="space-y-6">
             <JarvisCorrecaoHistoricoGeral />
           </TabsContent>
-
-          {/* Créditos dos professores */}
           <TabsContent value="creditos" className="space-y-6">
             <JarvisCorrecaoCreditosProfessores />
           </TabsContent>
-
-          {/* Configuração da correção IA */}
           <TabsContent value="configuracao" className="space-y-6">
             <JarvisCorrecaoConfigManager />
           </TabsContent>
-
-          {/* Vídeo de instrução */}
           <TabsContent value="video" className="space-y-6">
             <JarvisVideoInstrucao />
           </TabsContent>

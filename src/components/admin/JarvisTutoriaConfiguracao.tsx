@@ -619,7 +619,7 @@ export const JarvisTutoriaConfiguracao = () => {
     <>
     <Tabs defaultValue="calibracao" className="w-full">
       <TabsList>
-        <TabsTrigger value="calibracao">Calibração Pedagógica</TabsTrigger>
+        <TabsTrigger value="calibracao">Modos Especialistas</TabsTrigger>
         <TabsTrigger value="modelos">Modelos de Referência</TabsTrigger>
         <TabsTrigger value="tema">Frase Temática</TabsTrigger>
         <TabsTrigger value="acoes-rapidas">Ações Rápidas</TabsTrigger>
