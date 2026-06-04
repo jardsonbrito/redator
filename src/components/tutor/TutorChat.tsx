@@ -80,7 +80,9 @@ export function TutorChat({
         ) : (
           <div className="py-6">
             {mensagens.map((msg, idx) => {
-              const isSintese = sinteseGerada && idx === mensagens.length - 1 && msg.role === 'assistant';
+              const isSintese = msg.role === 'assistant' &&
+                (msg.conteudo.includes('Síntese da Sessão de Tutoria') ||
+                 (sinteseGerada && idx === mensagens.length - 1));
               return (
                 <div key={msg.id}>
                   {isSintese && (
