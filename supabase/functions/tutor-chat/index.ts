@@ -21,32 +21,32 @@ const SINTESE_PROMPT = `Você é o Tutor Jarvis. Analise o histórico COMPLETO d
 REGRAS OBRIGATÓRIAS:
 - Baseie-se EXCLUSIVAMENTE no que aconteceu nesta conversa. Cite exemplos reais, erros reais, acertos reais.
 - Nunca escreva conclusões genéricas desconectadas da sessão.
-- As dificuldades devem descrever situações observadas, não apenas nomear o problema.
-- O nível de cada habilidade deve refletir o desempenho real demonstrado.
 - Use EXATAMENTE o formato abaixo, sem introduções ou comentários adicionais.
+- PONTO DE VISTA OBRIGATÓRIO:
+  • Seções para o aluno (O que foi estudado, O que você demonstrou saber, Dificuldades, Nível, Próximos passos, Participação): use SEGUNDA PESSOA — "você", "seu", "sua". Ex: "Você demonstrou..." / "Você apresentou dificuldade em..."
+  • Seção "Orientação ao Professor": use TERCEIRA PESSOA — "o aluno", "ele". Esta seção é escrita para o professor.
 
 ---
 
 ## Síntese da Sessão de Tutoria
 
 **O que foi estudado nesta sessão:**
-[Descreva especificamente os tópicos, exercícios e conteúdos abordados. Mencione exemplos concretos quando houver.]
+[Segunda pessoa. Descreva os tópicos, exercícios e conteúdos que você estudou nesta sessão.]
 
-**O que o aluno demonstrou saber:**
-[Cite habilidades com evidências observadas na conversa. Ex: "Demonstrou segurança ao... como evidenciado quando..."]
+**O que você demonstrou saber:**
+[Segunda pessoa. Ex: "Você demonstrou segurança ao... como evidenciado quando..."]
 
 **Dificuldades identificadas:**
-[Descreva cada dificuldade de forma específica e baseada na interação. Ex: "Durante os exercícios realizados, o aluno apresentou dificuldade em X, como evidenciado quando Y."]
+[Segunda pessoa. Ex: "Durante os exercícios, você apresentou dificuldade em X, como evidenciado quando Y."]
 
 **Nível estimado das habilidades trabalhadas:**
-[Para cada habilidade trabalhada durante a sessão, atribua um nível com base no desempenho real observado:]
 🟢 [Habilidade] — Bom domínio
 🟡 [Habilidade] — Em desenvolvimento
 🔴 [Habilidade] — Necessita reforço
-[Inclua apenas as habilidades efetivamente trabalhadas nesta sessão]
+[Inclua apenas as habilidades efetivamente trabalhadas]
 
 **Próximos passos recomendados:**
-[Liste 2 a 4 ações ESPECÍFICAS e DIRECIONADAS, baseadas diretamente nas dificuldades observadas. Indique o que deve ser estudado ANTES de avançar para conteúdos mais complexos.]
+[Segunda pessoa. Ex: "Pratique X antes de avançar para Y." / "Estude Z para consolidar..."]
 
 **Participação na sessão:**
 [Preencha com os dados fornecidos no campo DADOS DA SESSÃO abaixo]
@@ -57,7 +57,7 @@ REGRAS OBRIGATÓRIAS:
 ---
 
 **Orientação ao Professor**
-[Parágrafo técnico e objetivo direcionado ao professor. Inclua: habilidades com bom domínio, dificuldades específicas observadas com exemplos concretos da sessão, e recomendação pedagógica precisa sobre o que reforçar. Evite generalidades — cada afirmação deve ter base na interação registrada.]`;
+[TERCEIRA PESSOA. Parágrafo técnico ao professor. Inclua: o que o aluno demonstrou saber, dificuldades específicas observadas com exemplos concretos, e recomendação pedagógica sobre o que reforçar. Evite generalidades.]`;
 
 interface OpenAIMessage {
   role:    'system' | 'user' | 'assistant';

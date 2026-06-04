@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { JarvisCreditManagementBulk } from '@/components/admin/JarvisCreditManagementBulk';
 import { JarvisHistoricoAdmin } from '@/components/admin/JarvisHistoricoAdmin';
+import { JarvisSessoesAdmin } from '@/components/admin/JarvisSessoesAdmin';
 import { JarvisCorrecaoCreditosProfessores } from '@/components/admin/JarvisCorrecaoCreditosProfessores';
 import { JarvisCorrecaoHistoricoGeral } from '@/components/admin/JarvisCorrecaoHistoricoGeral';
 import { JarvisModosManagement } from '@/components/admin/JarvisModosManagement';
@@ -27,6 +28,7 @@ export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
           <TabsList className="mb-4">
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
             <TabsTrigger value="historico">Histórico de Interações</TabsTrigger>
+            <TabsTrigger value="sessoes">Sessões do Tutor</TabsTrigger>
             <TabsTrigger value="configuracao">Configuração</TabsTrigger>
           </TabsList>
           <TabsContent value="creditos" className="space-y-6">
@@ -34,6 +36,9 @@ export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
           </TabsContent>
           <TabsContent value="historico" className="space-y-6">
             <JarvisHistoricoAdmin />
+          </TabsContent>
+          <TabsContent value="sessoes" className="space-y-6">
+            <JarvisSessoesAdmin />
           </TabsContent>
           <TabsContent value="configuracao">
             <Tabs defaultValue="modos" className="w-full">
