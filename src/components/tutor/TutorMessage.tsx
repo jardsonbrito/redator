@@ -114,12 +114,20 @@ interface TutorMessageProps {
   isSintese?: boolean;
 }
 
+function removerOrientacaoProfessor(texto: string): string {
+  // Remove a seção "Orientação ao Professor" e tudo após o separador ---
+  return texto.replace(/\n?---+\n+\*\*Orienta[cç][aã]o ao Professor\*\*[\s\S]*/i, '').trim();
+}
+
 export function TutorMessage({ mensagem, isSintese }: TutorMessageProps) {
   const isUser = mensagem.role === 'user';
   const [copied, setCopied] = useState(false);
+  const conteudoExibido = isSintese
+    ? removerOrientacaoProfessor(mensagem.conteudo)
+    : mensagem.conteudo;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(mensagem.conteudo).then(() => {
+    navigator.clipboard.writeText(conteudoExibido).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -152,7 +160,7 @@ export function TutorMessage({ mensagem, isSintese }: TutorMessageProps) {
         </div>
 
         <div className="rounded-3xl rounded-tl-sm bg-white border border-slate-200 shadow-sm px-5 py-4 text-sm leading-relaxed text-slate-800">
-          <MarkdownContent text={mensagem.conteudo} />
+          <MarkdownContent text={conteudoExibido} />
         </div>
 
         {/* Botão copiar — sempre visível na síntese, hover nos demais */}
