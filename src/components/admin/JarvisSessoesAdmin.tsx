@@ -16,11 +16,18 @@ import {
 import { cn } from '@/lib/utils';
 
 function humanizarParaTerceiraPessoa(texto: string, nome: string | null): string {
-  const ref = nome ? nome.split(' ')[0] : 'O aluno';
+  const ref  = nome ? nome.split(' ')[0] : 'O aluno';
+  const refl = ref.toLowerCase();
+  // \b não funciona com caracteres acentuados (ê, ã) — usamos lookahead/lookbehind de letras
+  const naoLetra = '(?<![a-zA-ZÀ-ÿ])';
+  const naoLetraF = '(?![a-zA-ZÀ-ÿ])';
   return texto
-    .replace(/\bVocê\b/g, ref).replace(/\bvocê\b/g, ref.toLowerCase())
-    .replace(/\bSeu\b/g, `De ${ref}`).replace(/\bseu\b/g, `de ${ref}`)
-    .replace(/\bSua\b/g, `De ${ref}`).replace(/\bsua\b/g, `de ${ref}`);
+    .replace(new RegExp(`${naoLetra}Você${naoLetraF}`, 'g'), ref)
+    .replace(new RegExp(`${naoLetra}você${naoLetraF}`, 'g'), refl)
+    .replace(new RegExp(`${naoLetra}Seu${naoLetraF}`, 'g'),  `de ${ref}`)
+    .replace(new RegExp(`${naoLetra}seu${naoLetraF}`, 'g'),  `de ${refl}`)
+    .replace(new RegExp(`${naoLetra}Sua${naoLetraF}`, 'g'),  `de ${ref}`)
+    .replace(new RegExp(`${naoLetra}sua${naoLetraF}`, 'g'),  `de ${refl}`);
 }
 
 interface Sessao {
