@@ -1,6 +1,6 @@
 
 import React, { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider } from "./hooks/useAuth";
 import { StudentAuthProvider } from "./hooks/useStudentAuth";
 import { NavigationProvider } from "./hooks/useNavigationContext";
@@ -205,7 +205,7 @@ function App() {
                     <Route path="/ajuda-rapida" element={<ProtectedStudentRoute><AjudaRapida /></ProtectedStudentRoute>} />
                     <Route path="/guia-tematico" element={<ProtectedStudentRoute><GuiaTematico /></ProtectedStudentRoute>} />
                     <Route path="/guia-tematico/:id" element={<ProtectedStudentRoute><GuiaTematicoView /></ProtectedStudentRoute>} />
-                    <Route path="/jarvis" element={<ProtectedStudentRoute><Jarvis /></ProtectedStudentRoute>} />
+                    <Route path="/jarvis" element={<Navigate to="/jarvis/tutor" replace />} />
                     <Route path="/jarvis/tutor" element={<ProtectedStudentRoute><TutorJarvis /></ProtectedStudentRoute>} />
                     <Route path="/jarvis/historico" element={<ProtectedStudentRoute><JarvisHistorico /></ProtectedStudentRoute>} />
                     <Route path="/plano-estudo" element={<ProtectedStudentRoute><PlanoEstudo /></ProtectedStudentRoute>} />
