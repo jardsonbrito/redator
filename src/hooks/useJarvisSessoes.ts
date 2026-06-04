@@ -35,6 +35,7 @@ export const useJarvisSessoes = (alunoEmail: string, limite = 20) => {
         .from('jarvis_sessoes_sintetizadas')
         .select('*')
         .eq('aluno_email', alunoEmail.toLowerCase().trim())
+        .eq('deleted_by_aluno', false)
         .order('created_at', { ascending: false })
         .limit(limite);
       if (error) throw error;
