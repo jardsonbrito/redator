@@ -736,7 +736,8 @@ export const JarvisTutoriaConfiguracao = () => {
                   <div className="space-y-5 mt-4 pt-4 border-t">
 
                     {/* Parâmetros estruturais — apenas para modos de geração */}
-                    {MODOS_ESTRUTURAIS.has(calib.subtab_nome) && <div>
+                    {MODOS_ESTRUTURAIS.has(calib.subtab_nome) && <>
+                      <div>
                       <p className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                         Parâmetros estruturais
                       </p>
@@ -1056,7 +1057,7 @@ export const JarvisTutoriaConfiguracao = () => {
                         className="mt-1"
                       />
                     </div>
-                    </div>}
+                    </>}
 
                     {/* Prompt Tutor — campo principal para todos os modos */}
                     <div>
