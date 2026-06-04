@@ -36,13 +36,8 @@ function SkeletonList() {
 
 export const MonitoramentoPage = () => {
   const now = new Date();
-  // Nos primeiros 10 dias do mês, o mês atual tem poucos dados — usar mês anterior como padrão
-  const defaultMes = now.getDate() <= 10
-    ? (now.getMonth() === 0 ? 12 : now.getMonth())
-    : now.getMonth() + 1;
-  const defaultAno = now.getDate() <= 10 && now.getMonth() === 0
-    ? now.getFullYear() - 1
-    : now.getFullYear();
+  const defaultMes = now.getMonth() + 1;
+  const defaultAno = now.getFullYear();
 
   const { turmasDinamicas } = useTurmasAtivas();
   const [selectedTurma, setSelectedTurma] = useState('');
