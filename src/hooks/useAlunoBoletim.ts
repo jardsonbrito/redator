@@ -106,6 +106,9 @@ export interface JustificativaBoletim {
 export interface JarvisBoletim {
   totalInteracoes: number;
   modos: { label: string; count: number }[];
+  totalSessoes: number;
+  ultimaSessao: string | null;
+  subtabsContagem: Record<string, number>;
 }
 
 export interface AlunoBoletimDados {
@@ -274,11 +277,21 @@ async function fetchBoletimData(
   // Dados do Jarvis para o boletim
   const jarvisRow = (jarvisBoletimRes.data as any)?.[0] ?? null;
   const modosContagem = (jarvisRow?.modos_contagem ?? {}) as Record<string, number>;
+
+  // Sessões sintetizadas no período
+  const sessoesRes = await supabase.rpc("get_jarvis_sessoes_resumo_by_email", {
+    p_email: email, p_mes: mes, p_ano: ano,
+  });
+  const sessoesRow = (sessoesRes.data as any)?.[0] ?? null;
+
   const jarvis: JarvisBoletim = {
     totalInteracoes: Number(jarvisRow?.total_interacoes ?? 0),
     modos: Object.entries(modosContagem)
       .map(([label, count]) => ({ label, count: Number(count) }))
       .sort((a, b) => b.count - a.count),
+    totalSessoes:    Number(sessoesRow?.total_sessoes ?? 0),
+    ultimaSessao:    sessoesRow?.ultima_sessao ?? null,
+    subtabsContagem: (sessoesRow?.subtabs_contagem ?? {}) as Record<string, number>,
   };
 
   // Contagem de eventos de aulas gravadas e videoteca a partir dos eventos já buscados

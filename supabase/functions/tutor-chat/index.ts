@@ -68,6 +68,106 @@ function estimarTokens(texto: string): number {
   return Math.ceil(texto.length / 4);
 }
 
+// ── Parser de síntese pedagógica ─────────────────────────────────────────────
+function parsearSintese(texto: string) {
+  const secao = (chave: string): string => {
+    const regex = new RegExp(`\\*\\*${chave}[:\\s*]*\\*\\*[:\\s]*([\\s\\S]*?)(?=\\n\\*\\*|\\n---|\$)`, 'i');
+    return (texto.match(regex)?.[1] ?? '').trim();
+  };
+
+  const resumo = secao('O que foi estudado nesta sess[aã]o');
+
+  // Habilidades: parse 🟢/🟡/🔴
+  const habilidades: { label: string; nivel: string }[] = [];
+  const habSecao = secao('N[ií]vel estimado das habilidades');
+  for (const linha of habSecao.split('\n')) {
+    const m = linha.match(/^([🟢🟡🔴])\s+(.+?)\s+[—-]\s+(.+)$/u);
+    if (m) {
+      const nivel = m[1] === '🟢' ? 'verde' : m[1] === '🟡' ? 'amarelo' : 'vermelho';
+      habilidades.push({ label: m[2].trim(), nivel });
+    }
+  }
+
+  // Dificuldades: linhas não-vazias da seção
+  const difSecao = secao('Dificuldades identificadas');
+  const dificuldades = difSecao.split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+
+  // Próximos passos
+  const passosSecao = secao('Pr[oó]ximos passos');
+  const proximos_passos = passosSecao.split('\n').map(l => l.replace(/^[-•*\d.]+\s*/, '').trim()).filter(Boolean);
+
+  // Orientação ao professor
+  const orientacao_professor = secao('Orienta[cç][aã]o ao Professor');
+
+  // Participação
+  const durMatch = texto.match(/Tempo de estudo[:\s]+~?(\d+)\s*minuto/i);
+  const msgsMatch = texto.match(/Mensagens trocadas[:\s]+(\d+)/i);
+  const exerMatch = texto.match(/Exerc[ií]cios realizados[:\s]+(\d+)/i);
+  const duracao_minutos      = durMatch  ? parseInt(durMatch[1])  : 0;
+  const total_mensagens      = msgsMatch ? parseInt(msgsMatch[1]) : 0;
+  const exercicios_estimados = exerMatch ? parseInt(exerMatch[1]) : 0;
+
+  // Tags normalizadas para PEP futuro
+  const textoLower = (dificuldades.join(' ') + ' ' + resumo).toLowerCase();
+  const tagsMap: Record<string, string> = {
+    'conectivo': 'conectivos', 'tese': 'tese', 'repertório': 'repertorio',
+    'repertorio': 'repertorio', 'introdução': 'introducao', 'introduca': 'introducao',
+    'desenvolvimento': 'desenvolvimento', 'conclusão': 'conclusao', 'conclusao': 'conclusao',
+    'coesão': 'coesao', 'coesao': 'coesao', 'argumento': 'argumentacao',
+    'argumentaç': 'argumentacao', 'proposta': 'proposta_intervencao', 'c5': 'proposta_intervencao',
+  };
+  const tags_dificuldades = [...new Set(
+    Object.entries(tagsMap).filter(([k]) => textoLower.includes(k)).map(([, v]) => v)
+  )];
+
+  return { resumo, habilidades, dificuldades, proximos_passos, orientacao_professor,
+           duracao_minutos, total_mensagens, exercicios_estimados, tags_dificuldades };
+}
+
+// ── Salvar síntese na tabela estruturada ─────────────────────────────────────
+async function salvarSessaoSintetizada(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    conversa_id: string;
+    aluno_id: string;
+    aluno_email: string;
+    subtab_nome: string | null;
+    texto_completo: string;
+  }
+): Promise<void> {
+  try {
+    const parsed = parsearSintese(params.texto_completo);
+
+    // Busca turma do aluno
+    const { data: perfil } = await supabase
+      .from('profiles')
+      .select('turma')
+      .eq('id', params.aluno_id)
+      .single();
+
+    await supabase.from('jarvis_sessoes_sintetizadas').insert({
+      conversa_id:          params.conversa_id,
+      aluno_id:             params.aluno_id,
+      aluno_email:          params.aluno_email.toLowerCase().trim(),
+      turma:                (perfil as any)?.turma ?? null,
+      subtab_nome:          params.subtab_nome,
+      resumo:               parsed.resumo,
+      habilidades:          parsed.habilidades,
+      dificuldades:         parsed.dificuldades,
+      proximos_passos:      parsed.proximos_passos,
+      orientacao_professor: parsed.orientacao_professor,
+      duracao_minutos:      parsed.duracao_minutos,
+      total_mensagens:      parsed.total_mensagens,
+      exercicios_estimados: parsed.exercicios_estimados,
+      texto_completo:       params.texto_completo,
+      tags_dificuldades:    parsed.tags_dificuldades,
+    });
+    console.log('📝 Sessão sintetizada salva com sucesso');
+  } catch (err) {
+    console.error('⚠️ Erro ao salvar sessão sintetizada:', err);
+  }
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -552,10 +652,23 @@ Deno.serve(async (req) => {
       tokens_input:      tokensInput,
       tokens_output:     tokensOutput,
       tokens_total:      tokensTotal,
-      provider:          'openai',
+      provider:          providerIA,
       modelo:            modeloIA,
       tempo_resposta_ms: tempoResposta,
     });
+
+    // ── 9b. Se for síntese, salvar na tabela estruturada ─────────
+    if (gerar_sintese && respostaTexto.includes('Síntese da Sessão')) {
+      await salvarSessaoSintetizada(supabase, {
+        conversa_id:    activeConversationId,
+        aluno_id:       aluno.id,
+        aluno_email:    aluno_email,
+        subtab_nome:    activeSubtabId
+          ? (await supabase.from('jarvis_tutoria_subtabs').select('nome').eq('id', activeSubtabId).single()).data?.nome ?? null
+          : null,
+        texto_completo: respostaTexto,
+      });
+    }
 
     // ── 10. Processar créditos (acumulador progressivo) ───────────
     let creditosDebitados = 0;

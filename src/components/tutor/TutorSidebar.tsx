@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Trash2, MessageSquare, Loader2 } from 'lucide-react';
+import { Plus, Trash2, MessageSquare, Loader2, History } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { TutorConversa } from '@/hooks/useTutorConversas';
 import { cn } from '@/lib/utils';
 import {
@@ -29,6 +30,19 @@ interface TutorSidebarProps {
   subtabs?:             SubtabItem[];
   activeSubtabId?:      string | null;
   onSelectSubtab?:      (id: string, label: string) => void;
+}
+
+function HistoricoButton() {
+  const navigate = useNavigate();
+  return (
+    <button
+      onClick={() => navigate('/jarvis/historico')}
+      className="w-full flex items-center gap-2 px-4 py-3 text-xs font-medium text-slate-500 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+    >
+      <History className="w-3.5 h-3.5" />
+      Ver histórico de sessões
+    </button>
+  );
 }
 
 export function TutorSidebar({
@@ -182,15 +196,18 @@ export function TutorSidebar({
         )}
       </div>
 
-      {/* Footer — créditos */}
-      {creditosRestantes !== undefined && (
-        <div className="px-4 py-3 border-t border-slate-100">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">Créditos Jarvis</span>
-            <strong className="text-base font-bold text-purple-700">{creditosRestantes}</strong>
+      {/* Footer — histórico + créditos */}
+      <div className="border-t border-slate-100">
+        <HistoricoButton />
+        {creditosRestantes !== undefined && (
+          <div className="px-4 py-3 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">Créditos Jarvis</span>
+              <strong className="text-base font-bold text-purple-700">{creditosRestantes}</strong>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog

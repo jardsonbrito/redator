@@ -41,6 +41,8 @@ export function TutorChat({
   const handleGerarSintese = async () => {
     await gerarSintese();
     setSinteseGerada(true);
+    // Confirma para o aluno que a sessão foi registrada
+    window.dispatchEvent(new CustomEvent('jarvis-sessao-registrada'));
   };
 
   useEffect(() => {

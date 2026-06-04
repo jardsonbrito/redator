@@ -116,7 +116,9 @@
       "Bash(gh search *)",
       "Bash(where gh *)",
       "PowerShell(Get-Date *)",
-      "Bash(Select-Object -First 50)"
+      "Bash(Select-Object -First 50)",
+      "Bash(awk '/^      [a-z_]+: \\\\{$/ {table=$1; sub\\(/:/, \"\", table\\); print NR\": \"table}' \"C:\\\\Users\\\\jards\\\\OneDrive\\\\Área de Trabalho\\\\Site\\\\redator\\\\src\\\\integrations\\\\supabase\\\\types.ts\")",
+      "Bash(awk '/Tables: \\\\{/{flag=1; next} /Enums: \\\\{/{flag=0} flag && /^      [a-z_]+: \\\\{$/{table=$1; sub\\(/:/, \"\", table\\); print table}' \"C:\\\\Users\\\\jards\\\\OneDrive\\\\Área de Trabalho\\\\Site\\\\redator\\\\src\\\\integrations\\\\supabase\\\\types.ts\")"
     ]
   },
   "enableAllProjectMcpServers": true,

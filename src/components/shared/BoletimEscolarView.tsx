@@ -508,31 +508,44 @@ export function BoletimEscolarView({ email, turma }: BoletimEscolarViewProps) {
 
               {/* Jarvis */}
               <MetricBlock title="Jarvis">
-                <div className="flex items-center gap-3">
-                  <div className="shrink-0 w-14 h-14 rounded-xl bg-violet-100 flex items-center justify-center">
-                    <JarvisIcon size={28} className="text-violet-700" />
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center mt-0.5">
+                    <JarvisIcon size={24} className="text-violet-700" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    {data.jarvis.totalInteracoes > 0 ? (
+                  <div className="flex-1 min-w-0 space-y-1">
+                    {data.jarvis.totalInteracoes > 0 || data.jarvis.totalSessoes > 0 ? (
                       <>
-                        <p className="text-2xl font-black text-foreground">
-                          {data.jarvis.totalInteracoes}
-                        </p>
-                        <p className="text-xs font-semibold text-foreground">
-                          {data.jarvis.totalInteracoes === 1 ? "interação" : "interações"} com o Jarvis
-                        </p>
-                        {data.jarvis.modos.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {data.jarvis.modos.map(({ label, count }) => (
-                              <span
-                                key={label}
-                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700"
-                              >
-                                {label} ×{count}
-                              </span>
-                            ))}
+                        <div className="flex items-baseline gap-3">
+                          <p className="text-2xl font-black text-foreground">{data.jarvis.totalInteracoes}</p>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {data.jarvis.totalInteracoes === 1 ? 'interação' : 'interações'}
+                          </p>
+                        </div>
+                        {data.jarvis.totalSessoes > 0 && (
+                          <p className="text-xs font-semibold text-violet-700">
+                            {data.jarvis.totalSessoes} {data.jarvis.totalSessoes === 1 ? 'sessão concluída' : 'sessões concluídas'}
+                          </p>
+                        )}
+                        {Object.keys(data.jarvis.subtabsContagem).length > 0 && (
+                          <div>
+                            <p className="text-[10px] text-muted-foreground mb-1">Assuntos mais estudados:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(data.jarvis.subtabsContagem).slice(0, 3).map(([label, count]) => (
+                                <span key={label} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )}
+                        {data.jarvis.ultimaSessao && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Última sessão: {new Date(data.jarvis.ultimaSessao).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                        <a href="/jarvis/historico" className="inline-block text-[10px] font-semibold text-violet-600 hover:underline mt-0.5">
+                          Ver histórico →
+                        </a>
                       </>
                     ) : (
                       <>
