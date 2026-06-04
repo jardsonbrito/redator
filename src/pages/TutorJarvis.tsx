@@ -23,10 +23,23 @@ const JARVIS_BLOQUEADO_MSG =
 export default function TutorJarvis() {
   const { studentData }                                   = useStudentAuth();
   const alunoEmail                                        = studentData.email ?? '';
+  const { toast }                                         = useToast();
+
+  // Toast quando sessão é registrada automaticamente
+  useEffect(() => {
+    const handler = () => {
+      toast({
+        title: '✅ Sessão registrada',
+        description: 'Sua síntese foi salva no histórico.',
+        className: 'border-green-200 bg-green-50 text-green-900',
+      });
+    };
+    window.addEventListener('jarvis-sessao-registrada', handler);
+    return () => window.removeEventListener('jarvis-sessao-registrada', handler);
+  }, []);
   const [activeConversationId, setActiveId]               = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen]                     = useState(false);
   const [creditosRestantes, setCreditosRestantes]         = useState<number>(0);
-  const { toast }                                         = useToast();
 
   const { isFeatureEnabled, isLoading: planLoading }      = usePlanFeatures(alunoEmail);
   const jarvisBloqueado                                   = !planLoading && !isFeatureEnabled('jarvis');
