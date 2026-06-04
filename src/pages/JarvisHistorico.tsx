@@ -116,13 +116,6 @@ function SessaoCard({ sessao }: { sessao: JarvisSessao }) {
             </div>
           )}
 
-          {/* Orientação ao professor */}
-          {sessao.orientacao_professor && (
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Orientação ao Professor</p>
-              <p className="text-sm text-slate-700 leading-relaxed">{sessao.orientacao_professor}</p>
-            </div>
-          )}
         </div>
       )}
     </div>
