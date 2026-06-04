@@ -115,11 +115,11 @@ interface TutorMessageProps {
 }
 
 function removerOrientacaoProfessor(texto: string): string {
-  // Remove tudo a partir do separador --- que precede "Orientação ao Professor"
-  const idx = texto.search(/-{3,}\s*\n+\*{0,2}Orienta[cç][aã]o ao Professor\*{0,2}/i);
+  // Estratégia 1: remove a partir do --- antes da seção
+  const idx = texto.search(/-{3,}\s+\*{0,2}Orienta[cç][aã]o ao Professor/i);
   if (idx !== -1) return texto.slice(0, idx).trim();
-  // Fallback: remove direto da linha da seção (sem ---)
-  const idx2 = texto.search(/\n\*{0,2}Orienta[cç][aã]o ao Professor\*{0,2}/i);
+  // Estratégia 2: sem ---, remove a partir do cabeçalho da seção
+  const idx2 = texto.search(/\*{0,2}Orienta[cç][aã]o ao Professor\*{0,2}/i);
   if (idx2 !== -1) return texto.slice(0, idx2).trim();
   return texto.trim();
 }
