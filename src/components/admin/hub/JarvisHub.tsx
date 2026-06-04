@@ -14,72 +14,85 @@ interface JarvisHubProps {
   defaultTab?: string;
 }
 
-export function JarvisHub({ defaultTab = 'alunos' }: JarvisHubProps) {
+export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
   return (
     <Tabs defaultValue={defaultTab} className="w-full">
-      <TabsList className="mb-4">
-        <TabsTrigger value="alunos">Alunos</TabsTrigger>
-        <TabsTrigger value="professores">Professores</TabsTrigger>
+      <TabsList className="mb-6">
+        <TabsTrigger value="tutor">Tutor Jarvis</TabsTrigger>
+        <TabsTrigger value="correcao">Correção IA</TabsTrigger>
       </TabsList>
 
-      {/* ── Alunos ─────────────────────────────────────────────────────────── */}
-      <TabsContent value="alunos">
-        <Tabs defaultValue="creditos" className="w-full">
+      {/* ── Tutor Jarvis ────────────────────────────────────────────────────── */}
+      <TabsContent value="tutor">
+        <Tabs defaultValue="sessoes" className="w-full">
           <TabsList className="mb-4">
+            <TabsTrigger value="sessoes">Sessões</TabsTrigger>
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
-            <TabsTrigger value="historico">Histórico de Interações</TabsTrigger>
-            <TabsTrigger value="sessoes">Sessões do Tutor</TabsTrigger>
-            <TabsTrigger value="configuracao">Configuração</TabsTrigger>
+            <TabsTrigger value="configuracao">Calibração Pedagógica</TabsTrigger>
+            <TabsTrigger value="parametros">Parâmetros IA</TabsTrigger>
+            <TabsTrigger value="modos">Modos</TabsTrigger>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
-          <TabsContent value="creditos" className="space-y-6">
-            <JarvisCreditManagementBulk />
-          </TabsContent>
-          <TabsContent value="historico" className="space-y-6">
-            <JarvisHistoricoAdmin />
-          </TabsContent>
+
+          {/* Sessões — visão principal de acompanhamento */}
           <TabsContent value="sessoes" className="space-y-6">
             <JarvisSessoesAdmin />
           </TabsContent>
-          <TabsContent value="configuracao">
-            <Tabs defaultValue="modos" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="modos">Modos</TabsTrigger>
-                <TabsTrigger value="parametros">Parâmetros IA</TabsTrigger>
-                <TabsTrigger value="tutoria">Tutoria</TabsTrigger>
-              </TabsList>
-              <TabsContent value="modos" className="space-y-6">
-                <JarvisModosManagement />
-              </TabsContent>
-              <TabsContent value="parametros" className="space-y-6">
-                <JarvisConfigManagement />
-              </TabsContent>
-              <TabsContent value="tutoria" className="space-y-6">
-                <JarvisTutoriaConfiguracao />
-              </TabsContent>
-            </Tabs>
+
+          {/* Créditos */}
+          <TabsContent value="creditos" className="space-y-6">
+            <JarvisCreditManagementBulk />
+          </TabsContent>
+
+          {/* Calibração Pedagógica — configuração do comportamento do Tutor */}
+          <TabsContent value="configuracao" className="space-y-6">
+            <JarvisTutoriaConfiguracao />
+          </TabsContent>
+
+          {/* Parâmetros de IA */}
+          <TabsContent value="parametros" className="space-y-6">
+            <JarvisConfigManagement />
+          </TabsContent>
+
+          {/* Modos simples (lapidação, análise) */}
+          <TabsContent value="modos" className="space-y-6">
+            <JarvisModosManagement />
+          </TabsContent>
+
+          {/* Histórico de interações (modos simples — legado) */}
+          <TabsContent value="historico" className="space-y-6">
+            <JarvisHistoricoAdmin />
           </TabsContent>
         </Tabs>
       </TabsContent>
 
-      {/* ── Professores ────────────────────────────────────────────────────── */}
-      <TabsContent value="professores">
-        <Tabs defaultValue="creditos" className="w-full">
+      {/* ── Correção IA ─────────────────────────────────────────────────────── */}
+      <TabsContent value="correcao">
+        <Tabs defaultValue="correcoes" className="w-full">
           <TabsList className="mb-4">
-            <TabsTrigger value="creditos">Créditos</TabsTrigger>
             <TabsTrigger value="correcoes">Correções</TabsTrigger>
-            <TabsTrigger value="config-correcao">Config. Correção IA</TabsTrigger>
-            <TabsTrigger value="video-instrucao">Vídeo de instrução</TabsTrigger>
+            <TabsTrigger value="creditos">Créditos</TabsTrigger>
+            <TabsTrigger value="configuracao">Configuração</TabsTrigger>
+            <TabsTrigger value="video">Vídeo de Instrução</TabsTrigger>
           </TabsList>
-          <TabsContent value="creditos" className="space-y-6">
-            <JarvisCorrecaoCreditosProfessores />
-          </TabsContent>
+
+          {/* Histórico de correções */}
           <TabsContent value="correcoes" className="space-y-6">
             <JarvisCorrecaoHistoricoGeral />
           </TabsContent>
-          <TabsContent value="config-correcao" className="space-y-6">
+
+          {/* Créditos dos professores */}
+          <TabsContent value="creditos" className="space-y-6">
+            <JarvisCorrecaoCreditosProfessores />
+          </TabsContent>
+
+          {/* Configuração da correção IA */}
+          <TabsContent value="configuracao" className="space-y-6">
             <JarvisCorrecaoConfigManager />
           </TabsContent>
-          <TabsContent value="video-instrucao" className="space-y-6">
+
+          {/* Vídeo de instrução */}
+          <TabsContent value="video" className="space-y-6">
             <JarvisVideoInstrucao />
           </TabsContent>
         </Tabs>
