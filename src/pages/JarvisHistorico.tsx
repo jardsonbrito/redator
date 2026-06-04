@@ -20,6 +20,10 @@ const SUBTAB_LABEL: Record<string, string> = {
   introducao:    'Introdução',
   desenvolvimento: 'Desenvolvimento',
   conclusao:     'Conclusão',
+  analisar:      'Analisar Texto',
+  melhorar:      'Melhorar Texto',
+  repertorio:    'Repertório',
+  gramatica:     'Gramática',
 };
 
 function SessaoCard({ sessao }: { sessao: JarvisSessao }) {
