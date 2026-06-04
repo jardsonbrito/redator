@@ -29,19 +29,20 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
           <div className="w-5 h-5"><JarvisIcon /></div>
         </div>
 
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-slate-900 leading-tight mb-2">
+        <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-slate-900 leading-[1.2] mb-3">
           {subtabLabel ? (
             <>Especialista em{' '}
-              <span className="text-purple-700 italic font-medium">{subtabLabel}</span>
+              <span className="text-purple-700 italic">{subtabLabel}</span>
             </>
           ) : (
-            <>Jarvis — tutor de{' '}
-              <span className="text-purple-700">redação</span>
+            <>Olá! Sou o Jarvis,<br />
+              seu tutor de{' '}
+              <span className="text-purple-700 italic">redação</span>.
             </>
           )}
         </h1>
 
-        <p className="text-sm text-slate-500 font-normal leading-relaxed max-w-[420px]">
+        <p className="text-sm text-slate-500 font-normal leading-relaxed max-w-[440px]">
           {subtabLabel
             ? `Modo especializado em ${subtabLabel}. Cole um texto, faça uma pergunta ou peça um exercício.`
             : 'Redação na prática, aprovação na certa. Como posso te ajudar hoje?'
