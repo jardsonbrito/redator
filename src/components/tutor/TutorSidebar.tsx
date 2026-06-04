@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Plus, Trash2, MessageSquare, Loader2, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { TutorConversa } from '@/hooks/useTutorConversas';
+import type { ModeSessaoInfo } from '@/hooks/useJarvisModeSessoes';
 import { cn } from '@/lib/utils';
+
+const NIVEL_DOT: Record<string, string> = {
+  verde:    'bg-green-500',
+  amarelo:  'bg-yellow-400',
+  vermelho: 'bg-red-500',
+};
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +23,7 @@ import {
 
 interface SubtabItem {
   id:    string;
+  nome:  string;
   label: string;
 }
 
@@ -30,6 +38,7 @@ interface TutorSidebarProps {
   subtabs?:             SubtabItem[];
   activeSubtabId?:      string | null;
   onSelectSubtab?:      (id: string, label: string) => void;
+  modeInfo?:            Record<string, ModeSessaoInfo>;
 }
 
 function HistoricoButton() {
@@ -56,6 +65,7 @@ export function TutorSidebar({
   subtabs = [],
   activeSubtabId,
   onSelectSubtab,
+  modeInfo = {},
 }: TutorSidebarProps) {
   const [hoveredId, setHoveredId]        = useState<string | null>(null);
   const [deletandoId, setDeletandoId]    = useState<string | null>(null);
@@ -106,24 +116,40 @@ export function TutorSidebar({
             Modo Especialista
           </p>
           <div className="space-y-1.5">
-            {subtabs.map(s => (
-              <button
-                key={s.id}
-                onClick={() => onSelectSubtab(s.id, s.label)}
-                className={cn(
-                  'w-full rounded-xl text-xs font-semibold px-3 py-2.5 flex items-center gap-2.5 border transition-all text-left',
-                  activeSubtabId === s.id
-                    ? 'bg-purple-600 border-purple-600 text-white shadow-sm'
-                    : 'bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100 hover:border-purple-200'
-                )}
-              >
-                <span className={cn(
-                  'w-2 h-2 rounded-full flex-shrink-0',
-                  activeSubtabId === s.id ? 'bg-white/70' : 'bg-purple-400'
-                )} />
-                <span className="leading-snug">{s.label}</span>
-              </button>
-            ))}
+            {subtabs.map(s => {
+              const info = modeInfo[s.nome] ?? null;
+              const isActive = activeSubtabId === s.id;
+              const dotColor = isActive
+                ? 'bg-white/70'
+                : info?.nivel
+                  ? NIVEL_DOT[info.nivel]
+                  : 'bg-slate-300';
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => onSelectSubtab(s.id, s.label)}
+                  className={cn(
+                    'w-full rounded-xl text-xs font-semibold px-3 py-2.5 flex items-center gap-2.5 border transition-all text-left',
+                    isActive
+                      ? 'bg-purple-600 border-purple-600 text-white shadow-sm'
+                      : 'bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100 hover:border-purple-200'
+                  )}
+                >
+                  <span className={cn('w-2 h-2 rounded-full flex-shrink-0', dotColor)} />
+                  <span className="leading-snug flex-1">{s.label}</span>
+                  {info && info.count > 0 && (
+                    <span className={cn(
+                      'text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0',
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-purple-200 text-purple-700'
+                    )}>
+                      {info.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

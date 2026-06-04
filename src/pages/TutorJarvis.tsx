@@ -3,6 +3,7 @@ import { Menu, X, Lock } from 'lucide-react';
 import { StudentHeader } from '@/components/StudentHeader';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
 import { useTutorConversas } from '@/hooks/useTutorConversas';
+import { useJarvisModeSessoes } from '@/hooks/useJarvisModeSessoes';
 import { TutorSidebar } from '@/components/tutor/TutorSidebar';
 import { TutorChat } from '@/components/tutor/TutorChat';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface SubtabSimples {
   id:        string;
+  nome:      string;
   label:     string;
   habilitada: boolean;
   ordem:     number;
@@ -45,6 +47,7 @@ export default function TutorJarvis() {
   const jarvisBloqueado                                   = !planLoading && !isFeatureEnabled('jarvis');
 
   const { conversas, loading, refetch, deletar } = useTutorConversas(alunoEmail);
+  const modeInfo = useJarvisModeSessoes(alunoEmail);
   const [subtabs, setSubtabs]                     = useState<SubtabSimples[]>([]);
   const [activeSubtabId, setActiveSubtabId]       = useState<string | null>(null);
   const [activeSubtabLabel, setActiveSubtabLabel] = useState<string | null>(null);
@@ -52,7 +55,7 @@ export default function TutorJarvis() {
   useEffect(() => {
     supabase
       .from('jarvis_tutoria_subtabs')
-      .select('id, label, habilitada, ordem')
+      .select('id, nome, label, habilitada, ordem')
       .eq('habilitada', true)
       .order('ordem')
       .then(({ data }) => { if (data) setSubtabs(data as SubtabSimples[]); });
@@ -135,6 +138,7 @@ export default function TutorJarvis() {
               subtabs={subtabs.filter(s => s.habilitada)}
               activeSubtabId={activeSubtabId}
               onSelectSubtab={handleSelecionarSubtab}
+              modeInfo={modeInfo}
             />
           </div>
 
