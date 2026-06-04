@@ -58,11 +58,6 @@ export default function TutorJarvis() {
       .then(({ data }) => { if (data) setSubtabs(data as SubtabSimples[]); });
   }, []);
 
-  useEffect(() => {
-    if (jarvisBloqueado && alunoEmail) {
-      toast({ title: 'Jarvis indisponível', description: JARVIS_BLOQUEADO_MSG, variant: 'destructive' });
-    }
-  }, [jarvisBloqueado, alunoEmail]);
 
   const handleSelectConversa = (id: string) => {
     setActiveId(id);
