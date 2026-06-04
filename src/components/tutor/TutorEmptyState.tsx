@@ -25,7 +25,7 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <div className="mb-10">
-        <div className="w-11 h-11 rounded-full bg-purple-700 flex items-center justify-center mb-5 shadow-sm">
+        <div className="w-11 h-11 rounded-full bg-purple-100 flex items-center justify-center mb-5 shadow-sm">
           <div className="w-5 h-5"><JarvisIcon /></div>
         </div>
 
