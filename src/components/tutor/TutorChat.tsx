@@ -10,8 +10,10 @@ interface TutorChatProps {
   conversationId:        string | null;
   onConversationCreated: (id: string) => void;
   onCreditosUpdate?:     (creditos: number) => void;
+  onAtalhoUsado?:        () => void;
   subtabId?:             string | null;
   subtabLabel?:          string | null;
+  atalhoContadores?:     Record<string, number>;
 }
 
 export function TutorChat({
@@ -19,8 +21,10 @@ export function TutorChat({
   conversationId,
   onConversationCreated,
   onCreditosUpdate,
+  onAtalhoUsado,
   subtabId,
   subtabLabel,
+  atalhoContadores = {},
 }: TutorChatProps) {
   const [inputValue, setInputValue]     = useState('');
   const [sinteseGerada, setSinteseGerada] = useState(false);
@@ -60,10 +64,10 @@ export function TutorChat({
     await enviar(texto);
   };
 
-  const handleQuickAction = async (label: string, instrucao: string) => {
+  const handleQuickAction = async (label: string, instrucao: string, atalhoId?: string) => {
     if (!label.trim() || isLoading) return;
-    // label = mensagem visível no chat; instrucao = prompt técnico enviado à IA
-    await enviar(label.trim(), instrucao.trim() || undefined);
+    await enviar(label.trim(), instrucao.trim() || undefined, atalhoId ?? null);
+    if (atalhoId) onAtalhoUsado?.();
   };
 
   const semMensagens = mensagens.length === 0 && !isLoading;
@@ -76,6 +80,7 @@ export function TutorChat({
           <TutorEmptyState
             onQuickAction={handleQuickAction}
             subtabLabel={subtabLabel}
+            atalhoContadores={atalhoContadores}
           />
         ) : (
           <div className="py-6">

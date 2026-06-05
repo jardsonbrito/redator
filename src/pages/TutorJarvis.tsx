@@ -4,6 +4,7 @@ import { StudentHeader } from '@/components/StudentHeader';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
 import { useTutorConversas } from '@/hooks/useTutorConversas';
 import { useJarvisModeSessoes } from '@/hooks/useJarvisModeSessoes';
+import { useAtalhoContadores } from '@/hooks/useAtalhoContadores';
 import { TutorSidebar } from '@/components/tutor/TutorSidebar';
 import { TutorChat } from '@/components/tutor/TutorChat';
 import { cn } from '@/lib/utils';
@@ -47,7 +48,8 @@ export default function TutorJarvis() {
   const jarvisBloqueado                                   = !planLoading && !isFeatureEnabled('jarvis');
 
   const { conversas, loading, refetch, deletar } = useTutorConversas(alunoEmail);
-  const { modeInfo, refetchModeInfo } = useJarvisModeSessoes(alunoEmail);
+  const { modeInfo, refetchModeInfo }               = useJarvisModeSessoes(alunoEmail);
+  const { contadores: atalhoContadores, refetchContadores } = useAtalhoContadores(alunoEmail);
   const [subtabs, setSubtabs]                     = useState<SubtabSimples[]>([]);
   const [activeSubtabId, setActiveSubtabId]       = useState<string | null>(null);
   const [activeSubtabLabel, setActiveSubtabLabel] = useState<string | null>(null);
@@ -157,8 +159,10 @@ export default function TutorJarvis() {
               conversationId={activeConversationId}
               onConversationCreated={handleConversationCreated}
               onCreditosUpdate={setCreditosRestantes}
+              onAtalhoUsado={refetchContadores}
               subtabId={activeSubtabId}
               subtabLabel={activeSubtabLabel}
+              atalhoContadores={atalhoContadores}
             />
           </div>
         </div>

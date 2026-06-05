@@ -13,11 +13,12 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 interface TutorEmptyStateProps {
-  onQuickAction: (label: string, instrucao: string) => void;
-  subtabLabel?:  string | null;
+  onQuickAction:     (label: string, instrucao: string, atalhoId?: string) => void;
+  subtabLabel?:      string | null;
+  atalhoContadores?: Record<string, number>;
 }
 
-export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateProps) {
+export function TutorEmptyState({ onQuickAction, subtabLabel, atalhoContadores = {} }: TutorEmptyStateProps) {
   const { actions, isLoading } = useTutorQuickActions();
 
   return (
@@ -62,20 +63,30 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
           ) : actions.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-[640px]">
               {actions.map(({ id, icone, label, descricao, texto }) => {
-                const Icon = ICON_MAP[icone] ?? HelpCircle;
+                const Icon    = ICON_MAP[icone] ?? HelpCircle;
+                const count   = atalhoContadores[id] ?? 0;
+                const isLast  = actions.length % 2 !== 0 && id === actions[actions.length - 1].id;
                 return (
                   <button
                     key={id}
-                    onClick={() => onQuickAction(label, texto)}
+                    onClick={() => onQuickAction(label, texto, id)}
                     className={cn(
-                      'group flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-xl text-left',
+                      'group relative flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-xl text-left',
                       'hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5',
                       'transition-all duration-150',
-                      actions.length % 2 !== 0 && id === actions[actions.length - 1].id
-                        ? 'sm:col-span-2'
-                        : '',
+                      isLast ? 'sm:col-span-2' : '',
                     )}
                   >
+                    {/* Indicador de uso — aparece quando count > 0 */}
+                    {count > 0 && (
+                      <span className="absolute top-2.5 right-2.5 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                        <span className="text-[10px] font-semibold text-purple-500 leading-none">
+                          {count}
+                        </span>
+                      </span>
+                    )}
+
                     <span className={cn(
                       'mt-0.5 w-8 h-8 rounded-lg bg-slate-50 border border-slate-200',
                       'flex items-center justify-center flex-shrink-0',
@@ -83,7 +94,7 @@ export function TutorEmptyState({ onQuickAction, subtabLabel }: TutorEmptyStateP
                     )}>
                       <Icon className="w-3.5 h-3.5 text-purple-600" />
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 pr-8">
                       <p className="text-[13.5px] font-medium text-slate-800 group-hover:text-purple-900 leading-snug">
                         {label}
                       </p>

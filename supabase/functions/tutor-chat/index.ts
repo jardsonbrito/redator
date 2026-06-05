@@ -7,12 +7,13 @@ const corsHeaders = {
 };
 
 interface TutorChatRequest {
-  aluno_email:       string;
-  conversation_id:   string | null;
-  mensagem:          string;
-  modulo?:           string;
-  subtab_id?:        string | null;
-  gerar_sintese?:    boolean;
+  aluno_email:        string;
+  conversation_id:    string | null;
+  mensagem:           string;
+  modulo?:            string;
+  subtab_id?:         string | null;
+  atalho_id?:         string | null;
+  gerar_sintese?:     boolean;
   instrucao_interna?: string | null;
 }
 
@@ -325,6 +326,7 @@ Deno.serve(async (req) => {
       mensagem,
       modulo = 'tutor',
       subtab_id: subtabIdReq = null,
+      atalho_id: atalhoIdReq = null,
       gerar_sintese = false,
       instrucao_interna = null,
     }: TutorChatRequest = await req.json();
@@ -418,7 +420,7 @@ Deno.serve(async (req) => {
         .from('jarvis_conversations')
         .insert({
           aluno_id: aluno.id, modulo, titulo, provider: providerIA, modelo: modeloIA,
-          subtab_id: subtabIdReq, instrucao_interna: instrucaoInterna,
+          subtab_id: subtabIdReq, atalho_id: atalhoIdReq, instrucao_interna: instrucaoInterna,
         })
         .select('id')
         .single();

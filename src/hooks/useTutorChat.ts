@@ -14,7 +14,7 @@ export interface TutorMensagem {
 interface UseTutorChatReturn {
   mensagens:         TutorMensagem[];
   isLoading:         boolean;
-  enviar:            (texto: string, instrucaoInterna?: string) => Promise<string | null>;
+  enviar:            (texto: string, instrucaoInterna?: string, atalhoId?: string | null) => Promise<string | null>;
   gerarSintese:      () => Promise<void>;
   creditosRestantes: number;
   acumuladorTokens:  number;
@@ -53,7 +53,7 @@ export const useTutorChat = (
     }
   }, [conversationId, carregarMensagens]);
 
-  const enviar = async (texto: string, instrucaoInterna?: string): Promise<string | null> => {
+  const enviar = async (texto: string, instrucaoInterna?: string, atalhoId?: string | null): Promise<string | null> => {
     if (!texto.trim() || isLoading) return null;
 
     // Mensagem otimista do usuário
@@ -76,6 +76,7 @@ export const useTutorChat = (
           mensagem:          texto.trim(),
           modulo:            'tutor',
           subtab_id:         subtabId ?? null,
+          atalho_id:         atalhoId ?? null,
           instrucao_interna: instrucaoInterna ?? null,
         },
       });
