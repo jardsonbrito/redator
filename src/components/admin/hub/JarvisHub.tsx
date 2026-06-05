@@ -9,6 +9,7 @@ import { JarvisConfigManagement } from '@/components/admin/JarvisConfigManagemen
 import { JarvisTutoriaConfiguracao } from '@/components/admin/JarvisTutoriaConfiguracao';
 import { JarvisCorrecaoConfigManager } from '@/components/admin/JarvisCorrecaoConfigManager';
 import { JarvisVideoInstrucao } from '@/components/admin/JarvisVideoInstrucao';
+import { JarvisBugReportsAdmin } from '@/components/admin/JarvisBugReportsAdmin';
 
 interface JarvisHubProps {
   defaultTab?: string;
@@ -28,6 +29,7 @@ export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
           <TabsList className="mb-4">
             {/* Monitoramento */}
             <TabsTrigger value="sessoes">Sessões</TabsTrigger>
+            <TabsTrigger value="bugs">Problemas</TabsTrigger>
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
             {/* Configuração */}
             <TabsTrigger value="configuracao-pedagogica">Configuração Pedagógica</TabsTrigger>
@@ -40,6 +42,11 @@ export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
           {/* Sessões — acompanhamento pedagógico em tempo real */}
           <TabsContent value="sessoes" className="space-y-6">
             <JarvisSessoesAdmin />
+          </TabsContent>
+
+          {/* Problemas reportados pelos alunos */}
+          <TabsContent value="bugs" className="space-y-6">
+            <JarvisBugReportsAdmin />
           </TabsContent>
 
           {/* Créditos */}
