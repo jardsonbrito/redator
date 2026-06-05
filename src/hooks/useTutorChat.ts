@@ -16,6 +16,9 @@ interface UseTutorChatReturn {
   isLoading:         boolean;
   enviar:            (texto: string, instrucaoInterna?: string, atalhoId?: string | null) => Promise<string | null>;
   gerarSintese:      () => Promise<void>;
+  avaliarSessao:     (sessaoId: string, nota: number) => Promise<void>;
+  reportarBug:       (descricao: string) => Promise<void>;
+  sessaoId:          string | null;
   creditosRestantes: number;
   acumuladorTokens:  number;
 }
@@ -29,6 +32,7 @@ export const useTutorChat = (
   const [mensagens, setMensagens]           = useState<TutorMensagem[]>([]);
   const [isLoading, setIsLoading]           = useState(false);
   const [acumuladorTokens, setAcumulador]   = useState(0);
+  const [sessaoId, setSessaoId]             = useState<string | null>(null);
   const { credits, refreshCredits }         = useJarvisCredits(alunoEmail);
   const { toast }                           = useToast();
 
@@ -51,6 +55,7 @@ export const useTutorChat = (
     } else {
       setMensagens([]);
     }
+    setSessaoId(null);
   }, [conversationId, carregarMensagens]);
 
   const enviar = async (texto: string, instrucaoInterna?: string, atalhoId?: string | null): Promise<string | null> => {
@@ -155,6 +160,7 @@ export const useTutorChat = (
       if (error) throw error;
       if (data?.success) {
         await carregarMensagens(conversationId);
+        if (data.sessao_id) setSessaoId(data.sessao_id);
       }
     } catch (err) {
       console.error('Erro ao gerar síntese:', err);
@@ -163,5 +169,24 @@ export const useTutorChat = (
     }
   };
 
-  return { mensagens, isLoading, enviar, gerarSintese, creditosRestantes: credits, acumuladorTokens };
+  const avaliarSessao = async (id: string, nota: number): Promise<void> => {
+    await supabase
+      .from('jarvis_sessoes_sintetizadas')
+      .update({ avaliacao_aluno: nota })
+      .eq('id', id);
+  };
+
+  const reportarBug = async (descricao: string): Promise<void> => {
+    await supabase.from('jarvis_bug_reports').insert({
+      aluno_email:     alunoEmail.toLowerCase().trim(),
+      conversation_id: conversationId ?? null,
+      descricao:       descricao.trim(),
+    });
+  };
+
+  return {
+    mensagens, isLoading, enviar, gerarSintese,
+    avaliarSessao, reportarBug, sessaoId,
+    creditosRestantes: credits, acumuladorTokens,
+  };
 };

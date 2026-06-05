@@ -99,7 +99,7 @@ async function salvarSessaoSintetizada(
     subtab_nome: string | null;
     texto_completo: string;
   }
-): Promise<void> {
+): Promise<string | null> {
   try {
     const parsed = parsearSintese(params.texto_completo);
 
@@ -113,7 +113,7 @@ async function salvarSessaoSintetizada(
     const nomeAluno = [(perfil as any)?.nome, (perfil as any)?.sobrenome]
       .filter(Boolean).join(' ') || null;
 
-    await supabase.from('jarvis_sessoes_sintetizadas').insert({
+    const { data: sessaoSalva } = await supabase.from('jarvis_sessoes_sintetizadas').insert({
       conversa_id:          params.conversa_id,
       aluno_id:             params.aluno_id,
       aluno_email:          params.aluno_email.toLowerCase().trim(),
@@ -128,10 +128,12 @@ async function salvarSessaoSintetizada(
       proximos_passos:      parsed.proximos_passos,
       orientacao_professor: parsed.orientacao_professor,
       texto_completo:       params.texto_completo,
-    });
+    }).select('id').single();
     console.log('📝 Sessão sintetizada salva com sucesso');
+    return (sessaoSalva as any)?.id ?? null;
   } catch (err) {
     console.error('⚠️ Erro ao salvar sessão sintetizada:', err);
+    return null;
   }
 }
 
@@ -620,8 +622,9 @@ Deno.serve(async (req) => {
     });
 
     // ── 9b. Se for síntese, salvar na tabela estruturada ─────────
+    let sessaoIdSalva: string | null = null;
     if (gerar_sintese && respostaTexto.includes('Síntese da Sessão')) {
-      await salvarSessaoSintetizada(supabase, {
+      sessaoIdSalva = await salvarSessaoSintetizada(supabase, {
         conversa_id:    activeConversationId,
         aluno_id:       aluno.id,
         aluno_email:    aluno_email,
@@ -670,6 +673,7 @@ Deno.serve(async (req) => {
       success:            true,
       resposta:           respostaTexto,
       conversation_id:    activeConversationId,
+      sessao_id:          sessaoIdSalva,
       tokens_usados:      tokensTotal,
       creditos_debitados: creditosDebitados,
       creditos_restantes: saldoRestante,

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronDown, ChevronUp, Clock, MessageSquare, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, MessageSquare, Search, Star, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +38,7 @@ interface Sessao {
   subtab_nome: string | null;
   resumo: string | null;
   pontos_positivos?: string | null;
+  avaliacao_aluno?: number | null;
   habilidades: Array<{ label: string; nivel: string }>;
   dificuldades: string[];
   proximos_passos: string[];
@@ -101,6 +102,19 @@ function SessaoRow({ sessao, selected, onToggle, onDelete }: SessaoRowProps) {
             )}
           </div>
         </td>
+        {/* Nota do aluno */}
+        <td className="px-4 py-3 cursor-pointer" onClick={() => setExpandida(v => !v)}>
+          {sessao.avaliacao_aluno ? (
+            <div className="flex gap-0.5">
+              {[1,2,3,4,5].map(s => (
+                <Star key={s} className={cn('w-3.5 h-3.5', s <= sessao.avaliacao_aluno! ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200')} />
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs text-slate-300">—</span>
+          )}
+        </td>
+
         {/* Ações */}
         <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
           <div className="flex items-center gap-1">
@@ -120,7 +134,7 @@ function SessaoRow({ sessao, selected, onToggle, onDelete }: SessaoRowProps) {
 
       {expandida && (
         <tr className={cn('border-b', selected ? 'bg-red-50' : 'bg-slate-50')}>
-          <td colSpan={7} className="px-6 py-5">
+          <td colSpan={8} className="px-6 py-5">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {sessao.resumo && (
                 <div>
@@ -301,14 +315,15 @@ export function JarvisSessoesAdmin() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assunto</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Data</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Duração</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Nota</th>
               <th className="px-4 py-3 w-20" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">Carregando...</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">Carregando...</td></tr>
             ) : sessoesFiltradas.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">Nenhuma sessão neste período.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">Nenhuma sessão neste período.</td></tr>
             ) : (
               sessoesFiltradas.map(s => (
                 <SessaoRow

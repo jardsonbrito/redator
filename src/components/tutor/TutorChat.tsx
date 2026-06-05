@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, AlertTriangle, Star } from 'lucide-react';
 import { TutorMessage, TutorThinkingIndicator } from './TutorMessage';
 import { TutorInput } from './TutorInput';
 import { TutorEmptyState } from './TutorEmptyState';
@@ -9,6 +9,10 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 interface TutorChatProps {
   alunoEmail:            string;
@@ -31,12 +35,22 @@ export function TutorChat({
   subtabLabel,
   atalhoContadores = {},
 }: TutorChatProps) {
-  const [inputValue, setInputValue]         = useState('');
-  const [sinteseGerada, setSinteseGerada]   = useState(false);
-  const [showConfirmSintese, setShowConfirmSintese] = useState(false);
+  const [inputValue, setInputValue]                   = useState('');
+  const [sinteseGerada, setSinteseGerada]             = useState(false);
+  const [showConfirmSintese, setShowConfirmSintese]   = useState(false);
+  const [avaliacao, setAvaliacao]                     = useState<number | null>(null);
+  const [hoveredStar, setHoveredStar]                 = useState(0);
+  const [showBugReport, setShowBugReport]             = useState(false);
+  const [bugText, setBugText]                         = useState('');
+  const [bugEnviando, setBugEnviando]                 = useState(false);
+  const [bugEnviado, setBugEnviado]                   = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { mensagens, isLoading, enviar, gerarSintese, creditosRestantes } = useTutorChat(
+  const {
+    mensagens, isLoading, enviar, gerarSintese,
+    avaliarSessao, reportarBug, sessaoId,
+    creditosRestantes,
+  } = useTutorChat(
     alunoEmail,
     conversationId,
     (novoId) => { onConversationCreated(novoId); },
@@ -46,13 +60,30 @@ export function TutorChat({
   useEffect(() => {
     setInputValue('');
     setSinteseGerada(false);
+    setAvaliacao(null);
+    setBugEnviado(false);
   }, [conversationId]);
 
   const handleGerarSintese = async () => {
     await gerarSintese();
     setSinteseGerada(true);
-    // Confirma para o aluno que a sessão foi registrada
     window.dispatchEvent(new CustomEvent('jarvis-sessao-registrada'));
+  };
+
+  const handleAvaliar = async (nota: number) => {
+    if (avaliacao || !sessaoId) return;
+    setAvaliacao(nota);
+    await avaliarSessao(sessaoId, nota);
+  };
+
+  const handleEnviarBug = async () => {
+    if (!bugText.trim()) return;
+    setBugEnviando(true);
+    await reportarBug(bugText);
+    setBugEnviando(false);
+    setBugEnviado(true);
+    setBugText('');
+    setTimeout(() => setShowBugReport(false), 1500);
   };
 
   useEffect(() => {
@@ -115,7 +146,7 @@ export function TutorChat({
         {!semMensagens && <div ref={bottomRef} />}
       </div>
 
-      {/* Botão encerrar sessão — aparece quando há mensagens e síntese ainda não foi gerada */}
+      {/* Botão encerrar sessão */}
       {!semMensagens && !sinteseGerada && !isLoading && (
         <div className="px-5 pb-3 flex justify-center">
           <button
@@ -128,6 +159,75 @@ export function TutorChat({
         </div>
       )}
 
+      {/* Avaliação por estrelas — aparece após a síntese */}
+      {sinteseGerada && sessaoId && (
+        <div className="px-5 py-3 border-t border-slate-100 flex flex-col items-center gap-1.5">
+          {!avaliacao ? (
+            <>
+              <p className="text-xs text-slate-400">Como foi esta sessão?</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onClick={() => handleAvaliar(star)}
+                    onMouseEnter={() => setHoveredStar(star)}
+                    onMouseLeave={() => setHoveredStar(0)}
+                    className="transition-transform hover:scale-125 active:scale-110"
+                  >
+                    <Star
+                      className={cn(
+                        'w-6 h-6 transition-colors',
+                        star <= (hoveredStar || 0)
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'fill-slate-200 text-slate-200'
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <Star
+                    key={star}
+                    className={cn(
+                      'w-5 h-5',
+                      star <= avaliacao
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'fill-slate-200 text-slate-200'
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-slate-400">Obrigado pela avaliação!</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Campo de input fixo no rodapé */}
+      <TutorInput
+        value={inputValue}
+        onChange={setInputValue}
+        onSend={handleSend}
+        isLoading={isLoading}
+        disabled={sinteseGerada}
+      />
+
+      {/* Link reportar problema */}
+      <div className="pb-2 flex justify-center">
+        <button
+          onClick={() => { setBugEnviado(false); setShowBugReport(true); }}
+          className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-slate-500 transition-colors"
+        >
+          <AlertTriangle className="w-3 h-3" />
+          Reportar problema
+        </button>
+      </div>
+
+      {/* Dialogs */}
       <AlertDialog open={showConfirmSintese} onOpenChange={setShowConfirmSintese}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -151,14 +251,44 @@ export function TutorChat({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Campo de input fixo no rodapé */}
-      <TutorInput
-        value={inputValue}
-        onChange={setInputValue}
-        onSend={handleSend}
-        isLoading={isLoading}
-        disabled={sinteseGerada}
-      />
+      <Dialog open={showBugReport} onOpenChange={setShowBugReport}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              Reportar um problema
+            </DialogTitle>
+          </DialogHeader>
+          {bugEnviado ? (
+            <p className="text-sm text-green-600 text-center py-4">Relatório enviado! Obrigado.</p>
+          ) : (
+            <>
+              <textarea
+                value={bugText}
+                onChange={e => setBugText(e.target.value)}
+                placeholder="Descreva o problema que você encontrou..."
+                rows={4}
+                className="w-full text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2.5 resize-none outline-none focus:ring-1 focus:ring-purple-300 focus:border-purple-300 placeholder-slate-400"
+              />
+              <DialogFooter>
+                <button
+                  onClick={() => setShowBugReport(false)}
+                  className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleEnviarBug}
+                  disabled={!bugText.trim() || bugEnviando}
+                  className="text-sm font-medium text-white bg-purple-700 hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg px-4 py-2 transition-colors"
+                >
+                  {bugEnviando ? 'Enviando...' : 'Enviar'}
+                </button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
