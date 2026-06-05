@@ -1,17 +1,18 @@
 import { useRef, useEffect, KeyboardEvent } from 'react';
-import { Send, Loader2, Mic, MicOff } from 'lucide-react';
+import { Send, Loader2, Mic, MicOff, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription';
 
 interface TutorInputProps {
-  value:     string;
-  onChange:  (value: string) => void;
-  onSend:    () => void;
-  isLoading: boolean;
-  disabled?: boolean;
+  value:          string;
+  onChange:       (value: string) => void;
+  onSend:         () => void;
+  isLoading:      boolean;
+  disabled?:      boolean;
+  onReportBug?:   () => void;
 }
 
-export function TutorInput({ value, onChange, onSend, isLoading, disabled }: TutorInputProps) {
+export function TutorInput({ value, onChange, onSend, isLoading, disabled, onReportBug }: TutorInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { isRecording, isSupported, toggleRecording, stopRecording } =
@@ -107,6 +108,19 @@ export function TutorInput({ value, onChange, onSend, isLoading, disabled }: Tut
         <p className="text-xs text-red-500 font-medium animate-pulse mt-2 text-center">
           Jarvis está ouvindo…
         </p>
+      )}
+
+      {onReportBug && (
+        <div className="flex justify-center mt-1">
+          <button
+            type="button"
+            onClick={onReportBug}
+            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-amber-600 transition-colors"
+          >
+            <AlertTriangle className="w-3 h-3" />
+            Reportar problema
+          </button>
+        </div>
       )}
     </div>
   );

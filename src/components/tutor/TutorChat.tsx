@@ -214,18 +214,8 @@ export function TutorChat({
         onSend={handleSend}
         isLoading={isLoading}
         disabled={sinteseGerada}
+        onReportBug={() => { setBugEnviado(false); setShowBugReport(true); }}
       />
-
-      {/* Link reportar problema */}
-      <div className="pb-2 flex justify-center">
-        <button
-          onClick={() => { setBugEnviado(false); setShowBugReport(true); }}
-          className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-slate-500 transition-colors"
-        >
-          <AlertTriangle className="w-3 h-3" />
-          Reportar problema
-        </button>
-      </div>
 
       {/* Dialogs */}
       <AlertDialog open={showConfirmSintese} onOpenChange={setShowConfirmSintese}>
