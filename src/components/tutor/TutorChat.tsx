@@ -4,6 +4,11 @@ import { TutorMessage, TutorThinkingIndicator } from './TutorMessage';
 import { TutorInput } from './TutorInput';
 import { TutorEmptyState } from './TutorEmptyState';
 import { useTutorChat } from '@/hooks/useTutorChat';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface TutorChatProps {
   alunoEmail:            string;
@@ -26,8 +31,9 @@ export function TutorChat({
   subtabLabel,
   atalhoContadores = {},
 }: TutorChatProps) {
-  const [inputValue, setInputValue]     = useState('');
-  const [sinteseGerada, setSinteseGerada] = useState(false);
+  const [inputValue, setInputValue]         = useState('');
+  const [sinteseGerada, setSinteseGerada]   = useState(false);
+  const [showConfirmSintese, setShowConfirmSintese] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { mensagens, isLoading, enviar, gerarSintese, creditosRestantes } = useTutorChat(
@@ -111,16 +117,39 @@ export function TutorChat({
 
       {/* Botão encerrar sessão — aparece quando há mensagens e síntese ainda não foi gerada */}
       {!semMensagens && !sinteseGerada && !isLoading && (
-        <div className="px-5 pb-2 flex justify-center">
+        <div className="px-5 pb-3 flex justify-center">
           <button
-            onClick={handleGerarSintese}
-            className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-purple-700 border border-slate-200 hover:border-purple-200 rounded-full px-4 py-1.5 transition-colors bg-white shadow-sm"
+            onClick={() => setShowConfirmSintese(true)}
+            className="flex items-center gap-2 text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 rounded-full px-5 py-2 transition-all shadow-md hover:shadow-purple-200 hover:shadow-lg active:scale-95"
           >
             <BookOpen className="w-3.5 h-3.5" />
             Encerrar sessão e gerar síntese
           </button>
         </div>
       )}
+
+      <AlertDialog open={showConfirmSintese} onOpenChange={setShowConfirmSintese}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Após confirmar, a conversa será encerrada e a síntese gerada. Não será possível enviar novas mensagens nesta sessão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowConfirmSintese(false);
+                setTimeout(() => handleGerarSintese(), 100);
+              }}
+              className="bg-purple-700 hover:bg-purple-800"
+            >
+              Sim, encerrar sessão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Campo de input fixo no rodapé */}
       <TutorInput
