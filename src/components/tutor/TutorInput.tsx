@@ -24,14 +24,8 @@ export function TutorInput({ value, onChange, onSend, isLoading, disabled }: Tut
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [value]);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!isLoading && !disabled && value.trim()) {
-        stopRecording(); // para o ditado antes de enviar
-        onSend();
-      }
-    }
+  const handleKeyDown = (_e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter cria nova linha; envio apenas pelo botão
   };
 
   const handleSend = () => {
@@ -109,13 +103,9 @@ export function TutorInput({ value, onChange, onSend, isLoading, disabled }: Tut
         </button>
       </div>
 
-      {isRecording ? (
+      {isRecording && (
         <p className="text-xs text-red-500 font-medium animate-pulse mt-2 text-center">
           Jarvis está ouvindo…
-        </p>
-      ) : (
-        <p className="text-[11px] text-slate-400 mt-2 text-center">
-          Enter para enviar · Shift+Enter para nova linha
         </p>
       )}
     </div>
