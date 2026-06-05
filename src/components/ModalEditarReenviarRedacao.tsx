@@ -127,6 +127,12 @@ export function ModalEditarReenviarRedacao({
         throw error;
       }
 
+      // Limpar marcações visuais do envio anterior para o corretor ver tela limpa no reenvio
+      await supabase
+        .from('marcacoes_visuais')
+        .delete()
+        .eq('redacao_id', redacao.id);
+
       // Invalidar cache do React Query para forçar refetch em TODAS as queries de redações
       queryClient.invalidateQueries({ queryKey: ['corretor-redacoes'] });
       queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
