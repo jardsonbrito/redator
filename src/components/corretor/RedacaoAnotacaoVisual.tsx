@@ -590,15 +590,28 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           ]
         });
 
-        // Hover: entra em modo edição para mostrar alças de redimensionamento
         const onMouseEnter = (annotation: any) => {
           selectedAnnotationIdRef.current = annotation.id;
-          isSuppressClickRef.current = true;
-          annotoriousRef.current?.selectAnnotation(annotation.id);
+          if (readonly) {
+            // Aluno: mostra o pop-up de comentário ao passar o mouse
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+            const pos = calcMiniCardPosition(annotation.id);
+            if (pos) setMiniCard({ id: annotation.id, pinned: false, editing: false, position: pos });
+          } else {
+            // Corretor: seleciona para mostrar alças de redimensionamento
+            isSuppressClickRef.current = true;
+            annotoriousRef.current?.selectAnnotation(annotation.id);
+          }
         };
 
         const onMouseLeave = () => {
-          // Mantém alças visíveis; deselect ocorre ao clicar fora
+          if (readonly) {
+            // Aluno: esconde o pop-up após pequeno delay (permite mover o mouse até ele)
+            hideTimerRef.current = setTimeout(() => {
+              if (!miniCardHoverRef.current) setMiniCard(null);
+            }, 200);
+          }
+          // Corretor: mantém alças visíveis; deselect ocorre ao clicar fora
         };
 
         // 1º clique: suprimido (disparado pelo selectAnnotation do hover)
