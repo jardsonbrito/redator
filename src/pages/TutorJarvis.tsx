@@ -47,7 +47,7 @@ export default function TutorJarvis() {
   const jarvisBloqueado                                   = !planLoading && !isFeatureEnabled('jarvis');
 
   const { conversas, loading, refetch, deletar } = useTutorConversas(alunoEmail);
-  const modeInfo = useJarvisModeSessoes(alunoEmail);
+  const { modeInfo, refetchModeInfo } = useJarvisModeSessoes(alunoEmail);
   const [subtabs, setSubtabs]                     = useState<SubtabSimples[]>([]);
   const [activeSubtabId, setActiveSubtabId]       = useState<string | null>(null);
   const [activeSubtabLabel, setActiveSubtabLabel] = useState<string | null>(null);
@@ -85,9 +85,9 @@ export default function TutorJarvis() {
 
   const handleConversationCreated = (novoId: string) => {
     setActiveId(novoId);
-    // subtabId já foi enviado na criação — mantém label para exibição, limpa o id pendente
     setActiveSubtabId(null);
     refetch();
+    refetchModeInfo();
   };
 
   const handleDeletar = async (id: string) => {
