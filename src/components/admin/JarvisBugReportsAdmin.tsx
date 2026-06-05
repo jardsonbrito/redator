@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 interface BugReport {
   id: string;
   aluno_email: string;
+  aluno_nome?: string | null;
   conversation_id: string | null;
   descricao: string;
   resolvido: boolean;
@@ -34,7 +35,24 @@ export function JarvisBugReportsAdmin() {
       if (filtro === 'resolvidos') query = query.eq('resolvido', true);
 
       const { data } = await query;
-      setReports(data ?? []);
+      const reports: BugReport[] = data ?? [];
+
+      // Enriquecer com nome dos alunos
+      const emails = [...new Set(reports.map(r => r.aluno_email).filter(Boolean))];
+      if (emails.length > 0) {
+        const { data: perfis } = await (supabase as any)
+          .from('profiles')
+          .select('email, nome, sobrenome')
+          .in('email', emails);
+        const nomeMap: Record<string, string> = {};
+        for (const p of perfis ?? []) {
+          const nome = [p.nome, p.sobrenome].filter(Boolean).join(' ').trim();
+          if (nome) nomeMap[p.email] = nome;
+        }
+        for (const r of reports) r.aluno_nome = nomeMap[r.aluno_email] ?? null;
+      }
+
+      setReports(reports);
     } finally {
       setLoading(false);
     }
@@ -131,8 +149,11 @@ export function JarvisBugReportsAdmin() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className={cn('text-sm font-medium', report.resolvido ? 'text-slate-400 line-through' : 'text-slate-800')}>
-                    {report.aluno_email}
+                    {report.aluno_nome ?? report.aluno_email}
                   </span>
+                  {report.aluno_nome && (
+                    <span className="text-[11px] text-slate-400">{report.aluno_email}</span>
+                  )}
                   {!report.resolvido && (
                     <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200 bg-amber-50">
                       Aberto
