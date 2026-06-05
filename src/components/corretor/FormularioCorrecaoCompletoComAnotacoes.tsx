@@ -93,8 +93,11 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [sidebarMode, setSidebarMode] = useState<'collapsed' | 'single' | 'all'>('collapsed');
   const [activeSidebarSection, setActiveSidebarSection] = useState('acoes');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [elogiosAutoSaveStatus, setElogiosAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const anotacaoRef = useRef<RedacaoAnotacaoVisualRef>(null);
+  const elogiosDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const elogiosInitializedRef = useRef(false);
 
   const { data: marcacoesPEP = [], refetch: refetchMarcacoesPEP } = useMarcacoesRedacao(redacao.id);
   const { toast } = useToast();
@@ -139,6 +142,29 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     carregarCorrecaoExistente();
     buscarTemaCompleto();
   }, [redacao.id]);
+
+  useEffect(() => {
+    if (!elogiosInitializedRef.current) return;
+    if (!corretorId || redacaoCongelada) return;
+
+    setElogiosAutoSaveStatus('idle');
+    if (elogiosDebounceRef.current) clearTimeout(elogiosDebounceRef.current);
+    elogiosDebounceRef.current = setTimeout(async () => {
+      setElogiosAutoSaveStatus('saving');
+      try {
+        const tabelaNome = redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas'
+          : redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado'
+          : 'redacoes_exercicio';
+        const campo = redacao.eh_corretor_1
+          ? 'elogios_pontos_atencao_corretor_1'
+          : 'elogios_pontos_atencao_corretor_2';
+        await supabase.from(tabelaNome).update({ [campo]: comentarios.elogios }).eq('id', redacao.id);
+        setElogiosAutoSaveStatus('saved');
+      } catch {
+        setElogiosAutoSaveStatus('idle');
+      }
+    }, 1500);
+  }, [comentarios.elogios]);
 
   useEffect(() => {
     if (!redacao.turma) return;
@@ -222,8 +248,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         elogios: data[`elogios_pontos_atencao_${prefixo}`] || ""
       });
       setAudioUrl(data[`audio_url_${prefixo}`] || null);
+      elogiosInitializedRef.current = true;
     } catch (error) {
       console.error('Erro ao carregar correção:', error);
+      elogiosInitializedRef.current = true;
     }
   };
 
@@ -648,8 +676,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             <div className="space-y-3 w-[280px]">
               {showSection('comentario') && (
                 <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
-                  <div className="px-4 py-3 border-b border-violet-50">
+                  <div className="px-4 py-3 border-b border-violet-50 flex items-center justify-between">
                     <h3 className="text-sm font-black text-slate-900">Comentário geral para o aluno</h3>
+                    {elogiosAutoSaveStatus === 'saving' && <span className="text-[11px] text-slate-400">Salvando...</span>}
+                    {elogiosAutoSaveStatus === 'saved' && <span className="text-[11px] text-green-500">✓ Salvo</span>}
                   </div>
                   <div className="p-4 space-y-2">
                     <textarea
@@ -794,8 +824,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           </SheetHeader>
           <div className="mt-4 space-y-3 pb-6">
             <div className="rounded-2xl border border-violet-100 bg-white shadow-sm">
-              <div className="px-4 py-3 border-b border-violet-50">
+              <div className="px-4 py-3 border-b border-violet-50 flex items-center justify-between">
                 <h3 className="text-sm font-black text-slate-900">Comentário geral para o aluno</h3>
+                {elogiosAutoSaveStatus === 'saving' && <span className="text-[11px] text-slate-400">Salvando...</span>}
+                {elogiosAutoSaveStatus === 'saved' && <span className="text-[11px] text-green-500">✓ Salvo</span>}
               </div>
               <div className="p-4 space-y-2">
                 <textarea placeholder="Escreva aqui um comentário geral..."
