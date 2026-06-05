@@ -274,12 +274,32 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('🎓 Tutor Jarvis — Iniciando processamento');
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+
+    const body = await req.json();
+
+    // ── Ações auxiliares (sem IA) ─────────────────────────────────
+    if (body.acao === 'reportar_bug') {
+      await supabase.from('jarvis_bug_reports').insert({
+        aluno_email:     (body.aluno_email ?? '').toLowerCase().trim(),
+        conversation_id: body.conversation_id ?? null,
+        descricao:       body.descricao ?? '',
+      });
+      return json({ success: true });
+    }
+
+    if (body.acao === 'avaliar_sessao') {
+      await supabase.from('jarvis_sessoes_sintetizadas')
+        .update({ avaliacao_aluno: body.nota })
+        .eq('id', body.sessao_id);
+      return json({ success: true });
+    }
+
+    // ── Pipeline de IA ────────────────────────────────────────────
+    console.log('🎓 Tutor Jarvis — Iniciando processamento');
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
@@ -293,7 +313,7 @@ Deno.serve(async (req) => {
       atalho_id: atalhoIdReq = null,
       gerar_sintese = false,
       instrucao_interna = null,
-    }: TutorChatRequest = await req.json();
+    }: TutorChatRequest = body;
 
     if (!aluno_email?.trim() || !mensagem?.trim()) {
       return json({ error: 'aluno_email e mensagem são obrigatórios' }, 400);

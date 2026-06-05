@@ -170,17 +170,19 @@ export const useTutorChat = (
   };
 
   const avaliarSessao = async (id: string, nota: number): Promise<void> => {
-    await supabase
-      .from('jarvis_sessoes_sintetizadas')
-      .update({ avaliacao_aluno: nota })
-      .eq('id', id);
+    await supabase.functions.invoke('tutor-chat', {
+      body: { acao: 'avaliar_sessao', sessao_id: id, nota },
+    });
   };
 
   const reportarBug = async (descricao: string): Promise<void> => {
-    await supabase.from('jarvis_bug_reports').insert({
-      aluno_email:     alunoEmail.toLowerCase().trim(),
-      conversation_id: conversationId ?? null,
-      descricao:       descricao.trim(),
+    await supabase.functions.invoke('tutor-chat', {
+      body: {
+        acao:            'reportar_bug',
+        aluno_email:     alunoEmail.toLowerCase().trim(),
+        conversation_id: conversationId ?? null,
+        descricao:       descricao.trim(),
+      },
     });
   };
 
