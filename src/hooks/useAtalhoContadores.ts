@@ -10,27 +10,15 @@ export const useAtalhoContadores = (alunoEmail: string) => {
   useEffect(() => {
     if (!alunoEmail?.trim()) return;
 
-    const email = alunoEmail.toLowerCase().trim();
-
     (async () => {
-      const { data: perfil } = await (supabase as any)
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
+      const { data, error } = await (supabase as any)
+        .rpc('get_atalho_contadores_by_email', { p_email: alunoEmail.toLowerCase().trim() });
 
-      if (!perfil?.id) return;
-
-      const { data: convs } = await (supabase as any)
-        .from('jarvis_conversations')
-        .select('atalho_id')
-        .eq('aluno_id', perfil.id)
-        .not('atalho_id', 'is', null);
+      if (error) { console.error('useAtalhoContadores:', error); return; }
 
       const result: Record<string, number> = {};
-      for (const c of convs ?? []) {
-        if (!c.atalho_id) continue;
-        result[c.atalho_id] = (result[c.atalho_id] ?? 0) + 1;
+      for (const row of data ?? []) {
+        if (row.atalho_id) result[row.atalho_id] = Number(row.total);
       }
       setContadores(result);
     })();

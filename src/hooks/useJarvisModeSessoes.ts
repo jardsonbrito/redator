@@ -7,8 +7,8 @@ export interface ModeSessaoInfo {
 }
 
 export const useJarvisModeSessoes = (alunoEmail: string) => {
-  const [info, setInfo]       = useState<Record<string, ModeSessaoInfo>>({});
-  const [tick, setTick]       = useState(0);
+  const [info, setInfo] = useState<Record<string, ModeSessaoInfo>>({});
+  const [tick, setTick] = useState(0);
 
   const refetch = useCallback(() => setTick(t => t + 1), []);
 
@@ -18,50 +18,28 @@ export const useJarvisModeSessoes = (alunoEmail: string) => {
     const email = alunoEmail.toLowerCase().trim();
 
     (async () => {
-      // 1. Busca aluno_id pelo email
-      const { data: perfil } = await (supabase as any)
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
+      // 1. Contagem de conversas por modo via RPC (bypassa RLS)
+      const { data: convData, error: convErr } = await (supabase as any)
+        .rpc('get_mode_conversas_by_email', { p_email: email });
 
-      if (!perfil?.id) return;
+      if (convErr) console.error('useJarvisModeSessoes (convs):', convErr);
 
-      // 2. Conta conversas por modo (dot aparece ao clicar o botão, sem precisar de síntese)
-      const { data: convs } = await (supabase as any)
-        .from('jarvis_conversations')
-        .select('subtab_id')
-        .eq('aluno_id', perfil.id)
-        .not('subtab_id', 'is', null);
-
-      // 3. Busca nomes dos subtabs referenciados
-      const subtabIds = [...new Set<string>((convs ?? []).map((c: any) => c.subtab_id))];
-      const subtabNomeMap: Record<string, string> = {};
-
-      if (subtabIds.length > 0) {
-        const { data: subtabs } = await (supabase as any)
-          .from('jarvis_tutoria_subtabs')
-          .select('id, nome')
-          .in('id', subtabIds);
-        for (const s of subtabs ?? []) subtabNomeMap[s.id] = s.nome;
-      }
-
-      // 4. Monta resultado base (count por nome do modo)
       const result: Record<string, ModeSessaoInfo> = {};
-      for (const c of convs ?? []) {
-        const nome = subtabNomeMap[c.subtab_id];
-        if (!nome) continue;
-        if (!result[nome]) result[nome] = { count: 0, nivel: null };
-        result[nome].count++;
+      for (const row of convData ?? []) {
+        if (row.subtab_nome) {
+          result[row.subtab_nome] = { count: Number(row.total), nivel: null };
+        }
       }
 
-      // 5. Nível vem da síntese mais recente por modo
-      const { data: sinteses } = await (supabase as any)
+      // 2. Nível vem da síntese mais recente por modo
+      const { data: sinteses, error: sintErr } = await (supabase as any)
         .from('jarvis_sessoes_sintetizadas')
         .select('subtab_nome, habilidades, created_at')
         .eq('aluno_email', email)
         .not('subtab_nome', 'is', null)
         .order('created_at', { ascending: false });
+
+      if (sintErr) console.error('useJarvisModeSessoes (sint):', sintErr);
 
       for (const s of sinteses ?? []) {
         if (!s.subtab_nome) continue;
