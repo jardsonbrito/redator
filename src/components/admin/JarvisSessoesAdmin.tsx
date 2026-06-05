@@ -37,6 +37,7 @@ interface Sessao {
   turma: string | null;
   subtab_nome: string | null;
   resumo: string | null;
+  pontos_positivos?: string | null;
   habilidades: Array<{ label: string; nivel: string }>;
   dificuldades: string[];
   proximos_passos: string[];
@@ -49,12 +50,6 @@ interface Sessao {
   created_at: string;
 }
 
-const NIVEL_COR: Record<string, string> = {
-  verde:    'bg-green-100 text-green-700 border-green-200',
-  amarelo:  'bg-yellow-100 text-yellow-700 border-yellow-200',
-  vermelho: 'bg-red-100 text-red-700 border-red-200',
-};
-const NIVEL_EMOJI: Record<string, string> = { verde: '🟢', amarelo: '🟡', vermelho: '🔴' };
 const SUBTAB_LABEL: Record<string, string> = {
   introducao: 'Introdução', desenvolvimento: 'Desenvolvimento', conclusao: 'Conclusão',
   analisar: 'Analisar Texto', melhorar: 'Melhorar Texto',
@@ -106,16 +101,6 @@ function SessaoRow({ sessao, selected, onToggle, onDelete }: SessaoRowProps) {
             )}
           </div>
         </td>
-        <td className="px-4 py-3 cursor-pointer" onClick={() => setExpandida(v => !v)}>
-          <div className="flex flex-wrap gap-1">
-            {sessao.habilidades.slice(0, 3).map((h, i) => (
-              <span key={i} className={cn('text-[10px] px-1.5 py-0.5 rounded-full border font-medium', NIVEL_COR[h.nivel])}>
-                {NIVEL_EMOJI[h.nivel]} {h.label}
-              </span>
-            ))}
-          </div>
-        </td>
-
         {/* Ações */}
         <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
           <div className="flex items-center gap-1">
@@ -135,17 +120,23 @@ function SessaoRow({ sessao, selected, onToggle, onDelete }: SessaoRowProps) {
 
       {expandida && (
         <tr className={cn('border-b', selected ? 'bg-red-50' : 'bg-slate-50')}>
-          <td colSpan={8} className="px-6 py-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <td colSpan={7} className="px-6 py-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {sessao.resumo && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">O que foi estudado</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">O que foi estudado</p>
                   <p className="text-sm text-slate-700 leading-relaxed">{humanizarParaTerceiraPessoa(sessao.resumo, sessao.aluno_nome ?? null)}</p>
                 </div>
               )}
-              {sessao.dificuldades.length > 0 && (
+              {sessao.pontos_positivos && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Dificuldades</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-green-500 mb-1.5">Pontos positivos</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">{sessao.pontos_positivos}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-1.5">Dificuldades identificadas</p>
+                {sessao.dificuldades.length > 0 ? (
                   <ul className="space-y-1">
                     {sessao.dificuldades.map((d, i) => (
                       <li key={i} className="text-sm text-slate-700 flex gap-2">
@@ -154,38 +145,21 @@ function SessaoRow({ sessao, selected, onToggle, onDelete }: SessaoRowProps) {
                       </li>
                     ))}
                   </ul>
-                </div>
-              )}
-              {sessao.proximos_passos.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Próximos passos</p>
-                  <ul className="space-y-1">
-                    {sessao.proximos_passos.map((p, i) => (
-                      <li key={i} className="text-sm text-slate-700 flex gap-2">
-                        <span className="text-purple-400 flex-shrink-0">→</span>
-                        {humanizarParaTerceiraPessoa(p, sessao.aluno_nome ?? null)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {sessao.orientacao_professor && (
-                <div className="md:col-span-2 bg-white rounded-xl border border-slate-200 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Orientação ao Professor</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{sessao.orientacao_professor}</p>
-                </div>
-              )}
-              {sessao.tags_dificuldades.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Tags (base para PEP)</p>
-                  <div className="flex flex-wrap gap-1">
-                    {sessao.tags_dificuldades.map(t => (
-                      <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">{t}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-sm text-slate-400 italic">Nenhuma dificuldade identificada.</p>
+                )}
+              </div>
             </div>
+            {sessao.tags_dificuldades.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Tags (base para PEP)</p>
+                <div className="flex flex-wrap gap-1">
+                  {sessao.tags_dificuldades.map(t => (
+                    <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">{t}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </td>
         </tr>
       )}
@@ -327,15 +301,14 @@ export function JarvisSessoesAdmin() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assunto</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Data</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Duração</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Habilidades</th>
               <th className="px-4 py-3 w-20" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">Carregando...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">Carregando...</td></tr>
             ) : sessoesFiltradas.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">Nenhuma sessão neste período.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">Nenhuma sessão neste período.</td></tr>
             ) : (
               sessoesFiltradas.map(s => (
                 <SessaoRow

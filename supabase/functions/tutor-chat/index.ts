@@ -17,48 +17,28 @@ interface TutorChatRequest {
   instrucao_interna?: string | null;
 }
 
-const SINTESE_PROMPT = `Você é o Tutor Jarvis. Analise o histórico COMPLETO desta sessão de tutoria e gere uma Síntese Pedagógica Detalhada.
+const SINTESE_PROMPT = `Você é o Tutor Jarvis. Analise o histórico COMPLETO desta sessão de tutoria e gere uma Síntese Pedagógica para o administrador da plataforma.
 
 REGRAS OBRIGATÓRIAS:
 - Baseie-se EXCLUSIVAMENTE no que aconteceu nesta conversa. Cite exemplos reais, erros reais, acertos reais.
-- Nunca escreva conclusões genéricas desconectadas da sessão.
+- Escreva em TERCEIRA PESSOA — "o aluno", "ele/ela". Nunca use "você" ou "seu".
+- Seja conciso: cada seção no máximo 2–3 frases objetivas.
+- Cada seção deve trazer informações EXCLUSIVAS — sem repetir ideias de outra seção.
+- Evite recomendações genéricas. Evite repetir conteúdos estudados dentro de Pontos Positivos ou Dificuldades.
 - Use EXATAMENTE o formato abaixo, sem introduções ou comentários adicionais.
-- PONTO DE VISTA OBRIGATÓRIO:
-  • Seções para o aluno (O que foi estudado, O que você demonstrou saber, Dificuldades, Nível, Próximos passos, Participação): use SEGUNDA PESSOA — "você", "seu", "sua". Ex: "Você demonstrou..." / "Você apresentou dificuldade em..."
-  • Seção "Orientação ao Professor": use TERCEIRA PESSOA — "o aluno", "ele". Esta seção é escrita para o professor.
 
 ---
 
 ## Síntese da Sessão de Tutoria
 
-**O que foi estudado nesta sessão:**
-[Segunda pessoa. Descreva os tópicos, exercícios e conteúdos que você estudou nesta sessão.]
+**O QUE FOI ESTUDADO:**
+[Resumo objetivo dos conteúdos, habilidades ou temas trabalhados nesta sessão.]
 
-**O que você demonstrou saber:**
-[Segunda pessoa. Ex: "Você demonstrou segurança ao... como evidenciado quando..."]
+**PONTOS POSITIVOS:**
+[Aspectos observados positivamente: compreensão, participação, autonomia, engajamento, capacidade de aplicação ou evolução percebida. Cite evidências concretas da conversa.]
 
-**Dificuldades identificadas:**
-[Segunda pessoa. Ex: "Durante os exercícios, você apresentou dificuldade em X, como evidenciado quando Y."]
-
-**Nível estimado das habilidades trabalhadas:**
-🟢 [Habilidade] — Bom domínio
-🟡 [Habilidade] — Em desenvolvimento
-🔴 [Habilidade] — Necessita reforço
-[Inclua apenas as habilidades efetivamente trabalhadas]
-
-**Próximos passos recomendados:**
-[Segunda pessoa. Ex: "Pratique X antes de avançar para Y." / "Estude Z para consolidar..."]
-
-**Participação na sessão:**
-[Preencha com os dados fornecidos no campo DADOS DA SESSÃO abaixo]
-• Tempo de estudo: [duração em minutos]
-• Mensagens trocadas: [total]
-• Exercícios realizados: [estimativa baseada na conversa]
-
----
-
-**Orientação ao Professor**
-[TERCEIRA PESSOA. Parágrafo técnico ao professor. Inclua: o que o aluno demonstrou saber, dificuldades específicas observadas com exemplos concretos, e recomendação pedagógica sobre o que reforçar. Evite generalidades.]`;
+**DIFICULDADES IDENTIFICADAS:**
+[Dificuldades específicas detectadas durante a sessão. Se não houver evidências suficientes, escrever: "Nenhuma dificuldade específica foi identificada nesta sessão."]`;
 
 interface OpenAIMessage {
   role:    'system' | 'user' | 'assistant';
@@ -76,39 +56,12 @@ function parsearSintese(texto: string) {
     return (texto.match(regex)?.[1] ?? '').trim();
   };
 
-  const resumo = secao('O que foi estudado nesta sess[aã]o');
+  const resumo           = secao('O QUE FOI ESTUDADO');
+  const pontos_positivos = secao('PONTOS POSITIVOS');
+  const difSecao         = secao('DIFICULDADES IDENTIFICADAS');
+  const dificuldades     = difSecao.split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
 
-  // Habilidades: parse 🟢/🟡/🔴
-  const habilidades: { label: string; nivel: string }[] = [];
-  const habSecao = secao('N[ií]vel estimado das habilidades');
-  for (const linha of habSecao.split('\n')) {
-    const m = linha.match(/^([🟢🟡🔴])\s+(.+?)\s+[—-]\s+(.+)$/u);
-    if (m) {
-      const nivel = m[1] === '🟢' ? 'verde' : m[1] === '🟡' ? 'amarelo' : 'vermelho';
-      habilidades.push({ label: m[2].trim(), nivel });
-    }
-  }
-
-  // Dificuldades: linhas não-vazias da seção
-  const difSecao = secao('Dificuldades identificadas');
-  const dificuldades = difSecao.split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
-
-  // Próximos passos
-  const passosSecao = secao('Pr[oó]ximos passos');
-  const proximos_passos = passosSecao.split('\n').map(l => l.replace(/^[-•*\d.]+\s*/, '').trim()).filter(Boolean);
-
-  // Orientação ao professor
-  const orientacao_professor = secao('Orienta[cç][aã]o ao Professor');
-
-  // Participação
-  const durMatch = texto.match(/Tempo de estudo[:\s]+~?(\d+)\s*minuto/i);
-  const msgsMatch = texto.match(/Mensagens trocadas[:\s]+(\d+)/i);
-  const exerMatch = texto.match(/Exerc[ií]cios realizados[:\s]+(\d+)/i);
-  const duracao_minutos      = durMatch  ? parseInt(durMatch[1])  : 0;
-  const total_mensagens      = msgsMatch ? parseInt(msgsMatch[1]) : 0;
-  const exercicios_estimados = exerMatch ? parseInt(exerMatch[1]) : 0;
-
-  // Tags normalizadas para PEP futuro
+  // Tags normalizadas para PEP
   const textoLower = (dificuldades.join(' ') + ' ' + resumo).toLowerCase();
   const tagsMap: Record<string, string> = {
     'conectivo': 'conectivos', 'tese': 'tese', 'repertório': 'repertorio',
@@ -121,8 +74,19 @@ function parsearSintese(texto: string) {
     Object.entries(tagsMap).filter(([k]) => textoLower.includes(k)).map(([, v]) => v)
   )];
 
-  return { resumo, habilidades, dificuldades, proximos_passos, orientacao_professor,
-           duracao_minutos, total_mensagens, exercicios_estimados, tags_dificuldades };
+  return {
+    resumo,
+    pontos_positivos,
+    dificuldades,
+    tags_dificuldades,
+    // campos legados — mantidos para linhas antigas no banco
+    habilidades:          [] as { label: string; nivel: string }[],
+    proximos_passos:      [] as string[],
+    orientacao_professor: '',
+    duracao_minutos:      0,
+    total_mensagens:      0,
+    exercicios_estimados: 0,
+  };
 }
 
 // ── Salvar síntese na tabela estruturada ─────────────────────────────────────
@@ -157,15 +121,13 @@ async function salvarSessaoSintetizada(
       turma:                (perfil as any)?.turma ?? null,
       subtab_nome:          params.subtab_nome,
       resumo:               parsed.resumo,
-      habilidades:          parsed.habilidades,
+      pontos_positivos:     parsed.pontos_positivos,
       dificuldades:         parsed.dificuldades,
+      tags_dificuldades:    parsed.tags_dificuldades,
+      habilidades:          parsed.habilidades,
       proximos_passos:      parsed.proximos_passos,
       orientacao_professor: parsed.orientacao_professor,
-      duracao_minutos:      parsed.duracao_minutos,
-      total_mensagens:      parsed.total_mensagens,
-      exercicios_estimados: parsed.exercicios_estimados,
       texto_completo:       params.texto_completo,
-      tags_dificuldades:    parsed.tags_dificuldades,
     });
     console.log('📝 Sessão sintetizada salva com sucesso');
   } catch (err) {
@@ -492,15 +454,7 @@ Deno.serve(async (req) => {
 
     console.log('📚 Histórico:', historico.length, 'mensagens');
 
-    // ── 5b. Dados de participação (injetados na síntese) ─────────
-    let dadosSessao = '';
-    if (gerar_sintese && historicoOrdenado.length > 0) {
-      const primeira  = new Date((historicoOrdenado[0] as any).created_at);
-      const ultima    = new Date((historicoOrdenado[historicoOrdenado.length - 1] as any).created_at);
-      const duracaoMin = Math.max(1, Math.round((ultima.getTime() - primeira.getTime()) / 60000));
-      const totalMsgs  = historicoOrdenado.length;
-      dadosSessao = `\nDADOS DA SESSÃO (use no campo Participação na sessão):\n• Tempo de estudo: aproximadamente ${duracaoMin} minuto${duracaoMin !== 1 ? 's' : ''}\n• Mensagens trocadas: ${totalMsgs}\n• Exercícios realizados: [estime com base na conversa]`;
-    }
+    // ── 5b. (reservado) ──────────────────────────────────────────
 
     // ── 5c. Contexto pedagógico ──────────────────────────────────────────────
     // instrucaoInterna presente (request ou DB) = reinjetar como system em todo turno
@@ -576,8 +530,8 @@ Deno.serve(async (req) => {
       messages.push({ role: 'system', content: instrucaoInterna! });
       messages.push({ role: 'user', content: mensagem.trim() });
       console.log(`📎 Instrução interna: ${instrucaoInterna!.length} chars (turno ${Math.floor(historico.length/2) + 1})`);
-    } else if (gerar_sintese && dadosSessao) {
-      messages.push({ role: 'user', content: `Gere a síntese pedagógica desta sessão.${dadosSessao}` });
+    } else if (gerar_sintese) {
+      messages.push({ role: 'user', content: 'Gere a síntese pedagógica desta sessão.' });
     } else {
       messages.push({ role: 'user', content: mensagem.trim() });
     }
