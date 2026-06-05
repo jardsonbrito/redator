@@ -119,6 +119,7 @@ interface QuickAction {
   icone: string;
   ordem: number;
   ativo: boolean;
+  max_execucoes: number | null;
 }
 
 const QA_ICON_MAP: Record<string, LucideIcon> = {
@@ -166,9 +167,9 @@ export const JarvisTutoriaConfiguracao = () => {
   // Quick Actions state
   const [quickActions, setQuickActions]   = useState<QuickAction[]>([]);
   const [editandoQA, setEditandoQA]       = useState<string | null>(null);
-  const [qaForm, setQaForm]               = useState({ label: '', texto: '', icone: 'HelpCircle' });
+  const [qaForm, setQaForm]               = useState({ label: '', texto: '', icone: 'HelpCircle', max_execucoes: '' });
   const [adicionandoQA, setAdicionandoQA] = useState(false);
-  const [qaNovaForm, setQaNovaForm]       = useState({ label: '', texto: '', icone: 'HelpCircle' });
+  const [qaNovaForm, setQaNovaForm]       = useState({ label: '', texto: '', icone: 'HelpCircle', max_execucoes: '' });
   const [salvandoQA, setSalvandoQA]       = useState(false);
 
   useEffect(() => {
@@ -279,16 +280,17 @@ export const JarvisTutoriaConfiguracao = () => {
 
   const iniciarEditQA = (qa: QuickAction) => {
     setEditandoQA(qa.id);
-    setQaForm({ label: qa.label, texto: qa.texto, icone: qa.icone });
+    setQaForm({ label: qa.label, texto: qa.texto, icone: qa.icone, max_execucoes: qa.max_execucoes != null ? String(qa.max_execucoes) : '' });
   };
 
   const salvarQA = async () => {
     if (!editandoQA) return;
     setSalvandoQA(true);
     try {
+      const maxExec = qaForm.max_execucoes.trim() !== '' ? parseInt(qaForm.max_execucoes) : null;
       const { error } = await (supabase as any)
         .from('tutor_quick_actions')
-        .update({ label: qaForm.label, texto: qaForm.texto, icone: qaForm.icone, updated_at: new Date().toISOString() })
+        .update({ label: qaForm.label, texto: qaForm.texto, icone: qaForm.icone, max_execucoes: maxExec, updated_at: new Date().toISOString() })
         .eq('id', editandoQA);
       if (error) throw error;
       toast({ title: '✅ Ação salva', className: 'border-green-200 bg-green-50 text-green-900' });
@@ -309,13 +311,14 @@ export const JarvisTutoriaConfiguracao = () => {
     setSalvandoQA(true);
     try {
       const maxOrdem = quickActions.length > 0 ? Math.max(...quickActions.map(a => a.ordem)) : 0;
+      const maxExecNova = qaNovaForm.max_execucoes.trim() !== '' ? parseInt(qaNovaForm.max_execucoes) : null;
       const { error } = await (supabase as any)
         .from('tutor_quick_actions')
-        .insert({ label: qaNovaForm.label.trim(), texto: qaNovaForm.texto, icone: qaNovaForm.icone, ordem: maxOrdem + 1 });
+        .insert({ label: qaNovaForm.label.trim(), texto: qaNovaForm.texto, icone: qaNovaForm.icone, max_execucoes: maxExecNova, ordem: maxOrdem + 1 });
       if (error) throw error;
       toast({ title: '✅ Ação criada', className: 'border-green-200 bg-green-50 text-green-900' });
       setAdicionandoQA(false);
-      setQaNovaForm({ label: '', texto: '', icone: 'HelpCircle' });
+      setQaNovaForm({ label: '', texto: '', icone: 'HelpCircle', max_execucoes: '' });
       loadQuickActions();
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
@@ -1358,6 +1361,18 @@ export const JarvisTutoriaConfiguracao = () => {
                   />
                   <p className="text-xs text-muted-foreground mt-1">Use \n para quebras de linha que serão inseridas no campo do aluno.</p>
                 </div>
+                <div className="w-48">
+                  <Label className="text-xs">Limite por aluno (opcional)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={qaNovaForm.max_execucoes}
+                    onChange={e => setQaNovaForm({ ...qaNovaForm, max_execucoes: e.target.value })}
+                    placeholder="Ilimitado"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Máx. de conversas por aluno. Vazio = sem limite.</p>
+                </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={criarQA} disabled={salvandoQA}>
                     <Save className="h-4 w-4 mr-2" />
@@ -1416,6 +1431,11 @@ export const JarvisTutoriaConfiguracao = () => {
                         >
                           {qa.ativo ? 'Ativo' : 'Inativo'}
                         </Badge>
+                        {qa.max_execucoes != null && (
+                          <Badge variant="outline" className="text-xs shrink-0 border-amber-300 text-amber-700 bg-amber-50">
+                            Limite: {qa.max_execucoes}x
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <Button
@@ -1481,6 +1501,18 @@ export const JarvisTutoriaConfiguracao = () => {
                             rows={2}
                             className="mt-1 text-sm"
                           />
+                        </div>
+                        <div className="w-48">
+                          <Label className="text-xs">Limite por aluno (opcional)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={qaForm.max_execucoes}
+                            onChange={e => setQaForm({ ...qaForm, max_execucoes: e.target.value })}
+                            placeholder="Ilimitado"
+                            className="mt-1"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">Máx. de conversas por aluno. Vazio = sem limite.</p>
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" onClick={salvarQA} disabled={salvandoQA}>

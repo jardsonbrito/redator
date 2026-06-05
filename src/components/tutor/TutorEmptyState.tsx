@@ -1,6 +1,6 @@
 import {
   HelpCircle, BookOpen, Link2, FileText, Lightbulb,
-  AlignLeft, Star, MessageSquare, PenLine, Type, Search, CheckCircle,
+  AlignLeft, Star, MessageSquare, PenLine, Type, Search, CheckCircle, Lock,
   type LucideIcon,
 } from 'lucide-react';
 import { useTutorQuickActions } from '@/hooks/useTutorQuickActions';
@@ -62,47 +62,65 @@ export function TutorEmptyState({ onQuickAction, subtabLabel, atalhoContadores =
             </div>
           ) : actions.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-[640px]">
-              {actions.map(({ id, icone, label, descricao, texto }) => {
-                const Icon    = ICON_MAP[icone] ?? HelpCircle;
-                const count   = atalhoContadores[id] ?? 0;
-                const isLast  = actions.length % 2 !== 0 && id === actions[actions.length - 1].id;
+              {actions.map(({ id, icone, label, descricao, texto, max_execucoes }) => {
+                const Icon       = ICON_MAP[icone] ?? HelpCircle;
+                const count      = atalhoContadores[id] ?? 0;
+                const limitado   = max_execucoes != null;
+                const esgotado   = limitado && count >= max_execucoes!;
+                const isLast     = actions.length % 2 !== 0 && id === actions[actions.length - 1].id;
                 return (
                   <button
                     key={id}
-                    onClick={() => onQuickAction(label, texto, id)}
+                    onClick={() => !esgotado && onQuickAction(label, texto, id)}
+                    disabled={esgotado}
                     className={cn(
-                      'group relative flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-xl text-left',
-                      'hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5',
-                      'transition-all duration-150',
+                      'group relative flex items-start gap-3 p-4 bg-white border rounded-xl text-left transition-all duration-150',
+                      esgotado
+                        ? 'border-slate-200 opacity-60 cursor-not-allowed'
+                        : 'border-slate-200 hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5',
                       isLast ? 'sm:col-span-2' : '',
                     )}
                   >
-                    {/* Indicador de uso — aparece quando count > 0 */}
-                    {count > 0 && (
-                      <span className="absolute top-2.5 right-2.5 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
-                        <span className="text-[10px] font-semibold text-purple-500 leading-none">
-                          {count}
-                        </span>
-                      </span>
-                    )}
+                    {/* Indicador de uso no canto superior direito */}
+                    <span className="absolute top-2.5 right-2.5 flex items-center gap-1">
+                      {esgotado ? (
+                        <Lock className="w-3 h-3 text-slate-400" />
+                      ) : count > 0 ? (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                          <span className="text-[10px] font-semibold text-purple-500 leading-none">
+                            {limitado ? `${count}/${max_execucoes}` : count}
+                          </span>
+                        </>
+                      ) : null}
+                    </span>
 
                     <span className={cn(
                       'mt-0.5 w-8 h-8 rounded-lg bg-slate-50 border border-slate-200',
                       'flex items-center justify-center flex-shrink-0',
-                      'group-hover:bg-purple-50 group-hover:border-purple-200 transition-colors',
+                      !esgotado && 'group-hover:bg-purple-50 group-hover:border-purple-200 transition-colors',
                     )}>
-                      <Icon className="w-3.5 h-3.5 text-purple-600" />
+                      {esgotado
+                        ? <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        : <Icon className="w-3.5 h-3.5 text-purple-600" />
+                      }
                     </span>
                     <div className="min-w-0 pr-8">
-                      <p className="text-[13.5px] font-medium text-slate-800 group-hover:text-purple-900 leading-snug">
+                      <p className={cn(
+                        'text-[13.5px] font-medium leading-snug',
+                        esgotado ? 'text-slate-400' : 'text-slate-800 group-hover:text-purple-900',
+                      )}>
                         {label}
                       </p>
-                      {descricao && (
+                      {esgotado ? (
+                        <p className="text-[12px] text-slate-400 mt-0.5 font-normal leading-snug">
+                          Limite atingido ({count}/{max_execucoes})
+                        </p>
+                      ) : descricao ? (
                         <p className="text-[12px] text-slate-400 mt-0.5 font-normal leading-snug">
                           {descricao}
                         </p>
-                      )}
+                      ) : null}
                     </div>
                   </button>
                 );

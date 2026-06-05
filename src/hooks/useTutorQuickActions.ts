@@ -9,6 +9,7 @@ export interface TutorQuickAction {
   icone: string;
   ordem: number;
   ativo: boolean;
+  max_execucoes: number | null;
 }
 
 export const useTutorQuickActions = () => {
@@ -20,7 +21,7 @@ export const useTutorQuickActions = () => {
       setLoading(true);
       const { data, error } = await (supabase as any)
         .from('tutor_quick_actions')
-        .select('id, label, descricao, texto, icone, ordem')
+        .select('id, label, descricao, texto, icone, ordem, max_execucoes')
         .eq('ativo', true)
         .order('ordem', { ascending: true });
       if (error) throw error;
