@@ -1126,7 +1126,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             alt="Redação para correção"
             className="img-redacao"
             onLoad={handleImageLoad}
-            loading="lazy"
+            loading={readonly ? "eager" : "lazy"}
             style={getImageStyle()}
           />
         </div>

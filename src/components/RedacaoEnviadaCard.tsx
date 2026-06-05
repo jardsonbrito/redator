@@ -297,6 +297,49 @@ export const RedacaoEnviadaCard = ({
         </div>
       )}
 
+      {/* ===== MENSAGEM PEDAGÓGICA ===== */}
+      {redacao.corrigida && (relatorioPedagogico || (redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim())) && (
+        <Card className="border shadow-sm bg-violet-50/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-violet-900">
+              <MessageSquare className="w-5 h-5" />
+              {redacao.corretor
+                ? `Mensagem pedagógica – ${redacao.corretor}`
+                : 'Mensagem pedagógica do corretor'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-3">
+            {!redacao.corretor_numero && redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && (
+              <div className="bg-white border border-violet-100 rounded-lg p-4">
+                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {redacao.comentario_admin}
+                </p>
+              </div>
+            )}
+            {relatorioPedagogico && (
+              <div className="bg-white border border-violet-100 rounded-lg p-4">
+                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {relatorioPedagogico}
+                </p>
+              </div>
+            )}
+            {studentData?.userType !== 'aluno' && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toast({ title: "Download iniciado", description: "A correção completa será baixada em breve." })}
+                  className="text-primary border-primary hover:bg-primary/10"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar Correção Completa
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* ===== REDAÇÃO ===== */}
       <Card className="border shadow-sm">
         <CardContent className="p-4 sm:p-5">
@@ -438,49 +481,6 @@ export const RedacaoEnviadaCard = ({
               corretorNome={corretorNomeAudio}
               isStudentView={true}
             />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ===== MENSAGEM PEDAGÓGICA ===== */}
-      {redacao.corrigida && (relatorioPedagogico || (redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim())) && (
-        <Card className="border shadow-sm bg-violet-50/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-violet-900">
-              <MessageSquare className="w-5 h-5" />
-              {redacao.corretor
-                ? `Mensagem pedagógica – ${redacao.corretor}`
-                : 'Mensagem pedagógica do corretor'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            {!redacao.corretor_numero && redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && (
-              <div className="bg-white border border-violet-100 rounded-lg p-4">
-                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
-                  {redacao.comentario_admin}
-                </p>
-              </div>
-            )}
-            {relatorioPedagogico && (
-              <div className="bg-white border border-violet-100 rounded-lg p-4">
-                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
-                  {relatorioPedagogico}
-                </p>
-              </div>
-            )}
-            {studentData?.userType !== 'aluno' && (
-              <div className="flex justify-center pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toast({ title: "Download iniciado", description: "A correção completa será baixada em breve." })}
-                  className="text-primary border-primary hover:bg-primary/10"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Baixar Correção Completa
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
