@@ -5,9 +5,13 @@ export interface JarvisVideoConfig {
   id: string;
   titulo: string;
   url_youtube: string;
+  atualizado_em: string;
 }
 
-const STORAGE_KEY = 'jarvis_video_instrucao_dismissed';
+const STORAGE_KEY = 'jarvis_video_instrucao_assistido';
+
+const versaoVideo = (config: Pick<JarvisVideoConfig, 'id' | 'atualizado_em'>) =>
+  `${config.id}:${config.atualizado_em}`;
 
 export function useJarvisVideoInstrucao() {
   const [config, setConfig] = useState<JarvisVideoConfig | null>(null);
@@ -18,15 +22,16 @@ export function useJarvisVideoInstrucao() {
     const carregar = async () => {
       const { data } = await supabase
         .from('jarvis_video_instrucao')
-        .select('id, titulo, url_youtube')
+        .select('id, titulo, url_youtube, atualizado_em')
         .order('atualizado_em', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (data?.url_youtube) {
-        setConfig(data as JarvisVideoConfig);
-        const dispensado = sessionStorage.getItem(STORAGE_KEY);
-        if (!dispensado) {
+        const videoConfig = data as JarvisVideoConfig;
+        setConfig(videoConfig);
+        const assistido = localStorage.getItem(STORAGE_KEY);
+        if (assistido !== versaoVideo(videoConfig)) {
           setModalAberto(true);
         }
       }
@@ -36,7 +41,9 @@ export function useJarvisVideoInstrucao() {
   }, []);
 
   const dispensar = () => {
-    sessionStorage.setItem(STORAGE_KEY, '1');
+    if (config) {
+      localStorage.setItem(STORAGE_KEY, versaoVideo(config));
+    }
     setModalAberto(false);
   };
 

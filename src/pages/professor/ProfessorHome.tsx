@@ -17,6 +17,7 @@ import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import { useProfessorFeatures } from "@/hooks/useProfessorFeatures";
 import { useJarvisVideoInstrucao } from "@/hooks/useJarvisVideoInstrucao";
 import { JarvisVideoModal } from "@/components/professor/JarvisVideoModal";
+import { ProfessorJarvisCorrecao } from "@/pages/professor/ProfessorJarvisCorrecao";
 
 const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; tooltip: string }> = {
   jarvis_correcao: {
@@ -131,7 +132,7 @@ const CHAVE_CONFIG: Record<string, { title: string; path: string; icon: any; too
 
 const ProfessorHome = () => {
   const { professor } = useProfessorAuth();
-  const { funcionalidadesOrdenadas } = useProfessorFeatures();
+  const { funcionalidadesOrdenadas, isFeatureEnabled, isLoading: isLoadingFeatures } = useProfessorFeatures();
   const { config: videoConfig, modalAberto, dispensar, abrirModal } = useJarvisVideoInstrucao();
 
   const emptyBreadcrumbs = useMemo(() => [], []);
@@ -155,6 +156,30 @@ const ProfessorHome = () => {
       })
       .filter((item) => item !== null);
   }, [funcionalidadesOrdenadas]);
+
+  // Quando o Jarvis Corretor é o único card de navegação liberado, ele vira a tela padrão do professor
+  // (ignora funcionalidades "ambiente" sem card próprio, como calendário, jarvis chat, ajuda rápida etc.)
+  const apenasJarvisCorrecao =
+    !isLoadingFeatures &&
+    menuItems.length === 1 &&
+    menuItems[0]?.path === CHAVE_CONFIG.jarvis_correcao.path;
+
+  // Tela padrão dedicada ao Jarvis Corretor (sem o dashboard de cards), preservando o vídeo de orientação
+  if (apenasJarvisCorrecao) {
+    return (
+      <>
+        {videoConfig && (
+          <JarvisVideoModal
+            aberto={modalAberto}
+            titulo={videoConfig.titulo}
+            urlYoutube={videoConfig.url_youtube}
+            onAssistirDepois={dispensar}
+          />
+        )}
+        <ProfessorJarvisCorrecao />
+      </>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -187,9 +212,11 @@ const ProfessorHome = () => {
             )}
           </div>
 
-          <div className="max-w-5xl mx-auto mb-8">
-            <CalendarioAtividades turmaCode={turmaCode} />
-          </div>
+          {isFeatureEnabled('calendario') && (
+            <div className="max-w-5xl mx-auto mb-8">
+              <CalendarioAtividades turmaCode={turmaCode} />
+            </div>
+          )}
 
           <div className="max-w-5xl mx-auto mb-8">
             <MuralAvisos turmaCode={turmaCode} />

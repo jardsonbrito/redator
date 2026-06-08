@@ -162,7 +162,7 @@ export const ProfessorSubscriptionManagement = () => {
 
       await supabase.from('professor_subscription_history').insert({
         professor_id: prof.id,
-        alteracao: `Assinatura ${existing ? 'atualizada' : 'criada'}: ${editForm.plano}, validade ${formatDateSafe(editForm.data_validade)}, créditos ${editForm.creditos}`,
+        alteracao: `Assinatura ${existing ? 'atualizada' : 'criada'}: ${getPlanoExibicao(editForm.plano)}, validade ${formatDateSafe(editForm.data_validade)}, créditos ${editForm.creditos}`,
         admin_responsavel: 'Administrador',
       });
     },
@@ -216,8 +216,11 @@ export const ProfessorSubscriptionManagement = () => {
       ? <Badge className="bg-green-100 text-green-800">Ativo</Badge>
       : <Badge variant="destructive">Vencido</Badge>;
 
+  const getPlanoExibicao = (plano: string) =>
+    todosPlanos.find(p => p.nome === plano)?.nome_exibicao ?? plano;
+
   const getPlanoBadge = (plano: string) => (
-    <Badge className="bg-violet-100 text-violet-800">{plano}</Badge>
+    <Badge className="bg-violet-100 text-violet-800">{getPlanoExibicao(plano)}</Badge>
   );
 
   const professoresFiltrados = professores.filter(p =>
