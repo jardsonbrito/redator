@@ -98,6 +98,7 @@ const AlunoLogin = () => {
       toast({
         title: "Acesso liberado!",
         description: `Bem-vindo, ${aluno.nome}!`,
+        duration: 1500,
       });
 
       navigate("/app", { replace: true });
