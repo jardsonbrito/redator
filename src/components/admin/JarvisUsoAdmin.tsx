@@ -411,7 +411,7 @@ const PAGE_SIZE = 50;
 
 export function JarvisUsoAdmin() {
   const now = new Date();
-  const [mes,          setMes]          = useState(now.getMonth() + 1);
+  const [mes,          setMes]          = useState<number>(now.getMonth() + 1);
   const [ano,          setAno]          = useState(now.getFullYear());
   const [turmaFiltro,  setTurmaFiltro]  = useState('todas');
   const [origemFiltro, setOrigemFiltro] = useState<'todas' | Origem>('todas');
@@ -435,15 +435,21 @@ export function JarvisUsoAdmin() {
     setSelectedIds(new Set());
     setPaginaAtual(0);
     try {
-      const inicio = new Date(ano, mes - 1, 1).toISOString();
-      const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString();
-
       let q = (supabase as any)
         .from('jarvis_uso_unificado')
         .select('*')
-        .gte('created_at', inicio)
-        .lte('created_at', fim)
         .order('created_at', { ascending: false });
+
+      if (mes === 0) {
+        // Todos os meses do ano selecionado
+        q = q
+          .gte('created_at', new Date(ano, 0, 1).toISOString())
+          .lte('created_at', new Date(ano, 11, 31, 23, 59, 59).toISOString());
+      } else {
+        q = q
+          .gte('created_at', new Date(ano, mes - 1, 1).toISOString())
+          .lte('created_at', new Date(ano, mes, 0, 23, 59, 59).toISOString());
+      }
 
       if (turmaFiltro  !== 'todas') q = q.eq('turma',  turmaFiltro);
       if (origemFiltro !== 'todas') q = q.eq('origem', origemFiltro);
@@ -551,6 +557,7 @@ export function JarvisUsoAdmin() {
         <Select value={mes.toString()} onValueChange={v => setMes(Number(v))}>
           <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
+            <SelectItem value="0">Todos os meses</SelectItem>
             {MESES.map(m => <SelectItem key={m.v} value={m.v.toString()}>{m.l}</SelectItem>)}
           </SelectContent>
         </Select>
