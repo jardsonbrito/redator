@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  TrendingUp, Clock, FileText, CheckCircle2, ArrowRight,
+  TrendingUp, CheckCircle2, ArrowRight,
   User, Calendar, BookOpen, Inbox, Loader2, AlertTriangle, BarChart2, Users
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -88,7 +88,7 @@ const ChartCard = ({ title, data, dataKey, color = "#8b5cf6" }: {
 
 const CorretorDashboard = () => {
   const { corretor, loading } = useCorretorAuth();
-  const { podeGerenciar, nomesTurmasGerenciadas } = useCorretorPermissoes();
+  const { podeGerenciar, nomesTurmasGerenciadas, featuresPlano } = useCorretorPermissoes();
   const isMobile = useIsMobile();
 
   // Conta discrepâncias pendentes nas turmas gerenciadas
@@ -199,27 +199,13 @@ const CorretorDashboard = () => {
             <Loader2 className="w-6 h-6 animate-spin text-violet-500" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <MetricCard
               title="Média das notas"
               value={metricas.mediaNota}
               sub="pontos médios"
               icon={TrendingUp}
               accent="bg-violet-600"
-            />
-            <MetricCard
-              title="Pendências"
-              value={metricas.totalPendencias}
-              sub="aguardando correção"
-              icon={Clock}
-              accent="bg-amber-500"
-            />
-            <MetricCard
-              title="Em correção"
-              value={emCorrecao.length}
-              sub="em andamento"
-              icon={FileText}
-              accent="bg-blue-500"
             />
             <MetricCard
               title="Total de envios"
@@ -313,51 +299,56 @@ const CorretorDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* ── ATALHOS DE GESTÃO (apenas gestor) ───────────────────────── */}
+        {/* ── ATALHOS DE GESTÃO (apenas gestor, filtrados pelo plano) ─── */}
         {podeGerenciar && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card
-              className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate('/corretor/temas')}
-            >
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="bg-fuchsia-100 p-2.5 rounded-xl">
-                  <BookOpen className="w-4 h-4 text-fuchsia-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-800 text-sm">Temas</p>
-                  <p className="text-xs text-slate-500 truncate">Gerenciar temas</p>
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Temas — exibe só se o plano tem temas */}
+            {featuresPlano["temas"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/temas')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-fuchsia-100 p-2.5 rounded-xl">
+                    <BookOpen className="w-4 h-4 text-fuchsia-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Temas</p>
+                    <p className="text-xs text-slate-500 truncate">Gerenciar temas</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
 
-            <Card
-              className={`bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-                discrepanciasPendentes > 0
-                  ? 'ring-2 ring-red-300'
-                  : 'ring-1 ring-violet-100'
-              }`}
-              onClick={() => navigate('/corretor/gestao-simulados')}
-            >
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className={`p-2.5 rounded-xl ${discrepanciasPendentes > 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
-                  <AlertTriangle className={`w-4 h-4 ${discrepanciasPendentes > 0 ? 'text-red-600' : 'text-amber-600'}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-800 text-sm">Discrepâncias</p>
-                  <p className="text-xs text-slate-500 truncate">
-                    {discrepanciasPendentes > 0
-                      ? `${discrepanciasPendentes} pendente${discrepanciasPendentes > 1 ? 's' : ''}`
-                      : prontas > 0
-                        ? `${prontas} pronta${prontas > 1 ? 's' : ''} p/ finalizar`
-                        : 'Sem pendências'}
-                  </p>
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              </CardContent>
-            </Card>
+            {/* Discrepâncias — exibe só se o plano tem simulados */}
+            {featuresPlano["simulados"] && (
+              <Card
+                className={`bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+                  discrepanciasPendentes > 0 ? 'ring-2 ring-red-300' : 'ring-1 ring-violet-100'
+                }`}
+                onClick={() => navigate('/corretor/gestao-simulados')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className={`p-2.5 rounded-xl ${discrepanciasPendentes > 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
+                    <AlertTriangle className={`w-4 h-4 ${discrepanciasPendentes > 0 ? 'text-red-600' : 'text-amber-600'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Discrepâncias</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {discrepanciasPendentes > 0
+                        ? `${discrepanciasPendentes} pendente${discrepanciasPendentes > 1 ? 's' : ''}`
+                        : prontas > 0
+                          ? `${prontas} pronta${prontas > 1 ? 's' : ''} p/ finalizar`
+                          : 'Sem pendências'}
+                    </p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
 
+            {/* Alunos — sempre disponível para o gestor */}
             <Card
               className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => navigate('/corretor/alunos')}
@@ -373,6 +364,63 @@ const CorretorDashboard = () => {
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </CardContent>
             </Card>
+
+            {/* Simulados — exibe só se o plano tem simulados */}
+            {featuresPlano["simulados"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/simulados')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-violet-100 p-2.5 rounded-xl">
+                    <BarChart2 className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Simulados</p>
+                    <p className="text-xs text-slate-500 truncate">Gerenciar simulados</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Aulas Gravadas — exibe só se o plano tem aulas_gravadas */}
+            {featuresPlano["aulas_gravadas"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/aulas')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-emerald-100 p-2.5 rounded-xl">
+                    <Calendar className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Aulas Gravadas</p>
+                    <p className="text-xs text-slate-500 truncate">Gerenciar aulas</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Aulas ao Vivo — exibe só se o plano tem aulas_ao_vivo */}
+            {featuresPlano["aulas_ao_vivo"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/aulas-ao-vivo')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-cyan-100 p-2.5 rounded-xl">
+                    <Inbox className="w-4 h-4 text-cyan-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Aulas ao Vivo</p>
+                    <p className="text-xs text-slate-500 truncate">Agendar e gerenciar</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
@@ -392,13 +440,13 @@ const CorretorDashboard = () => {
           />
         </div>
 
-        {/* ── GALERIA DE HONRA + TOP 5 (apenas para corretores com turmas externas) */}
-        {podeGerenciar && (
+        {/* ── GALERIA DE HONRA + TOP 5 (apenas para gestores, restrito às turmas gerenciadas) */}
+        {podeGerenciar && featuresPlano["top_5"] && nomesTurmasGerenciadas.length > 0 && (
           <Top5Widget
             variant="corretor"
             showHeader
             horizontal
-            turmasPermitidas={(corretor.turmas_autorizadas as string[]) ?? []}
+            turmasPermitidas={nomesTurmasGerenciadas}
           />
         )}
 
