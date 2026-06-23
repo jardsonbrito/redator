@@ -43,10 +43,14 @@ interface AulaFormProps {
   aulaEditando?: AulaEditando | null;
   onSuccess?: () => void;
   onCancelEdit?: () => void;
+  turmasRestricao?: string[];
 }
 
-export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProps) => {
-  const { turmasDinamicas } = useTurmasAtivas();
+export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRestricao }: AulaFormProps) => {
+  const { turmasDinamicas: todasAsTurmas } = useTurmasAtivas();
+  const turmasDinamicas = turmasRestricao && turmasRestricao.length > 0
+    ? todasAsTurmas.filter(t => turmasRestricao.includes(t.valor))
+    : todasAsTurmas;
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");

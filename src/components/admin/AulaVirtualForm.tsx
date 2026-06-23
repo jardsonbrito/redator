@@ -15,6 +15,7 @@ import { Info } from "lucide-react";
 
 interface AulaVirtualFormProps {
   onSuccess?: () => void;
+  turmasRestricao?: string[];
 }
 
 type AulaDisponivel = { id: string; titulo: string; data_aula: string };
@@ -25,8 +26,11 @@ const formatarData = (data: string) => {
   return `${d}/${m}/${y}`;
 };
 
-export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
-  const { turmasDinamicas } = useTurmasAtivas();
+export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormProps) => {
+  const { turmasDinamicas: todasAsTurmas } = useTurmasAtivas();
+  const turmasDinamicas = turmasRestricao && turmasRestricao.length > 0
+    ? todasAsTurmas.filter(t => turmasRestricao.includes(t.valor))
+    : todasAsTurmas;
 
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');

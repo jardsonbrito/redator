@@ -55,6 +55,8 @@ const CorretorEditarSimulado  = lazy(() => import("./pages/corretor/CorretorEdit
 const CorretorSimuladoRedacoes = lazy(() => import("./pages/corretor/CorretorSimuladoRedacoes"));
 const CorretorRedacaoSimuladoDetalhes = lazy(() => import("./pages/corretor/CorretorRedacaoSimuladoDetalhes"));
 const CorretorAulas           = lazy(() => import("./pages/corretor/CorretorAulas"));
+const CorretorCriarAula       = lazy(() => import("./pages/corretor/CorretorCriarAula"));
+const CorretorAulasAoVivo     = lazy(() => import("./pages/corretor/CorretorAulasAoVivo"));
 const CorretorVideoteca       = lazy(() => import("./pages/corretor/CorretorVideoteca"));
 const CorretorBiblioteca      = lazy(() => import("./pages/corretor/CorretorBiblioteca"));
 const CorretorRedacoesExemplar = lazy(() => import("./pages/corretor/CorretorRedacoesExemplar"));
@@ -262,6 +264,8 @@ function App() {
                     <Route path="/corretor/simulados/:simuladoId/redacoes" element={<CorretorGerenteRoute><CorretorSimuladoRedacoes /></CorretorGerenteRoute>} />
                     <Route path="/corretor/simulados/redacao/:id" element={<CorretorGerenteRoute><CorretorRedacaoSimuladoDetalhes /></CorretorGerenteRoute>} />
                     <Route path="/corretor/aulas" element={<CorretorGerenteRoute><CorretorAulas /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/aulas/nova" element={<CorretorGerenteRoute><CorretorCriarAula /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/aulas-ao-vivo" element={<CorretorGerenteRoute><CorretorAulasAoVivo /></CorretorGerenteRoute>} />
                     <Route path="/corretor/videoteca" element={<CorretorGerenteRoute><CorretorVideoteca /></CorretorGerenteRoute>} />
                     <Route path="/corretor/biblioteca" element={<CorretorGerenteRoute><CorretorBiblioteca /></CorretorGerenteRoute>} />
                     <Route path="/corretor/redacoes" element={<CorretorGerenteRoute><CorretorRedacoesExemplar /></CorretorGerenteRoute>} />

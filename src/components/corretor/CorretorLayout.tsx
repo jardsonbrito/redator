@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays, ChevronDown, BarChart2, Users, Video, Trophy, MonitorPlay, Film, BookMarked, ScrollText } from "lucide-react";
+import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays, ChevronDown, BarChart2, Users, Video, Trophy, MonitorPlay, Film, BookMarked, ScrollText, Tv } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
@@ -55,7 +55,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   }, [corretor?.email, buscarMensagensNaoLidas]);
 
   // Mapeamento chave-de-funcionalidade → item de menu (só para gestores, gate por plano)
-  // Chaves sem rota no painel do corretor são omitidas: aulas_ao_vivo, interatividade
+  // interatividade omitida: sem rota dedicada no painel do corretor
   type MenuEntry = { icon: React.ElementType; label: string; path: string };
   type MenuItem = MenuEntry | null;
 
@@ -65,6 +65,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
     { chave: "simulados",           icon: FileText,     label: "Simulados",               path: "/corretor/simulados" },
     { chave: "simulados",           icon: BarChart2,    label: "Notas e Discrepâncias",   path: "/corretor/gestao-simulados" },
     { chave: "aulas_gravadas",      icon: Video,        label: "Aulas Gravadas",          path: "/corretor/aulas" },
+    { chave: "aulas_ao_vivo",       icon: Tv,           label: "Aulas ao Vivo",           path: "/corretor/aulas-ao-vivo" },
     { chave: "top_5",               icon: Trophy,       label: "Top 5",                   path: "/corretor/top5" },
     { chave: "lousa",               icon: MonitorPlay,  label: "Lousa",                   path: "/corretor/lousas" },
     { chave: "videoteca",           icon: Film,         label: "Videoteca",               path: "/corretor/videoteca" },

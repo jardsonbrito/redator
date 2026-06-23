@@ -26,7 +26,7 @@ interface AulaVirtual {
   status_transmissao?: string;
 }
 
-export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit?: (aula: AulaVirtual) => void }) => {
+export const AulaVirtualList = ({ refresh, onEdit, turmasRestricao }: { refresh?: boolean; onEdit?: (aula: AulaVirtual) => void; turmasRestricao?: string[] }) => {
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const anoAtual = new Date().getFullYear();
@@ -51,8 +51,18 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
 
       if (error) throw error;
 
+      // Filtrar por turmas gerenciadas quando o corretor gestor usa esta lista
+      let lista = data || [];
+      if (turmasRestricao && turmasRestricao.length > 0) {
+        lista = lista.filter(a => {
+          const turmas = a.turmas_autorizadas as string[] | null;
+          if (!turmas || turmas.length === 0) return true;
+          return turmas.some(t => turmasRestricao.includes(t));
+        });
+      }
+
       // Ordenar aulas: primeiro as que estão ao vivo, depois por data (mais recente primeiro)
-      const aulasOrdenadas = (data || []).sort((a, b) => {
+      const aulasOrdenadas = lista.sort((a, b) => {
         const statusA = getStatusAula(a);
         const statusB = getStatusAula(b);
 

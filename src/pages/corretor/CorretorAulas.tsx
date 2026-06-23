@@ -1,14 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { UnifiedCardSkeleton } from "@/components/ui/unified-card";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Plus } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { AulaGravadaCardPadrao } from "@/components/shared/AulaGravadaCardPadrao";
 import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
+import { useNavigate } from "react-router-dom";
 
 const CorretorAulas = () => {
-  const { nomesTurmasGerenciadas } = useCorretorPermissoes();
+  const navigate = useNavigate();
+  const { nomesTurmasGerenciadas, podeGerenciar } = useCorretorPermissoes();
 
   const { data: aulas, isLoading, error } = useQuery({
     queryKey: ['aulas-corretor-gestor', nomesTurmasGerenciadas],
@@ -63,7 +66,19 @@ const CorretorAulas = () => {
   return (
     <CorretorLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Aulas Gravadas</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Aulas Gravadas</h1>
+          {podeGerenciar && (
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() => navigate("/corretor/aulas/nova")}
+            >
+              <Plus className="w-4 h-4" />
+              Nova Aula
+            </Button>
+          )}
+        </div>
 
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {aulasOrdenadas.length === 0 ? (
