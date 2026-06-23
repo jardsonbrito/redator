@@ -33,23 +33,6 @@ const CorretorAlunos = () => {
     enabled: nomesTurmasGerenciadas.length > 0,
   });
 
-  const { data: totalRedacoes } = useQuery({
-    queryKey: ["gestor-alunos-redacoes-count", nomesTurmasGerenciadas],
-    queryFn: async () => {
-      if (nomesTurmasGerenciadas.length === 0) return {};
-      const { data } = await supabase
-        .from("redacoes_enviadas")
-        .select("email_aluno")
-        .in("turma", nomesTurmasGerenciadas)
-        .is("deleted_at", null);
-      const counts: Record<string, number> = {};
-      (data ?? []).forEach((r: any) => {
-        counts[r.email_aluno] = (counts[r.email_aluno] ?? 0) + 1;
-      });
-      return counts;
-    },
-    enabled: nomesTurmasGerenciadas.length > 0,
-  });
 
   if (loading || loadingPerm) return null;
   if (!corretor) return <Navigate to="/corretor/login" replace />;
@@ -121,7 +104,6 @@ const CorretorAlunos = () => {
                       <p className="font-medium text-slate-800 text-sm truncate">
                         {aluno.nome || "—"}
                       </p>
-                      <p className="text-xs text-slate-500 truncate">{aluno.email}</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0 ml-3">
                       {aluno.turma && (
@@ -129,9 +111,6 @@ const CorretorAlunos = () => {
                           {formatTurmaDisplay(aluno.turma)}
                         </Badge>
                       )}
-                      <span className="text-xs text-slate-400 hidden sm:block">
-                        {totalRedacoes?.[aluno.email] ?? 0} redação(ões)
-                      </span>
                     </div>
                   </div>
                 ))}
