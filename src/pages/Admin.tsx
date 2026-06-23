@@ -695,23 +695,25 @@ const Admin = () => {
       };
 
       // Jarvis - estatísticas de uso
-      const { data: jarvisInteractions } = await supabase
-        .from('jarvis_interactions')
-        .select('id, created_at');
+      const [
+        { data: jarvisInteractions },
+        { data: jarvisSessoes },
+        { data: jarvisConfigs },
+      ] = await Promise.all([
+        supabase.from('jarvis_interactions').select('id, created_at'),
+        (supabase as any).from('jarvis_sessoes_sintetizadas').select('id, created_at'),
+        supabase.from('jarvis_config').select('id, ativo, versao'),
+      ]);
 
-      const { data: jarvisConfigs } = await supabase
-        .from('jarvis_config')
-        .select('id, ativo, versao');
+      const umDiaAtras = new Date(hoje.getTime() - 24 * 60 * 60 * 1000);
 
-      const totalInteracoes = jarvisInteractions?.length || 0;
-      const configAtiva = jarvisConfigs?.find(c => c.ativo);
+      const totalInteracoes = (jarvisInteractions?.length || 0) + (jarvisSessoes?.length || 0);
+      const configAtiva = jarvisConfigs?.find((c: any) => c.ativo);
       const totalConfigs = jarvisConfigs?.length || 0;
 
-      // Interações nas últimas 24h
-      const umDiaAtras = new Date(hoje.getTime() - 24 * 60 * 60 * 1000);
-      const interacoesRecentes = jarvisInteractions?.filter(i =>
-        new Date(i.created_at) >= umDiaAtras
-      ).length || 0;
+      const interacoesRecentes =
+        (jarvisInteractions?.filter(i => new Date(i.created_at) >= umDiaAtras).length || 0) +
+        ((jarvisSessoes as any[])?.filter((s: any) => new Date(s.created_at) >= umDiaAtras).length || 0);
 
       // Jarvis Corretor (professores) — versões principais
       const { data: jarvisCorrecoes } = await supabase
