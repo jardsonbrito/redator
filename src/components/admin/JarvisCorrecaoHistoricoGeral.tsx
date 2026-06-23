@@ -486,9 +486,6 @@ export const JarvisCorrecaoHistoricoGeral = () => {
                         <p className="text-sm font-medium text-gray-800 truncate max-w-[130px]">
                           {item.professor_nome ?? '—'}
                         </p>
-                        <p className="text-xs text-gray-400 truncate max-w-[130px]">
-                          {item.professor_email ?? ''}
-                        </p>
                       </TableCell>
                       <TableCell>
                         <p className="text-sm font-medium text-gray-800">{item.autor_nome || '—'}</p>
