@@ -196,16 +196,27 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
         aula_mae_id: (formData.eh_aula_ao_vivo && formData.eh_repeticao) ? formData.aula_mae_id : null,
       };
 
-      const { data: novaAulaVirtual, error } = await supabase
-        .from('aulas_virtuais')
-        .insert([aulaData])
-        .select('id')
-        .single();
+      let novaAulaVirtual: { id: string } | null = null;
 
-      if (error) throw error;
+      if (modoRestrito) {
+        // Corretor gestor: usa RPC SECURITY DEFINER (sem sessão Supabase Auth)
+        const { data: novoId, error: rpcError } = await supabase.rpc('corretor_criar_aula_virtual', {
+          p_data: aulaData,
+        });
+        if (rpcError) throw rpcError;
+        novaAulaVirtual = { id: novoId as string };
+      } else {
+        const { data, error } = await supabase
+          .from('aulas_virtuais')
+          .insert([aulaData])
+          .select('id')
+          .single();
+        if (error) throw error;
+        novaAulaVirtual = data;
+      }
 
-      // ── Criar aula gravada correspondente (apenas para aulas não-repetição)
-      if (formData.eh_aula_ao_vivo && !formData.eh_repeticao && novaAulaVirtual) {
+      // ── Criar aula gravada correspondente (apenas para aulas não-repetição, modo admin)
+      if (!modoRestrito && formData.eh_aula_ao_vivo && !formData.eh_repeticao && novaAulaVirtual) {
         const { data: novaGravada } = await supabase
           .from('aulas')
           .insert([{
@@ -231,7 +242,7 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
       }
 
       // ── Para repetições: herdar aula_gravada_id da aula mãe
-      if (formData.eh_aula_ao_vivo && formData.eh_repeticao && formData.aula_mae_id && novaAulaVirtual) {
+      if (!modoRestrito && formData.eh_aula_ao_vivo && formData.eh_repeticao && formData.aula_mae_id && novaAulaVirtual) {
         const { data: mae } = await supabase
           .from('aulas_virtuais')
           .select('aula_gravada_id')
