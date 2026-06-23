@@ -93,10 +93,11 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
           .select("id, email_visitante, nome_visitante, session_id, primeiro_acesso, ultimo_acesso, ativo, whatsapp")
           .order("ultimo_acesso", { ascending: false }),
 
-        // Buscar TODAS as redações de uma vez
+        // Buscar TODAS as redações de uma vez (excluindo apagadas)
         supabase
           .from('redacoes_enviadas')
-          .select('email_aluno, turma'),
+          .select('email_aluno, turma')
+          .is('deleted_at', null),
 
         // Buscar assinaturas ativas (data_validade >= hoje)
         supabase
