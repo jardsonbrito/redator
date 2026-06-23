@@ -178,8 +178,8 @@ export const AulaGravadaCardPadrao = ({
               </div>
             </div>
 
-            {/* Menu três pontinhos apenas para admin */}
-            {perfil === 'admin' && (
+            {/* Menu três pontinhos para admin ou quando há ações de gestão */}
+            {(perfil === 'admin' || actions?.onEditar || actions?.onExcluir) && (
               <div className="flex-shrink-0">
                 <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>

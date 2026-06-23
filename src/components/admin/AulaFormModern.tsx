@@ -317,8 +317,16 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRe
       let aulaId: string;
       let error;
 
-      if (aulaEditando) {
-        // Atualizar aula existente
+      if (aulaEditando && modoRestrito) {
+        // Corretor gestor editando: RPC SECURITY DEFINER
+        const { error: updateError } = await supabase.rpc('corretor_atualizar_aula', {
+          p_id: aulaEditando.id,
+          p_data: aulaData,
+        });
+        error = updateError;
+        aulaId = aulaEditando.id;
+      } else if (aulaEditando) {
+        // Admin autenticado editando
         const { error: updateError } = await supabase
           .from("aulas")
           .update(aulaData)
