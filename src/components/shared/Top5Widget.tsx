@@ -249,20 +249,30 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
   // Buscar simulados disponíveis separados por ano
   const { data: simuladosData } = useQuery({
-    queryKey: ['simulados-lista'],
+    queryKey: ['simulados-lista', turmasFiltroCorretor],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('simulados')
-        .select('id, titulo, data_inicio')
+        .select('id, titulo, data_inicio, turmas_autorizadas')
         .order('data_inicio', { ascending: false });
 
       if (error) throw error;
 
-      const currentYear = new Date().getFullYear();
-      const simuladosAnoAtual: typeof data = [];
-      const simuladosHistorico: typeof data = [];
+      // Para corretor gestor: filtra somente simulados da(s) turma(s) gerenciada(s)
+      let lista = data || [];
+      if (turmasFiltroCorretor && turmasFiltroCorretor.length > 0) {
+        lista = lista.filter(s => {
+          const turmasSimulado = s.turmas_autorizadas as string[] | null;
+          if (!turmasSimulado || turmasSimulado.length === 0) return true;
+          return turmasSimulado.some(t => turmasFiltroCorretor.includes(t));
+        });
+      }
 
-      (data || []).forEach(simulado => {
+      const currentYear = new Date().getFullYear();
+      const simuladosAnoAtual: typeof lista = [];
+      const simuladosHistorico: typeof lista = [];
+
+      lista.forEach(simulado => {
         const ano = simulado.data_inicio ? new Date(simulado.data_inicio).getFullYear() : null;
         if (ano === currentYear) {
           simuladosAnoAtual.push(simulado);
@@ -271,15 +281,10 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         }
       });
 
-      console.log(`📋 Simulados:`, {
-        anoAtual: simuladosAnoAtual.length,
-        historico: simuladosHistorico.length
-      });
-
       return {
         anoAtual: simuladosAnoAtual,
         historico: simuladosHistorico,
-        todos: data || []
+        todos: lista,
       };
     }
   });
