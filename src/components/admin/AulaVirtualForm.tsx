@@ -36,13 +36,15 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
 
+  const modoRestrito = !!(turmasRestricao && turmasRestricao.length > 0);
+
   const [formData, setFormData] = useState({
     titulo: "",
     descricao: "",
     data_aula: "",
     horario_inicio: "",
     horario_fim: "",
-    turmas_autorizadas: [] as string[],
+    turmas_autorizadas: turmasRestricao && turmasRestricao.length > 0 ? turmasRestricao : [] as string[],
     imagem_capa_url: "",
     link_meet: "",
     abrir_aba_externa: false,
@@ -151,8 +153,9 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
     // Validação de etapa vigente (apenas para aulas ao vivo que NÃO são repetições)
     // Repetições não criam entrada no diário, então a etapa não é necessária
     // "Professor" não é turma de aluno — ignorar na verificação
+    // Corretor gestor externo não usa Diário Online — pula validação
     const turmasAlunoParaValidar = formData.turmas_autorizadas.filter(t => t !== 'Professor');
-    if (formData.eh_aula_ao_vivo && !formData.eh_repeticao && turmasAlunoParaValidar.length > 0) {
+    if (!modoRestrito && formData.eh_aula_ao_vivo && !formData.eh_repeticao && turmasAlunoParaValidar.length > 0) {
       setLoading(true);
       const { valido, turmasSemEtapa } = await verificarEtapasVigentes();
 
@@ -387,8 +390,8 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
             {/* Configuração Section */}
             {activeSection === 'configuracao' && (
               <div className="space-y-6">
-                {/* Alerta informativo sobre presença automática */}
-                {formData.eh_aula_ao_vivo && (
+                {/* Alerta informativo sobre presença automática (oculto no modo restrito) */}
+                {!modoRestrito && formData.eh_aula_ao_vivo && (
                   <Alert className="bg-blue-50 border-blue-200">
                     <Info className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-blue-800">
@@ -428,6 +431,7 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
                 {/* Configurações */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-4">
+                    {!modoRestrito && (
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-0.5">
                         <div className="text-sm font-medium">Aula ao vivo</div>
@@ -443,8 +447,9 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
                         })}
                       />
                     </div>
+                    )}
 
-                    {formData.eh_aula_ao_vivo && (
+                    {!modoRestrito && formData.eh_aula_ao_vivo && (
                       <div className="flex items-center justify-between p-4 border border-orange-200 bg-orange-50 rounded-lg">
                         <div className="space-y-0.5">
                           <div className="text-sm font-medium">Repetição de outra aula</div>
@@ -461,7 +466,7 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
                       </div>
                     )}
 
-                    {formData.eh_aula_ao_vivo && formData.eh_repeticao && (
+                    {!modoRestrito && formData.eh_aula_ao_vivo && formData.eh_repeticao && (
                       <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
                         <label className="text-sm font-medium">Aula original (sessão principal)</label>
                         <Select
@@ -521,7 +526,9 @@ export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormP
                           <Checkbox
                             id={`turma-${valor}`}
                             checked={formData.turmas_autorizadas.includes(valor)}
+                            disabled={modoRestrito}
                             onCheckedChange={(checked) => {
+                              if (modoRestrito) return;
                               if (checked) {
                                 setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, valor]});
                               } else {

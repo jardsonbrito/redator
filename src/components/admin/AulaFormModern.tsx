@@ -51,6 +51,7 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRe
   const turmasDinamicas = turmasRestricao && turmasRestricao.length > 0
     ? todasAsTurmas.filter(t => turmasRestricao.includes(t.valor))
     : todasAsTurmas;
+  const modoRestrito = !!(turmasRestricao && turmasRestricao.length > 0);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -58,7 +59,7 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRe
   const [linkConteudo, setLinkConteudo] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const [pdfNome, setPdfNome] = useState("");
-  const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>([]);
+  const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>(turmasRestricao ?? []);
   const [permiteVisitante, setPermiteVisitante] = useState(false);
   const [ativo, setAtivo] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -325,8 +326,16 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRe
         error = updateError;
         aulaId = aulaEditando.id;
         console.log('✅ Aula atualizada:', aulaEditando.id);
+      } else if (modoRestrito) {
+        // Corretor gestor: usa RPC SECURITY DEFINER (sem sessão Supabase Auth)
+        const { data: newId, error: insertError } = await supabase.rpc('corretor_criar_aula', {
+          p_data: aulaData,
+        });
+        error = insertError;
+        aulaId = newId as string;
+        console.log('✅ Nova aula criada via RPC:', newId);
       } else {
-        // Criar nova aula
+        // Criar nova aula (admin autenticado)
         const { data: newAula, error: insertError } = await supabase
           .from("aulas")
           .insert([aulaData])
@@ -686,7 +695,8 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRe
                           <Checkbox
                             id={valor}
                             checked={turmasAutorizadas.includes(valor)}
-                            onCheckedChange={(checked) => handleTurmaChange(valor, checked as boolean)}
+                            disabled={modoRestrito}
+                            onCheckedChange={(checked) => !modoRestrito && handleTurmaChange(valor, checked as boolean)}
                           />
                           <Label htmlFor={valor} className="text-sm font-medium">
                             {label}
@@ -696,7 +706,8 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRe
                     </div>
                   </div>
 
-                  {/* Visível para Professores */}
+                  {/* Visível para Professores — oculto quando a aula é criada pelo corretor gestor */}
+                  {!modoRestrito && (
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-0.5">
                       <div className="text-sm font-medium">Visível para Professores</div>
@@ -713,6 +724,7 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRe
                       }}
                     />
                   </div>
+                  )}
 
                   {/* Permitir Visitantes */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
