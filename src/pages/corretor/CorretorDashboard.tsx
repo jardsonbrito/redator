@@ -10,8 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   TrendingUp, Clock, FileText, CheckCircle2, ArrowRight,
-  User, Calendar, BookOpen, Inbox, Loader2
+  User, Calendar, BookOpen, Inbox, Loader2, AlertTriangle, BarChart2, Users
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { verificarDivergencia } from "@/utils/simuladoDivergencia";
 import { Top5Widget } from "@/components/shared/Top5Widget";
 import { resolverGenero, tituloCorretor } from "@/utils/generoUtils";
 import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
@@ -85,8 +88,50 @@ const ChartCard = ({ title, data, dataKey, color = "#8b5cf6" }: {
 
 const CorretorDashboard = () => {
   const { corretor, loading } = useCorretorAuth();
-  const { podeGerenciar } = useCorretorPermissoes();
+  const { podeGerenciar, nomesTurmasGerenciadas } = useCorretorPermissoes();
   const isMobile = useIsMobile();
+
+  // Conta discrepâncias pendentes nas turmas gerenciadas
+  const { data: discrepanciasPendentes = 0 } = useQuery({
+    queryKey: ["gestor-discrepancias-count", nomesTurmasGerenciadas],
+    queryFn: async () => {
+      if (nomesTurmasGerenciadas.length === 0) return 0;
+      const { data } = await supabase
+        .from("redacoes_simulado")
+        .select("id, status_corretor_1, status_corretor_2, c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2, status_terceira_correcao, corrigida")
+        .in("turma", nomesTurmasGerenciadas)
+        .eq("corrigida", false)
+        .is("deleted_at", null);
+      if (!data) return 0;
+      return data.filter((r) => {
+        const div = verificarDivergencia(r as any);
+        return div?.temDivergencia && !r.status_terceira_correcao;
+      }).length;
+    },
+    enabled: podeGerenciar && nomesTurmasGerenciadas.length > 0,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Conta redações prontas para finalizar (sem discrepância, ambos corrigiram)
+  const { data: prontas = 0 } = useQuery({
+    queryKey: ["gestor-prontas-count", nomesTurmasGerenciadas],
+    queryFn: async () => {
+      if (nomesTurmasGerenciadas.length === 0) return 0;
+      const { data } = await supabase
+        .from("redacoes_simulado")
+        .select("id, status_corretor_1, status_corretor_2, c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2, status_terceira_correcao, corrigida")
+        .in("turma", nomesTurmasGerenciadas)
+        .eq("corrigida", false)
+        .is("deleted_at", null);
+      if (!data) return 0;
+      return data.filter((r) => {
+        const div = verificarDivergencia(r as any);
+        return div !== null && !div.temDivergencia;
+      }).length;
+    },
+    enabled: podeGerenciar && nomesTurmasGerenciadas.length > 0,
+    staleTime: 2 * 60 * 1000,
+  });
   const navigate = useNavigate();
   const { metricas, loading: loadingMetricas } = useCorretorMetricas(
     corretor?.email || '',
@@ -268,23 +313,67 @@ const CorretorDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* ── FUNCIONALIDADES ──────────────────────────────────────────── */}
+        {/* ── ATALHOS DE GESTÃO (apenas gestor) ───────────────────────── */}
         {podeGerenciar && (
-          <Card
-            className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => navigate('/corretor/temas')}
-          >
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="bg-fuchsia-100 p-3 rounded-xl">
-                <BookOpen className="w-5 h-5 text-fuchsia-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800 text-sm">Temas</p>
-                <p className="text-xs text-slate-500">Explorar temas disponíveis</p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Card
+              className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate('/corretor/temas')}
+            >
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="bg-fuchsia-100 p-2.5 rounded-xl">
+                  <BookOpen className="w-4 h-4 text-fuchsia-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 text-sm">Temas</p>
+                  <p className="text-xs text-slate-500 truncate">Gerenciar temas</p>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </CardContent>
+            </Card>
+
+            <Card
+              className={`bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+                discrepanciasPendentes > 0
+                  ? 'ring-2 ring-red-300'
+                  : 'ring-1 ring-violet-100'
+              }`}
+              onClick={() => navigate('/corretor/gestao-simulados')}
+            >
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className={`p-2.5 rounded-xl ${discrepanciasPendentes > 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
+                  <AlertTriangle className={`w-4 h-4 ${discrepanciasPendentes > 0 ? 'text-red-600' : 'text-amber-600'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 text-sm">Discrepâncias</p>
+                  <p className="text-xs text-slate-500 truncate">
+                    {discrepanciasPendentes > 0
+                      ? `${discrepanciasPendentes} pendente${discrepanciasPendentes > 1 ? 's' : ''}`
+                      : prontas > 0
+                        ? `${prontas} pronta${prontas > 1 ? 's' : ''} p/ finalizar`
+                        : 'Sem pendências'}
+                  </p>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </CardContent>
+            </Card>
+
+            <Card
+              className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate('/corretor/alunos')}
+            >
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="bg-blue-100 p-2.5 rounded-xl">
+                  <Users className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 text-sm">Alunos</p>
+                  <p className="text-xs text-slate-500 truncate">Turmas gerenciadas</p>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* ── GRÁFICOS ─────────────────────────────────────────────────── */}

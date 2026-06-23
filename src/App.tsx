@@ -70,6 +70,8 @@ const CorretorLousas          = lazy(() => import("./pages/corretor/CorretorLous
 const CorretorLousaDetalhes   = lazy(() => import("./pages/corretor/CorretorLousaDetalhes"));
 const CorretorVisitantes      = lazy(() => import("./pages/corretor/CorretorVisitantes"));
 const CorretorCalendario      = lazy(() => import("./pages/corretor/CorretorCalendario"));
+const CorretorGestaoSimulados = lazy(() => import("./pages/corretor/CorretorGestaoSimulados"));
+const CorretorAlunos          = lazy(() => import("./pages/corretor/CorretorAlunos"));
 const LousaRespostasPage      = lazy(() => import("./pages/admin/LousaRespostas"));
 const VisitantesAdmin         = lazy(() => import("./pages/admin/VisitantesAdmin"));
 const Top5Admin               = lazy(() => import("./pages/admin/Top5Admin"));
@@ -269,6 +271,8 @@ function App() {
                     <Route path="/corretor/lousas/:id" element={<CorretorGerenteRoute><CorretorLousaDetalhes /></CorretorGerenteRoute>} />
                     <Route path="/corretor/visitantes" element={<CorretorGerenteRoute><CorretorVisitantes /></CorretorGerenteRoute>} />
                     <Route path="/corretor/calendario" element={<CorretorGerenteRoute><CorretorCalendario /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/gestao-simulados" element={<CorretorGerenteRoute><CorretorGestaoSimulados /></CorretorGerenteRoute>} />
+                    <Route path="/corretor/alunos" element={<CorretorGerenteRoute><CorretorAlunos /></CorretorGerenteRoute>} />
 
                     {/* Rotas do Professor */}
                     <Route path="/professor/login" element={<ProfessorLogin />} />

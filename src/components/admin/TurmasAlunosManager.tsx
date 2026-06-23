@@ -14,7 +14,8 @@ import {
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Copy, Eye, EyeOff, Palette } from "lucide-react";
+import { Copy, Eye, EyeOff, Palette, Shield } from "lucide-react";
+import { TurmaGestorDialog } from "@/components/admin/TurmaGestorDialog";
 import { cn } from "@/lib/utils";
 
 interface TurmaAluno {
@@ -29,6 +30,8 @@ interface TurmaAluno {
   cor_secundaria?: string | null;
   cor_destaque?: string | null;
   gerenciada_por?: "admin" | "externo";
+  gestor_corretor_id?: string | null;
+  gestor_nome?: string | null;
 }
 
 interface BrandingForm {
@@ -62,6 +65,9 @@ export const TurmasAlunosManager = () => {
   const [gerandoConvite, setGerandoConvite] = useState(false);
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
 
+  // Gestor
+  const [turmaParaGestor, setTurmaParaGestor] = useState<TurmaAluno | null>(null);
+
   // Branding por turma
   const [turmaParaBranding, setTurmaParaBranding] = useState<TurmaAluno | null>(null);
   const [salvandoBranding, setSalvandoBranding] = useState(false);
@@ -75,13 +81,17 @@ export const TurmasAlunosManager = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("turmas_alunos")
-      .select("id, nome, codigo_acesso, descricao, ativo, criado_em, logo_url, cor_primaria, cor_secundaria, cor_destaque, gerenciada_por")
+      .select("id, nome, codigo_acesso, descricao, ativo, criado_em, logo_url, cor_primaria, cor_secundaria, cor_destaque, gerenciada_por, gestor_corretor_id, gestor:corretores!gestor_corretor_id(nome_completo)")
       .order("criado_em", { ascending: false });
 
     if (error) {
       toast({ title: "Erro", description: "Não foi possível carregar as turmas.", variant: "destructive" });
     } else {
-      const resultado = data || [];
+      const resultado = (data || []).map((t: any) => ({
+        ...t,
+        gestor_nome: t.gestor?.nome_completo ?? null,
+        gestor: undefined,
+      }));
       setTurmas(resultado);
       if (resultado.length > 0 && !turmaSelecionadaId) {
         setTurmaSelecionadaId(resultado.find(t => t.ativo)?.id || resultado[0].id);
@@ -338,6 +348,7 @@ export const TurmasAlunosManager = () => {
                       <th className="px-4 py-4 font-semibold">Nome</th>
                       <th className="px-4 py-4 font-semibold">Código da turma</th>
                       <th className="px-4 py-4 font-semibold">Gestão</th>
+                      <th className="px-4 py-4 font-semibold">Gestor</th>
                       <th className="px-4 py-4 font-semibold">Status</th>
                       <th className="px-4 py-4 font-semibold">Ações</th>
                     </tr>
@@ -384,6 +395,21 @@ export const TurmasAlunosManager = () => {
                           </button>
                         </td>
                         <td className="px-4 py-5">
+                          {turma.gerenciada_por === "externo" ? (
+                            turma.gestor_nome ? (
+                              <span className="text-xs font-medium text-emerald-700">
+                                {turma.gestor_nome}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-amber-600 font-semibold">
+                                ⚠ Sem gestor
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-5">
                           <span className={cn(
                             "rounded-full px-3 py-1 text-xs font-bold text-white",
                             turma.ativo ? "bg-purple-950" : "bg-slate-400"
@@ -400,6 +426,16 @@ export const TurmasAlunosManager = () => {
                             >
                               {turma.ativo ? "Inativar turma" : "Ativar turma"}
                             </button>
+                            {turma.gerenciada_por === "externo" && (
+                              <button
+                                type="button"
+                                onClick={() => setTurmaParaGestor(turma)}
+                                className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1"
+                              >
+                                <Shield className="w-3 h-3" />
+                                Gestor
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => handleAbrirBranding(turma)}
@@ -480,6 +516,18 @@ export const TurmasAlunosManager = () => {
           )}
         </div>
       </article>
+
+      {/* Dialog de gestor da turma */}
+      {turmaParaGestor && (
+        <TurmaGestorDialog
+          open={!!turmaParaGestor}
+          onOpenChange={(open) => { if (!open) setTurmaParaGestor(null); }}
+          turmaId={turmaParaGestor.id}
+          turmaNome={turmaParaGestor.nome}
+          gestorAtualId={turmaParaGestor.gestor_corretor_id ?? null}
+          onSuccess={fetchTurmas}
+        />
+      )}
 
       {/* Dialog de identidade visual */}
       <Dialog open={!!turmaParaBranding} onOpenChange={(o) => { if (!o) setTurmaParaBranding(null); }}>

@@ -1,0 +1,144 @@
+import { Navigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { CorretorLayout } from "@/components/corretor/CorretorLayout";
+import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Users, Search } from "lucide-react";
+import { useState } from "react";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
+
+const CorretorAlunos = () => {
+  const { corretor, loading } = useCorretorAuth();
+  const { podeGerenciar, nomesTurmasGerenciadas, loading: loadingPerm } = useCorretorPermissoes();
+  const [busca, setBusca] = useState("");
+
+  if (loading || loadingPerm) return null;
+  if (!corretor) return <Navigate to="/corretor/login" replace />;
+  if (!podeGerenciar) return <Navigate to="/corretor" replace />;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data: alunos, isLoading } = useQuery({
+    queryKey: ["gestor-alunos", nomesTurmasGerenciadas],
+    queryFn: async () => {
+      if (nomesTurmasGerenciadas.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, nome, email, turma, criado_em")
+        .in("turma", nomesTurmasGerenciadas)
+        .not("turma", "is", null)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: nomesTurmasGerenciadas.length > 0,
+  });
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data: totalRedacoes } = useQuery({
+    queryKey: ["gestor-alunos-redacoes-count", nomesTurmasGerenciadas],
+    queryFn: async () => {
+      if (nomesTurmasGerenciadas.length === 0) return {};
+      const { data } = await supabase
+        .from("redacoes_enviadas")
+        .select("email_aluno")
+        .in("turma", nomesTurmasGerenciadas)
+        .is("deleted_at", null);
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((r: any) => {
+        counts[r.email_aluno] = (counts[r.email_aluno] ?? 0) + 1;
+      });
+      return counts;
+    },
+    enabled: nomesTurmasGerenciadas.length > 0,
+  });
+
+  const alunosFiltrados = (alunos ?? []).filter(
+    (a) =>
+      a.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+      a.email?.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  return (
+    <CorretorLayout>
+      <div className="space-y-6">
+
+        {/* Hero */}
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+          <div className="flex items-center gap-4">
+            <Users className="w-8 h-8 text-violet-300 shrink-0" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Gestão</p>
+              <h1 className="text-2xl sm:text-3xl font-black mt-0.5">Alunos da Turma</h1>
+              <p className="text-violet-300 text-sm mt-1">
+                {nomesTurmasGerenciadas.join(', ')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Busca */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <Input
+            placeholder="Buscar por nome ou e-mail..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Lista */}
+        <Card className="border-0 ring-1 ring-violet-100 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                Alunos ({alunosFiltrados.length})
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <p className="text-center py-10 text-slate-500">Carregando alunos...</p>
+            ) : alunosFiltrados.length === 0 ? (
+              <p className="text-center py-10 text-slate-500">
+                {busca ? "Nenhum aluno encontrado." : "Nenhum aluno nesta turma."}
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {alunosFiltrados.map((aluno) => (
+                  <div
+                    key={aluno.id}
+                    className="flex items-center justify-between px-5 py-3 hover:bg-violet-50/40 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-800 text-sm truncate">
+                        {aluno.nome || "—"}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">{aluno.email}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-3">
+                      {aluno.turma && (
+                        <Badge variant="outline" className="text-xs">
+                          {formatTurmaDisplay(aluno.turma)}
+                        </Badge>
+                      )}
+                      <span className="text-xs text-slate-400 hidden sm:block">
+                        {totalRedacoes?.[aluno.email] ?? 0} redação(ões)
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </CorretorLayout>
+  );
+};
+
+export default CorretorAlunos;

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays, ChevronDown } from "lucide-react";
+import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays, ChevronDown, BarChart2, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
@@ -54,16 +54,23 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
     }
   }, [corretor?.email, buscarMensagensNaoLidas]);
 
-  const allMenuItems = [
-    { icon: Home, label: "Home", path: "/corretor", apenasGerente: false },
-    { icon: CalendarDays, label: "Calendário", path: "/corretor/calendario", apenasGerente: true },
-    { icon: MessageCircle, label: "Recado dos Alunos", path: "/corretor/ajuda-rapida", apenasGerente: false },
-    { icon: FileText, label: "Redações", path: "/corretor/redacoes-corretor", apenasGerente: false },
-    { icon: BookOpen, label: "Temas", path: "/corretor/temas", apenasGerente: true },
-    { icon: FileText, label: "Simulados", path: "/corretor/simulados", apenasGerente: true },
+  // separador: null = linha divisória entre seções
+  type MenuItem = { icon: React.ElementType; label: string; path: string; apenasGerente: boolean } | null;
+
+  const allMenuItems: MenuItem[] = [
+    { icon: Home,          label: "Home",              path: "/corretor",                    apenasGerente: false },
+    { icon: FileText,      label: "Redações",           path: "/corretor/redacoes-corretor",  apenasGerente: false },
+    { icon: MessageCircle, label: "Recado dos Alunos",  path: "/corretor/ajuda-rapida",       apenasGerente: false },
+    // separador: apenas visível para gestores
+    null,
+    { icon: CalendarDays,  label: "Calendário",         path: "/corretor/calendario",         apenasGerente: true },
+    { icon: BookOpen,      label: "Temas",              path: "/corretor/temas",              apenasGerente: true },
+    { icon: FileText,      label: "Simulados",          path: "/corretor/simulados",          apenasGerente: true },
+    { icon: BarChart2,     label: "Notas e Discrepâncias", path: "/corretor/gestao-simulados", apenasGerente: true },
+    { icon: Users,         label: "Alunos da Turma",   path: "/corretor/alunos",             apenasGerente: true },
   ];
 
-  const menuItems = allMenuItems.filter(item => !item.apenasGerente || podeGerenciar);
+  const menuItems = allMenuItems.filter(item => item === null ? podeGerenciar : (!item.apenasGerente || podeGerenciar));
 
   return (
     <CorretorNavigationProvider>
@@ -295,10 +302,13 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
           
           <nav className="p-3 sm:p-4 relative z-50 bg-white">
             <ul className="space-y-1 sm:space-y-2">
-              {menuItems.map((item) => {
+              {menuItems.map((item, idx) => {
+                if (item === null) {
+                  return <li key={`sep-${idx}`}><hr className="border-violet-100 my-1" /></li>;
+                }
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                
+                const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+
                 return (
                   <li key={item.path}>
                     <Link

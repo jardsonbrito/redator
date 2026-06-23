@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Search, Eye, User, GraduationCap, Star, AlertTriangle, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { verificarDivergencia } from "@/utils/simuladoDivergencia";
 import { normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
@@ -57,6 +58,7 @@ const CorretorSimuladoRedacoes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedDivergencia, setExpandedDivergencia] = useState<Set<string>>(new Set());
   const { corretor } = useCorretorAuth();
+  const { nomesTurmasGerenciadas } = useCorretorPermissoes();
 
   const toggleDivergencia = (id: string) => {
     setExpandedDivergencia(prev => {
@@ -110,7 +112,12 @@ const CorretorSimuladoRedacoes = () => {
         return isGenerico && nomeReal ? { ...r, nome_aluno: nomeReal } : r;
       });
 
-      return enriched as RedacaoSimulado[];
+      // Filtra pelas turmas gerenciadas — o gestor só vê redações das suas turmas
+      const filtrado = nomesTurmasGerenciadas.length > 0
+        ? enriched.filter((r) => nomesTurmasGerenciadas.includes(r.turma))
+        : enriched;
+
+      return filtrado as RedacaoSimulado[];
     },
     enabled: !!simuladoId
   });
