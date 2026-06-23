@@ -16,12 +16,8 @@ const CorretorAlunos = () => {
   const { podeGerenciar, nomesTurmasGerenciadas, loading: loadingPerm } = useCorretorPermissoes();
   const [busca, setBusca] = useState("");
 
-  if (loading || loadingPerm) return null;
-  if (!corretor) return <Navigate to="/corretor/login" replace />;
-  if (!podeGerenciar) return <Navigate to="/corretor" replace />;
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { data: alunos, isLoading } = useQuery({
+  // Hooks ANTES dos early-returns — garante ordem consistente entre renders
+  const { data: alunos, isLoading, error } = useQuery({
     queryKey: ["gestor-alunos", nomesTurmasGerenciadas],
     queryFn: async () => {
       if (nomesTurmasGerenciadas.length === 0) return [];
@@ -29,7 +25,7 @@ const CorretorAlunos = () => {
         .from("profiles")
         .select("id, nome, email, turma, criado_em")
         .in("turma", nomesTurmasGerenciadas)
-        .not("turma", "is", null)
+        .eq("user_type", "aluno")
         .order("nome");
       if (error) throw error;
       return data ?? [];
@@ -37,7 +33,6 @@ const CorretorAlunos = () => {
     enabled: nomesTurmasGerenciadas.length > 0,
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: totalRedacoes } = useQuery({
     queryKey: ["gestor-alunos-redacoes-count", nomesTurmasGerenciadas],
     queryFn: async () => {
@@ -55,6 +50,10 @@ const CorretorAlunos = () => {
     },
     enabled: nomesTurmasGerenciadas.length > 0,
   });
+
+  if (loading || loadingPerm) return null;
+  if (!corretor) return <Navigate to="/corretor/login" replace />;
+  if (!podeGerenciar) return <Navigate to="/corretor" replace />;
 
   const alunosFiltrados = (alunos ?? []).filter(
     (a) =>
@@ -103,6 +102,10 @@ const CorretorAlunos = () => {
           <CardContent className="p-0">
             {isLoading ? (
               <p className="text-center py-10 text-slate-500">Carregando alunos...</p>
+            ) : error ? (
+              <p className="text-center py-10 text-red-500 text-sm">
+                Erro ao carregar alunos. Tente recarregar a página.
+              </p>
             ) : alunosFiltrados.length === 0 ? (
               <p className="text-center py-10 text-slate-500">
                 {busca ? "Nenhum aluno encontrado." : "Nenhum aluno nesta turma."}

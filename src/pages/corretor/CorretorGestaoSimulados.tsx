@@ -114,13 +114,8 @@ const CorretorGestaoSimulados = () => {
   const [notasAdmin, setNotasAdmin] = useState({ c1: 0, c2: 0, c3: 0, c4: 0, c5: 0 });
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
-  if (loading || loadingPerm) return null;
-  if (!corretor) return <Navigate to="/corretor/login" replace />;
-  if (!podeGerenciar) return <Navigate to="/corretor" replace />;
-
   // ── queries ────────────────────────────────────────────────────────────────
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: redacoes, isLoading } = useQuery({
     queryKey: ['gestor-redacoes-simulado', nomesTurmasGerenciadas, apenasAnoAtual],
     queryFn: async () => {
@@ -157,7 +152,6 @@ const CorretorGestaoSimulados = () => {
     enabled: nomesTurmasGerenciadas.length > 0,
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: simulados } = useQuery({
     queryKey: ['gestor-simulados-filtro', nomesTurmasGerenciadas],
     queryFn: async () => {
@@ -174,7 +168,6 @@ const CorretorGestaoSimulados = () => {
 
   // ── mutations ──────────────────────────────────────────────────────────────
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const finalizarMutation = useMutation({
     mutationFn: async (redacao: RedacaoSimulado) => {
       // Segurança: verifica que a turma pertence às gerenciadas
@@ -213,7 +206,6 @@ const CorretorGestaoSimulados = () => {
     onError: (err: any) => toast({ title: "Erro ao finalizar", description: err?.message, variant: "destructive" }),
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const terceiraCorrecaoMutation = useMutation({
     mutationFn: async ({ redacao, notas }: { redacao: RedacaoSimulado; notas: typeof notasAdmin }) => {
       // Segurança: verifica que a turma pertence às gerenciadas
@@ -302,6 +294,12 @@ const CorretorGestaoSimulados = () => {
     })();
     return matchTurma && matchSimulado && matchNome && matchStatus && matchMes;
   });
+
+  // ── guards (após todos os hooks) ───────────────────────────────────────────
+
+  if (loading || loadingPerm) return null;
+  if (!corretor) return <Navigate to="/corretor/login" replace />;
+  if (!podeGerenciar) return <Navigate to="/corretor" replace />;
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
