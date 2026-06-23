@@ -23,7 +23,7 @@ const CorretorAlunos = () => {
       if (nomesTurmasGerenciadas.length === 0) return [];
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nome, email, turma, criado_em")
+        .select("id, nome, email, turma, created_at")
         .in("turma", nomesTurmasGerenciadas)
         .eq("user_type", "aluno")
         .order("nome");
