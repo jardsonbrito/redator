@@ -90,13 +90,21 @@ export const AulaVirtualList = ({ refresh, onEdit, turmasRestricao }: { refresh?
 
   const toggleAulaStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('aulas_virtuais')
-        .update({ ativo: !currentStatus })
-        .eq('id', id);
+      if (turmasRestricao && turmasRestricao.length > 0) {
+        // Corretor gestor: usa RPC SECURITY DEFINER
+        const { error } = await supabase.rpc('corretor_toggle_aula_virtual_status', {
+          p_id: id,
+          p_ativo: !currentStatus,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('aulas_virtuais')
+          .update({ ativo: !currentStatus })
+          .eq('id', id);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
-      
       toast.success(`Aula ${!currentStatus ? 'ativada' : 'desativada'} com sucesso!`);
       fetchAulas();
     } catch (error: any) {
@@ -119,12 +127,17 @@ export const AulaVirtualList = ({ refresh, onEdit, turmasRestricao }: { refresh?
     }
 
     try {
-      const { error } = await supabase
-        .from('aulas_virtuais')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      if (turmasRestricao && turmasRestricao.length > 0) {
+        // Corretor gestor: usa RPC SECURITY DEFINER (anon não pode DELETE via RLS)
+        const { error } = await supabase.rpc('corretor_excluir_aula_virtual', { p_id: id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('aulas_virtuais')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      }
 
       toast.success('Aula excluída com sucesso!');
       fetchAulas();
