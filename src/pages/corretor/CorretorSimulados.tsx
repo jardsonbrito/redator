@@ -15,11 +15,10 @@ const CorretorSimulados = () => {
   const { corretor } = useCorretorAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { podeGerenciar } = useCorretorPermissoes();
-  const turmasCorretor: string[] = corretor?.turmas_autorizadas ?? [];
+  const { podeGerenciar, nomesTurmasGerenciadas } = useCorretorPermissoes();
 
   const { data: simulados, isLoading, error } = useQuery({
-    queryKey: ['simulados-corretor', turmasCorretor],
+    queryKey: ['simulados-corretor', nomesTurmasGerenciadas],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('simulados')
@@ -33,12 +32,12 @@ const CorretorSimulados = () => {
       if (error) throw error;
       const todos = data || [];
 
-      // Filtra somente simulados vinculados às turmas do corretor
-      if (turmasCorretor.length === 0) return todos;
+      // Filtra somente simulados vinculados às turmas gerenciadas
+      if (nomesTurmasGerenciadas.length === 0) return todos;
       return todos.filter(s => {
         const turmasSimulado = s.turmas_autorizadas as string[] | null;
         if (!turmasSimulado || turmasSimulado.length === 0) return true;
-        return turmasSimulado.some(t => turmasCorretor.includes(t));
+        return turmasSimulado.some(t => nomesTurmasGerenciadas.includes(t));
       });
     },
     enabled: !!corretor,

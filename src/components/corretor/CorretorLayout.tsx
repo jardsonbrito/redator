@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays, ChevronDown, BarChart2, Users } from "lucide-react";
+import { LogOut, Home, BookOpen, FileText, Menu, X, MessageCircle, Pencil, Check, GraduationCap, CalendarDays, ChevronDown, BarChart2, Users, Video, Trophy, MonitorPlay, Film, BookMarked, ScrollText } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
@@ -23,7 +23,7 @@ interface CorretorLayoutProps {
 
 export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   const { corretor, logout, updateCorretorNome, updateCorretorSexo } = useCorretorAuth();
-  const { podeGerenciar } = useCorretorPermissoes();
+  const { podeGerenciar, featuresPlano } = useCorretorPermissoes();
   const { buscarMensagensNaoLidas } = useAjudaRapida();
   const { toast } = useToast();
   const location = useLocation();
@@ -54,23 +54,36 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
     }
   }, [corretor?.email, buscarMensagensNaoLidas]);
 
-  // separador: null = linha divisória entre seções
-  type MenuItem = { icon: React.ElementType; label: string; path: string; apenasGerente: boolean } | null;
+  // Mapeamento chave-de-funcionalidade → item de menu (só para gestores, gate por plano)
+  // Chaves sem rota no painel do corretor são omitidas: aulas_ao_vivo, interatividade
+  type MenuEntry = { icon: React.ElementType; label: string; path: string };
+  type MenuItem = MenuEntry | null;
 
-  const allMenuItems: MenuItem[] = [
-    { icon: Home,          label: "Home",              path: "/corretor",                    apenasGerente: false },
-    { icon: FileText,      label: "Redações",           path: "/corretor/redacoes-corretor",  apenasGerente: false },
-    { icon: MessageCircle, label: "Recado dos Alunos",  path: "/corretor/ajuda-rapida",       apenasGerente: false },
-    // separador: apenas visível para gestores
-    null,
-    { icon: CalendarDays,  label: "Calendário",         path: "/corretor/calendario",         apenasGerente: true },
-    { icon: BookOpen,      label: "Temas",              path: "/corretor/temas",              apenasGerente: true },
-    { icon: FileText,      label: "Simulados",          path: "/corretor/simulados",          apenasGerente: true },
-    { icon: BarChart2,     label: "Notas e Discrepâncias", path: "/corretor/gestao-simulados", apenasGerente: true },
-    { icon: Users,         label: "Alunos da Turma",   path: "/corretor/alunos",             apenasGerente: true },
+  const FEATURE_MENU: Array<{ chave: string } & MenuEntry> = [
+    { chave: "calendario",          icon: CalendarDays, label: "Calendário",              path: "/corretor/calendario" },
+    { chave: "temas",               icon: BookOpen,     label: "Temas",                   path: "/corretor/temas" },
+    { chave: "simulados",           icon: FileText,     label: "Simulados",               path: "/corretor/simulados" },
+    { chave: "simulados",           icon: BarChart2,    label: "Notas e Discrepâncias",   path: "/corretor/gestao-simulados" },
+    { chave: "aulas_gravadas",      icon: Video,        label: "Aulas Gravadas",          path: "/corretor/aulas" },
+    { chave: "top_5",               icon: Trophy,       label: "Top 5",                   path: "/corretor/top5" },
+    { chave: "lousa",               icon: MonitorPlay,  label: "Lousa",                   path: "/corretor/lousas" },
+    { chave: "videoteca",           icon: Film,         label: "Videoteca",               path: "/corretor/videoteca" },
+    { chave: "biblioteca",          icon: BookMarked,   label: "Biblioteca",              path: "/corretor/biblioteca" },
+    { chave: "redacoes_exemplares", icon: ScrollText,   label: "Redações Exemplares",     path: "/corretor/redacoes" },
   ];
 
-  const menuItems = allMenuItems.filter(item => item === null ? podeGerenciar : (!item.apenasGerente || podeGerenciar));
+  const menuItems: MenuItem[] = [
+    { icon: Home,          label: "Home",             path: "/corretor" },
+    { icon: FileText,      label: "Redações",          path: "/corretor/redacoes-corretor" },
+    { icon: MessageCircle, label: "Recado dos Alunos", path: "/corretor/ajuda-rapida" },
+    ...(podeGerenciar ? [
+      null as null,
+      ...FEATURE_MENU
+        .filter((f) => featuresPlano[f.chave] === true)
+        .map((f) => ({ icon: f.icon, label: f.label, path: f.path })),
+      { icon: Users, label: "Alunos da Turma", path: "/corretor/alunos" },
+    ] : []),
+  ];
 
   return (
     <CorretorNavigationProvider>

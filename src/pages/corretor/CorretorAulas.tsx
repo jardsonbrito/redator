@@ -1,40 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
-import { GraduationCap, Play, FileText } from "lucide-react";
+import { UnifiedCardSkeleton } from "@/components/ui/unified-card";
+import { GraduationCap } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
-import { resolveAulaCover } from "@/utils/coverUtils";
 import { AulaGravadaCardPadrao } from "@/components/shared/AulaGravadaCardPadrao";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 
 const CorretorAulas = () => {
+  const { nomesTurmasGerenciadas } = useCorretorPermissoes();
+
   const { data: aulas, isLoading, error } = useQuery({
-    queryKey: ['aulas-corretor'],
+    queryKey: ['aulas-corretor-gestor', nomesTurmasGerenciadas],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('aulas')
-        .select(`
-          *,
-          modulos(nome)
-        `)
+        .select('*, modulos(nome)')
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
-      
+
       if (error) throw error;
-      return (data || []).map(aula => ({
-        ...aula,
-        modulo: aula.modulos?.nome || ''
-      }));
-    }
+      const todas = (data || []).map(aula => ({ ...aula, modulo: aula.modulos?.nome || '' }));
+
+      // Filtra somente aulas vinculadas às turmas gerenciadas
+      if (nomesTurmasGerenciadas.length === 0) return todas;
+      return todas.filter(a => {
+        const turmasAula = a.turmas_autorizadas as string[] | null;
+        if (!turmasAula || turmasAula.length === 0) return true;
+        return turmasAula.some(t => nomesTurmasGerenciadas.includes(t));
+      });
+    },
+    enabled: nomesTurmasGerenciadas.length > 0,
   });
 
   if (isLoading) {
     return (
       <CorretorLayout>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Aulas</h1>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Aulas Gravadas</h1>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
@@ -55,15 +58,12 @@ const CorretorAulas = () => {
     );
   }
 
-  // Não agrupar mais por módulo, renderizar diretamente
   const aulasOrdenadas = aulas || [];
 
   return (
     <CorretorLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Aulas</h1>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Aulas Gravadas</h1>
 
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {aulasOrdenadas.length === 0 ? (
@@ -74,7 +74,7 @@ const CorretorAulas = () => {
                   Nenhuma aula disponível
                 </h3>
                 <p className="text-gray-500">
-                  As aulas aparecerão aqui quando forem publicadas.
+                  As aulas aparecerão aqui quando forem publicadas para esta turma.
                 </p>
               </CardContent>
             </Card>
