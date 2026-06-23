@@ -49,10 +49,15 @@ interface AulaVirtualEditFormProps {
   aula: AulaVirtual;
   onSuccess?: () => void;
   onCancel?: () => void;
+  turmasRestricao?: string[];
 }
 
-export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEditFormProps) => {
-  const { turmasDinamicas } = useTurmasAtivas();
+export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel, turmasRestricao }: AulaVirtualEditFormProps) => {
+  const { turmasDinamicas: todasAsTurmas } = useTurmasAtivas();
+  const turmasDinamicas = turmasRestricao && turmasRestricao.length > 0
+    ? todasAsTurmas.filter(t => turmasRestricao.includes(t.valor))
+    : todasAsTurmas;
+  const modoRestrito = !!(turmasRestricao && turmasRestricao.length > 0);
 
   const [loading, setLoading] = useState(false);
   const [gerandoGravada, setGerandoGravada] = useState(false);
@@ -402,8 +407,8 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                   </div>
                 </div>
 
-                {/* Aula Gravada Vinculada */}
-                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                {/* Aula Gravada Vinculada — oculta para corretor gestor */}
+                {!modoRestrito && <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Aula Gravada Vinculada <span className="text-gray-400 font-normal">(opcional)</span></label>
                     <p className="text-xs text-gray-500">Alunos ausentes verão um botão "Assistir Gravação" direcionado para esta gravação.</p>
@@ -442,7 +447,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
+                </div>}
 
                 {/* Imagem de Capa */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
@@ -459,6 +464,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                 {/* Configurações */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-4">
+                    {!modoRestrito && (
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-0.5">
                         <div className="text-sm font-medium">Aula ao vivo</div>
@@ -474,8 +480,9 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                         })}
                       />
                     </div>
+                    )}
 
-                    {formData.eh_aula_ao_vivo && (
+                    {!modoRestrito && formData.eh_aula_ao_vivo && (
                       <div className="flex items-center justify-between p-4 border border-orange-200 bg-orange-50 rounded-lg">
                         <div className="space-y-0.5">
                           <div className="text-sm font-medium">Repetição de outra aula</div>
@@ -492,7 +499,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                       </div>
                     )}
 
-                    {formData.eh_aula_ao_vivo && formData.eh_repeticao && (
+                    {!modoRestrito && formData.eh_aula_ao_vivo && formData.eh_repeticao && (
                       <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
                         <label className="text-sm font-medium">Aula original (sessão principal)</label>
                         <Select
@@ -552,7 +559,9 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                           <Checkbox
                             id={`turma-${valor}`}
                             checked={formData.turmas_autorizadas.includes(valor)}
+                            disabled={modoRestrito}
                             onCheckedChange={(checked) => {
+                              if (modoRestrito) return;
                               if (checked) {
                                 setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, valor]});
                               } else {
