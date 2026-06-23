@@ -1,7 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { JarvisCreditManagementBulk } from '@/components/admin/JarvisCreditManagementBulk';
-import { JarvisHistoricoAdmin } from '@/components/admin/JarvisHistoricoAdmin';
-import { JarvisSessoesAdmin } from '@/components/admin/JarvisSessoesAdmin';
+import { JarvisUsoAdmin } from '@/components/admin/JarvisUsoAdmin';
 import { JarvisCorrecaoCreditosProfessores } from '@/components/admin/JarvisCorrecaoCreditosProfessores';
 import { JarvisCorrecaoHistoricoGeral } from '@/components/admin/JarvisCorrecaoHistoricoGeral';
 import { JarvisModosManagement } from '@/components/admin/JarvisModosManagement';
@@ -25,23 +24,21 @@ export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
 
       {/* ── Tutor Jarvis ────────────────────────────────────────────────────── */}
       <TabsContent value="tutor">
-        <Tabs defaultValue="sessoes" className="w-full">
+        <Tabs defaultValue="uso" className="w-full">
           <TabsList className="mb-4">
             {/* Monitoramento */}
-            <TabsTrigger value="sessoes">Sessões</TabsTrigger>
+            <TabsTrigger value="uso">Uso do Jarvis</TabsTrigger>
             <TabsTrigger value="bugs">Problemas</TabsTrigger>
             <TabsTrigger value="creditos">Créditos</TabsTrigger>
             {/* Configuração */}
             <TabsTrigger value="configuracao-pedagogica">Configuração Pedagógica</TabsTrigger>
             <TabsTrigger value="modos">Modos do Jarvis</TabsTrigger>
             <TabsTrigger value="parametros">Parâmetros IA</TabsTrigger>
-            {/* Legado */}
-            <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
 
-          {/* Sessões — acompanhamento pedagógico em tempo real */}
-          <TabsContent value="sessoes" className="space-y-6">
-            <JarvisSessoesAdmin />
+          {/* Uso do Jarvis — sessões Tutor + interações legadas unificadas */}
+          <TabsContent value="uso" className="space-y-6">
+            <JarvisUsoAdmin />
           </TabsContent>
 
           {/* Problemas reportados pelos alunos */}
@@ -78,11 +75,6 @@ export function JarvisHub({ defaultTab = 'tutor' }: JarvisHubProps) {
           {/* Parâmetros de IA — modelo, temperatura, tokens */}
           <TabsContent value="parametros" className="space-y-6">
             <JarvisConfigManagement />
-          </TabsContent>
-
-          {/* Histórico de interações (modos simples — legado) */}
-          <TabsContent value="historico" className="space-y-6">
-            <JarvisHistoricoAdmin />
           </TabsContent>
         </Tabs>
       </TabsContent>

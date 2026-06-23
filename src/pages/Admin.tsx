@@ -187,7 +187,7 @@ const Admin = () => {
     'gamificacao':        '/admin/gamificacao',
     'processo-seletivo':  '/admin/processo-seletivo',
   };
-  const [jarvisTab, setJarvisTab] = useState("alunos");
+  const [jarvisTab, setJarvisTab] = useState("tutor");
   const [showProfile, setShowProfile] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("visao-geral");
@@ -1388,8 +1388,8 @@ const Admin = () => {
               cardData={cardData}
               isLoading={isLoadingCards}
               onCardClick={(id) => {
-                if (id === 'jarvis') { setJarvisTab('alunos'); setActiveView('jarvis'); }
-                else if (id === 'jarvis_correcao') { setJarvisTab('professores'); setActiveView('jarvis'); }
+                if (id === 'jarvis') { setJarvisTab('tutor'); setActiveView('jarvis'); }
+                else if (id === 'jarvis_correcao') { setJarvisTab('correcao'); setActiveView('jarvis'); }
                 else setActiveView(id);
               }}
             />
