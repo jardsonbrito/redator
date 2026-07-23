@@ -152,8 +152,8 @@ const CorretorDashboard = () => {
 
   if (!corretor) return <Navigate to="/corretor/login" replace />;
 
-  const { pendentes, emCorrecao, incompletas, corrigidas } = getRedacoesPorStatus();
-  const filaAtiva = [...emCorrecao, ...pendentes, ...incompletas].slice(0, 8);
+  const { pendentes, incompletas, corrigidas } = getRedacoesPorStatus();
+  const filaAtiva = [...pendentes, ...incompletas].slice(0, 8);
 
   const generoCorretor = resolverGenero(corretor.sexo, corretor.nome_completo ?? '');
   const firstName = corretor.nome_completo?.split(' ')[0] ?? tituloCorretor(generoCorretor);
@@ -179,8 +179,8 @@ const CorretorDashboard = () => {
                 <p className="text-violet-200 text-xs mt-0.5">Pendentes</p>
               </div>
               <div className="rounded-xl bg-white/10 backdrop-blur px-4 py-3 min-w-[90px] text-center">
-                <p className="text-2xl font-bold">{emCorrecao.length}</p>
-                <p className="text-violet-200 text-xs mt-0.5">Em correção</p>
+                <p className="text-2xl font-bold">{incompletas.length}</p>
+                <p className="text-violet-200 text-xs mt-0.5">Incompletas</p>
               </div>
               <div className="rounded-xl bg-white/10 backdrop-blur px-4 py-3 min-w-[90px] text-center">
                 <p className="text-2xl font-bold">{corrigidas.length}</p>
@@ -286,12 +286,12 @@ const CorretorDashboard = () => {
                     </div>
                   );
                 })}
-                {(pendentes.length + emCorrecao.length + incompletas.length) > 8 && (
+                {(pendentes.length + incompletas.length) > 8 && (
                   <button
                     onClick={() => navigate('/corretor/redacoes-corretor')}
                     className="w-full text-center text-xs text-violet-500 hover:text-violet-700 py-2"
                   >
-                    + {(pendentes.length + emCorrecao.length + incompletas.length) - 8} mais redações aguardando
+                    + {(pendentes.length + incompletas.length) - 8} mais redações aguardando
                   </button>
                 )}
               </div>
