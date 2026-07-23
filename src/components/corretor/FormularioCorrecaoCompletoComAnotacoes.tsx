@@ -15,6 +15,7 @@ import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
 import { TemaModal } from "./TemaModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { TextareaWithSpellcheck } from "@/components/ui/textarea-with-spellcheck";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +74,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [showTemaModal, setShowTemaModal] = useState(false);
   const [showDevolverModal, setShowDevolverModal] = useState(false);
   const [showPEPModal, setShowPEPModal] = useState(false);
+  const [showPEPConfirmDialog, setShowPEPConfirmDialog] = useState(false);
   const [showRedacaoExpandida, setShowRedacaoExpandida] = useState(false);
   const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [loading, setLoading] = useState(false);
@@ -255,16 +257,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     }
   };
 
-  const salvarCorrecao = useCallback(async (status: 'incompleta' | 'corrigida') => {
-    if (status === 'corrigida' && !turmaExterna) {
-      const { data: marcacoesAtuais } = await refetchMarcacoesPEP();
-      if (!marcacoesAtuais || marcacoesAtuais.length === 0) {
-        toast({ title: 'Plano de Estudo não preenchido', description: 'Clique em "Gerar plano de estudo" e marque os aspectos identificados antes de finalizar.', variant: 'destructive' });
-        setShowPEPModal(true);
-        return;
-      }
-    }
-
+  const executarSalvarCorrecao = useCallback(async (status: 'incompleta' | 'corrigida') => {
     setLoading(true);
     try {
       const { error } = await supabase.rpc('salvar_correcao_corretor', {
@@ -315,7 +308,24 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     } finally {
       setLoading(false);
     }
-  }, [redacao, notas, comentarios, toast, onSucesso, onRefreshList, refetchMarcacoesPEP, corretorNome, corretorEmail, turmaExterna]);
+  }, [redacao, notas, comentarios, toast, onSucesso, onRefreshList, corretorNome, corretorEmail]);
+
+  const salvarCorrecao = useCallback(async (status: 'incompleta' | 'corrigida') => {
+    if (status === 'corrigida' && !turmaExterna) {
+      const { data: marcacoesAtuais } = await refetchMarcacoesPEP();
+      if (!marcacoesAtuais || marcacoesAtuais.length === 0) {
+        setShowPEPConfirmDialog(true);
+        return;
+      }
+    }
+
+    await executarSalvarCorrecao(status);
+  }, [turmaExterna, refetchMarcacoesPEP, executarSalvarCorrecao]);
+
+  const confirmarFinalizarSemPEP = useCallback(() => {
+    setShowPEPConfirmDialog(false);
+    executarSalvarCorrecao('corrigida');
+  }, [executarSalvarCorrecao]);
 
   const atualizarNota = (competencia: keyof Omit<NotasCorrecao, 'total'>, valor: number) => {
     setNotas(prev => ({ ...prev, [competencia]: valor }));
@@ -626,7 +636,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="left" className="text-xs">
-                    {marcacoesPEP.length === 0 ? 'PEP — pendente' : `PEP — ${marcacoesPEP.length} marcação(ões)`}
+                    {marcacoesPEP.length === 0 ? 'PEP — opcional, não preenchido' : `PEP — ${marcacoesPEP.length} marcação(ões)`}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -741,7 +751,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                     <div className="min-w-0">
                       <h3 className="text-sm font-black text-slate-900 leading-tight">Plano de Estudo (PEP)</h3>
                       <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                        {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
+                        {marcacoesPEP.length === 0 ? 'Opcional — recomendado preencher' : `${marcacoesPEP.length} marcação(ões)`}
                       </p>
                     </div>
                     <Button type="button" onClick={() => setShowPEPModal(true)} size="sm"
@@ -793,10 +803,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                     </button>
                     <button onClick={() => salvarCorrecao('corrigida')}
                       disabled={loading || redacaoCongelada}
-                      className={cn("w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors",
-                        !turmaExterna && marcacoesPEP.length === 0 ? 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'
-                      )}
-                      title={!turmaExterna && marcacoesPEP.length === 0 ? 'Preencha o PEP antes de finalizar' : undefined}>
+                      className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors bg-violet-700 hover:bg-violet-800">
                       {loading ? 'Salvando…' : 'Finalizar correção'}
                     </button>
                   </div>
@@ -857,7 +864,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                   <div>
                     <h3 className="text-sm font-black text-slate-900">Plano de Estudo (PEP)</h3>
                     <p className={`text-xs mt-0.5 ${marcacoesPEP.length === 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                      {marcacoesPEP.length === 0 ? 'Preencha antes de finalizar' : `${marcacoesPEP.length} marcação(ões)`}
+                      {marcacoesPEP.length === 0 ? 'Opcional — recomendado preencher' : `${marcacoesPEP.length} marcação(ões)`}
                     </p>
                   </div>
                   <Button type="button" onClick={() => { setShowPEPModal(true); setMobileSidebarOpen(false); }} size="sm"
@@ -905,9 +912,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 </button>
                 <button onClick={() => salvarCorrecao('corrigida')}
                   disabled={loading || redacaoCongelada}
-                  className={cn("w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors",
-                    !turmaExterna && marcacoesPEP.length === 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-violet-700 hover:bg-violet-800'
-                  )}>
+                  className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold text-white disabled:opacity-50 transition-colors bg-violet-700 hover:bg-violet-800">
                   {loading ? 'Salvando…' : 'Finalizar correção'}
                 </button>
               </div>
@@ -936,6 +941,26 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         alunoEmail={(redacao as any).email_aluno ?? ''}
         corretorEmail={corretorEmail}
       />
+
+      {/* Confirmação de finalização sem PEP preenchido */}
+      <AlertDialog open={showPEPConfirmDialog} onOpenChange={setShowPEPConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar correção sem preencher o Plano de Estudo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você ainda não marcou nenhum aspecto no Plano de Estudo (PEP) desta redação. O preenchimento é opcional, mas recomendado para orientar o aluno. Deseja encerrar a correção mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowPEPConfirmDialog(false); setTimeout(() => setShowPEPModal(true), 100); }}>
+              Preencher agora
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarFinalizarSemPEP} className="bg-violet-700 hover:bg-violet-800">
+              Encerrar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal de Devolução */}
       <Dialog open={showDevolverModal} onOpenChange={setShowDevolverModal}>
