@@ -946,9 +946,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       <AlertDialog open={showPEPConfirmDialog} onOpenChange={setShowPEPConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Encerrar correção sem preencher o Plano de Estudo?</AlertDialogTitle>
+            <AlertDialogTitle>Encerrar sem preencher o Plano de Estudo?</AlertDialogTitle>
             <AlertDialogDescription>
-              Você ainda não marcou nenhum aspecto no Plano de Estudo (PEP) desta redação. O preenchimento é opcional, mas recomendado para orientar o aluno. Deseja encerrar a correção mesmo assim?
+              Nenhum aspecto foi marcado no PEP. Deseja preencher agora ou encerrar a correção?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -956,7 +956,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               Preencher agora
             </AlertDialogCancel>
             <AlertDialogAction onClick={confirmarFinalizarSemPEP} className="bg-violet-700 hover:bg-violet-800">
-              Encerrar mesmo assim
+              Encerrar correção
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
