@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { Resend } from "npm:resend@4.0.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,10 +28,12 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const resendApiKey = 're_5g8wjotb_Ng2hbcmtot32vzL9SQLRkMbw';
+    const brevoApiKey = Deno.env.get('BREVO_API_KEY');
+    const brevoSenderEmail = Deno.env.get('BREVO_SENDER_EMAIL') || 'noreply@laboratoriodoredator.com';
+    const brevoSenderName = Deno.env.get('BREVO_SENDER_NAME') || 'App do Redator';
 
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY nao configurada');
+    if (!brevoApiKey) {
+      throw new Error('BREVO_API_KEY nao configurada');
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -62,8 +63,6 @@ Deno.serve(async (req) => {
     } else {
       correctionUrl += `/minhas-redacoes?highlight=${redacao_id}`;
     }
-
-    const resend = new Resend(resendApiKey);
 
     // Funcao para corrigir caracteres UTF-8 corrompidos
     const fixUtf8 = (str: string): string => {
@@ -175,25 +174,36 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    const emailResult = await resend.emails.send({
-      from: 'App do Redator <noreply@laboratoriodoredator.com>',
-      to: [student_email],
-      subject: `🎉 ${artigo} ${tipoTexto} foi corrigida!`,
-      html: emailHtml,
+    const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
       headers: {
-        'Content-Type': 'text/html; charset=UTF-8'
-      }
+        'api-key': brevoApiKey,
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: brevoSenderName, email: brevoSenderEmail },
+        to: [{ email: student_email, name: studentNameFixed }],
+        subject: `🎉 ${artigo} ${tipoTexto} foi corrigida!`,
+        htmlContent: emailHtml
+      })
     });
 
-    console.log('✅ Email enviado com sucesso!');
+    const brevoData = await brevoResponse.json();
+
+    if (!brevoResponse.ok) {
+      throw new Error(`Brevo: ${brevoData.message ?? JSON.stringify(brevoData)}`);
+    }
+
+    console.log('✅ Email enviado com sucesso!', brevoData.messageId);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        email_id: emailResult.data?.id
+      JSON.stringify({
+        success: true,
+        email_id: brevoData.messageId
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
