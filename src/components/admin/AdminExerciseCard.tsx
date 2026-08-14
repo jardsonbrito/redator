@@ -12,7 +12,7 @@ import {
 import { Edit, Trash2, Eye, Power, MoreHorizontal, Calendar, Users, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
+import { getExerciseAvailability, formatExercisePeriod, getEffectiveCover } from "@/utils/exerciseUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { ExercicioSubmissionsModal } from "./ExercicioSubmissionsModal";
 
@@ -108,13 +108,7 @@ export const AdminExerciseCard = ({
     }
   };
 
-  const getCoverImage = () => {
-    if (exercicio.cover_upload_url) return exercicio.cover_upload_url;
-    if (exercicio.cover_url) return exercicio.cover_url;
-    if (exercicio.imagem_capa_url) return exercicio.imagem_capa_url;
-    if (exercicio.temas?.cover_url) return exercicio.temas.cover_url;
-    return "/placeholders/aula-cover.png";
-  };
+  const getCoverImage = () => getEffectiveCover(exercicio);
 
   const formatCreationDate = (dateString: string) => {
     try {
