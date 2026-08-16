@@ -155,6 +155,13 @@ export const PSEtapaFinalConfig: React.FC = () => {
         return;
       }
 
+      const inicio = new Date(`${form.data_inicio}T${form.hora_inicio}`);
+      const fim = new Date(`${form.data_fim}T${form.hora_fim}`);
+      if (fim <= inicio) {
+        toast.error('A data/hora de encerramento deve ser posterior à data/hora de início');
+        return;
+      }
+
       const temaSelecionado = todosTemas?.find(t => t.id === form.tema_id);
 
       salvarEtapaFinal({

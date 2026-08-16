@@ -144,6 +144,20 @@ export const SimuladoForm = ({ mode = 'create', simuladoEditando, onSuccess, onC
       return;
     }
 
+    if (formData.data_inicio && formData.hora_inicio && formData.data_fim && formData.hora_fim) {
+      const inicio = new Date(`${formData.data_inicio}T${formData.hora_inicio}`);
+      const fim = new Date(`${formData.data_fim}T${formData.hora_fim}`);
+      if (fim <= inicio) {
+        toast({
+          title: "Erro",
+          description: "A data/hora de encerramento deve ser posterior à data/hora de início.",
+          variant: "destructive",
+        });
+        setActiveSection('periodo');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {

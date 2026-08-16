@@ -85,6 +85,13 @@ const CorretorCriarSimulado = () => {
       return;
     }
 
+    const inicio = new Date(`${form.data_inicio}T${form.hora_inicio}`);
+    const fim = new Date(`${form.data_fim}T${form.hora_fim}`);
+    if (fim <= inicio) {
+      toast({ title: "Período inválido", description: "A data/hora de encerramento deve ser posterior à data/hora de início.", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
     try {
       const { error } = await supabase.rpc("criar_simulado_corretor", {

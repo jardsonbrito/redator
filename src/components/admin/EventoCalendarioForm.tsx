@@ -197,6 +197,11 @@ export const EventoCalendarioForm = ({
       setActiveSection('destinatarios');
       return;
     }
+    if (form.hora_inicio && form.hora_fim && form.hora_fim <= form.hora_inicio) {
+      toast.error('O horário de término deve ser posterior ao horário de início.');
+      setActiveSection('quando');
+      return;
+    }
 
     setLoading(true);
     const payload: EventoCalendarioPayload = {
