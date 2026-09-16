@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, UserPlus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { useTurmas } from "@/hooks/usePlansAdmin";
 
 interface Visitante {
   id: string;
@@ -31,11 +31,10 @@ interface MigrarVisitanteModalProps {
 }
 
 export const MigrarVisitanteModal = ({ visitante, isOpen, onClose, onSuccess }: MigrarVisitanteModalProps) => {
-  const [turmaDestino, setTurmaDestino] = useState<string>(TURMAS_VALIDAS[0]);
+  const { data: turmasDisponiveis = [] } = useTurmas();
+  const [turmaDestino, setTurmaDestino] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  const turmasDisponiveis = TURMAS_VALIDAS;
 
   if (!visitante) return null;
 
@@ -118,8 +117,8 @@ export const MigrarVisitanteModal = ({ visitante, isOpen, onClose, onSuccess }: 
               </SelectTrigger>
               <SelectContent>
                 {turmasDisponiveis.map((turma) => (
-                  <SelectItem key={turma} value={turma}>
-                    {formatTurmaDisplay(turma)}
+                  <SelectItem key={turma.id} value={turma.nome}>
+                    {turma.nome}
                   </SelectItem>
                 ))}
               </SelectContent>

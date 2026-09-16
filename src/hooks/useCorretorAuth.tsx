@@ -8,6 +8,8 @@ interface Corretor {
   nome_completo: string;
   email: string;
   ativo: boolean;
+  turmas_autorizadas?: string[] | null;
+  sexo?: string | null;
 }
 
 interface CorretorAuthContextType {
@@ -16,6 +18,8 @@ interface CorretorAuthContextType {
   loginAsCorretor: (email: string, senha?: string) => Promise<{ error?: string }>;
   logout: () => void;
   isCorretor: boolean;
+  updateCorretorNome: (nome: string) => Promise<void>;
+  updateCorretorSexo: (sexo: string | null) => Promise<void>;
 }
 
 const CorretorAuthContext = createContext<CorretorAuthContextType>({
@@ -24,6 +28,8 @@ const CorretorAuthContext = createContext<CorretorAuthContextType>({
   loginAsCorretor: async () => ({ error: "Not implemented" }),
   logout: () => {},
   isCorretor: false,
+  updateCorretorNome: async () => {},
+  updateCorretorSexo: async () => {},
 });
 
 export const useCorretorAuth = () => {
@@ -40,17 +46,39 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
   const { toast } = useToast();
 
   useEffect(() => {
-    // Verificar se há um corretor logado no localStorage
     const savedCorretor = localStorage.getItem('corretor_session');
     if (savedCorretor) {
       try {
         const parsed = JSON.parse(savedCorretor);
         setCorretor(parsed);
-      } catch (error) {
+        setLoading(false);
+
+        // Atualiza turmas_autorizadas e sexo do banco (sessão antiga pode não ter esses campos)
+        if (parsed.id) {
+          supabase
+            .from('corretores')
+            .select('turmas_autorizadas, sexo')
+            .eq('id', parsed.id)
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data) {
+                const updated = {
+                  ...parsed,
+                  turmas_autorizadas: (data.turmas_autorizadas as string[]) ?? null,
+                  sexo: (data as any).sexo ?? null,
+                };
+                setCorretor(updated);
+                localStorage.setItem('corretor_session', JSON.stringify(updated));
+              }
+            });
+        }
+      } catch {
         localStorage.removeItem('corretor_session');
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const loginAsCorretor = async (email: string, senha?: string) => {
@@ -72,6 +100,8 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         nome_completo: corretorData.nome_completo,
         email: corretorData.email,
         ativo: corretorData.ativo,
+        turmas_autorizadas: (corretorData.turmas_autorizadas as string[]) ?? null,
+        sexo: (corretorData as any).sexo ?? null,
       };
 
       setCorretor(corretorInfo);
@@ -87,6 +117,30 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
       console.error("Erro no login do corretor:", error);
       return { error: "Erro inesperado ao fazer login" };
     }
+  };
+
+  const updateCorretorNome = async (nome: string) => {
+    if (!corretor) return;
+    const { error } = await supabase
+      .from('corretores')
+      .update({ nome_completo: nome.trim() })
+      .eq('id', corretor.id);
+    if (error) throw error;
+    const updated = { ...corretor, nome_completo: nome.trim() };
+    setCorretor(updated);
+    localStorage.setItem('corretor_session', JSON.stringify(updated));
+  };
+
+  const updateCorretorSexo = async (sexo: string | null) => {
+    if (!corretor) return;
+    const { error } = await supabase
+      .from('corretores')
+      .update({ sexo } as any)
+      .eq('id', corretor.id);
+    if (error) throw error;
+    const updated = { ...corretor, sexo };
+    setCorretor(updated);
+    localStorage.setItem('corretor_session', JSON.stringify(updated));
   };
 
   const logout = () => {
@@ -123,6 +177,8 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         loginAsCorretor,
         logout,
         isCorretor: !!corretor,
+        updateCorretorNome,
+        updateCorretorSexo,
       }}
     >
       {children}

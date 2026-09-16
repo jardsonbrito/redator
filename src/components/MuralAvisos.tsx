@@ -172,33 +172,9 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
     });
   };
 
-  if (isLoading) {
-    return (
-      <Card className="mb-6">
-        <CardContent className="text-center py-8">
-          <p className="text-muted-foreground">Carregando avisos...</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (isLoading) return null;
 
-  if (avisos.length === 0) {
-    return (
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            Mural de Avisos
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center py-8">
-          <p className="text-muted-foreground">
-            Nenhum aviso disponível no momento. Fique atento às atualizações da coordenação.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (avisos.length === 0) return null;
 
   return (
     <Card className="mb-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl">

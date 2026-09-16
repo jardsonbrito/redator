@@ -15,9 +15,9 @@ interface ConfiguracaoA4 {
 const CONFIG_PADRAO: ConfiguracaoA4 = {
   largura: 2480,        // A4 width em 300dpi (21cm)
   altura: 3508,         // A4 height em 300dpi (29.7cm)
-  margemCm: 2.5,        // 2.5cm de margem
-  tamanhoFonte: 50,     // ~13pt em 300dpi (13pt * 300/72) - +2pt
-  lineHeight: 1.7,      // Espaçamento 1.7 (entrelinhas ainda maior)
+  margemCm: 2.0,        // 2.0cm de margem (reduzido de 2.5cm)
+  tamanhoFonte: 46,     // ~11pt em 300dpi (11pt * 300/72 = 45.8px)
+  lineHeight: 1.35,     // Espaçamento 1.35 (padrão para redações ENEM)
   dpi: 300
 };
 
@@ -104,7 +104,7 @@ function quebrarTextoEmLinhas(
 
 /**
  * Gera imagem A4 do texto da redação
- * @param texto - Texto da redação (limitado a 500 palavras)
+ * @param texto - Texto da redação (limitado a 550 palavras)
  * @returns Promise com Blob da imagem JPEG
  */
 export async function gerarImagemA4DeTexto(
@@ -146,16 +146,19 @@ export async function gerarImagemA4DeTexto(
       const recuoParagrafo = cmParaPixels(1.25, config.dpi); // Recuo de 1.25cm
 
       linhasTexto.forEach((linha, index) => {
-        // Verificar se ainda cabe na página
-        if (yAtual + espacamentoLinha > margemPx + alturaTexto) {
-          console.warn(`Texto excedeu altura da página A4 na linha ${index + 1}`);
-          return; // Para de renderizar se não couber
-        }
-
         // Linha vazia = separador entre parágrafos
         if (linha.texto === '') {
-          yAtual += espacamentoLinha * 0.5; // Espaço reduzido entre parágrafos
+          // Verificar se há espaço para o separador
+          if (yAtual + (espacamentoLinha * 0.3) <= margemPx + alturaTexto) {
+            yAtual += espacamentoLinha * 0.3; // Espaço reduzido entre parágrafos (de 0.5 para 0.3)
+          }
           return;
+        }
+
+        // Verificar se ainda cabe na página (usar tamanho da fonte ao invés de espacamentoLinha completo)
+        if (yAtual + config.tamanhoFonte > margemPx + alturaTexto) {
+          console.warn(`Texto excedeu altura da página A4 na linha ${index + 1} de ${linhasTexto.length}`);
+          return; // Para de renderizar se não couber
         }
 
         // Aplicar recuo na primeira linha de cada parágrafo

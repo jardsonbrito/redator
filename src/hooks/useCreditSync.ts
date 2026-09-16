@@ -28,13 +28,12 @@ export const useCreditSync = () => {
       }
     }));
 
-    // 3. Invalidar queries relacionadas a créditos e redações
+    // 3. Invalidar queries relacionadas a créditos e redações (ambas chaves em uso)
+    await queryClient.invalidateQueries({
+      queryKey: ['redacoes-minhas']
+    });
     await queryClient.invalidateQueries({
       queryKey: ['minhas-redacoes']
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: ['minhas-redacoes', userEmail.toLowerCase().trim()]
     });
 
     // 4. Invalidar queries de créditos se existirem

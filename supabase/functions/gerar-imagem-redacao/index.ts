@@ -141,8 +141,8 @@ serve(async (req) => {
 
     // Validar limite de palavras
     const palavras = texto.trim().split(/\s+/).length;
-    if (palavras > 500) {
-      throw new Error(`Texto excede limite de 500 palavras (${palavras} palavras encontradas)`);
+    if (palavras > 550) {
+      throw new Error(`Texto excede limite de 550 palavras (${palavras} palavras encontradas)`);
     }
 
     // Gerar SVG

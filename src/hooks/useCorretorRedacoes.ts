@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,21 +20,23 @@ export interface RedacaoCorretor {
   corretor_id_1?: string | null;
   corretor_id_2?: string | null;
   turma?: string; // Added turma property
+  // Campos de congelamento
+  corrigida?: boolean;
+  congelada?: boolean;
+  data_descongelamento?: string | null;
+  // Tipo do exercício pai — preenchido apenas quando tipo_redacao === 'exercicio'
+  exercicio_tipo?: string | null;
+  // Pré-correção do Jarvis (admin) — apenas em redacoes_enviadas regulares
+  jarvis_precorrecao_id?: string | null;
+  jarvis_precorrecao_status?: string | null;
 }
 
 export const useCorretorRedacoes = (corretorEmail: string) => {
-  const [redacoes, setRedacoes] = useState<RedacaoCorretor[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (corretorEmail) {
-      fetchRedacoes();
-    }
-  }, [corretorEmail]);
-
-  const fetchRedacoes = async () => {
-    try {
+  const { data: redacoes = [], isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['corretor-redacoes', corretorEmail],
+    queryFn: async () => {
       const { data, error } = await supabase
         .rpc('get_redacoes_corretor_detalhadas', {
           corretor_email: corretorEmail
@@ -42,26 +44,31 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
 
       if (error) throw error;
 
-      // Type cast the data to ensure compatibility
       const redacoesFormatadas = (data || []).map(item => ({
         ...item,
         tipo_redacao: item.tipo_redacao as string,
-        status_minha_correcao: item.status_minha_correcao as 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida'
+        status_minha_correcao: item.status_minha_correcao as 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida' | 'devolvida',
+        exercicio_tipo: (item as any).exercicio_tipo ?? null,
+        jarvis_precorrecao_id: (item as any).jarvis_precorrecao_id ?? null,
+        jarvis_precorrecao_status: (item as any).jarvis_precorrecao_status ?? null,
       }));
 
-      console.log('Redações carregadas:', redacoesFormatadas);
-      setRedacoes(redacoesFormatadas);
-    } catch (error: any) {
-      console.error("Erro ao buscar redações do corretor:", error);
-      toast({
-        title: "Erro ao carregar redações",
-        description: "Não foi possível carregar suas redações.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return redacoesFormatadas;
+    },
+    enabled: !!corretorEmail,
+    staleTime: 1000 * 60, // 1 minuto - considera dados "frescos" por 1 minuto
+    refetchInterval: 1000 * 60 * 2, // Refetch automático a cada 2 minutos
+    refetchOnWindowFocus: true, // Refetch quando o usuário volta para a aba
+  });
+
+  // Mostrar erro se houver
+  if (error) {
+    toast({
+      title: "Erro ao carregar redações",
+      description: "Não foi possível carregar suas redações.",
+      variant: "destructive"
+    });
+  }
 
   const getRedacoesPorStatus = () => {
     const pendentes = redacoes.filter(r => r.status_minha_correcao === 'pendente');
@@ -74,14 +81,13 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
 
   // Função para atualizar a lista após correção
   const refreshRedacoes = async () => {
-    console.log('Atualizando lista de redações...');
-    await fetchRedacoes();
+    await refetch();
   };
 
   return {
     redacoes,
     loading,
-    fetchRedacoes,
+    fetchRedacoes: refetch, // Compatibilidade com código antigo
     getRedacoesPorStatus,
     refreshRedacoes
   };

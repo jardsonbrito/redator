@@ -1,13 +1,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowLeft, Mail, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
@@ -18,19 +16,15 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already authenticated and admin
   useEffect(() => {
-    console.log('Login page - Auth loading:', authLoading, 'User:', user?.email, 'IsAdmin:', isAdmin);
-    
     if (!authLoading && user && isAdmin) {
-      console.log('User is already authenticated as admin, redirecting to /admin');
       navigate('/admin', { replace: true });
     }
   }, [user, isAdmin, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast({
         title: "Campos obrigatórios",
@@ -41,32 +35,26 @@ const Login = () => {
     }
 
     setLoading(true);
-    console.log('Form submitted - attempting login with:', email);
 
     try {
       const { error } = await signIn(email, password);
-      
+
       if (error) {
-        console.error('Login error:', error);
         toast({
           title: "Erro no login",
           description: error.message || "Credenciais inválidas. Verifique email e senha.",
           variant: "destructive",
         });
       } else {
-        console.log('Login successful, waiting for redirect...');
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o painel administrativo...",
         });
-        
-        // Give a moment for the auth state to update, then redirect
         setTimeout(() => {
           navigate('/admin', { replace: true });
         }, 1000);
       }
     } catch (error: any) {
-      console.error('Unexpected login error:', error);
       toast({
         title: "Erro inesperado",
         description: "Ocorreu um erro inesperado. Tente novamente.",
@@ -77,57 +65,61 @@ const Login = () => {
     }
   };
 
-  // Show loading if auth is still loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
-        <div className="text-lg text-redator-accent">Carregando sistema de autenticação...</div>
+      <div className="min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-white to-cyan-50 flex items-center justify-center">
+        <div className="text-lg text-violet-600">Carregando...</div>
       </div>
     );
   }
 
-  // If already logged in as admin, show redirect message
   if (user && isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
-        <div className="text-lg text-redator-accent">Redirecionando para o painel administrativo...</div>
+      <div className="min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-white to-cyan-50 flex items-center justify-center">
+        <div className="text-lg text-violet-600">Redirecionando para o painel administrativo...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
-      <div className="w-full max-w-md p-4">
-        <div className="mb-6">
-          <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Voltar ao início</span>
-          </Link>
-        </div>
-        
-        <Card className="border-redator-accent/20">
-          <CardHeader>
-            <CardTitle className="text-center text-redator-primary">Painel Administrativo</CardTitle>
-            <p className="text-center text-sm text-redator-accent">
+    <div className="min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-white to-cyan-50 flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-[420px]">
+        <div className="rounded-[2rem] border border-violet-100 bg-white/85 p-6 shadow-2xl shadow-violet-200/40 backdrop-blur xl:p-8">
+
+          {/* Logo + título */}
+          <div className="flex flex-col items-center mb-6">
+            <img
+              src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
+              alt="Logo da plataforma"
+              className="w-20 h-20 object-contain mb-3"
+            />
+            <h2 className="text-xl font-bold text-slate-900">Painel Administrativo</h2>
+            <p className="mt-1 text-sm text-slate-500 text-center">
               Acesso exclusivo para administradores
             </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-redator-primary">Email</Label>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="email" className="text-sm font-medium text-slate-700">E-mail</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Digite seu email"
+                  placeholder="Digite seu e-mail"
                   required
-                  className="border-redator-accent/30 focus:border-redator-primary"
+                  className="pl-10 border-slate-200 focus:border-violet-400 focus:ring-violet-400/20"
                 />
               </div>
-              <div>
-                <Label htmlFor="password" className="text-redator-primary">Senha</Label>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="password" className="text-sm font-medium text-slate-700">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
                   id="password"
                   type="password"
@@ -135,20 +127,30 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Digite sua senha"
                   required
-                  className="border-redator-accent/30 focus:border-redator-primary"
+                  className="pl-10 border-slate-200 focus:border-violet-400 focus:ring-violet-400/20"
                 />
               </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white" 
-                disabled={loading}
-              >
-                {loading ? 'Fazendo login...' : 'Acessar Painel Admin'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-11 font-semibold mt-2"
+              disabled={loading}
+            >
+              {loading ? 'Entrando...' : 'Acessar Painel Admin'}
+            </Button>
+          </form>
+
+          <div className="mt-5 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-800 hover:underline transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Voltar ao início
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

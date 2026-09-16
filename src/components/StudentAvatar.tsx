@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User } from 'lucide-react';
+import { User, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
@@ -133,7 +133,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
   }, [user, studentData.email, isStudentLoggedIn, onAvatarUpdate]);
 
   const sizeClasses = {
-    sm: 'w-8 h-8',
+    sm: 'w-11 h-11',
     md: 'w-16 h-16',
     lg: 'w-32 h-32'
   };
@@ -256,27 +256,30 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         setUserProfile(profileData);
         console.log("✅ Profile definido para upload:", profileData);
       }
-      const fileExt = file.name.split(".").pop();
-      // Usar timestamp para criar nome único e evitar cache
-      const timestamp = Date.now();
-      const filePath = `${userId}-${timestamp}.${fileExt}`;
+      // Deletar foto antiga do Storage antes de fazer o novo upload
+      const oldAvatarUrl = avatarUrl || userProfile?.avatar_url;
+      if (oldAvatarUrl && oldAvatarUrl.includes('/storage/v1/object/public/avatars/')) {
+        const match = oldAvatarUrl.match(/\/storage\/v1\/object\/public\/avatars\/(.+)/);
+        if (match?.[1]) {
+          await supabase.storage.from('avatars').remove([match[1]]);
+        }
+      }
 
-      console.log("📁 Path final do novo avatar com timestamp:", filePath);
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${userId}-${Date.now()}.${fileExt}`;
 
       // 2. Upload no Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { 
+        .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true 
+          upsert: true,
         });
 
       if (uploadError) {
         console.error("❌ Erro no upload:", uploadError);
         throw uploadError;
       }
-
-      console.log("✅ Upload realizado com sucesso!");
 
       // 3. Gerar URL pública do novo arquivo
       const { data: publicData } = supabase.storage
@@ -290,10 +293,11 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       // 4. Atualizar avatar_url no banco usando update direto
       console.log("🔍 Tentando atualizar avatar_url para email:", studentData.email);
       
+      const emailParaAtualizar = (studentData.email || user?.email || '').toLowerCase();
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: newAvatarUrl })
-        .eq('email', studentData.email.toLowerCase())
+        .eq('email', emailParaAtualizar)
         .eq('user_type', 'aluno');
 
       if (updateError) {
@@ -339,24 +343,53 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const cameraIconSize = size === 'lg' ? 'w-6 h-6' : size === 'md' ? 'w-4 h-4' : 'w-3.5 h-3.5';
+
   return (
-    <div className="relative group">
-      <Avatar 
-        className={`${sizeClasses[size]} border border-primary/20 transition-all ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 hover:shadow-lg' : ''}`}
+    <div
+      className="relative group"
+      title={showUpload ? 'Clique para alterar a foto de perfil' : undefined}
+    >
+      <Avatar
+        className={`${sizeClasses[size]} transition-all duration-200 ${uploading ? 'opacity-50' : ''} ${
+          avatarUrl
+            ? 'ring-2 ring-white/60 ring-offset-1 ring-offset-primary shadow-md'
+            : 'border-2 border-white/40'
+        } ${showUpload ? 'cursor-pointer hover:ring-white hover:shadow-lg hover:scale-105' : ''}`}
         onClick={showUpload ? handleAvatarClick : undefined}
       >
         {avatarUrl && (
-          <AvatarImage 
-            src={avatarUrl} 
+          <AvatarImage
+            src={avatarUrl}
             alt="Avatar do usuário"
             className="object-cover"
           />
         )}
-        <AvatarFallback className="bg-primary/10 text-primary">
+        <AvatarFallback className="bg-white text-primary font-bold">
           {studentData.nomeUsuario ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
       </Avatar>
-      
+
+      {/* Overlay de câmera — só aparece no hover quando há foto; permanente quando sem foto */}
+      {showUpload && !uploading && (
+        <div
+          className={`absolute inset-0 rounded-full flex items-center justify-center transition-opacity duration-200 pointer-events-none ${
+            avatarUrl
+              ? 'bg-black/50 opacity-0 group-hover:opacity-100'
+              : 'bg-black/30 opacity-100'
+          }`}
+        >
+          <Camera className={`${cameraIconSize} text-white`} />
+        </div>
+      )}
+
+      {/* Badge de câmera no canto — só aparece quando não há foto */}
+      {showUpload && size === 'sm' && !uploading && !avatarUrl && (
+        <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-sm pointer-events-none">
+          <Camera className="w-2.5 h-2.5 text-primary" />
+        </div>
+      )}
+
       {showUpload && (
         <input
           ref={fileInputRef}

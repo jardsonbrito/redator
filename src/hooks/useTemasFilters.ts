@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { textIncludes, getUniqueEixos } from '@/utils/textUtils';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useStudentAuth } from '@/hooks/useStudentAuth';
 
 export interface Tema {
   id: string;
@@ -21,19 +22,21 @@ export interface Tema {
 
 export const useTemasFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  
+  const { studentData } = useStudentAuth();
+  const turmaDoAluno = studentData?.turma ?? null;
+
   // Estados dos filtros
   const [fraseFilter, setFraseFilter] = useState(searchParams.get('q') || '');
   const [selectedEixos, setSelectedEixos] = useState<string[]>(
     searchParams.get('eixos')?.split(',').filter(Boolean) || []
   );
-  
+
   // Debounce para a busca
   const debouncedFraseFilter = useDebounce(fraseFilter, 400);
 
   // Buscar todos os temas publicados
   const { data: allTemas, isLoading, error } = useQuery({
-    queryKey: ['temas-student-all'],
+    queryKey: ['temas-student-all', turmaDoAluno],
     queryFn: async (): Promise<Tema[]> => {
       try {
         const { data, error } = await supabase
@@ -45,15 +48,46 @@ export const useTemasFilters = () => {
 
         if (error) throw error;
 
-        return (data || []).map((t: any) => ({
+        const items = (data || []).map((t: any) => ({
           ...t,
           frase_tematica: t.frase_tematica || 'Tema sem título',
         }));
+
+        // Filtrar por turma: null/vazio = visível para todas
+        if (turmaDoAluno) {
+          return items.filter((t: any) =>
+            !t.turmas_permitidas || t.turmas_permitidas.length === 0 || t.turmas_permitidas.includes(turmaDoAluno)
+          );
+        }
+        return items;
       } catch (e) {
         console.error('Erro ao buscar temas:', e);
         return [];
       }
     },
+  });
+
+  // Buscar frases temáticas sobre as quais o aluno já escreveu
+  const { data: frasesJaEscritas } = useQuery({
+    queryKey: ['redacoes-frases-aluno', studentData.email],
+    queryFn: async (): Promise<Set<string>> => {
+      if (!studentData.email) return new Set();
+      try {
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('frase_tematica')
+          .eq('email_aluno', studentData.email)
+          .is('deleted_at', null);
+
+        if (error) throw error;
+
+        return new Set((data || []).map(r => r.frase_tematica).filter(Boolean));
+      } catch (e) {
+        console.error('Erro ao buscar redações do aluno:', e);
+        return new Set();
+      }
+    },
+    enabled: !!studentData.email,
   });
 
   // Lista única de eixos para o dropdown
@@ -73,7 +107,7 @@ export const useTemasFilters = () => {
       .slice(0, 10); // Máximo 10 sugestões
   }, [allTemas, debouncedFraseFilter]);
 
-  // Filtrar temas baseado nos filtros ativos
+  // Filtrar e ordenar temas baseado nos filtros ativos
   const filteredTemas = useMemo(() => {
     if (!allTemas) return [];
 
@@ -82,7 +116,7 @@ export const useTemasFilters = () => {
     // Filtro por frase temática
     if (debouncedFraseFilter.trim()) {
       const searchTerm = debouncedFraseFilter.trim();
-      filtered = filtered.filter(tema => 
+      filtered = filtered.filter(tema =>
         textIncludes(tema.frase_tematica, searchTerm)
       );
     }
@@ -91,15 +125,23 @@ export const useTemasFilters = () => {
     if (selectedEixos.length > 0) {
       filtered = filtered.filter(tema => {
         if (!tema.eixo_tematico) return false;
-        
-        return selectedEixos.some(eixoSelecionado => 
+
+        return selectedEixos.some(eixoSelecionado =>
           textIncludes(tema.eixo_tematico || '', eixoSelecionado)
         );
       });
     }
 
+    // Ordenação: primeiro temas não escritos, depois escritos
+    // Dentro de cada grupo, mantém a ordem por data (já vem do banco: published_at desc)
+    if (frasesJaEscritas && frasesJaEscritas.size > 0) {
+      const naoEscritos = filtered.filter(t => !frasesJaEscritas.has(t.frase_tematica));
+      const jaEscritos = filtered.filter(t => frasesJaEscritas.has(t.frase_tematica));
+      return [...naoEscritos, ...jaEscritos];
+    }
+
     return filtered;
-  }, [allTemas, debouncedFraseFilter, selectedEixos]);
+  }, [allTemas, debouncedFraseFilter, selectedEixos, frasesJaEscritas]);
 
   // Sincronizar filtros com URL
   useEffect(() => {

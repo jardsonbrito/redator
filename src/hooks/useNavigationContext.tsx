@@ -40,7 +40,15 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   // Mapear rotas para breadcrumbs automáticos
   const getAutomaticBreadcrumbs = useCallback((pathname: string): BreadcrumbItem[] => {
     const pathParts = pathname.split('/').filter(Boolean);
-    const crumbs: BreadcrumbItem[] = [{ label: 'Início', href: '/app' }];
+    const isProfessorPath = pathParts[0] === 'professor';
+    const homeHref = isProfessorPath ? '/professor/dashboard' : '/app';
+    const crumbs: BreadcrumbItem[] = [{ label: 'Início', href: homeHref }];
+
+    // Sub-rotas que não devem gerar nível próprio no breadcrumb
+    const pathOverrides: Record<string, BreadcrumbItem[]> = {
+      '/jarvis/tutor': [{ label: 'Início', href: homeHref }, { label: 'Jarvis' }],
+    };
+    if (pathOverrides[pathname]) return pathOverrides[pathname];
 
     // Mapeamento de rotas para labels
     const routeLabels: Record<string, string> = {
@@ -49,18 +57,33 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       'temas': 'Temas',
       'aulas': 'Aulas',
       'aulas-ao-vivo': 'Aulas ao Vivo',
+      'salas-virtuais': 'Aulas ao Vivo',
       'videoteca': 'Videoteca',
       'biblioteca': 'Biblioteca',
-      'redacoes': 'Redações Exemplar',
+      'redacoes': 'Redações Exemplares',
+      'redacoes-exemplar': 'Redações Exemplares',
       'top5': 'TOP 5',
       'minhas-redacoes': 'Minhas Redações',
       'minhas-conquistas': 'Minhas Conquistas',
       'gamificacao': 'Gamificação',
       'lousa': 'Lousa Interativa',
       'ajuda-rapida': 'Ajuda Rápida',
-      'salas-virtuais': 'Salas Virtuais',
+      'interatividade': 'Interatividade',
       'envie-redacao': 'Enviar Redação',
-      'manuscrita': 'Manuscrita'
+      'manuscrita': 'Manuscrita',
+      'guia-tematico': 'Guia Temático',
+      'repertorio': 'Repertório Orientado',
+      'repertorio-orientado': 'Repertório Orientado',
+      'laboratorio-repertorio': 'Laboratório de Repertório',
+      'microaprendizagem': 'Microaprendizagem',
+      'redacoes-comentadas': 'Redações Comentadas',
+      'jarvis-correcao': 'Jarvis',
+      'jarvis': 'Jarvis',
+      'turmas': 'Minhas Turmas',
+      'alunos': 'Meus Alunos',
+      'diario-online': 'Diário Online',
+      'salas-virtuais': 'Aulas ao Vivo',
+      'dashboard': 'Início'
     };
 
     let currentPath = '';
@@ -69,8 +92,8 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       const part = pathParts[i];
       currentPath += `/${part}`;
       
-      // Pular se for 'app' (já incluído como Início)
-      if (part === 'app') continue;
+      // Pular segmentos de contexto já incluídos como Início
+      if (part === 'app' || part === 'professor') continue;
       
       // Se for ID (UUID ou número), usar contexto da parte anterior
       if ((/^[0-9]+$/.test(part) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(part)) && i > 0) {
@@ -91,7 +114,12 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
         
         // Se não é a última parte, adicionar link
         if (i < pathParts.length - 1) {
-          crumbs.push({ label, href: currentPath });
+          // Alguns segmentos de rota não têm página de listagem própria —
+          // redirecionar para o path correto da lista correspondente
+          const hrefOverrides: Record<string, string> = {
+            '/redacoes-exemplar': '/redacoes',
+          };
+          crumbs.push({ label, href: hrefOverrides[currentPath] ?? currentPath });
         } else {
           crumbs.push({ label });
         }

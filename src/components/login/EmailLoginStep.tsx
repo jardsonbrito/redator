@@ -111,11 +111,8 @@ export const EmailLoginStep = ({ onEmailVerified, loading }: EmailLoginStepProps
     <div className="space-y-4">
       <div className="text-center mb-6">
         <h3 className="text-lg font-semibold text-redator-primary mb-2">
-          Acesso por E-mail
+          Acesso por e-mail
         </h3>
-        <p className="text-sm text-redator-accent">
-          Digite seu e-mail para continuar
-        </p>
       </div>
 
       <div>
@@ -140,7 +137,7 @@ export const EmailLoginStep = ({ onEmailVerified, loading }: EmailLoginStepProps
       <Button 
         onClick={handleContinue}
         disabled={verifying || loading}
-        className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white h-12"
+        className="w-full bg-violet-600 hover:bg-violet-700 text-white h-12 rounded-xl font-semibold"
       >
         {verifying ? (
           <>

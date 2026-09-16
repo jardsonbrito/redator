@@ -1,9 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, ExternalLink, FileText, Calendar, Users } from "lucide-react";
+import { Clock, ExternalLink, FileText, Calendar, CheckCircle, Hourglass, RotateCcw, User } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { pickCoverImage, getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useExerciseSubmission } from "@/hooks/useExerciseSubmission";
 
 interface ExerciseCardProps {
@@ -50,8 +53,11 @@ export function ExerciseCard({
   onDelete,
   onToggleStatus
 }: ExerciseCardProps) {
+  const navigate = useNavigate();
   // Hook para verificar se o aluno já participou do exercício
   const { data: submissionData } = useExerciseSubmission(exercise.id);
+  const submissionDetails = submissionData?.submissionDetails;
+  const isProducaoGuiada = exercise.tipo === 'Produção Guiada';
 
   // Implementar sistema de múltiplas fontes de imagem com fallback automático
   const imageSources = pickCoverImage({
@@ -278,8 +284,85 @@ export function ExerciseCard({
                     </Button>
                   )}
 
-                  {/* Durante o período - já enviou */}
-                  {availability.status === 'disponivel' && submissionData?.hasSubmitted && (
+                  {/* Produção Guiada - já enviou (disponível ou encerrada) */}
+                  {isProducaoGuiada && submissionData?.hasSubmitted && availability.status !== 'agendado' && (
+                    <div className="space-y-2">
+                      {submissionDetails?.corrigida ? (
+                        <div className="space-y-3">
+                          {/* Datas */}
+                          <div className="space-y-1.5">
+                            {submissionDetails.data_envio && (
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                <span>
+                                  <span className="font-medium">Enviado:</span>{" "}
+                                  {format(new Date(submissionDetails.data_envio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </span>
+                              </div>
+                            )}
+                            {submissionDetails.data_correcao && (
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0 text-green-600" />
+                                <span>
+                                  <span className="font-medium">Corrigido:</span>{" "}
+                                  {format(new Date(submissionDetails.data_correcao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Nota em destaque */}
+                          {submissionDetails.nota_total !== null && submissionDetails.nota_total !== undefined && (
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                              <p className="text-xs font-medium text-green-700 mb-0.5">Sua nota</p>
+                              <p className="text-2xl font-bold text-green-800 leading-none">
+                                {submissionDetails.nota_total}
+                                <span className="text-sm font-normal text-green-600 ml-1">/ 1000</span>
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Badge + botão */}
+                          <Badge className="bg-green-600 text-white text-xs px-2 py-1 flex items-center gap-1 w-fit">
+                            <CheckCircle className="w-3 h-3" />
+                            Corrigida
+                          </Badge>
+                          <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                            onClick={() => navigate(`/exercicios/${exercise.id}/producao-guiada`)}
+                          >
+                            Ver minha atividade
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {submissionDetails?.status_corretor_1 === 'devolvida' ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
+                                <RotateCcw className="w-4 h-4" />
+                                Devolvida
+                              </div>
+                              <p className="text-xs text-red-500 pl-5">Refaça o exercício</p>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-sm text-amber-600">
+                              <Hourglass className="w-4 h-4" />
+                              Aguardando correção
+                            </div>
+                          )}
+                          <Button
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                            onClick={() => navigate(`/exercicios/${exercise.id}/producao-guiada`)}
+                          >
+                            Ver minha atividade
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Outros tipos - durante o período - já enviou */}
+                  {!isProducaoGuiada && availability.status === 'disponivel' && submissionData?.hasSubmitted && (
                     <Button
                       className="w-full bg-blue-600 text-white font-semibold"
                       disabled
@@ -288,8 +371,8 @@ export function ExerciseCard({
                     </Button>
                   )}
 
-                  {/* Após o período - com envio */}
-                  {availability.status === 'encerrado' && submissionData?.hasSubmitted && (
+                  {/* Outros tipos - após o período - com envio */}
+                  {!isProducaoGuiada && availability.status === 'encerrado' && submissionData?.hasSubmitted && (
                     <Button
                       className="w-full bg-blue-600 text-white font-semibold"
                       disabled

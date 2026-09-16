@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate, Link } from "react-router-dom";
 import { ProfessorLoginForm } from "@/components/login/ProfessorLoginForm";
 import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 export const ProfessorLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -14,7 +11,6 @@ export const ProfessorLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirecionar se já estiver logado
   useEffect(() => {
     if (professor) {
       if (professor.primeiro_login) {
@@ -25,66 +21,51 @@ export const ProfessorLogin = () => {
     }
   }, [professor, navigate]);
 
-  const handleLogin = async (data: { email: string; senha: string }) => {
+  const handleLogin = async (data: { email: string }) => {
     setLoading(true);
-
     try {
-      const result = await loginAsProfessor(data.email, data.senha);
-      
+      const result = await loginAsProfessor(data.email);
       if (result.error) {
-        toast({
-          title: "Erro no login",
-          description: result.error,
-          variant: "destructive"
-        });
+        toast({ title: "Erro no login", description: result.error, variant: "destructive" });
       }
-    } catch (error) {
-      console.error('Erro no login:', error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive"
-      });
+    } catch {
+      toast({ title: "Erro", description: "Ocorreu um erro inesperado. Tente novamente.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex justify-center">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <GraduationCap className="w-8 h-8 text-primary" />
-            </div>
+    <div className="min-h-screen overflow-hidden bg-gradient-to-br from-violet-50 via-white to-cyan-50 flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-[420px]">
+        <div className="rounded-[2rem] border border-violet-100 bg-white/85 p-6 shadow-2xl shadow-violet-200/40 backdrop-blur xl:p-8">
+
+          {/* Logo + título */}
+          <div className="flex flex-col items-center mb-6">
+            <img
+              src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
+              alt="Logo da plataforma"
+              className="w-20 h-20 object-contain mb-3"
+            />
+            <h2 className="text-xl font-bold text-slate-900">Acesso Professor</h2>
+            <p className="mt-1 text-sm text-slate-500 text-center">
+              App do Redator — área exclusiva para professores
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-primary">Professor</h1>
-          <p className="text-muted-foreground">
-            App do Redator
-          </p>
-        </div>
 
-        <Card className="border-primary/20 shadow-lg">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-primary">Entrar no Sistema</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ProfessorLoginForm onLogin={handleLogin} loading={loading} />
-          </CardContent>
-        </Card>
+          <ProfessorLoginForm onLogin={handleLogin} loading={loading} />
 
-        <div className="text-center">
-          <Link to="/">
-            <Button variant="ghost" className="text-muted-foreground">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar para página inicial
-            </Button>
-          </Link>
-        </div>
+          <div className="mt-5 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-800 hover:underline transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Voltar ao início
+            </Link>
+          </div>
 
-        <div className="text-center text-sm text-muted-foreground">
-          <p>
+          <p className="mt-3 text-center text-xs text-slate-400">
             Problemas para acessar? Entre em contato com o administrador.
           </p>
         </div>

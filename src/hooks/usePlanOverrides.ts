@@ -1,76 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-// Definir funcionalidades padrão por plano
-const DEFAULT_PLAN_FEATURES = {
-  'Largada': {
-    'temas': true,
-    'enviar_tema_livre': false,
-    'exercicios': false,
-    'simulados': false,
-    'lousa': false,
-    'biblioteca': false,
-    'redacoes_exemplares': false,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Lapidação': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Liderança': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': true,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Bolsista': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  }
-};
-
-type PlanType = 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
 
 interface PlanOverride {
   id: string;
@@ -83,7 +14,7 @@ interface PlanOverride {
 
 interface UsePlanOverridesProps {
   studentId?: string;
-  plano?: PlanType | null;
+  plano?: string | null;
 }
 
 export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) => {
@@ -91,35 +22,44 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Buscar overrides do aluno (usando service_role para contornar RLS)
+  // Features base do plano (fonte de verdade: banco)
+  const { data: dbPlanFeatures } = useQuery({
+    queryKey: ['db-plan-features', plano],
+    queryFn: async (): Promise<Record<string, boolean> | null> => {
+      if (!plano) return null;
+      const { data, error } = await supabase
+        .rpc('get_features_for_plan', { plan_name: plano });
+      if (error || !data || data.length === 0) return null;
+      return Object.fromEntries(
+        (data as { chave: string; habilitado: boolean }[]).map(r => [r.chave, r.habilitado])
+      );
+    },
+    enabled: !!plano,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  // Buscar overrides do aluno
   const loadOverrides = async () => {
     if (!studentId) return;
 
     setLoading(true);
     try {
-      // Usar rpc ou consulta direta para contornar RLS já que alunos não usam Supabase Auth
       let { data, error } = await supabase
-        .rpc('get_student_plan_overrides', {
-          student_uuid: studentId
-        });
+        .rpc('get_student_plan_overrides', { student_uuid: studentId });
 
-      // Se a função RPC não existir, tentar buscar diretamente da tabela
       if (error && error.code === '42883') {
-        console.log('⚠️ Função RPC não encontrada, tentando acesso direto à tabela...');
         const { data: directData, error: directError } = await supabase
           .from('plan_overrides')
           .select('*')
           .eq('student_id', studentId);
 
         if (directError) {
-          console.error('❌ Erro ao buscar overrides direto:', directError);
           return;
         }
-
         data = directData;
         error = null;
       } else if (error) {
-        console.error('Erro ao carregar overrides:', error);
         return;
       }
 
@@ -135,16 +75,16 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
     }
   };
 
-  // Verificar se uma funcionalidade está habilitada
+  // Verifica se uma funcionalidade está habilitada:
+  // override individual tem prioridade; senão usa a feature base do plano no banco.
   const isFunctionalityEnabled = (functionality: string): boolean => {
     if (!plano) return false;
 
-    // Usar override se existir, caso contrário usar o padrão do plano
     if (overrides[functionality] !== undefined) {
       return overrides[functionality];
     }
 
-    return DEFAULT_PLAN_FEATURES[plano]?.[functionality] || false;
+    return dbPlanFeatures?.[functionality] ?? false;
   };
 
   // Atualizar override de uma funcionalidade
@@ -159,7 +99,6 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
     }
 
     try {
-      // Usar RPC para garantir que a operação funcione independente do RLS
       let { error } = await supabase
         .rpc('upsert_student_plan_override', {
           student_uuid: studentId,
@@ -167,9 +106,7 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
           is_enabled: enabled
         });
 
-      // Se a função RPC não existir, fazer upsert direto na tabela
       if (error && error.code === '42883') {
-        console.log('⚠️ Função RPC upsert não encontrada, tentando upsert direto...');
         const { error: upsertError } = await supabase
           .from('plan_overrides')
           .upsert({
@@ -184,7 +121,6 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
       }
 
       if (error) {
-        console.error('Erro ao salvar override:', error);
         toast({
           title: "❌ Erro ao Salvar",
           description: `Erro ao salvar configuração: ${error.message}`,
@@ -193,15 +129,9 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
         return false;
       }
 
-      // Atualizar estado local
-      setOverrides(prev => ({
-        ...prev,
-        [functionality]: enabled
-      }));
-
+      setOverrides(prev => ({ ...prev, [functionality]: enabled }));
       return true;
     } catch (error) {
-      console.error('Erro ao salvar override:', error);
       toast({
         title: "❌ Erro ao Salvar",
         description: "Erro inesperado ao salvar configuração.",
@@ -223,14 +153,10 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
     }
 
     try {
-      // Usar RPC para resetar todos os overrides
       const { error } = await supabase
-        .rpc('reset_student_plan_overrides', {
-          student_uuid: studentId
-        });
+        .rpc('reset_student_plan_overrides', { student_uuid: studentId });
 
       if (error) {
-        console.error('Erro ao resetar overrides:', error);
         toast({
           title: "❌ Erro ao Resetar",
           description: `Erro ao resetar configurações: ${error.message}`,
@@ -239,7 +165,6 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
         return false;
       }
 
-      // Limpar estado local
       setOverrides({});
       toast({
         title: "✅ Resetado",
@@ -248,7 +173,6 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
 
       return true;
     } catch (error) {
-      console.error('Erro ao resetar overrides:', error);
       toast({
         title: "❌ Erro ao Resetar",
         description: "Erro inesperado ao resetar configurações.",
@@ -258,12 +182,8 @@ export const usePlanOverrides = ({ studentId, plano }: UsePlanOverridesProps) =>
     }
   };
 
-  // Verificar se há customizações ativas
-  const hasCustomizations = () => {
-    return Object.keys(overrides).length > 0;
-  };
+  const hasCustomizations = () => Object.keys(overrides).length > 0;
 
-  // Carregar overrides quando studentId mudar
   useEffect(() => {
     if (studentId) {
       loadOverrides();

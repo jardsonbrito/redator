@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,8 @@ import { useCredits } from "@/hooks/useCredits";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { gerarImagemA4DeTexto, validarImagemGerada, gerarNomeArquivoA4, contarPalavras } from "@/utils/gerarImagemA4";
-import { getTurmaCode } from "@/utils/turmaUtils";
+import { getTurmaCode, normalizeTurmaToLetter } from "@/utils/turmaUtils";
+import { corrigirOrientacaoImagem } from "@/utils/corrigirOrientacaoImagem";
 
 interface RedacaoFormUnificadoProps {
   // Configurações do formulário
@@ -30,6 +31,7 @@ interface RedacaoFormUnificadoProps {
   // Dados de contexto
   fonte?: string;
   exercicioId?: string;
+  processoSeletivoCandidatoId?: string | null; // ID do candidato do processo seletivo
 
   // Callbacks
   onSubmitSuccess?: () => void;
@@ -47,6 +49,7 @@ export const RedacaoFormUnificado = ({
   requiredCredits = 1,
   fonte,
   exercicioId,
+  processoSeletivoCandidatoId,
   onSubmitSuccess,
   className
 }: RedacaoFormUnificadoProps) => {
@@ -66,8 +69,19 @@ export const RedacaoFormUnificado = ({
   const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [tipoRedacao, setTipoRedacao] = useState<"manuscrita" | "digitada">("digitada");
-  const [corretores, setCorretores] = useState<any[]>([]);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  // todosCorretores: lista filtrada por turma mas ainda NÃO filtrada por tipo de redação
+  const [todosCorretores, setTodosCorretores] = useState<any[]>([]);
   const [loadingCorretores, setLoadingCorretores] = useState(true);
+
+  // Corretores compatíveis com o tipo de redação selecionado pelo aluno
+  const corretores = useMemo(() => {
+    return todosCorretores.filter((c) => {
+      if (tipoRedacao === "manuscrita") return c.aceita_manuscrita !== false;
+      if (tipoRedacao === "digitada")   return c.aceita_digitada   !== false;
+      return true;
+    });
+  }, [todosCorretores, tipoRedacao]);
 
   // Determinar tipo de usuário e envio
   const userType = localStorage.getItem("userType");
@@ -75,14 +89,26 @@ export const RedacaoFormUnificado = ({
 
   let tipoEnvio = "avulsa";
   let turmaCode = "visitante";
+  const isProcessoSeletivo = !!processoSeletivoCandidatoId;
 
   if (isSimulado) {
     tipoEnvio = "simulado";
+    if (userType === "aluno") {
+      turmaCode = studentData.turma || alunoTurma || "visitante";
+    }
+  } else if (isProcessoSeletivo) {
+    tipoEnvio = "processo_seletivo";
+    if (userType === "aluno") {
+      turmaCode = studentData.turma || alunoTurma || "visitante";
+    }
   } else if (exercicioId) {
     tipoEnvio = "exercicio";
-  } else if (userType === "aluno" && alunoTurma) {
+    if (userType === "aluno") {
+      turmaCode = studentData.turma || alunoTurma || "visitante";
+    }
+  } else if (userType === "aluno") {
     tipoEnvio = "regular";
-    turmaCode = getTurmaCode(alunoTurma);
+    turmaCode = studentData.turma || alunoTurma || "visitante";
   }
 
   // Hook para gerenciar créditos
@@ -100,7 +126,7 @@ export const RedacaoFormUnificado = ({
   useEffect(() => {
     if (userType === "aluno") {
       const alunoEmail = studentData.email || localStorage.getItem("alunoEmail");
-      const alunoNome = localStorage.getItem("alunoNome") || "Aluno";
+      const alunoNome = studentData.nomeUsuario || studentData.nome || localStorage.getItem("alunoNome") || "";
 
       if (alunoEmail && !email) {
         setEmail(alunoEmail);
@@ -121,16 +147,52 @@ export const RedacaoFormUnificado = ({
   }, [userType, fraseTematica, studentData]);
 
   const fetchCorretores = async () => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🚀 RedacaoFormUnificado - BUSCA DE CORRETORES');
+    console.log('═══════════════════════════════════════════════════════');
+
     try {
       const { data, error } = await supabase
         .from('corretores')
-        .select('id, nome_completo, email')
+        .select('id, nome_completo, email, turmas_autorizadas, aceita_manuscrita, aceita_digitada')
         .eq('ativo', true)
         .eq('visivel_no_formulario', true)
         .order('nome_completo');
 
       if (error) throw error;
-      setCorretores(data || []);
+
+      console.log('📦 DADOS RECEBIDOS DO BANCO:', data);
+      console.log('👤 TURMA DO ALUNO (alunoTurma):', alunoTurma);
+      console.log('👤 TURMA DO ALUNO (studentData.turma):', studentData.turma);
+
+      let corretoresFiltrados = data || [];
+
+      const turmaAluno = studentData.turma || alunoTurma;
+
+      if (turmaAluno) {
+        const turmaNormalizadaAluno = normalizeTurmaToLetter(turmaAluno);
+
+        corretoresFiltrados = corretoresFiltrados.filter(corretor => {
+          // Sem turmas configuradas → disponível para todos
+          if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
+            return true;
+          }
+
+          return corretor.turmas_autorizadas.some((t: string) => {
+            // 1) Comparação direta (cobre "Redatores 2026", nomes completos, etc.)
+            if (t === turmaAluno) return true;
+            // 2) Normalização por letra (cobre "TURMA A", "LRA2025", "A", etc.)
+            if (turmaNormalizadaAluno) {
+              const tNorm = normalizeTurmaToLetter(t);
+              if (tNorm && tNorm === turmaNormalizadaAluno) return true;
+            }
+            return false;
+          });
+        });
+      }
+
+      console.log('🔍 DEBUG RedacaoFormUnificado - Corretores filtrados por turma:', corretoresFiltrados);
+      setTodosCorretores(corretoresFiltrados);
     } catch (error: any) {
       console.error('Erro ao buscar corretores:', error);
       toast({
@@ -151,19 +213,55 @@ export const RedacaoFormUnificado = ({
     const totalPalavras = textoLimpo ? textoLimpo.split(/\s+/).length : 0;
     setPalavras(totalPalavras);
 
-    // Validar limite de 500 palavras
-    if (totalPalavras > 500) {
+    // Validar limite de 550 palavras
+    if (totalPalavras > 550) {
       toast({
         title: "Limite de palavras excedido",
-        description: `Sua redação tem ${totalPalavras} palavras. O limite é 500 palavras.`,
+        description: `Sua redação tem ${totalPalavras} palavras. O limite é 550 palavras.`,
         variant: "destructive",
         duration: 3000
       });
     }
   };
 
+  // Verificar se o aluno tem redação pendente com o corretor
+  const verificarPendenciaCorretor = async (corretorId: string): Promise<boolean> => {
+    try {
+      const emailCredito = getCreditEmail();
+      if (!emailCredito) return false;
+
+      const { data, error } = await supabase.rpc('verificar_redacao_pendente_corretor', {
+        p_email_aluno: emailCredito,
+        p_corretor_id: corretorId,
+        p_tipo_envio: tipoEnvio
+      });
+
+      if (error) {
+        console.error('Erro ao verificar pendência:', error);
+        return false;
+      }
+
+      if (data && data.length > 0 && data[0].tem_pendente) {
+        const temaExibicao = data[0].tema ?
+          `"${data[0].tema.substring(0, 30)}${data[0].tema.length > 30 ? '...' : ''}"` :
+          'uma redação';
+        toast({
+          title: "Corretor indisponível",
+          description: `Você já tem uma redação pendente com este corretor (${temaExibicao}). Aguarde a correção para enviar outra.`,
+          variant: "destructive",
+          duration: 6000
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar pendência com corretor:', error);
+      return false;
+    }
+  };
+
   // Seleção de corretores
-  const handleCorretorToggle = (corretorId: string, checked: boolean) => {
+  const handleCorretorToggle = async (corretorId: string, checked: boolean) => {
     let newSelected = [...selectedCorretores];
 
     if (checked) {
@@ -178,6 +276,13 @@ export const RedacaoFormUnificado = ({
         });
         return;
       }
+
+      // Verificar se tem pendência com este corretor
+      const temPendencia = await verificarPendenciaCorretor(corretorId);
+      if (temPendencia) {
+        return; // Não adicionar o corretor se já tem pendência
+      }
+
       newSelected.push(corretorId);
     } else {
       newSelected = newSelected.filter(id => id !== corretorId);
@@ -186,34 +291,55 @@ export const RedacaoFormUnificado = ({
     setSelectedCorretores(newSelected);
   };
 
-  // Upload de arquivo
-  const handleRedacaoManuscritaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload de arquivo — com correção automática de orientação para imagens
+  const handleRedacaoManuscritaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Verificar tamanho (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "O arquivo deve ter no máximo 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!file) return;
 
-      // Verificar tipo
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: "Tipo de arquivo não suportado",
-          description: "Use apenas JPG, PNG ou PDF.",
-          variant: "destructive",
-        });
-        return;
-      }
+    // Verificar tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "O arquivo deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      setRedacaoManuscrita(file);
-      const url = URL.createObjectURL(file);
-      setRedacaoManuscritaUrl(url);
+    // Verificar tipo — PDF não é aceito pois o sistema de correção requer imagem
+    if (file.type === 'application/pdf') {
+      toast({
+        title: "Formato não aceito",
+        description: "A redação deve ser enviada como foto (JPG ou PNG). Tire uma foto da sua redação manuscrita e envie no formato de imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Tipo de arquivo não suportado",
+        description: "Use apenas JPG ou PNG.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Revogar URL anterior para evitar vazamento de memória
+    if (redacaoManuscritaUrl) {
+      URL.revokeObjectURL(redacaoManuscritaUrl);
+      setRedacaoManuscritaUrl(null);
+    }
+
+    // Corrigir orientação da imagem (EXIF + landscape → portrait)
+    setIsProcessingImage(true);
+    try {
+      const fileCorrigido = await corrigirOrientacaoImagem(file);
+      setRedacaoManuscrita(fileCorrigido);
+      setRedacaoManuscritaUrl(URL.createObjectURL(fileCorrigido));
+    } finally {
+      setIsProcessingImage(false);
     }
   };
 
@@ -259,9 +385,9 @@ export const RedacaoFormUnificado = ({
         throw new Error("Selecione o arquivo da redação manuscrita");
       }
 
-      // Validar limite de 500 palavras para redação digitada
-      if (tipoRedacao === "digitada" && palavras > 500) {
-        throw new Error(`Sua redação tem ${palavras} palavras. O limite é 500 palavras.`);
+      // Validar limite de 550 palavras para redação digitada
+      if (tipoRedacao === "digitada" && palavras > 550) {
+        throw new Error(`Sua redação tem ${palavras} palavras. O limite é 550 palavras.`);
       }
 
       // Verificar créditos para alunos
@@ -344,7 +470,9 @@ export const RedacaoFormUnificado = ({
 
       if (userType === "aluno") {
         const alunoEmail = studentData.email || localStorage.getItem("alunoEmail");
-        const alunoNome = localStorage.getItem("alunoNome") || "Aluno";
+        const alunoNome = studentData.nomeUsuario || (() => {
+          try { return JSON.parse(localStorage.getItem("alunoData") || "{}").nome; } catch { return null; }
+        })() || "";
 
         if (alunoEmail) {
           finalEmail = alunoEmail.toLowerCase().trim();
@@ -382,8 +510,8 @@ export const RedacaoFormUnificado = ({
 
         if (redacaoError) throw redacaoError;
       } else {
-        // Para redações regulares (incluindo exercícios)
-        const redacaoData = {
+        // Para redações regulares (incluindo exercícios e processo seletivo)
+        const redacaoData: Record<string, any> = {
           nome_aluno: finalNomeCompleto,
           email_aluno: finalEmail,
           frase_tematica: fraseTematicaLocal.trim(),
@@ -398,15 +526,44 @@ export const RedacaoFormUnificado = ({
           corretor_id_2: selectedCorretores[1] || null
         };
 
-        const { error: redacaoError } = await supabase
+        // Se for processo seletivo, vincular ao candidato
+        if (processoSeletivoCandidatoId) {
+          redacaoData.processo_seletivo_candidato_id = processoSeletivoCandidatoId;
+        }
+
+        const { data: redacaoInserida, error: redacaoError } = await supabase
           .from('redacoes_enviadas')
-          .insert(redacaoData);
+          .insert(redacaoData)
+          .select('id')
+          .single();
 
         if (redacaoError) throw redacaoError;
+
+        // Se for processo seletivo, atualizar o status do candidato para "concluido"
+        if (processoSeletivoCandidatoId) {
+          const { error: updateCandidatoError } = await supabase
+            .from('ps_candidatos')
+            .update({
+              status: 'concluido',
+              data_conclusao: new Date().toISOString()
+            })
+            .eq('id', processoSeletivoCandidatoId);
+
+          if (updateCandidatoError) {
+            console.error('Erro ao atualizar status do candidato:', updateCandidatoError);
+            // Não lançar erro pois a redação já foi enviada
+          }
+
+          // Marcar participação no perfil
+          await supabase
+            .from('profiles')
+            .update({ participou_processo_seletivo: true })
+            .eq('email', finalEmail);
+        }
       }
 
-      // Consumir créditos se for aluno
-      if (userType === "aluno") {
+      // Consumir créditos se for aluno (exceto processo seletivo que é gratuito)
+      if (userType === "aluno" && requiredCredits > 0 && !isProcessoSeletivo) {
         const success = await consumeCredits(
           requiredCredits,
           isSimulado ? `Envio de redação de simulado` : 'Envio de redação'
@@ -421,12 +578,16 @@ export const RedacaoFormUnificado = ({
           return;
         }
       } else {
-        // Toast apenas para visitantes (alunos já recebem o toast de créditos)
+        // Toast para visitantes ou processo seletivo
+        const description = isProcessoSeletivo
+          ? "Sua redação do Processo Seletivo foi enviada com sucesso! Aguarde o resultado."
+          : isSimulado
+            ? "Sua redação do simulado foi enviada para correção."
+            : "Sua redação foi enviada para correção.";
+
         toast({
           title: "✅ Redação enviada com sucesso!",
-          description: isSimulado ?
-            "Sua redação do simulado foi enviada para correção." :
-            "Sua redação foi enviada para correção.",
+          description,
           className: "border-green-200 bg-green-50 text-green-900",
           duration: 5000
         });
@@ -439,6 +600,13 @@ export const RedacaoFormUnificado = ({
         });
       }
 
+      // Invalidar cache do processo seletivo se aplicável
+      if (isProcessoSeletivo) {
+        queryClient.invalidateQueries({ queryKey: ['ps-candidato'] });
+        queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
+        queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
+      }
+
       // Callback de sucesso
       if (onSubmitSuccess) {
         onSubmitSuccess();
@@ -446,6 +614,8 @@ export const RedacaoFormUnificado = ({
         // Navegar para página apropriada
         if (isSimulado) {
           navigate('/app');
+        } else if (isProcessoSeletivo) {
+          navigate('/processo-seletivo');
         } else {
           navigate('/minhas-redacoes');
         }
@@ -482,14 +652,20 @@ export const RedacaoFormUnificado = ({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <h2 className="text-lg sm:text-xl font-semibold">
               {isSimulado ? 'Enviar Redação do Simulado' :
+               isProcessoSeletivo ? 'Redação do Processo Seletivo' :
                (fonte === 'tema' ? 'Redação sobre o Tema Selecionado' :
                 (userType === "aluno" ? 'Enviar Redação — Tema Livre' : 'Enviar Redação Avulsa — Tema Livre'))}
             </h2>
             <div className="flex items-center gap-2">
-              {userType === "aluno" && (
+              {userType === "aluno" && !isProcessoSeletivo && (
                 <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
                   {creditsLoading ? "..." : credits}
                 </div>
+              )}
+              {isProcessoSeletivo && (
+                <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">
+                  Gratuito
+                </span>
               )}
             </div>
           </div>
@@ -546,6 +722,8 @@ export const RedacaoFormUnificado = ({
               value={tipoRedacao}
               onValueChange={(value: "manuscrita" | "digitada") => {
                 setTipoRedacao(value);
+                // Limpar corretores selecionados: a lista de compatíveis pode mudar
+                setSelectedCorretores([]);
                 if (value === "manuscrita") {
                   setRedacaoTexto("");
                   setPalavras(0);
@@ -572,7 +750,7 @@ export const RedacaoFormUnificado = ({
               <CardContent className="p-4 text-center border-2 border-dashed border-purple-400 rounded-xl">
                 <input
                   type="file"
-                  accept="image/png, image/jpeg, application/pdf"
+                  accept="image/png, image/jpeg"
                   className="hidden"
                   id="upload-file"
                   onChange={handleRedacaoManuscritaChange}
@@ -585,11 +763,18 @@ export const RedacaoFormUnificado = ({
                   Selecionar arquivo da redação
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  Somente JPG, PNG ou PDF (máx. 5MB)
+                  Somente JPG ou PNG (máx. 5MB)
                 </p>
 
+                {/* Feedback de processamento de orientação */}
+                {isProcessingImage && (
+                  <div className="mt-4 text-sm text-purple-700 font-medium animate-pulse">
+                    Ajustando orientação da imagem...
+                  </div>
+                )}
+
                 {/* Preview do arquivo */}
-                {redacaoManuscritaUrl && (
+                {!isProcessingImage && redacaoManuscritaUrl && (
                   <div className="relative mt-4 max-w-md mx-auto">
                     {redacaoManuscrita?.type === 'application/pdf' ? (
                       <div className="bg-white rounded-lg border p-4">
@@ -627,24 +812,24 @@ export const RedacaoFormUnificado = ({
               <div className="flex justify-between items-center">
                 <Label htmlFor="redacao" className="text-sm">Texto da Redação</Label>
                 <span className={`text-xs font-medium ${
-                  palavras > 500 ? 'text-red-600' :
-                  palavras > 450 ? 'text-amber-600' :
+                  palavras > 550 ? 'text-red-600' :
+                  palavras > 500 ? 'text-amber-600' :
                   'text-gray-500'
                 }`}>
-                  Palavras: {palavras}/500
+                  Palavras: {palavras}/550
                 </span>
               </div>
               <Textarea
                 id="redacao"
                 rows={10}
-                className={`resize-none ${palavras > 500 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                className={`resize-none ${palavras > 550 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 value={redacaoTexto}
                 onChange={handleTextoChange}
                 required
               />
-              {palavras > 500 && (
+              {palavras > 550 && (
                 <p className="text-xs text-red-600 mt-1">
-                  ⚠️ Você excedeu o limite de 500 palavras. Por favor, reduza o texto.
+                  ⚠️ Você excedeu o limite de 550 palavras. Por favor, reduza o texto.
                 </p>
               )}
             </div>
@@ -662,6 +847,12 @@ export const RedacaoFormUnificado = ({
             </h3>
             {loadingCorretores ? (
               <p className="text-sm text-gray-500">Carregando corretores...</p>
+            ) : corretores.length === 0 ? (
+              <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Nenhum corretor disponível para redações{" "}
+                {tipoRedacao === "manuscrita" ? "manuscritas / foto" : "digitadas"} no momento.
+                Tente selecionar o outro tipo de envio ou aguarde a disponibilidade.
+              </p>
             ) : (
               <div className="space-y-2">
                 {corretores.map((corretor) => (
@@ -689,9 +880,9 @@ export const RedacaoFormUnificado = ({
           <Button
             type="submit"
             className="w-full text-white bg-purple-600 hover:bg-purple-700 rounded-xl py-3 text-lg font-semibold mt-6"
-            disabled={isSubmitting || (userType === "aluno" && (creditsLoading || credits < requiredCredits))}
+            disabled={isSubmitting || isProcessingImage || (userType === "aluno" && !isProcessoSeletivo && (creditsLoading || credits < requiredCredits))}
           >
-            {isSubmitting ? "Enviando..." : "Enviar Redação"}
+            {isSubmitting ? "Enviando..." : isProcessingImage ? "Processando imagem..." : isProcessoSeletivo ? "Enviar Redação do Processo Seletivo" : "Enviar Redação"}
           </Button>
         </form>
       </CardContent>

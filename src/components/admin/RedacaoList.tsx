@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { RedacaoExemplarCardPadrao } from '@/components/shared/RedacaoExemplarCardPadrao';
 import { trackAdminEvent } from '@/utils/telemetry';
 import {
@@ -24,6 +25,7 @@ import { RedacaoForm } from './RedacaoForm';
 
 export const RedacaoList = () => {
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -33,9 +35,9 @@ export const RedacaoList = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes')
-        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor')
+        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, autor, foto_autor, atualizado_banca, ano_banca, ativo')
         .order('data_envio', { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -47,34 +49,48 @@ export const RedacaoList = () => {
     }
   }, [redacoes]);
 
+  const handleToggleAtivo = async (id: string, currentStatus: boolean) => {
+    try {
+      if (!isAdmin || !user) {
+        throw new Error('Usuário não tem permissões de administrador');
+      }
+
+      const { error } = await supabase
+        .from('redacoes')
+        .update({ ativo: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Invalidar queries e forçar refetch
+      await queryClient.invalidateQueries({ queryKey: ['admin-redacoes'] });
+      await queryClient.invalidateQueries({ queryKey: ['redacoes'] });
+      await refetch();
+
+      toast({
+        title: currentStatus ? "Redação Inativada" : "Redação Ativada",
+        description: currentStatus
+          ? "A redação não estará mais visível para os usuários."
+          : "A redação está agora visível para os usuários.",
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao alterar status da redação:', error);
+      toast({
+        title: "Erro ao alterar status",
+        description: error.message || "Não foi possível alterar o status da redação.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       console.log('🗑️ Iniciando exclusão da redação com ID:', id);
-      
-      // Verificar autenticação do usuário
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Usuário não autenticado');
-      }
-      console.log('✅ Usuário autenticado:', user.email);
 
-      // Verificar se é admin usando a tabela admin_users
-      const { data: adminUser, error: adminError } = await supabase
-        .from('admin_users')
-        .select('ativo')
-        .eq('email', user.email?.toLowerCase())
-        .eq('ativo', true)
-        .single();
-
-      if (adminError || !adminUser) {
-        console.error('❌ Erro ao verificar permissões admin:', adminError);
-        // Fallback para emails hardcoded (compatibilidade)
-        const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
-        if (!adminEmails.includes(user.email?.toLowerCase() || '')) {
-          throw new Error('Usuário não tem permissões de administrador');
-        }
+      if (!isAdmin || !user) {
+        throw new Error('Usuário não tem permissões de administrador');
       }
-      console.log('✅ Usuário confirmado como admin');
 
       // Verificar se a redação existe antes da exclusão
       const { data: existingRedacao, error: checkError } = await supabase
@@ -179,28 +195,34 @@ export const RedacaoList = () => {
       {redacoes && redacoes.length > 0 ? (
         <>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {redacoes.map((redacao) => (
-              <RedacaoExemplarCardPadrao
-                key={redacao.id}
-                redacao={{
-                  id: redacao.id,
-                  frase_tematica: redacao.frase_tematica || 'Redação Exemplar',
-                  eixo_tematico: redacao.eixo_tematico,
-                  conteudo: redacao.conteudo,
-                  data_envio: redacao.data_envio,
-                  autor: redacao.autor,
-                  foto_autor: redacao.foto_autor,
-                  pdf_url: redacao.pdf_url,
-                  dica_de_escrita: redacao.dica_de_escrita,
-                  // data_agendamento: redacao.data_agendamento // Campo ainda não existe no banco
-                }}
-                perfil="admin"
-                actions={{
-                  onEditar: () => setEditingId(redacao.id),
-                  onExcluir: () => setDeleteId(redacao.id)
-                }}
-              />
-            ))}
+            {[...redacoes]
+              .sort((a, b) =>
+                (a.frase_tematica || '').localeCompare(b.frase_tematica || '', 'pt-BR')
+              )
+              .map((redacao) => (
+                <RedacaoExemplarCardPadrao
+                  key={redacao.id}
+                  redacao={{
+                    id: redacao.id,
+                    frase_tematica: redacao.frase_tematica || 'Redação Exemplar',
+                    eixo_tematico: redacao.eixo_tematico,
+                    conteudo: redacao.conteudo,
+                    data_envio: redacao.data_envio,
+                    autor: redacao.autor,
+                    foto_autor: redacao.foto_autor,
+                    pdf_url: redacao.pdf_url,
+                    atualizado_banca: redacao.atualizado_banca,
+                    ano_banca: redacao.ano_banca,
+                    ativo: redacao.ativo ?? true,
+                  }}
+                  perfil="admin"
+                  actions={{
+                    onEditar: () => setEditingId(redacao.id),
+                    onExcluir: () => setDeleteId(redacao.id),
+                    onToggleAtivo: () => handleToggleAtivo(redacao.id, redacao.ativo ?? true)
+                  }}
+                />
+              ))}
           </div>
 
           <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

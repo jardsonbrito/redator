@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, User, Shield, ShieldCheck } from "lucide-react";
+import { Mail, User } from "lucide-react";
+
+interface Turma {
+  id: string;
+  nome: string;
+}
 
 interface ProfessorFormProps {
   onSuccess: () => void;
@@ -17,13 +22,26 @@ interface ProfessorFormProps {
 export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: ProfessorFormProps) => {
   const [nomeCompleto, setNomeCompleto] = useState(professorEditando?.nome_completo || "");
   const [email, setEmail] = useState(professorEditando?.email || "");
-  const [role, setRole] = useState(professorEditando?.role || "professor");
+  const [turmaId, setTurmaId] = useState<string>(professorEditando?.turma_id || "none");
+  const [turmas, setTurmas] = useState<Turma[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const fetchTurmas = async () => {
+      const { data } = await supabase
+        .from("turmas_professores")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome");
+      setTurmas(data || []);
+    };
+    fetchTurmas();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!nomeCompleto.trim() || !email.trim()) {
       toast({
         title: "Campos obrigatórios",
@@ -33,14 +51,9 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
       return;
     }
 
-    // Validação básica de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast({
-        title: "E-mail inválido",
-        description: "Por favor, insira um e-mail válido.",
-        variant: "destructive"
-      });
+      toast({ title: "E-mail inválido", description: "Por favor, insira um e-mail válido.", variant: "destructive" });
       return;
     }
 
@@ -48,83 +61,51 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
 
     try {
       if (professorEditando) {
-        // Atualizar professor existente
         const { data, error } = await supabase.rpc('atualizar_professor', {
           professor_id: professorEditando.id,
           p_nome_completo: nomeCompleto.trim(),
           p_email: email.toLowerCase().trim(),
-          p_role: role
+          p_role: 'professor',
+          p_turma_id: turmaId === "none" ? null : turmaId
         });
 
         if (error) throw error;
 
         const result = data as any;
         if (!result.success) {
-          toast({
-            title: "Erro",
-            description: result.message,
-            variant: "destructive"
-          });
+          toast({ title: "Erro", description: result.message, variant: "destructive" });
           return;
         }
 
-        toast({
-          title: "Professor atualizado",
-          description: "Os dados do professor foram atualizados com sucesso."
-        });
+        toast({ title: "Professor atualizado", description: "Dados atualizados com sucesso." });
       } else {
-        // Criar novo professor com usuário Auth
-        console.log('🔄 Chamando Edge Function criar-professor-auth com:', {
-          nome_completo: nomeCompleto.trim(),
-          email: email.toLowerCase().trim(),
-          role: role
-        });
-
         const { data, error } = await supabase.functions.invoke('criar-professor-auth', {
           body: {
             nome_completo: nomeCompleto.trim(),
             email: email.toLowerCase().trim(),
-            role: role
+            role: 'professor',
+            turma_id: turmaId === "none" ? null : turmaId
           }
         });
 
-        console.log('📥 Resposta do Edge Function:', { data, error });
-
-        if (error) {
-          console.error('❌ Erro no Edge Function:', error);
-          throw error;
-        }
+        if (error) throw error;
 
         const result = data as any;
         if (!result.success) {
-          console.error('❌ Edge Function retornou erro:', result);
-          toast({
-            title: "Erro",
-            description: result.message,
-            variant: "destructive"
-          });
+          toast({ title: "Erro", description: result.message, variant: "destructive" });
           return;
         }
 
-        console.log('✅ Professor criado com sucesso via Edge Function');
-        toast({
-          title: "Professor criado",
-          description: "Novo professor criado com sucesso. Senha padrão: 123456"
-        });
+        toast({ title: "Professor criado", description: "Novo professor criado com sucesso." });
       }
 
-      // Limpar formulário
       setNomeCompleto("");
       setEmail("");
-      setRole("professor");
+      setTurmaId("none");
       onSuccess();
     } catch (error: any) {
       console.error('Erro ao salvar professor:', error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao salvar o professor. Tente novamente.",
-        variant: "destructive"
-      });
+      toast({ title: "Erro", description: "Ocorreu um erro ao salvar o professor. Tente novamente.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -133,10 +114,8 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
   const handleCancel = () => {
     setNomeCompleto("");
     setEmail("");
-    setRole("professor");
-    if (onCancelEdit) {
-      onCancelEdit();
-    }
+    setTurmaId("none");
+    if (onCancelEdit) onCancelEdit();
   };
 
   return (
@@ -151,9 +130,7 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nome" className="text-sm font-medium">
-                Nome Completo *
-              </Label>
+              <Label htmlFor="nome">Nome Completo *</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
@@ -169,9 +146,7 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                E-mail *
-              </Label>
+              <Label htmlFor="email">E-mail *</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
@@ -187,30 +162,22 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Tipo de Acesso *</Label>
-            <RadioGroup value={role} onValueChange={setRole}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="professor" id="professor" />
-                <Label htmlFor="professor" className="flex items-center gap-2 cursor-pointer">
-                  <Shield className="w-4 h-4 text-blue-500" />
-                  Professor
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="admin" id="admin" />
-                <Label htmlFor="admin" className="flex items-center gap-2 cursor-pointer">
-                  <ShieldCheck className="w-4 h-4 text-green-500" />
-                  Administrador
-                </Label>
-              </div>
-            </RadioGroup>
-            <p className="text-xs text-muted-foreground">
-              {!professorEditando && "Senha temporária: 123456 (será solicitada troca no primeiro login)"}
-            </p>
+          <div className="space-y-2">
+            <Label htmlFor="turma">Turma</Label>
+            <Select value={turmaId} onValueChange={setTurmaId}>
+              <SelectTrigger id="turma">
+                <SelectValue placeholder="Selecione uma turma (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem turma</SelectItem>
+                {turmas.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={loading} className="flex-1">
               {loading ? "Salvando..." : professorEditando ? "Atualizar Professor" : "Criar Professor"}
             </Button>

@@ -21,38 +21,16 @@ const converterNota1000ParaNota10 = (nota: number): number => {
   return nota / 100; // 800 -> 8.0
 };
 
+// Média final: frequência + redações + lousas + simulados (÷ 4)
 const calcularMediaOnline = (
   frequencia: number,
-  participacao: number,
   redacoes: number,
   lousas: number,
   simulados: number
 ): number => {
-  return (frequencia + participacao + redacoes + lousas + simulados) / 5;
+  return (frequencia + redacoes + lousas + simulados) / 4;
 };
 
-const calcularNovaMediaFinal = (
-  frequencia: number,
-  participacao: number,
-  redacoes: number,
-  lousas: number,
-  simulados: number
-): number => {
-  return (frequencia + participacao + redacoes + lousas + simulados) / 5;
-};
-
-const calcularMediaFinalComAvaliacao = (
-  mediaOnline: number,
-  notaAvaliacaoPresencial: number | null
-): number => {
-  // Se não houver avaliação presencial, retorna apenas a média online
-  if (notaAvaliacaoPresencial === null || notaAvaliacaoPresencial === undefined) {
-    return mediaOnline;
-  }
-
-  // Se houver avaliação presencial: (Média Online + Avaliação Presencial) ÷ 2
-  return (mediaOnline + notaAvaliacaoPresencial) / 2;
-};
 
 // Hook para gerenciar etapas
 export function useEtapas(turma?: string) {
@@ -229,7 +207,8 @@ export function useAulaMutation() {
             turma: aula.turma,
             data_aula: aula.data_aula,
             conteudo_ministrado: aula.conteudo_ministrado,
-            observacoes: aula.observacoes
+            observacoes: aula.observacoes,
+            tipo_aula: aula.tipo_aula || null,
           })
           .eq('id', aula.id)
           .select()
@@ -246,7 +225,8 @@ export function useAulaMutation() {
             data_aula: aula.data_aula,
             conteudo_ministrado: aula.conteudo_ministrado,
             observacoes: aula.observacoes,
-            professor_email: aula.professor_email
+            professor_email: aula.professor_email,
+            tipo_aula: aula.tipo_aula || null,
           })
           .select()
           .single();
@@ -418,7 +398,9 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           .from('aulas_diario')
           .select('id, turma')
           .in('turma', possiveisTurmas)
-          .eq('etapa_id', etapa.id);
+          .eq('etapa_id', etapa.id)
+          .is('origem_aula_virtual_id', null) // Excluir entradas criadas por aulas ao vivo (contadas em totalAulasVirtuais)
+          .or('tipo_aula.is.null,tipo_aula.neq.nivelamento'); // Nivelamento é convite — não penaliza frequência
 
         // Buscar presença do aluno nessas aulas do diário
         const aulaIds = aulas?.map(a => a.id) || [];
@@ -447,27 +429,56 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
         let presencasVirtuais = 0;
 
         try {
-          // Buscar aulas virtuais do período da etapa para a turma do aluno
-          // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
-          const { data: aulasVirtuais } = await supabase
+          // Buscar aulas virtuais do período com aula_mae_id para agrupamento pedagógico
+          // Repetições da mesma aula são agrupadas e contam como 1 unidade pedagógica
+          const { data: rawAulas } = await supabase
             .from('aulas_virtuais')
-            .select('id')
+            .select('id, aula_mae_id, tipo_aula')
             .eq('ativo', true)
             .gte('data_aula', etapa.data_inicio)
             .lt('data_aula', etapa.data_fim + 'T23:59:59')
             .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
-          if (aulasVirtuais && aulasVirtuais.length > 0) {
-            totalAulasVirtuais = aulasVirtuais.length;
+          // Nivelamento é convite — não entra no denominador de frequência
+          const aulasVirtuais = (rawAulas || []).filter((a: any) => a.tipo_aula !== 'nivelamento') as { id: string; aula_mae_id: string | null }[];
 
+          if (aulasVirtuais.length > 0) {
+            // Agrupar: aulas raiz (aula_mae_id IS NULL) são unidades pedagógicas independentes
+            // Repetições (aula_mae_id NOT NULL) se juntam ao grupo da aula mãe
+            const grupos: Record<string, string[]> = {};
+            for (const aula of aulasVirtuais.filter(a => !a.aula_mae_id)) {
+              grupos[aula.id] = [aula.id];
+            }
+            // Mãe fora do período: múltiplas filhas com o mesmo mae_id devem ser agrupadas
+            const maeForaDoperiodo = new Map<string, string>();
+            for (const aula of aulasVirtuais.filter(a => !!a.aula_mae_id)) {
+              if (grupos[aula.aula_mae_id!]) {
+                grupos[aula.aula_mae_id!].push(aula.id);
+              } else if (maeForaDoperiodo.has(aula.aula_mae_id!)) {
+                const repId = maeForaDoperiodo.get(aula.aula_mae_id!)!;
+                grupos[repId].push(aula.id);
+              } else {
+                grupos[aula.id] = [aula.id];
+                maeForaDoperiodo.set(aula.aula_mae_id!, aula.id);
+              }
+            }
+
+            totalAulasVirtuais = Object.keys(grupos).length;
+
+            const todosIds = aulasVirtuais.map(a => a.id);
             const { data: presencasAulasVirtuais } = await supabase
               .from('presenca_aulas')
-              .select('entrada_at')
+              .select('aula_id')
               .eq('email_aluno', alunoEmail.toLowerCase())
-              .in('aula_id', aulasVirtuais.map(a => a.id))
+              .in('aula_id', todosIds)
               .not('entrada_at', 'is', null);
 
-            presencasVirtuais = presencasAulasVirtuais?.length || 0;
+            const idsComPresenca = new Set(presencasAulasVirtuais?.map(p => p.aula_id) || []);
+
+            // Contar grupos onde o aluno tem presença em qualquer sessão
+            presencasVirtuais = Object.values(grupos).filter(ids =>
+              ids.some(id => idsComPresenca.has(id))
+            ).length;
           }
         } catch (error) {
           console.error('Erro ao buscar aulas virtuais:', error);
@@ -498,7 +509,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             .select('nota_total, status')
             .ilike('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
-            .lt('data_envio', etapa.data_fim + 'T23:59:59');
+            .lt('data_envio', etapa.data_fim + 'T23:59:59')
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!redacoesError && redacoes) {
             // Filtrar redações válidas (não devolvidas e com nota)
@@ -529,7 +541,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             .ilike('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
             .lt('data_envio', etapa.data_fim + 'T23:59:59')
-            .is('devolvida_por', null); // Não devolvidas
+            .is('devolvida_por', null) // Não devolvidas
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!simuladosError && simulados) {
             const simuladosComNota = simulados.filter(s => 
@@ -585,7 +598,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             .eq('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
             .lt('data_envio', etapa.data_fim + 'T23:59:59')
-            .is('devolvida_por', null); // Não devolvidas
+            .is('devolvida_por', null) // Não devolvidas
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           // Buscar dados do radar (exercícios importados)
           const { data: radarExercicios, error: radarError } = await supabase
@@ -617,58 +631,15 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           console.log('⚠️ Erro ao buscar exercícios:', error);
         }
 
-        // Buscar avaliação presencial da etapa
-        let avaliacaoPresencialData: { nota: number | null; observacoes?: string } = { nota: null };
-        try {
-          const { data: avaliacaoData, error: avaliacaoError } = await supabase
-            .from('avaliacoes_presenciais')
-            .select('nota, observacoes')
-            .ilike('aluno_email', alunoEmail)
-            .eq('etapa_id', etapa.id)
-            .maybeSingle();
-
-          if (!avaliacaoError && avaliacaoData) {
-            avaliacaoPresencialData = {
-              nota: avaliacaoData.nota,
-              observacoes: avaliacaoData.observacoes
-            };
-          }
-        } catch (error) {
-          console.error('Erro ao buscar avaliação presencial:', error);
-        }
-
-        // NOVA LÓGICA: Calcular média final
-        // Converter percentuais para notas 0-10
+        // Calcular média final: (frequência + redações + lousas + simulados) ÷ 4
         const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
-        const participacaoNota = converterPercentualParaNota(participacaoData.percentual_participacao);
-
-        // Converter notas 0-1000 para 0-10
         const redacoesNota = converterNota1000ParaNota10(redacoesData.nota_media);
         const simuladosNota = converterNota1000ParaNota10(simuladosData.nota_media);
-
-        // Converter notas das lousas (já estão em escala 0-10)
         const lousasNota = lousasData.nota_media;
 
-        // 1. Calcular média online (5 critérios ÷ 5)
-        const mediaOnline = calcularMediaOnline(
-          frequenciaNota,
-          participacaoNota,
-          redacoesNota,
-          lousasNota,
-          simuladosNota
-        );
+        const mediaFinal = calcularMediaOnline(frequenciaNota, redacoesNota, lousasNota, simuladosNota);
 
-        // 2. Calcular média final: (Média Online + Avaliação Presencial) ÷ 2
-        const mediaFinal = calcularMediaFinalComAvaliacao(
-          mediaOnline,
-          avaliacaoPresencialData.nota
-        );
-
-        // Logs simplificados para melhor performance
-        const avaliacaoText = avaliacaoPresencialData.nota !== null
-          ? `AP${avaliacaoPresencialData.nota.toFixed(1)}`
-          : 'AP-';
-        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: Online=${mediaOnline.toFixed(1)} (F${frequenciaNota.toFixed(1)} P${participacaoNota.toFixed(1)} R${redacoesNota.toFixed(1)} L${lousasNota.toFixed(1)} S${simuladosNota.toFixed(1)}) ${avaliacaoText} → Final=${mediaFinal.toFixed(1)}`);
+        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: F${frequenciaNota.toFixed(1)} R${redacoesNota.toFixed(1)} L${lousasNota.toFixed(1)} S${simuladosNota.toFixed(1)} → Final=${mediaFinal.toFixed(1)}`);
 
         diarioData.push({
           etapa_numero: etapa.numero,
@@ -681,8 +652,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           simulados: simuladosData,
           exercicios: exerciciosData,
           lousas: lousasData,
-          avaliacao_presencial: avaliacaoPresencialData,
-          media_final: Math.max(0, Math.min(10, mediaFinal)) // Garantir que fica entre 0 e 10
+          avaliacao_presencial: { nota: null },
+          media_final: Math.max(0, Math.min(10, mediaFinal))
         });
       }
       
@@ -725,7 +696,7 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       // Buscar todos os alunos dessa turma (usando turma normalizada)
       const { data: alunos, error: alunosError } = await supabase
         .from('profiles')
-        .select('email, nome')
+        .select('email, nome, created_at')
         .eq('user_type', 'aluno')
         .eq('turma', turmaNormalizada)
         .eq('ativo', true);
@@ -771,22 +742,25 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           .in('email_aluno', emailsAlunos)
           .gte('data_envio', etapas.data_inicio)
           .lte('data_envio', etapas.data_fim)
-          .is('devolvida_por', null),
-          
+          .is('devolvida_por', null)
+          .is('deleted_at', null),  // Filtrar soft deletes
+
         supabase
           .from('redacoes_simulado')
           .select('email_aluno, nota_total')
           .in('email_aluno', emailsAlunos)
           .gte('data_envio', etapas.data_inicio)
           .lte('data_envio', etapas.data_fim)
-          .is('devolvida_por', null),
-          
+          .is('devolvida_por', null)
+          .is('deleted_at', null),  // Filtrar soft deletes
+
         supabase
           .from('redacoes_exercicio')
           .select('email_aluno')
           .in('email_aluno', emailsAlunos)
           .gte('data_envio', etapas.data_inicio)
-          .lte('data_envio', etapas.data_fim),
+          .lte('data_envio', etapas.data_fim)
+          .is('deleted_at', null),  // Filtrar soft deletes
           
         supabase
           .from('radar_dados')
@@ -807,56 +781,105 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         `turma ${turmaNormalizada}`    // "turma C"
       ];
 
+      // Buscar TODAS as aulas do diário (com e sem origem virtual)
+      // Para frequência: excluímos as criadas por aulas ao vivo (contadas separadamente em aulas_virtuais)
+      // Para participação: incluímos todas, pois o campo `participou` é registrado no diário mesmo para aulas ao vivo
       const { data: aulas } = await supabase
         .from('aulas_diario')
-        .select('id')
+        .select('id, data_aula, origem_aula_virtual_id, tipo_aula')
         .in('turma', possiveisTurmas)
         .eq('etapa_id', etapas.id);
 
-      const aulaIds = aulas?.map(a => a.id) || [];
+      const aulasData = (aulas || []) as { id: string; data_aula: string; origem_aula_virtual_id: string | null; tipo_aula: string | null }[];
+      // Apenas aulas puras do diário (sem origem virtual e sem nivelamento) → denominador de FREQUÊNCIA do diário
+      // Nivelamento é convite — ausência não penaliza o perfil do aluno
+      const aulasFreqData = aulasData.filter(a => !a.origem_aula_virtual_id && a.tipo_aula !== 'nivelamento');
+      const allAulaIds = aulasData.map(a => a.id);
 
-      // Buscar TODAS as presenças de UMA VEZ para todos os alunos
+      // Buscar TODAS as presenças de UMA VEZ para todos os alunos (frequência + participação)
       const { data: todasPresencas } = await supabase
         .from('presenca_participacao_diario')
-        .select('aluno_email, presente, participou')
+        .select('aluno_email, aula_id, presente, participou')
         .in('aluno_email', emailsAlunos)
-        .in('aula_id', aulaIds);
+        .in('aula_id', allAulaIds);
 
       // Buscar aulas virtuais do período da etapa para esta turma (UMA VEZ SÓ)
       // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
       const { data: aulasVirtuais } = await supabase
         .from('aulas_virtuais')
-        .select('id')
+        .select('id, aula_mae_id, data_aula, tipo_aula')
         .eq('ativo', true)
         .gte('data_aula', etapas.data_inicio)
         .lt('data_aula', etapas.data_fim + 'T23:59:59')
         .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
-      const aulasVirtuaisIds = aulasVirtuais?.map(a => a.id) || [];
-      
+      // Nivelamento é convite — não entra no denominador de frequência
+      const rawAulasVirtuais = (aulasVirtuais || []).filter((a: any) => a.tipo_aula !== 'nivelamento') as { id: string; aula_mae_id: string | null; data_aula: string }[];
+      const allAulasVirtuaisIds = rawAulasVirtuais.map(a => a.id);
+
+      // Agrupar aulas virtuais por unidade pedagógica (mãe + filhas = 1 unidade)
+      // Inclui tratamento para mãe fora do período: filhas irmãs agrupadas entre si
+      const gruposAulasVirtuais: Record<string, { ids: string[]; dataAula: string }> = {};
+      const maeForaDoperiodoVirtual = new Map<string, string>();
+      for (const aula of rawAulasVirtuais.filter(a => !a.aula_mae_id)) {
+        gruposAulasVirtuais[aula.id] = { ids: [aula.id], dataAula: aula.data_aula };
+      }
+      for (const aula of rawAulasVirtuais.filter(a => !!a.aula_mae_id)) {
+        if (gruposAulasVirtuais[aula.aula_mae_id!]) {
+          gruposAulasVirtuais[aula.aula_mae_id!].ids.push(aula.id);
+        } else if (maeForaDoperiodoVirtual.has(aula.aula_mae_id!)) {
+          const repId = maeForaDoperiodoVirtual.get(aula.aula_mae_id!)!;
+          gruposAulasVirtuais[repId].ids.push(aula.id);
+        } else {
+          gruposAulasVirtuais[aula.id] = { ids: [aula.id], dataAula: aula.data_aula };
+          maeForaDoperiodoVirtual.set(aula.aula_mae_id!, aula.id);
+        }
+      }
+
       // Buscar TODAS as presenças nas aulas virtuais para todos os alunos (UMA VEZ SÓ)
-      const { data: todasPresencasVirtuais } = aulasVirtuaisIds.length > 0 ? await supabase
+      const { data: todasPresencasVirtuais } = allAulasVirtuaisIds.length > 0 ? await supabase
         .from('presenca_aulas')
-        .select('email_aluno, entrada_at')
+        .select('email_aluno, aula_id, entrada_at')
         .filter('email_aluno', 'in', `(${emailsAlunos.map(e => `"${e.toLowerCase()}"`).join(',')})`)
-        .in('aula_id', aulasVirtuaisIds)
+        .in('aula_id', allAulasVirtuaisIds)
         .not('entrada_at', 'is', null) : { data: [] };
 
       console.log(`🎯 Dados de presença virtual carregados: ${todasPresencasVirtuais?.length || 0} registros`);
 
       for (const aluno of alunos) {
-        // Contar presenças nas aulas do diário
-        const presencasAluno = todasPresencas?.filter(p => p.aluno_email === aluno.email) || [];
-        const totalAulasDiario = aulaIds.length;
-        const aulasPresentes = presencasAluno.filter(p => p.presente).length;
-        const aulasParticipou = presencasAluno.filter(p => p.participou).length;
+        // Data de matrícula do aluno (para excluir aulas anteriores ao ingresso)
+        const enrolledDate = (aluno as any).created_at
+          ? ((aluno as any).created_at as string).substring(0, 10)
+          : etapas.data_inicio;
 
-        // Contar presenças nas aulas virtuais para este aluno
-        const presencasVirtuaisAluno = todasPresencasVirtuais?.filter(p => 
-          p.email_aluno === aluno.email.toLowerCase()
+        // Aulas puras do diário (sem origem virtual) para FREQUÊNCIA, filtradas por matrícula
+        const aulasDiarioFreqParaAluno = aulasFreqData.filter(a => a.data_aula >= enrolledDate);
+        const aulaIdsFreqParaAluno = aulasDiarioFreqParaAluno.map(a => a.id);
+        const totalAulasDiario = aulaIdsFreqParaAluno.length;
+
+        // Todas as aulas do diário (incluindo de aulas ao vivo) para PARTICIPAÇÃO, filtradas por matrícula
+        const aulasPartParaAluno = aulasData.filter(a => a.data_aula >= enrolledDate);
+        const aulaIdsPartParaAluno = aulasPartParaAluno.map(a => a.id);
+
+        // Presenças para frequência (apenas aulas puras do diário)
+        const presencasFreqAluno = todasPresencas?.filter(
+          p => p.aluno_email === aluno.email && aulaIdsFreqParaAluno.includes(p.aula_id)
         ) || [];
-        const totalAulasVirtuais = aulasVirtuaisIds.length;
-        const presencasVirtuais = presencasVirtuaisAluno.length;
+        const aulasPresentes = presencasFreqAluno.filter(p => p.presente).length;
+
+        // Participação (todas as aulas do diário, campo participou)
+        const presencasPartAluno = todasPresencas?.filter(
+          p => p.aluno_email === aluno.email && aulaIdsPartParaAluno.includes(p.aula_id)
+        ) || [];
+        const aulasParticipou = presencasPartAluno.filter(p => p.participou).length;
+
+        // Grupos de aulas virtuais disponíveis para este aluno (excluir grupos anteriores à matrícula)
+        const gruposParaAluno = Object.values(gruposAulasVirtuais).filter(g => g.dataAula >= enrolledDate);
+        const totalAulasVirtuais = gruposParaAluno.length;
+        const idsComPresencaVirtual = new Set(
+          todasPresencasVirtuais?.filter(p => p.email_aluno === aluno.email.toLowerCase()).map(p => p.aula_id) || []
+        );
+        const presencasVirtuais = gruposParaAluno.filter(g => g.ids.some(id => idsComPresencaVirtual.has(id))).length;
 
         // Combinar dados do diário + aulas virtuais
         const totalAulasCompleto = totalAulasDiario + totalAulasVirtuais;
@@ -868,11 +891,13 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           percentual_frequencia: totalAulasCompleto > 0 ? (totalPresencasCompleto / totalAulasCompleto) * 100 : 0
         };
 
-        // Para participação, considerar apenas aulas do diário (aulas virtuais não têm participação)
+        // Para participação, usar TODAS as aulas do diário (incluindo criadas por aulas ao vivo)
+        // pois o campo `participou` é registrado no diário mesmo para aulas ao vivo
+        const totalAulasParticipacao = aulaIdsPartParaAluno.length;
         const participacaoData = {
-          total_aulas: totalAulasDiario,
+          total_aulas: totalAulasParticipacao,
           aulas_participou: aulasParticipou,
-          percentual_participacao: totalAulasDiario > 0 ? (aulasParticipou / totalAulasDiario) * 100 : 0
+          percentual_participacao: totalAulasParticipacao > 0 ? (aulasParticipou / totalAulasParticipacao) * 100 : 0
         };
 
         // Buscar redações do período da etapa com campos corretos
@@ -883,7 +908,8 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
             .select('nota_total, status, devolvida_por')
             .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
-            .lte('data_envio', etapas.data_fim);
+            .lte('data_envio', etapas.data_fim)
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!redacoesError && redacoes) {
             const redacoesValidas = redacoes.filter(r => 
@@ -917,7 +943,8 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
             .select('nota_total, devolvida_por')
             .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
-            .lte('data_envio', etapas.data_fim);
+            .lte('data_envio', etapas.data_fim)
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!simuladosError && simulados) {
             const simuladosComNota = simulados.filter(s => 
@@ -977,7 +1004,8 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
             .select('id')
             .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
-            .lte('data_envio', etapas.data_fim);
+            .lte('data_envio', etapas.data_fim)
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           // Buscar dados do radar (exercícios importados)
           const { data: radarExercicios, error: radarError } = await supabase
@@ -1010,53 +1038,13 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
 
         console.log(`📊 Resumo para ${aluno.email} - Período: ${etapas.data_inicio} a ${etapas.data_fim}`);
 
-        // Buscar avaliação presencial da etapa
-        let avaliacaoPresencialData: { nota: number | null; observacoes?: string } = { nota: null };
-        try {
-          const { data: avaliacaoData, error: avaliacaoError } = await supabase
-            .from('avaliacoes_presenciais')
-            .select('nota, observacoes')
-            .eq('aluno_email', aluno.email)
-            .eq('etapa_id', etapas.id)
-            .maybeSingle();
-
-          if (!avaliacaoError && avaliacaoData) {
-            avaliacaoPresencialData = {
-              nota: avaliacaoData.nota,
-              observacoes: avaliacaoData.observacoes
-            };
-            console.log(`✅ Avaliação presencial de ${aluno.email}: ${avaliacaoData.nota}`);
-          }
-        } catch (error) {
-          console.log('⚠️ Erro ao buscar avaliação presencial:', aluno.email, error);
-        }
-
-        // NOVA LÓGICA: Calcular média final com 5 critérios fixos
-        // Converter percentuais para notas 0-10
+        // Calcular média final: (frequência + redações + lousas + simulados) ÷ 4
         const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
-        const participacaoNota = converterPercentualParaNota(participacaoData.percentual_participacao);
-
-        // Converter notas 0-1000 para 0-10
         const redacoesNota = converterNota1000ParaNota10(redacoesData.nota_media);
         const simuladosNota = converterNota1000ParaNota10(simuladosData.nota_media);
-
-        // Converter notas das lousas (já estão em escala 0-10)
         const lousasNota = lousasData.nota_media;
 
-        // 1. Calcular Média Online (5 critérios)
-        const mediaOnline = calcularMediaOnline(
-          frequenciaNota,
-          participacaoNota,
-          redacoesNota,
-          lousasNota,
-          simuladosNota
-        );
-
-        // 2. Calcular Média Final: (Média Online + Avaliação Presencial) ÷ 2
-        const mediaFinal = calcularMediaFinalComAvaliacao(
-          mediaOnline,
-          avaliacaoPresencialData.nota
-        );
+        const mediaFinal = calcularMediaOnline(frequenciaNota, redacoesNota, lousasNota, simuladosNota);
 
         const dadosAluno = {
           frequencia: frequenciaData,
@@ -1065,7 +1053,7 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           simulados: simuladosData,
           exercicios: exerciciosData,
           lousas: lousasData,
-          avaliacao_presencial: avaliacaoPresencialData,
+          avaliacao_presencial: { nota: null },
           media_final: Math.max(0, Math.min(10, mediaFinal))
         };
 
@@ -1168,37 +1156,16 @@ export function useTurmasDisponiveis() {
   return useQuery({
     queryKey: ['turmas_disponiveis'],
     queryFn: async () => {
-      // Buscar turmas distintas que existem no sistema
       const { data, error } = await supabase
-        .from('profiles')
-        .select('turma')
-        .eq('user_type', 'aluno')
-        .not('turma', 'is', null);
+        .from('turmas_alunos')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
 
       if (error) throw error;
 
-      // Turmas dinâmicas encontradas
-      const turmasEncontradas = [...new Set(data.map(item => item.turma))];
-
-      // Turmas fixas no formato normalizado (A-E, VISITANTE)
-      const turmasFixas = ['A', 'B', 'C', 'D', 'E', 'VISITANTE'];
-
-      // Combinar turmas fixas com as encontradas, removendo duplicatas
-      const todasTurmasLetras = [...new Set([...turmasFixas, ...turmasEncontradas])];
-
-      // Retornar no formato { codigo: "A", nome: "A" }
-      const turmasFormatadas = todasTurmasLetras.map(letra => ({
-        codigo: letra,
-        nome: letra // Apenas a letra (A, B, C, D, E ou VISITANTE)
-      }));
-
-      // Ordenar: A-E primeiro, depois VISITANTE
-      return turmasFormatadas.sort((a, b) => {
-        if (a.codigo === 'VISITANTE') return 1;
-        if (b.codigo === 'VISITANTE') return -1;
-        return a.codigo.localeCompare(b.codigo);
-      });
+      return (data || []).map(t => ({ codigo: t.nome, nome: t.nome }));
     },
-    staleTime: 10 * 60 * 1000, // 10 minutos
+    staleTime: 10 * 60 * 1000,
   });
 }

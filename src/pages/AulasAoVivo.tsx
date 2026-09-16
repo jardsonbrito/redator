@@ -12,6 +12,7 @@ import { SkeletonCard } from "@/components/ui/skeleton-card";
 import { getMyAttendanceStatus, registrarEntrada, registrarSaida, AttendanceStatus } from "@/utils/attendanceHelpers";
 import { computeStatus } from "@/utils/aulaStatus";
 import { AulaCardPadrao } from "@/components/shared/AulaCardPadrao";
+import { JustificativaAusenciaModal } from "@/components/shared/JustificativaAusenciaModal";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 interface AulaAoVivo {
@@ -28,6 +29,7 @@ interface AulaAoVivo {
   ativo: boolean;
   imagem_capa_url?: string;
   status_transmissao?: string;
+  aula_gravada_id?: string | null;
 }
 
 interface AttendanceRecord {
@@ -44,25 +46,65 @@ const AulasAoVivo = () => {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadingOperations, setLoadingOperations] = useState<Record<string, boolean>>({});
+  // Data de cadastro/aprovação do aluno na plataforma (ISO string ou null)
+  const [studentEnrolledAt, setStudentEnrolledAt] = useState<string | null>(null);
+  // Mapa: id da aula ao vivo → id da aula gravada correspondente (manual ou auto-matched por título)
+  const [gravadaIdMap, setGravadaIdMap] = useState<Record<string, string | null>>({});
+
+  // Justificativas: { aulaId: { texto, criadoEm } | null }
+  const [justificativaMap, setJustificativaMap] = useState<Record<string, { texto: string; criadoEm: string } | null>>({});
+  const [justificativaModalAulaId, setJustificativaModalAulaId] = useState<string | null>(null);
 
   const fetchAulas = async () => {
     try {
       setIsLoading(true);
-      
-      // Buscar aulas ao vivo ativas
+
+      // Buscar data de cadastro do aluno para saber se estava matriculado na época de cada aula
+      if (studentData.email && studentData.userType === 'aluno') {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('created_at, data_aprovacao')
+          .eq('email', studentData.email.toLowerCase())
+          .maybeSingle();
+        if (profileData) {
+          // Preferir data_aprovacao; fallback para created_at
+          setStudentEnrolledAt(profileData.data_aprovacao || profileData.created_at || null);
+        }
+      }
+
+      // Calcular janela de exibição: hoje + amanhã
+      const agora = new Date();
+      const hoje = agora.toISOString().split('T')[0];
+      const horaAtual = agora.toTimeString().slice(0, 8);
+      const amanha = new Date(agora);
+      amanha.setDate(amanha.getDate() + 1);
+      const amanhaStr = amanha.toISOString().split('T')[0];
+
+      // Busca: todas as passadas (sem limite inferior) + até amanhã no futuro
       const { data: aulasData, error: aulasError } = await supabase
         .from('aulas_virtuais')
         .select('*')
         .eq('ativo', true)
         .eq('eh_aula_ao_vivo', true)
-        .order('data_aula', { ascending: false });
+        .lte('data_aula', amanhaStr)
+        .order('data_aula', { ascending: true });
 
       if (aulasError) {
         throw aulasError;
       }
 
-      // Filtrar aulas baseado na autorização
-      const aulasAutorizadas = (aulasData || []).filter(aula => {
+      // Filtrar aulas baseado na autorização + regra de proximidade:
+      // - Todas as aulas de HOJE aparecem
+      // - Aulas de AMANHÃ só aparecem se hoje não tiver nenhuma aula pendente ou em curso
+      const todasAulas = (aulasData || []);
+      const temAulaHojeAtiva = todasAulas.some(a =>
+        a.data_aula === hoje && a.horario_fim >= horaAtual
+      );
+
+      const aulasAutorizadas = todasAulas.filter(aula => {
+        // Passadas: sempre aparecem
+        // Amanhã: só aparece se hoje não tiver aula pendente/em curso
+        if (aula.data_aula === amanhaStr && temAulaHojeAtiva) return false;
         if (aula.permite_visitante && studentData.userType === 'visitante') {
           return true;
         }
@@ -94,19 +136,38 @@ const AulasAoVivo = () => {
         const prioridadeB = prioridade[statusB as keyof typeof prioridade] || 0;
 
         if (prioridadeA !== prioridadeB) {
-          return prioridadeB - prioridadeA; // Ordem decrescente de prioridade
+          return prioridadeB - prioridadeA;
         }
 
-        // Se têm a mesma prioridade, ordenar por data (mais recente primeiro)
-        return new Date(b.data_aula).getTime() - new Date(a.data_aula).getTime();
+        const dateA = new Date(a.data_aula).getTime();
+        const dateB = new Date(b.data_aula).getTime();
+        // Agendadas: mais próximas primeiro; encerradas: mais recentes primeiro
+        return statusA === 'agendada' ? dateA - dateB : dateB - dateA;
       });
 
       setAulas(aulasOrdenadas);
+
+      // Buscar aulas gravadas para auto-matching por título
+      const { data: aulasGravadas } = await supabase
+        .from('aulas')
+        .select('id, titulo')
+        .eq('ativo', true);
+
+      const gravadas = (aulasGravadas || []) as Array<{ id: string; titulo: string }>;
+      const newGravadaMap: Record<string, string | null> = {};
+      for (const aula of aulasOrdenadas) {
+        // Preferência: vínculo manual → auto-match por título
+        newGravadaMap[aula.id] = (aula as any).aula_gravada_id || matchGravadaByTitle(aula.titulo, gravadas);
+      }
+      setGravadaIdMap(newGravadaMap);
 
       // Buscar status de presença para cada aula autorizada
       for (const aula of aulasAutorizadas) {
         await fetchAttendanceStatus(aula.id);
       }
+
+      // Buscar justificativas do aluno para aulas encerradas
+      await fetchJustificativas(aulasAutorizadas.map(a => a.id));
     } catch (error: any) {
       console.error('Erro ao carregar aulas:', error);
       toast.error('Erro ao carregar aulas ao vivo');
@@ -127,6 +188,47 @@ const AulasAoVivo = () => {
     } catch (error) {
       console.error('Error fetching attendance status:', error);
     }
+  };
+
+  const fetchJustificativas = async (aulaIds: string[]) => {
+    if (aulaIds.length === 0) return;
+
+    const userType = localStorage.getItem('userType');
+    let email: string | null = null;
+    if (userType === 'aluno') {
+      try { email = JSON.parse(localStorage.getItem('alunoData') || '{}').email; } catch { /* noop */ }
+    } else if (userType === 'visitante') {
+      try { email = JSON.parse(localStorage.getItem('visitanteData') || '{}').email; } catch { /* noop */ }
+    }
+    if (!email) return;
+
+    try {
+      const { data } = await supabase
+        .from('justificativas_ausencia')
+        .select('aula_id, justificativa, criado_em')
+        .eq('email_aluno', email.toLowerCase())
+        .in('aula_id', aulaIds);
+
+      const map: Record<string, { texto: string; criadoEm: string } | null> = {};
+      aulaIds.forEach(id => { map[id] = null; });
+      (data || []).forEach((row: any) => {
+        map[row.aula_id] = { texto: row.justificativa, criadoEm: row.criado_em };
+      });
+      setJustificativaMap(map);
+    } catch (err) {
+      console.error('Erro ao buscar justificativas:', err);
+    }
+  };
+
+  const handleJustificarAusencia = (aulaId: string) => {
+    setJustificativaModalAulaId(aulaId);
+  };
+
+  const handleJustificativaEnviada = (aulaId: string, texto: string) => {
+    setJustificativaMap(prev => ({
+      ...prev,
+      [aulaId]: { texto, criadoEm: new Date().toISOString() },
+    }));
   };
 
   const handleRegistrarEntrada = async (sessionId: string) => {
@@ -211,6 +313,45 @@ const AulasAoVivo = () => {
     }
   };
 
+  /** Busca a aula gravada correspondente por similaridade de título */
+  const matchGravadaByTitle = (titulo: string, gravadas: Array<{ id: string; titulo: string }>): string | null => {
+    const norm = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ');
+    const t = norm(titulo);
+
+    // 1. Correspondência exata
+    let found = gravadas.find(g => norm(g.titulo) === t);
+    if (found) return found.id;
+
+    // 2. Um contém o outro
+    found = gravadas.find(g => {
+      const gt = norm(g.titulo);
+      return t.includes(gt) || gt.includes(t);
+    });
+    if (found) return found.id;
+
+    // 3. Sobreposição de palavras significativas (≥4 chars, ≥50% de match)
+    const words = t.split(' ').filter(w => w.length >= 4);
+    if (words.length > 0) {
+      found = gravadas.find(g => {
+        const gt = norm(g.titulo);
+        const hits = words.filter(w => gt.includes(w)).length;
+        return hits >= Math.ceil(words.length * 0.5);
+      });
+      if (found) return found.id;
+    }
+
+    return null;
+  };
+
+  /** Retorna true se o aluno se matriculou APÓS a data da aula (aula anterior à matrícula) */
+  const isEnrolledAfterClass = (aula: AulaAoVivo): boolean => {
+    if (!studentEnrolledAt) return false;
+    const enrolledDate = new Date(studentEnrolledAt);
+    const classDate = new Date(aula.data_aula + 'T23:59:59');
+    return enrolledDate > classDate;
+  };
+
   const getStatusAula = (aula: AulaAoVivo) => {
     try {
       if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
@@ -284,17 +425,21 @@ const AulasAoVivo = () => {
                 console.log('   - Attendance Map:', attendanceMap);
                 console.log('   - Attendance Status:', attendanceStatus);
 
+                const aulaComGravada = { ...aula, aula_gravada_id: gravadaIdMap[aula.id] ?? null };
                 return (
                   <AulaCardPadrao
                     key={aula.id}
-                    aula={aula}
+                    aula={aulaComGravada}
                     perfil="aluno"
                     attendanceStatus={attendanceStatus}
                     loadingOperation={loadingOperations[aula.id]}
+                    justificativaEnviada={!!justificativaMap[aula.id]}
+                    enrolledAfterClass={isEnrolledAfterClass(aula)}
                     actions={{
                       onEntrarAula: () => window.open(aula.link_meet, '_blank'),
                       onRegistrarEntrada: () => handleRegistrarEntrada(aula.id),
-                      onRegistrarSaida: () => handleRegistrarSaida(aula.id)
+                      onRegistrarSaida: () => handleRegistrarSaida(aula.id),
+                      onJustificarAusencia: handleJustificarAusencia,
                     }}
                   />
                 );
@@ -303,6 +448,21 @@ const AulasAoVivo = () => {
           )}
         </div>
       </main>
+
+      {/* Modal de justificativa de ausência */}
+      {justificativaModalAulaId && (() => {
+        const aulaModal = aulas.find(a => a.id === justificativaModalAulaId);
+        return (
+          <JustificativaAusenciaModal
+            isOpen={true}
+            onClose={() => setJustificativaModalAulaId(null)}
+            aulaId={justificativaModalAulaId}
+            aulaTitulo={aulaModal?.titulo ?? ''}
+            justificativaExistente={justificativaMap[justificativaModalAulaId] ?? null}
+            onEnviado={(texto) => handleJustificativaEnviada(justificativaModalAulaId, texto)}
+          />
+        );
+      })()}
     </div>
   );
 };

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Edit, Save, X } from "lucide-react";
+import { Search, Edit, Save, X, Calendar } from "lucide-react";
 
 interface RedacaoExercicio {
   id: string;
@@ -42,10 +42,12 @@ export const RedacaoExercicioList = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
 
   useEffect(() => {
     fetchRedacoes();
-  }, []);
+  }, [apenasAnoAtual]);
 
   useEffect(() => {
     filterRedacoes();
@@ -53,7 +55,7 @@ export const RedacaoExercicioList = () => {
 
   const fetchRedacoes = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("redacoes_exercicio")
         .select(`
           *,
@@ -63,6 +65,14 @@ export const RedacaoExercicioList = () => {
           )
         `)
         .order("data_envio", { ascending: false });
+
+      if (apenasAnoAtual) {
+        query = query
+          .gte('data_envio', `${anoAtual}-01-01`)
+          .lt('data_envio', `${anoAtual + 1}-01-01`);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setRedacoes(data || []);
@@ -178,6 +188,16 @@ export const RedacaoExercicioList = () => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Button
+              variant={apenasAnoAtual ? "default" : "outline"}
+              size="sm"
+              onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+            >
+              <Calendar className="w-3 h-3 mr-1" />
+              {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+            </Button>
           </div>
         </CardContent>
       </Card>

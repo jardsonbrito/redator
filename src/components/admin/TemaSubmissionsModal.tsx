@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import { formatTurmaDisplay } from "@/utils/turmaUtils";
+import { formatTurmaDisplay, isStatusEspecial } from "@/utils/turmaUtils";
 
 interface SubmissionData {
   nome_aluno: string;
@@ -58,6 +58,8 @@ export const TemaSubmissionsModal = ({
     try {
       setIsLoading(true);
 
+      console.log('🔍 [TemaSubmissionsModal] Buscando envios para tema:', fraseTematica);
+
       // Verificar se existe um simulado com essa frase temática
       const { data: simulado, error: simuladoError } = await supabase
         .from("simulados")
@@ -65,102 +67,215 @@ export const TemaSubmissionsModal = ({
         .eq("frase_tematica", fraseTematica)
         .maybeSingle();
 
-      let data: SubmissionData[] = [];
-      let error = null;
+      console.log('🔍 [TemaSubmissionsModal] Simulado encontrado:', simulado);
 
+      let allSubmissions: SubmissionData[] = [];
+      let hasSimulado = false;
+
+      // PARTE 1: Buscar redações de SIMULADO (se existir)
       if (simulado && simulado.id) {
+        hasSimulado = true;
         // É um simulado - buscar de redacoes_simulado
         setIsSimulado(true);
-        const { data: redacoesSimulado, error: redacoesError } = await supabase
+
+        console.log('🔍 [TemaSubmissionsModal] Buscando redações do simulado:', simulado.id);
+
+        // Buscar redações do simulado (sem JOIN que pode falhar)
+        const { data: redacoesData, error: redacoesError } = await supabase
           .from("redacoes_simulado")
           .select("nome_aluno, email_aluno, turma, nota_final_corretor_1, nota_final_corretor_2, nota_final_admin, status_terceira_correcao, nota_total, corrigida")
-          .eq("id_simulado", simulado.id);
+          .eq("id_simulado", simulado.id)
+          .is("deleted_at", null);
 
         if (redacoesError) {
-          error = redacoesError;
-        } else {
-          // Buscar nomes reais dos profiles
-          const emails = (redacoesSimulado || []).map(r => r.email_aluno).filter(Boolean);
+          console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações do simulado:', redacoesError);
+          // Não fazer throw - apenas log o erro e continua
+        } else if (redacoesData) {
+          const redacoesSimulado = redacoesData;
+          console.log('🔍 [TemaSubmissionsModal] Redações do simulado encontradas:', redacoesSimulado?.length || 0);
 
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("email, nome")
-            .in("email", emails);
+          if (redacoesSimulado && redacoesSimulado.length > 0) {
+            // Buscar dados dos alunos separadamente
+            // Normalizar emails (lowercase e trim) para garantir match
+            const emails = redacoesSimulado
+              .map((r: any) => r.email_aluno?.toLowerCase().trim())
+              .filter(Boolean);
 
-          const profileMap = new Map(
-            (profiles || []).map(p => [p.email, p.nome])
-          );
+            console.log('🔍 [TemaSubmissionsModal] Emails para buscar (normalizados):', emails);
 
-          // Nota final vem pronta do banco (já considera terceira correção da Coordenação, quando houver).
-          // Exibimos como corrigida assim que os dois corretores terminarem, mesmo que o admin
-          // ainda não tenha marcado a linha como finalizada manualmente.
-          data = (redacoesSimulado || []).map(r => {
-            const nota1 = r.nota_final_corretor_1 ?? null;
-            const nota2 = r.nota_final_corretor_2 ?? null;
-            const teveTerceiraCorrecao = r.status_terceira_correcao === 'concluida';
-            const corrigida = r.corrigida || (nota1 !== null && nota2 !== null);
+            const { data: alunos, error: alunosError } = await supabase
+              .from("profiles")
+              .select("email, nome, turma")
+              .in("email", emails);
 
-            // Usar nome do profile se disponível, senão usar nome_aluno da redação
-            const nomeReal = profileMap.get(r.email_aluno) || r.nome_aluno;
+            console.log('🔍 [TemaSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
+            console.log('🔍 [TemaSubmissionsModal] Detalhes dos alunos:',
+              alunos?.map(a => ({ email: a.email, nome: a.nome, turma: a.turma }))
+            );
 
-            return {
-              nome_aluno: nomeReal,
-              email_aluno: r.email_aluno,
-              turma: r.turma || null,
-              nota_total: r.nota_total,
-              nota_corretor_1: nota1,
-              nota_corretor_2: nota2,
-              nota_coordenacao: teveTerceiraCorrecao ? r.nota_final_admin ?? null : null,
-              teve_terceira_correcao: teveTerceiraCorrecao,
-              corrigida: corrigida,
-              status: corrigida ? 'corrigida' : 'aguardando',
-              is_simulado: true
-            };
-          });
-        }
-      } else {
-        // É um tema regular - buscar de redacoes_enviadas
-        setIsSimulado(false);
-        const { data: redacoesRegulares, error: redacoesError } = await supabase
-          .from("redacoes_enviadas")
-          .select("nome_aluno, email_aluno, turma, nota_total, corrigida, status")
-          .eq("frase_tematica", fraseTematica);
+            if (alunosError) {
+              console.error('❌ [TemaSubmissionsModal] Erro ao buscar alunos:', alunosError);
+            }
 
-        if (redacoesError) {
-          error = redacoesError;
-        } else {
-          // Buscar nomes reais dos profiles
-          const emails = (redacoesRegulares || []).map(r => r.email_aluno).filter(Boolean);
+            // Criar mapa de email => dados do aluno (normalizar email para garantir match)
+            const alunosMap = new Map(
+              (alunos || []).map(a => [
+                a.email.toLowerCase().trim(),
+                { nome: a.nome, turma: a.turma }
+              ])
+            );
 
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("email, nome")
-            .in("email", emails);
+            // Nota final vem pronta do banco (já considera terceira correção da Coordenação, quando houver).
+            // Exibimos como corrigida assim que os dois corretores terminarem, mesmo que o admin
+            // ainda não tenha marcado a linha como finalizada manualmente.
+            const simuladoSubmissions = redacoesSimulado.map((r: any) => {
+              const nota1 = r.nota_final_corretor_1 ?? null;
+              const nota2 = r.nota_final_corretor_2 ?? null;
+              const teveTerceiraCorrecao = r.status_terceira_correcao === 'concluida';
+              const corrigida = r.corrigida || (nota1 !== null && nota2 !== null);
 
-          const profileMap = new Map(
-            (profiles || []).map(p => [p.email, p.nome])
-          );
+              // Usar dados reais da tabela alunos
+              // Normalizar email para buscar no Map
+              const emailNormalizado = r.email_aluno?.toLowerCase().trim();
+              const alunoData = alunosMap.get(emailNormalizado);
+              const nomeReal = alunoData?.nome || r.nome_aluno || r.email_aluno || 'Aluno';
+              const turmaAtual = alunoData?.turma || r.turma || null;
 
-          // Mapear para usar nome do profile
-          data = (redacoesRegulares || []).map(r => {
-            const nomeReal = profileMap.get(r.email_aluno) || r.nome_aluno;
+              console.log('🔍 [TemaSubmissionsModal] Mapeando redação simulado:', {
+                email_original: r.email_aluno,
+                email_normalizado: emailNormalizado,
+                aluno_data: alunoData,
+                nome_completo: nomeReal,
+                turma: turmaAtual
+              });
 
-            return {
-              nome_aluno: nomeReal,
-              email_aluno: r.email_aluno,
-              turma: r.turma || null,
-              nota_total: r.nota_total,
-              corrigida: r.corrigida,
-              status: r.status
-            };
-          });
+              return {
+                nome_aluno: nomeReal,
+                email_aluno: r.email_aluno,
+                turma: turmaAtual,
+                nota_total: r.nota_total,
+                nota_corretor_1: nota1,
+                nota_corretor_2: nota2,
+                nota_coordenacao: teveTerceiraCorrecao ? r.nota_final_admin ?? null : null,
+                teve_terceira_correcao: teveTerceiraCorrecao,
+                corrigida: corrigida,
+                status: corrigida ? 'corrigida' : 'aguardando',
+                is_simulado: true
+              };
+            });
+
+            allSubmissions = [...allSubmissions, ...simuladoSubmissions];
+          }
         }
       }
 
-      if (error) throw error;
+      // PARTE 2: SEMPRE buscar redações REGULARES também
+      {
+        console.log('🔍 [TemaSubmissionsModal] Iniciando busca por redações regulares...');
+
+        // Buscar SEM aluno_id para evitar erro
+        const { data: redacoesData, error: redacoesError } = await supabase
+          .from("redacoes_enviadas")
+          .select("email_aluno, nota_total, corrigida, status")
+          .eq("frase_tematica", fraseTematica)
+          .is("deleted_at", null);
+
+        if (redacoesError) {
+          console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações regulares:', redacoesError);
+          // Não fazer throw - apenas log o erro e continua
+        } else if (redacoesData && redacoesData.length > 0) {
+          const redacoesRegulares = redacoesData;
+          console.log('✅ [TemaSubmissionsModal] Redações regulares encontradas:', redacoesRegulares?.length || 0);
+          console.log('🔍 [TemaSubmissionsModal] Dados brutos de redações:', redacoesRegulares);
+
+            if (redacoesRegulares && redacoesRegulares.length > 0) {
+              // Buscar dados dos alunos separadamente
+              // Normalizar emails (lowercase e trim) para garantir match
+              const emails = redacoesRegulares
+                .map((r: any) => r.email_aluno?.toLowerCase().trim())
+                .filter(Boolean);
+
+              console.log('🔍 [TemaSubmissionsModal] === BUSCANDO ALUNOS ===');
+              console.log('   Emails para buscar:', emails);
+              console.log('   Total de emails:', emails.length);
+
+              const { data: alunos, error: alunosError } = await supabase
+                .from("profiles")
+                .select("email, nome, turma")
+                .in("email", emails);
+
+              console.log('🔍 [TemaSubmissionsModal] === RESULTADO DA BUSCA ===');
+              console.log('   Alunos encontrados:', alunos?.length || 0);
+
+              if (alunosError) {
+                console.error('❌ [TemaSubmissionsModal] ERRO AO BUSCAR ALUNOS:');
+                console.error('   Código:', alunosError.code);
+                console.error('   Mensagem:', alunosError.message);
+                console.error('   Detalhes:', alunosError.details);
+                console.error('   Hint:', alunosError.hint);
+                console.error('   Objeto completo:', JSON.stringify(alunosError, null, 2));
+              }
+
+              if (!alunosError && alunos && alunos.length > 0) {
+                console.log('✅ [TemaSubmissionsModal] Alunos encontrados com sucesso:');
+                alunos.forEach((a, i) => {
+                  console.log(`   ${i + 1}. Email: ${a.email}, Nome: ${a.nome_completo}, Turma: ${a.turma}`);
+                });
+              }
+
+              if (!alunosError && (!alunos || alunos.length === 0)) {
+                console.error('❌ [TemaSubmissionsModal] EMAILS NÃO ENCONTRADOS NA TABELA ALUNOS!');
+                console.error('   Emails buscados:', emails);
+                console.error('   Isso significa que esses alunos NÃO estão cadastrados na tabela alunos');
+                console.error('   Ou os emails estão em formato diferente no banco');
+              }
+
+              // Criar mapa de email => dados do aluno (normalizar email para garantir match)
+              const alunosMap = new Map(
+                (alunos || []).map(a => [
+                  a.email.toLowerCase().trim(),
+                  { nome: a.nome, turma: a.turma }
+                ])
+              );
+
+              // Mapear para usar dados reais da tabela alunos
+              const regularSubmissions = redacoesRegulares.map((r: any) => {
+                // Normalizar email para buscar no Map
+                const emailNormalizado = r.email_aluno?.toLowerCase().trim();
+                const alunoData = alunosMap.get(emailNormalizado);
+
+                console.log('🔍 [TemaSubmissionsModal] Mapeando redação:', {
+                  email_original: r.email_aluno,
+                  email_normalizado: emailNormalizado,
+                  aluno_data: alunoData,
+                  nome_completo: alunoData?.nome,
+                  turma: alunoData?.turma
+                });
+
+                return {
+                  nome_aluno: alunoData?.nome || r.email_aluno || 'Aluno',
+                  email_aluno: r.email_aluno,
+                  turma: alunoData?.turma || null,
+                  nota_total: r.nota_total,
+                  corrigida: r.corrigida,
+                  status: r.status
+                };
+              });
+
+              allSubmissions = [...allSubmissions, ...regularSubmissions];
+            }
+          }
+        }
+
+      // Atualizar estado de isSimulado baseado nos dados
+      setIsSimulado(hasSimulado && allSubmissions.some(s => s.is_simulado));
+
+      console.log('✅ [TemaSubmissionsModal] Total de submissões encontradas:', allSubmissions.length);
+      console.log('   - Simulados:', allSubmissions.filter(s => s.is_simulado).length);
+      console.log('   - Regulares:', allSubmissions.filter(s => !s.is_simulado).length);
 
       // Ordenar por nota (maior nota primeiro), devolvidas e não corrigidas por último
-      const sortedData = (data || []).sort((a, b) => {
+      const sortedData = (allSubmissions || []).sort((a, b) => {
         // Redações devolvidas vão para o final
         const aDevolvida = a.status === 'devolvida';
         const bDevolvida = b.status === 'devolvida';
@@ -253,7 +368,9 @@ export const TemaSubmissionsModal = ({
                       {submission.nome_aluno}
                     </TableCell>
                     <TableCell className="text-gray-700">
-                      {submission.turma && submission.turma !== "null" ? formatTurmaDisplay(submission.turma) : "—"}
+                      {submission.turma && submission.turma !== "null" && !isStatusEspecial(submission.turma)
+                        ? formatTurmaDisplay(submission.turma)
+                        : "—"}
                     </TableCell>
                     {isSimulado ? (
                       <>

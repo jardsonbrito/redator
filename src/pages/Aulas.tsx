@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,14 +6,16 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
-import { Navigate } from "react-router-dom";
-import { Search, CheckCircle } from "lucide-react";
+import { Navigate, useSearchParams } from "react-router-dom";
+import { Search, CheckCircle, BookMarked } from "lucide-react";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone, type UnifiedCardItem } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
 import { AulaGravadaCardPadrao } from "@/components/shared/AulaGravadaCardPadrao";
+import { AulaVideoModal } from "@/components/shared/AulaVideoModal";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
@@ -43,15 +45,25 @@ interface Aula {
 const Aulas = () => {
   // Configurar título da página
   usePageTitle('Aulas');
-  
+
   const { studentData } = useStudentAuth();
-  const { markAsWatched, isWatched } = useRecordedLessonViews();
+  const { professor } = useProfessorAuth();
+  const { markAsWatched, isWatched, confirmAsWatched, isConfirmed, isConfirming } = useRecordedLessonViews();
   const { isFeatureEnabled } = usePlanFeatures(studentData.email);
+  const [searchParams] = useSearchParams();
+  const aulaDestaque = searchParams.get('aula'); // ID vindo do PEP (missão vinculada)
+  const aulaDestaqueRef = useRef<HTMLDivElement | null>(null);
   const [aulas, setAulas] = useState<Aula[]>([]);
   const [filteredAulas, setFilteredAulas] = useState<Aula[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [moduloFilter, setModuloFilter] = useState("");
+  // Atualização otimista: IDs das aulas abertas nesta sessão (antes do refetch do banco)
+  const [aulasAbertasLocal, setAulasAbertasLocal] = useState<Set<string>>(new Set());
+  // Atualização otimista: IDs das aulas confirmadas nesta sessão
+  const [aulasConfermadasLocal, setAulasConfermadasLocal] = useState<Set<string>>(new Set());
+  // Aula sendo exibida no modal inline
+  const [aulaEmReproducao, setAulaEmReproducao] = useState<Aula | null>(null);
   const { toast } = useToast();
 
   const modulosDisponiveis = [
@@ -67,6 +79,16 @@ const Aulas = () => {
     fetchAulas();
   }, []);
 
+  // Scroll automático para a aula vinculada ao PEP quando a lista carrega
+  useEffect(() => {
+    if (!aulaDestaque || isLoading || filteredAulas.length === 0) return;
+    if (aulaDestaqueRef.current) {
+      setTimeout(() => {
+        aulaDestaqueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [aulaDestaque, isLoading, filteredAulas]);
+
   useEffect(() => {
     filterAulas();
   }, [aulas, searchTerm, moduloFilter]);
@@ -77,7 +99,8 @@ const Aulas = () => {
       console.log('🔄 Dados do estudante completos:', JSON.stringify(studentData, null, 2));
       
       // Validar dados antes de fazer a consulta
-      const userType = studentData.userType || null;
+      // Professor tem tipo próprio; aluno usa turma; demais casos passam null (admin vê tudo)
+      const userType = professor ? 'professor' : (studentData.userType || null);
       const userTurma = (studentData.userType === 'aluno' && studentData.turma) ? studentData.turma : null;
       
       console.log('📋 Parâmetros para RPC:', { userType, userTurma });
@@ -161,57 +184,49 @@ const Aulas = () => {
     setFilteredAulas(filtered);
   };
 
-  const handleAssistirAula = async (aula: Aula) => {
-    // Marcar como assistida primeiro (se for vídeo gravado)
-    if (aula.video_id || aula.embed_url || aula.video_url_original) {
-      await markAsWatched(aula.id, aula.titulo);
-    }
-    
-    // Determinar a melhor URL para abrir
-    let videoUrl = '';
-    
-    // Priorizar embed_url ou video_url_original
+  const handleConfirmar = async (id: string, titulo: string) => {
+    // Atualização otimista: muda botão imediatamente
+    setAulasConfermadasLocal(prev => new Set(prev).add(id));
+    await confirmAsWatched(id, titulo);
+  };
+
+  const handleAssistirAula = (aula: Aula) => {
+    // Atualização otimista: revela o botão "Confirmar" imediatamente
+    setAulasAbertasLocal(prev => new Set(prev).add(aula.id));
+
+    // Com embed_url disponível → reprodução inline no modal
     if (aula.embed_url) {
-      videoUrl = aula.embed_url;
-    } else if (aula.video_url_original) {
-      videoUrl = aula.video_url_original;
-    } else if (aula.link_conteudo) {
-      // Verificar se é uma URL do YouTube e convertê-la se necessário
-      const youtubeMatch = aula.link_conteudo.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-      if (youtubeMatch && youtubeMatch[1]) {
-        // Converter para formato embed que funciona melhor
-        videoUrl = `https://www.youtube.com/watch?v=${youtubeMatch[1]}`;
-      } else {
-        videoUrl = aula.link_conteudo;
-      }
+      setAulaEmReproducao(aula);
+      markAsWatched(aula.id, aula.titulo);
+      return;
     }
 
-    if (videoUrl) {
-      try {
-        // Abrir em nova aba
-        const newWindow = window.open(videoUrl, '_blank', 'noopener,noreferrer');
-        if (!newWindow) {
-          toast({
-            title: "Bloqueador de pop-up detectado",
-            description: "Por favor, permita pop-ups para este site ou tente novamente.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao abrir vídeo:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível abrir o vídeo. Tente novamente.",
-          variant: "destructive"
-        });
-      }
-    } else {
+    // Sem embed_url → fallback para nova aba (comportamento anterior)
+    let videoUrl = aula.video_url_original || aula.link_conteudo || '';
+
+    if (!videoUrl) {
       toast({
         title: "Erro",
         description: "Link do vídeo não disponível.",
         variant: "destructive"
       });
+      return;
     }
+
+    try {
+      const newWindow = window.open(videoUrl, '_blank', 'noopener,noreferrer');
+      if (!newWindow) {
+        toast({
+          title: "Bloqueador de pop-up detectado",
+          description: "Por favor, permita pop-ups para este site ou tente novamente.",
+          variant: "destructive"
+        });
+      }
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível abrir o vídeo.", variant: "destructive" });
+    }
+
+    markAsWatched(aula.id, aula.titulo);
   };
 
   const handleDownloadPdf = async (aula: Aula) => {
@@ -242,8 +257,8 @@ const Aulas = () => {
     }
   };
 
-  // Se a funcionalidade está desabilitada pelo plano, redirecionar
-  if (!isFeatureEnabled('aulas_gravadas')) {
+  // Se a funcionalidade está desabilitada pelo plano, redirecionar (professor é isento)
+  if (!professor && !isFeatureEnabled('aulas_gravadas')) {
     return <Navigate to="/app" replace />;
   }
 
@@ -309,6 +324,16 @@ const Aulas = () => {
             </CardContent>
           </Card>
 
+          {/* Banner de missão vinculada (quando vem do PEP) */}
+          {aulaDestaque && filteredAulas.some(a => a.id === aulaDestaque) && (
+            <div className="flex items-center gap-2 mb-4 px-4 py-3 bg-[#f1e4fe] border border-[#c8a8f0] rounded-xl mx-1 sm:mx-0">
+              <BookMarked className="w-4 h-4 text-[#3f0776] flex-shrink-0" />
+              <p className="text-sm text-[#3f0776] font-medium">
+                Aula vinculada ao seu Plano de Estudo — destacada abaixo.
+              </p>
+            </div>
+          )}
+
           {/* Lista de Aulas */}
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mx-1 sm:mx-0">
             {filteredAulas.length === 0 ? (
@@ -323,22 +348,42 @@ const Aulas = () => {
                 </CardContent>
               </Card>
             ) : (
-              filteredAulas.map((aula) => (
-                <AulaGravadaCardPadrao
-                  key={aula.id}
-                  aula={aula}
-                  perfil="aluno"
-                  isWatched={isWatched(aula.id)}
-                  actions={{
-                    onAssistir: () => handleAssistirAula(aula),
-                    onBaixarPdf: aula.pdf_url ? () => handleDownloadPdf(aula) : undefined,
-                  }}
-                />
-              ))
+              filteredAulas.map((aula) => {
+                const isDestaque = aula.id === aulaDestaque;
+                return (
+                  <div
+                    key={aula.id}
+                    ref={isDestaque ? aulaDestaqueRef : null}
+                    className={isDestaque ? 'ring-2 ring-[#3f0776] ring-offset-2 rounded-2xl' : ''}
+                  >
+                    <AulaGravadaCardPadrao
+                      aula={aula}
+                      perfil="aluno"
+                      isWatched={isWatched(aula.id) || aulasAbertasLocal.has(aula.id)}
+                      isConfirmed={isConfirmed(aula.id) || aulasConfermadasLocal.has(aula.id)}
+                      isConfirming={isConfirming}
+                      actions={{
+                        onAssistir: () => handleAssistirAula(aula),
+                        onConfirmar: (id) => handleConfirmar(id, aula.titulo),
+                        onBaixarPdf: aula.pdf_url ? () => handleDownloadPdf(aula) : undefined,
+                      }}
+                    />
+                  </div>
+                );
+              })
             )}
           </div>
         </main>
         </div>
+
+        {/* Modal de reprodução inline */}
+        <AulaVideoModal
+          aula={aulaEmReproducao}
+          isConfirmed={aulaEmReproducao ? (isConfirmed(aulaEmReproducao.id) || aulasConfermadasLocal.has(aulaEmReproducao.id)) : false}
+          isConfirming={isConfirming}
+          onClose={() => setAulaEmReproducao(null)}
+          onConfirmar={(id, titulo) => handleConfirmar(id, titulo)}
+        />
       </TooltipProvider>
     </ProtectedRoute>
   );

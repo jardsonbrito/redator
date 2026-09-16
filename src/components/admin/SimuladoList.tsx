@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SimuladoForm } from "./SimuladoForm";
 import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
@@ -14,6 +15,8 @@ const SimuladoList = () => {
   const queryClient = useQueryClient();
   const [simuladoEditando, setSimuladoEditando] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
 
   const { data: simulados, isLoading } = useQuery({
     queryKey: ['admin-simulados'],
@@ -45,42 +48,49 @@ const SimuladoList = () => {
   }, [simulados]);
 
   const handleDeleteSimulado = (id: string) => {
-    // Buscar o simulado para mostrar informações na confirmação
-    const simulado = simulados?.find(s => s.id === id);
-    const nomeSimulado = simulado?.titulo || 'este simulado';
-
-    const confirmDelete = window.confirm(
-      `Tem certeza que deseja excluir "${nomeSimulado}"?\n\nEsta ação não pode ser desfeita e todas as redações relacionadas a este simulado serão afetadas.`
-    );
-
-    if (confirmDelete) {
-      deletarSimulado.mutate(id);
-    }
+    console.log('🗑️ [SimuladoList] handleDeleteSimulado chamado com ID:', id);
+    deletarSimulado.mutate(id);
   };
 
   const deletarSimulado = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      console.log('🗑️ [SimuladoList] Tentando deletar simulado:', id);
+
+      const { data, error } = await supabase
         .from('simulados')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      console.log('🗑️ [SimuladoList] Resultado da exclusão:', { data, error });
+
+      if (error) {
+        console.error('❌ [SimuladoList] Erro ao deletar:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
+
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('✅ [SimuladoList] Simulado deletado com sucesso:', data);
       toast({
         title: "Simulado excluído com sucesso!",
         description: "O simulado foi removido do sistema.",
       });
       queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('❌ [SimuladoList] Erro na mutação:', error);
       toast({
         title: "Erro ao excluir simulado",
-        description: "Não foi possível excluir o simulado.",
+        description: error.message || "Não foi possível excluir o simulado.",
         variant: "destructive",
       });
-      console.error("Erro ao excluir simulado:", error);
     }
   });
 
@@ -173,24 +183,43 @@ const SimuladoList = () => {
     );
   }
 
+  const simuladosFiltrados = apenasAnoAtual
+    ? (simulados || []).filter((s) => {
+        const d = new Date(s.data_inicio);
+        return !isNaN(d.getTime()) && d.getFullYear() === anoAtual;
+      })
+    : (simulados || []);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-redator-primary">Simulados Cadastrados</h2>
-        <Button onClick={() => setShowForm(true)} variant="default" size="sm">
-          Novo Simulado
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={apenasAnoAtual ? "default" : "outline"}
+            size="sm"
+            onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+          >
+            <Calendar className="w-3 h-3 mr-1" />
+            {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+          </Button>
+          <Button onClick={() => setShowForm(true)} variant="default" size="sm">
+            Novo Simulado
+          </Button>
+        </div>
       </div>
-      
-      {!simulados || simulados.length === 0 ? (
+
+      {simuladosFiltrados.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-gray-500">Nenhum simulado cadastrado ainda.</p>
+            <p className="text-gray-500">
+              {apenasAnoAtual ? `Nenhum simulado em ${anoAtual}` : "Nenhum simulado cadastrado ainda."}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {simulados.map((simulado) => (
+          {simuladosFiltrados.map((simulado) => (
             <SimuladoCardPadrao
               key={simulado.id}
               simulado={simulado}

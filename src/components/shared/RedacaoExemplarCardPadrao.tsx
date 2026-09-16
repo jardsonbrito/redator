@@ -2,7 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MoreHorizontal, ExternalLink, Edit, Trash2, User } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, Edit, Trash2, User, Download, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
+import { fetchFullRedacaoExemplar, generateRedacaoExemplarPDF } from '@/utils/redacaoExemplarPdfUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SeloValidacaoENEM } from '@/components/shared/SeloValidacaoENEM';
 
 interface RedacaoExemplarCardData {
   id: string;
@@ -25,21 +28,26 @@ interface RedacaoExemplarCardData {
   foto_autor?: string;
   pdf_url?: string;
   imagem_url?: string;
-  dica_de_escrita?: string;
   data_agendamento?: string | null;
   // Campos para agendamento/publicação programada (legado)
   data_publicacao?: string | null;
   programada?: boolean;
+  // Validação ENEM
+  atualizado_banca?: boolean;
+  ano_banca?: number | null;
+  // Status ativo/inativo
+  ativo?: boolean;
 }
 
 interface RedacaoExemplarCardActions {
   onEditar?: (id: string) => void;
   onExcluir?: (id: string) => void;
+  onToggleAtivo?: () => void;
 }
 
 interface RedacaoExemplarCardPadraoProps {
   redacao: RedacaoExemplarCardData;
-  perfil: 'aluno' | 'admin' | 'corretor';
+  perfil: 'aluno' | 'admin' | 'corretor' | 'professor';
   actions?: RedacaoExemplarCardActions;
 }
 
@@ -49,6 +57,34 @@ export const RedacaoExemplarCardPadrao = ({
   actions
 }: RedacaoExemplarCardPadraoProps) => {
   const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const [downloadingPdf, setDownloadingPdf] = React.useState(false);
+
+  const handleDownloadPdf = async () => {
+    setDropdownOpen(false);
+    setDownloadingPdf(true);
+    const toastId = toast.loading('Gerando PDF...');
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast.error('Popup bloqueado. Permita popups para este site e tente novamente.', { id: toastId });
+      setDownloadingPdf(false);
+      return;
+    }
+
+    try {
+      const full = await fetchFullRedacaoExemplar(redacao.id);
+      if (!full) throw new Error('Redação não encontrada');
+      await generateRedacaoExemplarPDF(full, win);
+      toast.success('PDF gerado com sucesso!', { id: toastId });
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      win.close();
+      toast.error('Erro ao gerar PDF. Tente novamente.', { id: toastId });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
 
 
@@ -127,6 +163,8 @@ export const RedacaoExemplarCardPadrao = ({
   const handleViewRedacao = () => {
     if (perfil === 'corretor') {
       navigate(`/corretor/redacoes-exemplar/${redacao.id}`);
+    } else if (perfil === 'professor') {
+      navigate(`/professor/redacoes-exemplar/${redacao.id}`);
     } else {
       // Admin e aluno usam a mesma rota
       navigate(`/redacoes-exemplar/${redacao.id}`);
@@ -151,6 +189,16 @@ export const RedacaoExemplarCardPadrao = ({
         {getEixoBadge() && (
           <div className="absolute top-2 left-2">
             {getEixoBadge()}
+          </div>
+        )}
+
+        {/* Badge de status inativo (só para admin) */}
+        {perfil === 'admin' && redacao.ativo === false && (
+          <div className="absolute top-2 right-2">
+            <Badge className="bg-red-600 text-white border-red-700">
+              <EyeOff className="w-3 h-3 mr-1" />
+              Inativa
+            </Badge>
           </div>
         )}
       </div>
@@ -192,19 +240,48 @@ export const RedacaoExemplarCardPadrao = ({
             {/* Menu três pontinhos apenas para admin */}
             {perfil === 'admin' && (
               <div className="flex-shrink-0">
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => actions?.onEditar?.(redacao.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onEditar?.(redacao.id);
+                    }}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleDownloadPdf}
+                      disabled={downloadingPdf}
+                    >
+                      <Download className="mr-2 h-4 w-4 text-purple-600" />
+                      {downloadingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onToggleAtivo?.();
+                    }}>
+                      {redacao.ativo !== false ? (
+                        <>
+                          <EyeOff className="mr-2 h-4 w-4 text-orange-600" />
+                          <span className="text-orange-600">Inativar</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="mr-2 h-4 w-4 text-green-600" />
+                          <span className="text-green-600">Ativar</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => actions?.onExcluir?.(redacao.id)} className="text-red-600">
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onExcluir?.(redacao.id);
+                    }} className="text-red-600">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>
@@ -213,6 +290,13 @@ export const RedacaoExemplarCardPadrao = ({
               </div>
             )}
           </div>
+
+          {/* Selo de validação ENEM */}
+          {redacao.atualizado_banca && (
+            <div>
+              <SeloValidacaoENEM ano={redacao.ano_banca} />
+            </div>
+          )}
 
           {/* Data de criação (só para admin) */}
           {perfil === 'admin' && formatCreatedDate() && (

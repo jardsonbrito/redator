@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
@@ -12,6 +12,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
 import { ModalRevisualizacaoRedacao } from "@/components/ModalRevisualizacaoRedacao";
+import { ModalEditarReenviarRedacao } from "@/components/ModalEditarReenviarRedacao";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
@@ -118,9 +119,14 @@ const MinhasRedacoesList = () => {
   // Estados para modal de revisualização (quando já está ciente)
   const [showModalRevisualizacao, setShowModalRevisualizacao] = useState(false);
   const [redacaoRevisualizacao, setRedacaoRevisualizacao] = useState<RedacaoTurma | null>(null);
-  
+
+  // Estados para modal de editar e reenviar
+  const [showEditarReenviarModal, setShowEditarReenviarModal] = useState(false);
+  const [redacaoParaEditar, setRedacaoParaEditar] = useState<any>(null);
+
   const itemsPerPage = 10;
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const navigate = useNavigate();
   const { isRedacaoVisualizada } = useVisualizacoesRealtime();
@@ -128,10 +134,8 @@ const MinhasRedacoesList = () => {
   // Hook para cancelamento de redações
   const { cancelRedacao, cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
     onSuccess: () => {
-      // Recarregar a lista após cancelamento com delay maior para capturar logs
-      setTimeout(() => {
-        window.location.reload();
-      }, 5000);
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
     }
   });
 
@@ -177,7 +181,7 @@ const MinhasRedacoesList = () => {
     condition2: isVisitanteLoggedIn
   });
 
-  const { data: redacoes = [], isLoading, error } = useQuery({
+  const { data: redacoes = [], isLoading, error, refetch } = useQuery({
     queryKey: ['minhas-redacoes', studentData?.email, visitanteData?.email, userType, 'visitor-essays'],
     queryFn: async () => {
       console.log('🔍 Iniciando busca de redações - userType:', userType);
@@ -198,6 +202,7 @@ const MinhasRedacoesList = () => {
           .select('*')
           .eq('turma', 'visitante')
           .ilike('email_aluno', emailVisitante)
+          .is('deleted_at', null)
           .order('data_envio', { ascending: false });
           
         if (errorVisitantes) {
@@ -242,6 +247,7 @@ const MinhasRedacoesList = () => {
             corretor2:corretores!corretor_id_2(id, nome_completo)
           `)
           .ilike('email_aluno', emailBusca)
+          .is('deleted_at', null)
           .order('data_envio', { ascending: false });
 
         console.log('📋 Redações encontradas para o aluno:', {
@@ -262,7 +268,7 @@ const MinhasRedacoesList = () => {
         const todasRedacoes: RedacaoTurma[] = [];
 
         // Buscar temas correspondentes às frases temáticas das redações
-        let temasMap = new Map();
+        const temasMap = new Map();
         if (redacoesRegulares && redacoesRegulares.length > 0) {
           const frasesTemáticas = [...new Set(redacoesRegulares.map((r: any) => r.frase_tematica))];
 
@@ -512,6 +518,39 @@ const MinhasRedacoesList = () => {
     setShowAuthDialog(true);
   };
 
+  const handleEditarReenviar = async (id: string) => {
+    console.log('📝 Abrindo modal de edição e reenvio para redação:', id);
+
+    try {
+      // Buscar dados completos da redação
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, frase_tematica, redacao_texto')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        console.error('Erro ao buscar redação:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados da redação.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setRedacaoParaEditar(data);
+      setShowEditarReenviarModal(true);
+    } catch (error) {
+      console.error('Erro ao abrir modal de edição:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir o editor de redação.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleEmailAuth = async () => {
     if (!selectedRedacao) return;
     
@@ -692,7 +731,7 @@ const MinhasRedacoesList = () => {
     const maxVisiblePages = 5;
     
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
     
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
@@ -768,6 +807,10 @@ const MinhasRedacoesList = () => {
                 key={redacao.id}
                 redacao={redacao}
                 actions={{
+                  // Simulados não permitem cancelamento nesta lista — o cancelamento
+                  // de simulado é feito pelo card do simulado (SimuladoCardPadrao)
+                  // somente enquanto o simulado está ativo (não encerrado).
+                  canCancelarEnvio: redacao.tipo_envio !== 'simulado',
                   onVerRedacao: (id) => {
                     if (redacao.status === 'devolvida') {
                       handleViewRedacao(redacao);
@@ -793,7 +836,8 @@ const MinhasRedacoesList = () => {
                         }
                       }
                     }
-                  }
+                  },
+                  onEditarReenviar: handleEditarReenviar
                 }}
               />
             ))}
@@ -979,6 +1023,21 @@ const MinhasRedacoesList = () => {
               frase_tematica: redacaoRevisualizacao.frase_tematica,
               justificativa_devolucao: (redacaoRevisualizacao as any).justificativa_devolucao || 'Motivo não especificado',
               data_envio: redacaoRevisualizacao.data_envio
+            }}
+          />
+        )}
+
+        {/* Modal de editar e reenviar redação */}
+        {redacaoParaEditar && (
+          <ModalEditarReenviarRedacao
+            isOpen={showEditarReenviarModal}
+            onClose={() => {
+              setShowEditarReenviarModal(false);
+              setRedacaoParaEditar(null);
+            }}
+            redacao={redacaoParaEditar}
+            onSuccess={() => {
+              refetch();
             }}
           />
         )}

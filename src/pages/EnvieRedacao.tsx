@@ -1,6 +1,8 @@
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ClipboardList } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,12 +12,21 @@ import { RedacaoFormUnificado } from "@/components/shared/RedacaoFormUnificado";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Configurar breadcrumbs e título
   const fonte = searchParams.get('fonte');
   const tema = searchParams.get('tema');
+  const processoSeletivoCandidatoId = searchParams.get('processo_seletivo_candidato_id');
+  const isProcessoSeletivo = !!processoSeletivoCandidatoId;
 
-  if (fonte === 'tema' && tema) {
+  if (isProcessoSeletivo) {
+    useBreadcrumbs([
+      { label: 'Início', href: '/app' },
+      { label: 'Processo Seletivo', href: '/processo-seletivo' },
+      { label: 'Enviar Redação' }
+    ]);
+  } else if (fonte === 'tema' && tema) {
     useBreadcrumbs([
       { label: 'Início', href: '/app' },
       { label: 'Temas', href: '/temas' },
@@ -27,6 +38,12 @@ const EnvieRedacao = () => {
       { label: 'Exercícios', href: '/exercicios' },
       { label: 'Enviar Redação' }
     ]);
+  } else if (fonte === 'laboratorio') {
+    useBreadcrumbs([
+      { label: 'Início', href: '/app' },
+      { label: 'Repertório Orientado', href: '/repertorio-orientado' },
+      { label: 'Enviar Redação' }
+    ]);
   } else {
     useBreadcrumbs([
       { label: 'Início', href: '/app' },
@@ -34,7 +51,7 @@ const EnvieRedacao = () => {
     ]);
   }
 
-  usePageTitle('Enviar Redação');
+  usePageTitle(isProcessoSeletivo ? 'Redação - Processo Seletivo' : 'Enviar Redação');
 
   const temaFromUrl = searchParams.get('tema');
   const exercicioFromUrl = searchParams.get('exercicio');
@@ -42,7 +59,8 @@ const EnvieRedacao = () => {
 
   // Verificar se acesso ao tema livre está desabilitado
   const isFreeTopicAccess = !temaFromUrl && !exercicioFromUrl;
-  const isFreeTopicDisabled = isFreeTopicAccess && settings && settings.free_topic_enabled === false;
+  const isFromLaboratorio = fonte === 'laboratorio';
+  const isFreeTopicDisabled = isFreeTopicAccess && !isFromLaboratorio && settings && settings.free_topic_enabled === false;
 
   // Verificar se tema livre está desabilitado
   if (isFreeTopicDisabled) {
@@ -82,13 +100,23 @@ const EnvieRedacao = () => {
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Enviar Redação" />
           <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Badge do Processo Seletivo */}
+            {isProcessoSeletivo && (
+              <div className="mb-4 flex justify-center">
+                <Badge className="bg-purple-600 text-white px-4 py-2 text-sm">
+                  <ClipboardList className="w-4 h-4 mr-2" />
+                  Processo Seletivo - Etapa Final
+                </Badge>
+              </div>
+            )}
             <RedacaoFormUnificado
               fraseTematica={temaFromUrl ? decodeURIComponent(temaFromUrl) : ""}
-              readOnlyFraseTematica={fonte === 'tema'}
-              fonte={fonte}
+              readOnlyFraseTematica={fonte === 'tema' || fonte === 'laboratorio' || isProcessoSeletivo}
+              fonte={isProcessoSeletivo ? 'processo_seletivo' : fonte}
               exercicioId={exercicioFromUrl}
+              processoSeletivoCandidatoId={processoSeletivoCandidatoId}
               requiredCorretores={1}
-              requiredCredits={1}
+              requiredCredits={isProcessoSeletivo ? 0 : 1}
             />
           </main>
         </div>

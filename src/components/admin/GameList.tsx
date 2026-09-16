@@ -370,7 +370,7 @@ const GameList: React.FC<GameListProps> = ({ onEdit, onNew, onStats }) => {
                         <div className="flex gap-1 flex-wrap">
                           {game.turmas_autorizadas.map(turma => (
                             <Badge key={turma} variant="outline" className="text-xs">
-                              Turma {turma}
+                              {turma}
                             </Badge>
                           ))}
                         </div>

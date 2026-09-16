@@ -12,7 +12,7 @@ import {
 import { Edit, Trash2, Eye, Power, MoreHorizontal, Calendar, Users, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
+import { getExerciseAvailability, formatExercisePeriod, getEffectiveCover } from "@/utils/exerciseUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { ExercicioSubmissionsModal } from "./ExercicioSubmissionsModal";
 
@@ -57,7 +57,9 @@ export const AdminExerciseCard = ({
   onDelete
 }: AdminExerciseCardProps) => {
   const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+  const [pendingCount, setPendingCount] = useState<number>(0);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchSubmissionsCount();
@@ -65,35 +67,48 @@ export const AdminExerciseCard = ({
 
   const fetchSubmissionsCount = async () => {
     try {
-      // Buscar a frase temática do tema vinculado ao exercício
-      if (!exercicio.temas?.frase_tematica) {
-        setSubmissionsCount(0);
+      if (exercicio.tipo === 'Produção Guiada') {
+        const [{ count: total, error }, { count: pending }] = await Promise.all([
+          supabase
+            .from("redacoes_exercicio")
+            .select("*", { count: "exact", head: true })
+            .eq("exercicio_id", exercicio.id),
+          supabase
+            .from("redacoes_exercicio")
+            .select("*", { count: "exact", head: true })
+            .eq("exercicio_id", exercicio.id)
+            .in("status_corretor_1", ["pendente", "em_correcao", "reenviado"])
+            .eq("corrigida", false),
+        ]);
+        if (error) throw error;
+        setSubmissionsCount(total || 0);
+        setPendingCount(pending || 0);
         return;
       }
 
-      const fraseTematica = exercicio.temas.frase_tematica;
+      if (!exercicio.temas?.frase_tematica) {
+        setSubmissionsCount(0);
+        setPendingCount(0);
+        return;
+      }
 
-      // Buscar redações que têm essa frase temática
       const { count, error } = await supabase
         .from("redacoes_enviadas")
         .select("*", { count: "exact", head: true })
-        .eq("frase_tematica", fraseTematica);
+        .eq("frase_tematica", exercicio.temas.frase_tematica)
+        .is("deleted_at", null);
 
       if (error) throw error;
       setSubmissionsCount(count || 0);
+      setPendingCount(0);
     } catch (error) {
       console.error("Erro ao buscar contagem de envios:", error);
       setSubmissionsCount(0);
+      setPendingCount(0);
     }
   };
 
-  const getCoverImage = () => {
-    if (exercicio.cover_upload_url) return exercicio.cover_upload_url;
-    if (exercicio.cover_url) return exercicio.cover_url;
-    if (exercicio.imagem_capa_url) return exercicio.imagem_capa_url;
-    if (exercicio.temas?.cover_url) return exercicio.temas.cover_url;
-    return "/placeholders/aula-cover.png";
-  };
+  const getCoverImage = () => getEffectiveCover(exercicio);
 
   const formatCreationDate = (dateString: string) => {
     try {
@@ -154,42 +169,6 @@ export const AdminExerciseCard = ({
                 {exercicio.tipo}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(exercicio)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar exercício
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onToggleActive(exercicio)}>
-                    <Power className="mr-2 h-4 w-4" />
-                    {exercicio.ativo ? 'Marcar como rascunho' : 'Publicar exercício'}
-                  </DropdownMenuItem>
-                  {exercicio.link_forms && (
-                    <DropdownMenuItem onClick={() => window.open(exercicio.link_forms, '_blank')}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Visualizar exercício
-                    </DropdownMenuItem>
-                  )}
-                  {exercicio.tipo === 'Redação com Frase Temática' && (
-                    <DropdownMenuItem onClick={() => setShowSubmissionsModal(true)}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Alunos que Enviaram
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onDelete(exercicio)} className="text-red-600">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir exercício
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
 
           {/* Informações extras */}
@@ -242,24 +221,99 @@ export const AdminExerciseCard = ({
             </div>
           )}
 
-          {/* Contador de envios - apenas para Redação com Frase Temática */}
-          {exercicio.tipo === 'Redação com Frase Temática' && (
-            <div className="pt-2 border-t border-gray-200">
-              <div className="flex items-center gap-2 text-sm">
-                <FileText className="w-4 h-4 text-purple-600" />
-                <span className="font-medium text-gray-700">Enviaram:</span>
-                <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold">
-                  {submissionsCount}
-                </Badge>
-              </div>
+          {/* Rodapé com contador e menu de ações */}
+          <div className="pt-3 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              {/* Contador de envios - clicável para Redação e Produção Guiada */}
+              {(exercicio.tipo === 'Redação com Frase Temática' || exercicio.tipo === 'Produção Guiada') ? (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowSubmissionsModal(true)}
+                    className="flex items-center gap-2 text-sm hover:bg-purple-50 px-2 py-1 rounded-md transition-colors group"
+                  >
+                    <FileText className="w-4 h-4 text-purple-600 group-hover:text-purple-700" />
+                    <span className="font-medium text-gray-700 group-hover:text-purple-700">Enviaram:</span>
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold group-hover:bg-purple-200">
+                      {submissionsCount}
+                    </Badge>
+                  </button>
+                  {exercicio.tipo === 'Produção Guiada' && pendingCount > 0 && (
+                    <button
+                      onClick={() => setShowSubmissionsModal(true)}
+                      className="flex items-center gap-1.5 text-sm hover:bg-amber-50 px-2 py-1 rounded-md transition-colors group"
+                    >
+                      <Badge className="bg-amber-100 text-amber-700 font-semibold group-hover:bg-amber-200 border-0">
+                        {pendingCount} aguardam
+                      </Badge>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <span>📅</span>
+                  <span>{formatCreationDate(exercicio.criado_em)}</span>
+                </div>
+              )}
+
+              {/* Menu de ações (três pontinhos) */}
+              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                    <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
+                  <DropdownMenuItem onClick={() => {
+                    setDropdownOpen(false);
+                    onEdit(exercicio);
+                  }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Edit className="mr-2 h-4 w-4" />
+                    Editar exercício
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setDropdownOpen(false);
+                    onToggleActive(exercicio);
+                  }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Power className="mr-2 h-4 w-4" />
+                    {exercicio.ativo ? 'Marcar como rascunho' : 'Publicar exercício'}
+                  </DropdownMenuItem>
+                  {exercicio.link_forms && (
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      window.open(exercicio.link_forms, '_blank');
+                    }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                      <Eye className="mr-2 h-4 w-4" />
+                      Visualizar exercício
+                    </DropdownMenuItem>
+                  )}
+                  {(exercicio.tipo === 'Redação com Frase Temática' || exercicio.tipo === 'Produção Guiada') && (
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      setTimeout(() => setShowSubmissionsModal(true), 100);
+                    }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Alunos que Enviaram
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    setDropdownOpen(false);
+                    onDelete(exercicio);
+                  }} className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 transition-colors">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir exercício
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
       {/* Modal de lista de alunos que enviaram */}
       <ExercicioSubmissionsModal
         isOpen={showSubmissionsModal}
+        exercicioTipo={exercicio.tipo}
         onClose={() => setShowSubmissionsModal(false)}
         exercicioId={exercicio.id}
         exercicioTitulo={exercicio.titulo}

@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, Calendar } from "lucide-react";
 import { useRedacoesEnviadas, RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { RedacaoViewForm } from "./RedacaoViewForm";
 import { RedacaoListTable } from "./RedacaoListTable";
+import { estaCongelada } from "@/utils/redacaoUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
-import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 
 export const RedacaoEnviadaForm = () => {
   const {
@@ -34,6 +35,9 @@ export const RedacaoEnviadaForm = () => {
   const [filtroCorretor, setFiltroCorretor] = useState<string>("todos");
   const [filtroMes, setFiltroMes] = useState<string>(""); // vazio significa "mês atual"
   const [buscaNome, setBuscaNome] = useState("");
+
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
 
   // Consulta para buscar corretores ativos
   const { data: corretores } = useQuery({
@@ -78,6 +82,11 @@ export const RedacaoEnviadaForm = () => {
   const mesAtual = format(new Date(), 'yyyy-MM');
   const mesDefault = mesesDisponiveis.includes(mesAtual) ? mesAtual : (mesesDisponiveis[mesesDisponiveis.length - 1] || mesAtual);
 
+  // Filtrar chips de mês por ano quando ativo
+  const mesesFiltrados = apenasAnoAtual
+    ? mesesDisponiveis.filter(m => m.startsWith(`${anoAtual}-`))
+    : mesesDisponiveis;
+
   // Inicializar filtro de mês se ainda não foi definido
   useEffect(() => {
     if (filtroMes === "" && mesesDisponiveis.length > 0) {
@@ -98,10 +107,12 @@ export const RedacaoEnviadaForm = () => {
       return filtroTurma === redacao.turma;
     })();
     
+    const redacaoCongelada = estaCongelada(redacao);
     const matchStatus = filtroStatus === "todas" ||
-      (filtroStatus === "aguardando" && !redacao.corrigida && redacao.status !== 'incompleta' && redacao.status !== 'devolvida') ||
+      (filtroStatus === "aguardando" && !redacao.corrigida && !redacaoCongelada && redacao.status !== 'incompleta' && redacao.status !== 'devolvida') ||
       (filtroStatus === "incompletas" && (redacao.status === 'incompleta' || redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta')) ||
-      (filtroStatus === "corrigidas" && (redacao.status === 'corrigida' || redacao.corrigida));
+      (filtroStatus === "corrigidas" && (redacao.status === 'corrigida' || redacao.corrigida)) ||
+      (filtroStatus === "congeladas" && redacaoCongelada);
     
     const matchCorretor = filtroCorretor === "todos" || 
       redacao.corretor_id_1 === filtroCorretor || 
@@ -121,7 +132,10 @@ export const RedacaoEnviadaForm = () => {
     return matchNome && matchTurma && matchStatus && matchCorretor && matchMes;
   });
 
-  const turmasDisponiveis = TODAS_TURMAS; // ['A', 'B', 'C', 'D', 'E', 'VISITANTE']
+  const turmasDisponiveis = useMemo(
+    () => [...new Set(redacoes.map(r => r.turma).filter(Boolean))].sort() as string[],
+    [redacoes]
+  );
 
   const handleView = (redacao: RedacaoEnviada) => {
     setSelectedRedacao(redacao);
@@ -197,6 +211,7 @@ export const RedacaoEnviadaForm = () => {
                   <SelectItem value="aguardando">Aguardando</SelectItem>
                   <SelectItem value="incompletas">Incompletas</SelectItem>
                   <SelectItem value="corrigidas">Corrigidas</SelectItem>
+                  <SelectItem value="congeladas">Congeladas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -222,18 +237,32 @@ export const RedacaoEnviadaForm = () => {
           {/* Chips mensais para seleção rápida */}
           <div className="flex flex-wrap gap-2 mt-4">
             <Button
+              variant={apenasAnoAtual ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                const novoValor = !apenasAnoAtual;
+                setApenasAnoAtual(novoValor);
+                if (novoValor && filtroMes !== "todos" && filtroMes !== "" && !filtroMes.startsWith(`${anoAtual}-`)) {
+                  setFiltroMes(mesDefault);
+                }
+              }}
+            >
+              <Calendar className="w-3 h-3 mr-1" />
+              {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+            </Button>
+            <Button
               variant={filtroMes === "todos" ? "default" : "outline"}
               size="sm"
               onClick={() => setFiltroMes("todos")}
             >
               Todos os meses
             </Button>
-            {mesesDisponiveis.map(mes => {
+            {mesesFiltrados.map(mes => {
               // Criar data no primeiro dia do mês para evitar problemas de timezone
               const [ano, mes_num] = mes.split('-');
               const dataDoMes = new Date(parseInt(ano), parseInt(mes_num) - 1, 1);
               const nomeDoMes = format(dataDoMes, 'LLLL yyyy', { locale: ptBR });
-              
+
               return (
                 <Button
                   key={mes}

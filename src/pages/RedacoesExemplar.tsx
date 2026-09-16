@@ -12,10 +12,12 @@ import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
 import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
 import { RedacaoExemplarCardPadrao } from "@/components/shared/RedacaoExemplarCardPadrao";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 
 const RedacoesExemplar = () => {
   // Configurar título da página
   usePageTitle('Redações Exemplar');
+  const { professor } = useProfessorAuth();
 
   // Usar o hook de filtros
   const {
@@ -178,13 +180,17 @@ const RedacoesExemplar = () => {
               </Card>
             ) : (
               <div role="list" className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {redacoesExemplares.map((redacao: any) => (
-                  <RedacaoExemplarCardPadrao
-                    key={redacao.id}
-                    redacao={redacao}
-                    perfil="aluno"
-                  />
-                ))}
+                {[...redacoesExemplares]
+                  .sort((a: any, b: any) =>
+                    (a.frase_tematica || '').localeCompare(b.frase_tematica || '', 'pt-BR')
+                  )
+                  .map((redacao: any) => (
+                    <RedacaoExemplarCardPadrao
+                      key={redacao.id}
+                      redacao={redacao}
+                      perfil={professor ? "professor" : "aluno"}
+                    />
+                  ))}
               </div>
             )}
 

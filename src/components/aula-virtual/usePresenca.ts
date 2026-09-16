@@ -59,7 +59,7 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
       // Obter token de sessão do cookie
       const getSessionToken = (): string | null => {
         const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
+        for (const cookie of cookies) {
           const [name, value] = cookie.trim().split('=');
           if (name === 'student_session_token') {
             return value;

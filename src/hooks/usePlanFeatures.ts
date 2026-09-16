@@ -2,86 +2,121 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from './useSubscription';
 
-type PlanType = 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
-
-// Definir funcionalidades padrão por plano
-const DEFAULT_PLAN_FEATURES = {
-  'Largada': {
-    'temas': true,
-    'enviar_tema_livre': false,
-    'exercicios': false,
-    'simulados': false,
-    'lousa': false,
-    'biblioteca': false,
-    'redacoes_exemplares': false,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Lapidação': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Liderança': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': true,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Bolsista': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  }
-};
-
 export const usePlanFeatures = (userEmail: string) => {
   const { data: subscription } = useSubscription(userEmail);
 
-  // Buscar overrides do aluno usando RPC
+  // Verifica se é visitante
+  const { data: isVisitante } = useQuery({
+    queryKey: ['is-visitante', userEmail],
+    queryFn: async () => {
+      if (!userEmail) return false;
+      const { data } = await supabase
+        .from('visitante_sessoes')
+        .select('id')
+        .eq('email_visitante', userEmail)
+        .single();
+      return !!data;
+    },
+    enabled: !!userEmail,
+    staleTime: 5 * 60 * 1000
+  });
+
+  // ── FASE 2: DB-first — features do plano ─────────────────────────────────
+  // Ativo quando: tem plano e não é visitante.
+  // retry:1 → fallback rápido se o banco não responder.
+  // Retorna null se o banco falhar → isFeatureEnabled cai no hardcoded.
+  const { data: dbPlanFeatures } = useQuery({
+    queryKey: ['db-plan-features', subscription?.plano],
+    queryFn: async (): Promise<Record<string, boolean> | null> => {
+      if (!subscription?.plano) return null;
+      const { data, error } = await supabase
+        .rpc('get_features_for_plan', { plan_name: subscription.plano });
+      if (error || !data || data.length === 0) return null;
+      return Object.fromEntries(
+        (data as { chave: string; habilitado: boolean }[]).map(r => [r.chave, r.habilitado])
+      );
+    },
+    enabled: !!subscription?.plano && isVisitante !== true,
+    staleTime: 5 * 60 * 1000,
+    retry: 1
+  });
+
+  // ── FASE 2: DB-first — features do visitante ──────────────────────────────
+  // Ativo somente quando confirmado como visitante.
+  // get_visitante_features() não recebe parâmetro; cache global (sem email na key).
+  const { data: dbVisitanteFeatures } = useQuery({
+    queryKey: ['db-visitante-features'],
+    queryFn: async (): Promise<Record<string, boolean> | null> => {
+      const { data, error } = await supabase.rpc('get_visitante_features');
+      if (error || !data || data.length === 0) return null;
+      return Object.fromEntries(
+        (data as { chave: string; habilitado: boolean }[]).map(r => [r.chave, r.habilitado])
+      );
+    },
+    enabled: isVisitante === true,
+    staleTime: 5 * 60 * 1000,
+    retry: 1
+  });
+
+  // ── Verifica se é candidato ativo do Processo Seletivo ────────────────────
+  const { data: isPSCandidate } = useQuery({
+    queryKey: ['is-ps-candidate', userEmail],
+    queryFn: async (): Promise<boolean> => {
+      if (!userEmail) return false;
+      const { data } = await supabase
+        .from('ps_candidatos')
+        .select('id, ps_formularios!inner(ativo)')
+        .ilike('email_aluno', userEmail.toLowerCase().trim())
+        .not('status', 'in', '("reprovado","migrado")')
+        .eq('ps_formularios.ativo', true)
+        .limit(1)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!userEmail && isVisitante !== true && !subscription?.plano,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  // ── Features do Processo Seletivo ─────────────────────────────────────────
+  const { data: dbPSFeatures } = useQuery({
+    queryKey: ['db-ps-features'],
+    queryFn: async (): Promise<Record<string, boolean> | null> => {
+      const { data, error } = await supabase.rpc('get_ps_features');
+      if (error || !data || data.length === 0) return null;
+      return Object.fromEntries(
+        (data as { chave: string; habilitado: boolean }[]).map(r => [r.chave, r.habilitado])
+      );
+    },
+    enabled: isPSCandidate === true,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  // ── Ordem dos cards para o MenuGrid ──────────────────────────────────────
+  // Carregado uma vez; cache de 5 min; sem retry excessivo.
+  const { data: funcionalidadesOrdenadas } = useQuery({
+    queryKey: ['funcionalidades-ordered'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('funcionalidades')
+        .select('chave, ordem_aluno, nome_exibicao')
+        .eq('ativo', true)
+        .order('ordem_aluno');
+      if (error) return null;
+      return (data ?? null) as Array<{ chave: string; ordem_aluno: number; nome_exibicao: string }> | null;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Overrides individuais por aluno (inalterado)
   const { data: overrides = [] } = useQuery({
     queryKey: ['student-plan-overrides', userEmail],
     queryFn: async () => {
       if (!userEmail) return [];
 
-      // Primeiro buscar o ID do aluno
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
@@ -91,28 +126,15 @@ export const usePlanFeatures = (userEmail: string) => {
 
       if (profileError || !profile) return [];
 
-      // Buscar overrides usando RPC para contornar RLS
-
       let { data, error } = await supabase
-        .rpc('get_student_plan_overrides', {
-          student_uuid: profile.id
-        });
+        .rpc('get_student_plan_overrides', { student_uuid: profile.id });
 
-      // Se a função RPC não existir, tentar buscar diretamente da tabela
       if (error && (error.code === '42883' || error.message?.includes('does not exist'))) {
         const { data: directData, error: directError } = await supabase
           .from('plan_overrides')
           .select('*')
           .eq('student_id', profile.id);
-
-        if (directError) {
-          // Se a tabela não existir, retornar array vazio em vez de falhar
-          if (directError.code === '42P01' || directError.message?.includes('does not exist')) {
-            return [];
-          }
-          return [];
-        }
-
+        if (directError) return [];
         data = directData;
         error = null;
       } else if (error) {
@@ -122,37 +144,58 @@ export const usePlanFeatures = (userEmail: string) => {
       return data || [];
     },
     enabled: !!userEmail,
-    staleTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 5 * 60 * 1000
   });
 
+  // ── isFeatureEnabled: lógica de acesso DB-first ──────────────────────────
+  //
+  // Prioridade de resolução:
+  //   1. Visitante          → DB visitante_funcionalidades → false
+  //   2. PS candidate       → DB ps_funcionalidades → false
+  //   3. Sem assinatura     → false para tudo
+  //   4. Override individual → plan_overrides (prioridade máxima)
+  //   5. Plano              → DB plano_funcionalidades → false
+  //
   const isFeatureEnabled = (functionality: string): boolean => {
+    if (isVisitante) {
+      return dbVisitanteFeatures ? (dbVisitanteFeatures[functionality] ?? false) : false;
+    }
+
+    if (isPSCandidate && !subscription?.plano) {
+      return dbPSFeatures ? (dbPSFeatures[functionality] ?? false) : false;
+    }
+
     if (!subscription?.plano) {
       return false;
     }
 
-    // Verificar se há override
     const override = overrides.find(o => o.functionality === functionality);
-    if (override) {
+    if (override !== undefined) {
       return override.enabled;
     }
 
-    // Usar padrão do plano
-    const defaultValue = DEFAULT_PLAN_FEATURES[subscription.plano]?.[functionality] ?? false;
-    return defaultValue;
+    return dbPlanFeatures ? (dbPlanFeatures[functionality] ?? false) : false;
   };
+
+  const planFeatures = subscription?.plano ? (dbPlanFeatures ?? null) : null;
 
   return {
     subscription,
     isFeatureEnabled,
-    planFeatures: subscription?.plano ? DEFAULT_PLAN_FEATURES[subscription.plano] : null,
+    planFeatures,
     overrides,
-    // Debug info
+    funcionalidadesOrdenadas,
     isLoading: !subscription,
+    isVisitante,
+    isPSCandidate,
+    usingDbFeatures: !!(dbPlanFeatures || dbVisitanteFeatures || dbPSFeatures),
     debugInfo: {
-      userEmail: userEmail.slice(0, 10) + '...',
+      userEmail: userEmail ? userEmail.slice(0, 10) + '...' : '',
       hasSubscription: !!subscription,
       plano: subscription?.plano,
-      overridesCount: overrides.length
+      overridesCount: overrides.length,
+      isVisitante,
+      dbSource: !!(dbPlanFeatures || dbVisitanteFeatures)
     }
   };
 };

@@ -43,6 +43,7 @@ interface BibliotecaCardPadraoProps {
 
 export const BibliotecaCardPadrao = ({ material, perfil, actions }: BibliotecaCardPadraoProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const formatDate = (dateString: string) => {
     try {
@@ -87,42 +88,60 @@ export const BibliotecaCardPadrao = ({ material, perfil, actions }: BibliotecaCa
             )}
           </div>
 
-          <DropdownMenu>
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => actions?.onEditar?.(material)}>
+              <DropdownMenuItem onClick={() => {
+                setDropdownOpen(false);
+                actions?.onEditar?.(material);
+              }}>
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
 
               {material.status === 'publicado' ? (
-                <DropdownMenuItem onClick={() => actions?.onDespublicar?.(material.id)}>
+                <DropdownMenuItem onClick={() => {
+                  setDropdownOpen(false);
+                  actions?.onDespublicar?.(material.id);
+                }}>
                   <EyeOff className="h-4 w-4 mr-2" />
                   Despublicar
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem onClick={() => actions?.onPublicar?.(material.id)}>
+                <DropdownMenuItem onClick={() => {
+                  setDropdownOpen(false);
+                  actions?.onPublicar?.(material.id);
+                }}>
                   <Eye className="h-4 w-4 mr-2" />
                   Publicar
                 </DropdownMenuItem>
               )}
 
-              <DropdownMenuItem onClick={() => actions?.onDownloadAdmin?.(material)}>
+              <DropdownMenuItem onClick={() => {
+                setDropdownOpen(false);
+                actions?.onDownloadAdmin?.(material);
+              }}>
                 <Download className="h-4 w-4 mr-2" />
                 Download
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => actions?.onInativar?.(material.id)}>
+              <DropdownMenuItem onClick={() => {
+                setDropdownOpen(false);
+                actions?.onInativar?.(material.id);
+              }}>
                 <EyeOff className="h-4 w-4 mr-2" />
                 Inativar
               </DropdownMenuItem>
 
               <DropdownMenuItem
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  setShowDeleteDialog(true);
+                }}
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4 mr-2" />

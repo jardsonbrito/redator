@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, LogOut, BarChart3, Edit, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, LogOut, BarChart3, Edit, Power, PowerOff, Trash2, FileText, PlayCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { computeStatus } from '@/utils/aulaStatus';
 import { formatTurmaDisplay } from '@/utils/turmaUtils';
+import { Link } from 'react-router-dom';
 
 interface AulaCardData {
   id: string;
@@ -29,6 +30,7 @@ interface AulaCardData {
   ativo: boolean;
   eh_aula_ao_vivo?: boolean;
   status_transmissao?: string;
+  aula_gravada_id?: string | null;
 }
 
 interface AulaCardActions {
@@ -39,17 +41,23 @@ interface AulaCardActions {
   onEditar?: (id: string) => void;
   onDesativar?: (id: string) => void;
   onExcluir?: (id: string) => void;
+  onJustificarAusencia?: (id: string) => void;
 }
 
 interface AulaCardPadraoProps {
   aula: AulaCardData;
-  perfil: 'aluno' | 'admin';
+  perfil: 'aluno' | 'admin' | 'professor';
   actions?: AulaCardActions;
   attendanceStatus?: 'presente' | 'ausente' | 'entrada_registrada' | 'saida_registrada';
   loadingOperation?: boolean;
+  justificativaEnviada?: boolean;
+  /** true quando o aluno se matriculou APÓS a realização desta aula */
+  enrolledAfterClass?: boolean;
 }
 
-export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation }: AulaCardPadraoProps) => {
+export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation, justificativaEnviada, enrolledAfterClass = false }: AulaCardPadraoProps) => {
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+
   const getStatusAula = () => {
     if (!aula.eh_aula_ao_vivo) return 'encerrada';
 
@@ -91,7 +99,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
   };
 
   const getAttendanceBadge = () => {
-    if (perfil !== 'aluno' || !aula.eh_aula_ao_vivo) return null;
+    if ((perfil !== 'aluno' && perfil !== 'professor') || !aula.eh_aula_ao_vivo) return null;
 
     // Para aulas ao vivo ou agendadas, mostrar se entrada/saída foi registrada
     if (status === 'ao_vivo' || status === 'agendada') {
@@ -114,6 +122,18 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
     // Para aulas encerradas, mostrar status final
     if (status === 'encerrada') {
       const isPresent = attendanceStatus === 'entrada_registrada' || attendanceStatus === 'saida_registrada' || attendanceStatus === 'presente';
+      if (!isPresent && enrolledAfterClass) {
+        const to = aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas';
+        return (
+          <Link
+            to={to}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+          >
+            <PlayCircle className="w-3 h-3" />
+            Ver Gravação
+          </Link>
+        );
+      }
       return (
         <Badge variant={isPresent ? 'default' : 'secondary'} className="text-xs">
           {isPresent ? 'Presente' : 'Ausente'}
@@ -128,7 +148,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
     try {
       const date = new Date(aula.data_aula + 'T00:00:00');
       const dateStr = format(date, 'dd/MM/yyyy', { locale: ptBR });
-      return `${dateStr} • ${aula.horario_inicio} - ${aula.horario_fim}`;
+      return `${dateStr} • ${aula.horario_inicio.slice(0, 5)} - ${aula.horario_fim.slice(0, 5)}`;
     } catch {
       return 'Data não disponível';
     }
@@ -196,7 +216,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
             </div>
             <div className="flex items-center gap-2">
               {perfil === 'admin' && (
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                       <MoreHorizontal className="h-4 w-4" />
@@ -204,16 +224,25 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {aula.eh_aula_ao_vivo && (
-                      <DropdownMenuItem onClick={() => actions?.onFrequencia?.(aula.id)}>
+                      <DropdownMenuItem onClick={() => {
+                        setDropdownOpen(false);
+                        actions?.onFrequencia?.(aula.id);
+                      }}>
                         <BarChart3 className="mr-2 h-4 w-4" />
                         Frequência
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onClick={() => actions?.onEditar?.(aula.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onEditar?.(aula.id);
+                    }}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => actions?.onDesativar?.(aula.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onDesativar?.(aula.id);
+                    }}>
                       {aula.ativo ? (
                         <>
                           <PowerOff className="mr-2 h-4 w-4" />
@@ -227,7 +256,10 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => actions?.onExcluir?.(aula.id)} className="text-red-600">
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onExcluir?.(aula.id);
+                    }} className="text-red-600">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>
@@ -274,7 +306,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
 
           {/* Ações */}
           <div className="pt-2">
-            {perfil === 'aluno' && (
+            {(perfil === 'aluno' || perfil === 'professor') && (
               <div className="space-y-2">
                 <Button
                   className={`w-full font-semibold ${status === 'ao_vivo' ? 'bg-red-600 hover:bg-red-700 animate-pulse' : status === 'encerrada' ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'} text-white`}
@@ -284,6 +316,48 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   <ExternalLink className="w-4 h-4 mr-2" />
                   {getButtonText()}
                 </Button>
+
+                {/* Botão para assistir gravação — apenas para alunos */}
+                {perfil === 'aluno' && aula.eh_aula_ao_vivo && status === 'encerrada' && (enrolledAfterClass || attendanceStatus === 'ausente') && (
+                  <Link
+                    to={aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas'}
+                    className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium rounded-md border border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white transition-colors"
+                  >
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Assistir Gravação
+                  </Link>
+                )}
+
+                {/* Botão de justificativa — apenas para alunos */}
+                {perfil === 'aluno' && aula.eh_aula_ao_vivo && status === 'encerrada' && attendanceStatus === 'ausente' && !enrolledAfterClass && (
+                  <div className="space-y-2">
+                    {justificativaEnviada ? (
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-800 text-xs flex-1 justify-center py-1.5">
+                          ✓ Justificativa enviada — Falta justificada
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => actions?.onJustificarAusencia?.(aula.id)}
+                        >
+                          Ver
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-amber-300 text-amber-800 hover:bg-amber-50"
+                        onClick={() => actions?.onJustificarAusencia?.(aula.id)}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Justificar ausência
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {/* Botões de entrada/saída ou status */}
                 {aula.eh_aula_ao_vivo && status !== 'encerrada' && (

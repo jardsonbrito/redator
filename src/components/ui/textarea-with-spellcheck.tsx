@@ -1,8 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-export interface TextareaWithSpellcheckProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export type TextareaWithSpellcheckProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>
 
 const TextareaWithSpellcheck = React.forwardRef<
   HTMLTextAreaElement,

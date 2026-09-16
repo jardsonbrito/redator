@@ -4,11 +4,28 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
+import { ImageSelector } from "@/components/admin/ImageSelector";
 
-const TURMAS = ['A', 'B', 'C', 'D', 'E'];
+type AulaDisponivel = { id: string; titulo: string; data_aula: string };
+type AulaGravadaDisponivel = { id: string; titulo: string; criado_em: string };
+type ImageValue = {
+  source: 'upload' | 'url';
+  url?: string;
+  file_path?: string;
+  file_size?: number;
+  dimensions?: { width: number; height: number };
+} | null;
+
+const formatarData = (data: string) => {
+  if (!data) return '';
+  const [y, m, d] = data.split('-');
+  return `${d}/${m}/${y}`;
+};
 
 interface AulaVirtual {
   id: string;
@@ -24,17 +41,30 @@ interface AulaVirtual {
   permite_visitante: boolean;
   ativo: boolean;
   eh_aula_ao_vivo?: boolean;
+  aula_mae_id?: string | null;
+  aula_gravada_id?: string | null;
 }
 
 interface AulaVirtualEditFormProps {
   aula: AulaVirtual;
   onSuccess?: () => void;
   onCancel?: () => void;
+  turmasRestricao?: string[];
 }
 
-export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEditFormProps) => {
+export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel, turmasRestricao }: AulaVirtualEditFormProps) => {
+  const { turmasDinamicas: todasAsTurmas } = useTurmasAtivas();
+  const turmasDinamicas = turmasRestricao && turmasRestricao.length > 0
+    ? todasAsTurmas.filter(t => turmasRestricao.includes(t.valor))
+    : todasAsTurmas;
+  const modoRestrito = !!(turmasRestricao && turmasRestricao.length > 0);
+
   const [loading, setLoading] = useState(false);
+  const [gerandoGravada, setGerandoGravada] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
+  const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
+  const [aulasGravadas, setAulasGravadas] = useState<AulaGravadaDisponivel[]>([]);
+  const [imagemCapaValue, setImagemCapaValue] = useState<ImageValue>(null);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -48,7 +78,10 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
     abrir_aba_externa: false,
     permite_visitante: false,
     ativo: true,
-    eh_aula_ao_vivo: true
+    eh_aula_ao_vivo: true,
+    eh_repeticao: false,
+    aula_mae_id: null as string | null,
+    aula_gravada_id: null as string | null,
   });
 
   useEffect(() => {
@@ -65,10 +98,82 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         abrir_aba_externa: aula.abrir_aba_externa,
         permite_visitante: aula.permite_visitante || false,
         ativo: aula.ativo,
-        eh_aula_ao_vivo: aula.eh_aula_ao_vivo ?? true
+        eh_aula_ao_vivo: aula.eh_aula_ao_vivo ?? true,
+        eh_repeticao: !!aula.aula_mae_id,
+        aula_mae_id: aula.aula_mae_id || null,
+        aula_gravada_id: aula.aula_gravada_id || null,
       });
+      setImagemCapaValue(aula.imagem_capa_url ? { source: 'url', url: aula.imagem_capa_url } : null);
     }
   }, [aula]);
+
+  useEffect(() => {
+    const carregarAulas = async () => {
+      const { data } = await (supabase
+        .from('aulas_virtuais')
+        .select('id, titulo, data_aula')
+        .eq('eh_aula_ao_vivo', true)
+        .eq('ativo', true)
+        .is('aula_mae_id', null)
+        .neq('id', aula.id)
+        .order('data_aula', { ascending: false }) as any);
+      setAulasDisponiveis((data || []) as AulaDisponivel[]);
+
+      const { data: gravadas } = await supabase
+        .from('aulas')
+        .select('id, titulo, criado_em')
+        .eq('ativo', true)
+        .order('criado_em', { ascending: false });
+      setAulasGravadas((gravadas || []) as AulaGravadaDisponivel[]);
+    };
+    carregarAulas();
+  }, [aula.id]);
+
+  const resolveImageUrl = (imageValue: ImageValue): string | null => {
+    if (!imageValue) return null;
+    if (imageValue.source === 'url') return imageValue.url || null;
+    if (imageValue.source === 'upload' && imageValue.file_path) {
+      const { data } = supabase.storage.from('aulas').getPublicUrl(imageValue.file_path);
+      return data.publicUrl;
+    }
+    return null;
+  };
+
+  const gerarAulaGravada = async () => {
+    const MODULO_AULA_AO_VIVO_ID = 'b14dd9be-a203-45df-97b7-ae592f5c60ed';
+    setGerandoGravada(true);
+    try {
+      const { data: novaGravada, error } = await supabase
+        .from('aulas')
+        .insert([{
+          titulo: formData.titulo.trim(),
+          descricao: formData.descricao.trim() || null,
+          link_conteudo: '',
+          turmas_autorizadas: formData.turmas_autorizadas,
+          permite_visitante: formData.permite_visitante,
+          cover_url: resolveImageUrl(imagemCapaValue),
+          cover_source: imagemCapaValue ? imagemCapaValue.source : null,
+          modulo_id: MODULO_AULA_AO_VIVO_ID,
+          ativo: false,
+        }])
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      await supabase
+        .from('aulas_virtuais')
+        .update({ aula_gravada_id: novaGravada.id })
+        .eq('id', aula.id);
+
+      setFormData(prev => ({ ...prev, aula_gravada_id: novaGravada.id }));
+      toast.success('Aula gravada gerada! Agora adicione o link do YouTube em Aulas Gravadas.');
+    } catch (err: any) {
+      toast.error('Erro ao gerar aula gravada: ' + err.message);
+    } finally {
+      setGerandoGravada(false);
+    }
+  };
 
   const handleAction = () => {
     // Validações básicas
@@ -102,6 +207,12 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
       return;
     }
 
+    if (formData.eh_aula_ao_vivo && formData.eh_repeticao && !formData.aula_mae_id) {
+      toast.error('Selecione a aula original para salvar como repetição');
+      setActiveSection('configuracao');
+      return;
+    }
+
     handleSubmit();
   };
 
@@ -116,12 +227,13 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         horario_inicio: formData.horario_inicio,
         horario_fim: formData.horario_fim,
         turmas_autorizadas: formData.turmas_autorizadas,
-        imagem_capa_url: formData.imagem_capa_url.trim() || null,
+        imagem_capa_url: resolveImageUrl(imagemCapaValue),
         link_meet: formData.link_meet.trim(),
         abrir_aba_externa: formData.abrir_aba_externa,
         permite_visitante: formData.permite_visitante,
         ativo: formData.ativo,
-        eh_aula_ao_vivo: formData.eh_aula_ao_vivo
+        eh_aula_ao_vivo: formData.eh_aula_ao_vivo,
+        aula_mae_id: (formData.eh_aula_ao_vivo && formData.eh_repeticao) ? formData.aula_mae_id : null,
       };
 
       // Usar RPC para evitar problema com trigger
@@ -138,7 +250,9 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         p_abrir_aba_externa: aulaData.abrir_aba_externa,
         p_permite_visitante: aulaData.permite_visitante,
         p_ativo: aulaData.ativo,
-        p_eh_aula_ao_vivo: aulaData.eh_aula_ao_vivo
+        p_eh_aula_ao_vivo: aulaData.eh_aula_ao_vivo,
+        p_aula_mae_id: aulaData.aula_mae_id,
+        p_aula_gravada_id: formData.aula_gravada_id,
       });
 
       if (error) {
@@ -293,22 +407,64 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                   </div>
                 </div>
 
+                {/* Aula Gravada Vinculada — oculta para corretor gestor */}
+                {!modoRestrito && <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Aula Gravada Vinculada <span className="text-gray-400 font-normal">(opcional)</span></label>
+                    <p className="text-xs text-gray-500">Alunos ausentes verão um botão "Assistir Gravação" direcionado para esta gravação.</p>
+
+                    {/* Botão para gerar a aula gravada automaticamente */}
+                    {!formData.aula_gravada_id && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={gerarAulaGravada}
+                        disabled={gerandoGravada}
+                        className="w-full border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white"
+                      >
+                        {gerandoGravada ? 'Gerando...' : 'Gerar Aula Gravada automaticamente'}
+                      </Button>
+                    )}
+                    {formData.aula_gravada_id && (
+                      <p className="text-xs text-green-600 font-medium">✓ Aula gravada vinculada</p>
+                    )}
+
+                    <Select
+                      value={formData.aula_gravada_id || 'nenhuma'}
+                      onValueChange={(value) => setFormData({...formData, aula_gravada_id: value === 'nenhuma' ? null : value})}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Selecione a aula gravada..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="nenhuma">— Nenhuma —</SelectItem>
+                        {aulasGravadas.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.titulo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>}
+
                 {/* Imagem de Capa */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">URL da Imagem de Capa</label>
-                    <Input
-                      value={formData.imagem_capa_url}
-                      onChange={(e) => setFormData({...formData, imagem_capa_url: e.target.value})}
-                      className="text-sm"
-                      spellCheck={false}
-                    />
-                  </div>
+                  <ImageSelector
+                    title="Imagem de Capa"
+                    description="Envie um arquivo ou informe uma URL pública. Recomendado 1280x720px."
+                    value={imagemCapaValue}
+                    onChange={setImagemCapaValue}
+                    minDimensions={{ width: 640, height: 360 }}
+                    bucket="aulas"
+                  />
                 </div>
 
                 {/* Configurações */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-4">
+                    {!modoRestrito && (
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-0.5">
                         <div className="text-sm font-medium">Aula ao vivo</div>
@@ -316,9 +472,53 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                       </div>
                       <Switch
                         checked={formData.eh_aula_ao_vivo}
-                        onCheckedChange={(checked) => setFormData({...formData, eh_aula_ao_vivo: checked})}
+                        onCheckedChange={(checked) => setFormData({
+                          ...formData,
+                          eh_aula_ao_vivo: checked,
+                          eh_repeticao: checked ? formData.eh_repeticao : false,
+                          aula_mae_id: checked ? formData.aula_mae_id : null,
+                        })}
                       />
                     </div>
+                    )}
+
+                    {!modoRestrito && formData.eh_aula_ao_vivo && (
+                      <div className="flex items-center justify-between p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">Repetição de outra aula</div>
+                          <div className="text-xs text-gray-500">Alunos presentes em qualquer sessão terão presença contabilizada</div>
+                        </div>
+                        <Switch
+                          checked={formData.eh_repeticao}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData,
+                            eh_repeticao: checked,
+                            aula_mae_id: checked ? formData.aula_mae_id : null,
+                          })}
+                        />
+                      </div>
+                    )}
+
+                    {!modoRestrito && formData.eh_aula_ao_vivo && formData.eh_repeticao && (
+                      <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
+                        <label className="text-sm font-medium">Aula original (sessão principal)</label>
+                        <Select
+                          value={formData.aula_mae_id || ''}
+                          onValueChange={(value) => setFormData({...formData, aula_mae_id: value || null})}
+                        >
+                          <SelectTrigger className="text-sm bg-white">
+                            <SelectValue placeholder="Selecione a aula original..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {aulasDisponiveis.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.titulo} — {formatarData(a.data_aula)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-0.5">
@@ -354,21 +554,23 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                   <div className="space-y-3">
                     <div className="text-sm font-medium">Turmas Autorizadas</div>
                     <div className="grid grid-cols-3 gap-2">
-                      {TURMAS.map((turma) => (
-                        <div key={turma} className="flex items-center space-x-2">
+                      {turmasDinamicas.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`turma-${turma}`}
-                            checked={formData.turmas_autorizadas.includes(turma)}
+                            id={`turma-${valor}`}
+                            checked={formData.turmas_autorizadas.includes(valor)}
+                            disabled={modoRestrito}
                             onCheckedChange={(checked) => {
+                              if (modoRestrito) return;
                               if (checked) {
-                                setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, turma]});
+                                setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, valor]});
                               } else {
-                                setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== turma)});
+                                setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== valor)});
                               }
                             }}
                           />
-                          <label htmlFor={`turma-${turma}`} className="text-sm font-medium">
-                            {turma}
+                          <label htmlFor={`turma-${valor}`} className="text-sm font-medium">
+                            {label}
                           </label>
                         </div>
                       ))}

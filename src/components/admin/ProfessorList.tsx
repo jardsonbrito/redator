@@ -3,20 +3,29 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Users, 
-  Edit, 
-  Shield, 
-  ShieldCheck, 
-  Power, 
-  PowerOff, 
+import {
+  Users,
+  Edit,
+  Trash2,
+  Power,
+  PowerOff,
   ArrowUpDown,
   AlertTriangle,
-  Clock,
-  Eye
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 
@@ -24,15 +33,11 @@ interface Professor {
   id: string;
   nome_completo: string;
   email: string;
-  role: string;
   ativo: boolean;
   primeiro_login: boolean;
   ultimo_login: string | null;
   ultimo_ip: unknown;
-  ultimo_browser: string | null;
   criado_em: string;
-  atualizado_em: string;
-  senha_hash: string;
 }
 
 interface ProfessorListProps {
@@ -44,6 +49,9 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [professorParaExcluir, setProfessorParaExcluir] = useState<Professor | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const fetchProfessores = async () => {
@@ -96,33 +104,37 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
     }
   };
 
-  const handleChangeRole = async (professorId: string, novoRole: string) => {
+  const handleSortByDate = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
+  const handleDelete = async () => {
+    if (!professorParaExcluir) return;
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from('professores')
-        .update({ role: novoRole })
-        .eq('id', professorId);
+        .delete()
+        .eq('id', professorParaExcluir.id);
 
       if (error) throw error;
 
       toast({
-        title: "Tipo de acesso alterado",
-        description: `Tipo de acesso alterado para ${novoRole === 'admin' ? 'Administrador' : 'Professor'}.`
+        title: "Professor excluído",
+        description: `${professorParaExcluir.nome_completo} foi removido com sucesso.`
       });
-
+      setProfessorParaExcluir(null);
       fetchProfessores();
     } catch (error: any) {
-      console.error('Erro ao alterar role:', error);
+      console.error('Erro ao excluir professor:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível alterar o tipo de acesso.",
+        description: "Não foi possível excluir o professor.",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
-  };
-
-  const handleSortByDate = () => {
-    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
   const formatDate = (dateString: string) => {
@@ -140,6 +152,7 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -166,7 +179,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                       <ArrowUpDown className="w-4 h-4" />
                     </div>
                   </TableHead>
-                  <TableHead>Tipo de Acesso</TableHead>
                   <TableHead>Último Login</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -196,18 +208,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                     <TableCell className="text-sm">
                       {formatDate(professor.criado_em)}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {professor.role === 'admin' ? (
-                          <ShieldCheck className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Shield className="w-4 h-4 text-blue-500" />
-                        )}
-                        <span className="capitalize">
-                          {professor.role === 'admin' ? 'Administrador' : 'Professor'}
-                        </span>
-                      </div>
-                    </TableCell>
                     <TableCell className="text-sm">
                       {professor.ultimo_login ? (
                         <div>
@@ -223,42 +223,53 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onEdit(professor)}
-                          title="Editar dados"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleAtivo(professor.id, !professor.ativo)}
-                          title={professor.ativo ? "Inativar conta" : "Ativar conta"}
-                        >
-                          {professor.ativo ? (
-                            <PowerOff className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <Power className="w-4 h-4 text-green-500" />
-                          )}
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleChangeRole(professor.id, professor.role === 'admin' ? 'professor' : 'admin')}
-                          title={`Alterar para ${professor.role === 'admin' ? 'Professor' : 'Administrador'}`}
-                        >
-                          {professor.role === 'admin' ? (
-                            <Shield className="w-4 h-4 text-blue-500" />
-                          ) : (
-                            <ShieldCheck className="w-4 h-4 text-green-500" />
-                          )}
-                        </Button>
-                      </div>
+                      <DropdownMenu
+                        open={openDropdownId === professor.id}
+                        onOpenChange={(open) => setOpenDropdownId(open ? professor.id : null)}
+                      >
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setOpenDropdownId(null);
+                            onEdit(professor);
+                          }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {
+                            setOpenDropdownId(null);
+                            handleToggleAtivo(professor.id, !professor.ativo);
+                          }}>
+                            {professor.ativo ? (
+                              <>
+                                <PowerOff className="mr-2 h-4 w-4 text-red-500" />
+                                Inativar conta
+                              </>
+                            ) : (
+                              <>
+                                <Power className="mr-2 h-4 w-4 text-green-500" />
+                                Ativar conta
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setOpenDropdownId(null);
+                              setTimeout(() => setProfessorParaExcluir(professor), 100);
+                            }}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -268,5 +279,31 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
         )}
       </CardContent>
     </Card>
+
+    <AlertDialog open={!!professorParaExcluir} onOpenChange={(open) => { if (!open) setProfessorParaExcluir(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-red-700">
+            <AlertTriangle className="h-5 w-5" />
+            Excluir Professor
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja excluir <strong>{professorParaExcluir?.nome_completo}</strong>?
+            Esta ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isDeleting ? "Excluindo..." : "Excluir"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };

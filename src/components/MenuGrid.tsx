@@ -3,14 +3,13 @@ import { Link } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { LucideIcon, Lock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { UnlockModal } from "./UnlockModal";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
-import { useNewContentTags } from "@/hooks/useNewContentTags";
-import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 
 interface MenuItem {
   title: string;
@@ -20,62 +19,25 @@ interface MenuItem {
   showAlways: boolean;
   showCondition?: boolean;
   resourceType?: string;
+  highlight?: boolean; // Destaque especial (ex: processo seletivo pendente)
+  disabled?: boolean;  // Card em breve / ainda não disponível
 }
 
 interface MenuGridProps {
   menuItems: MenuItem[];
   showMinhasRedacoes: boolean;
+  maxCards?: number;
 }
 
-export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
+export const MenuGrid = ({ menuItems, showMinhasRedacoes, maxCards }: MenuGridProps) => {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState('');
-  const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
   const { isBlockedResource } = useTurmaERestrictions();
-  const { shouldShowNewTag, handleCardClick } = useNewContentTags();
-  const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
-  const { isFeatureEnabled, debugInfo, overrides, subscription } = usePlanFeatures(studentData.email);
-
-  // Estado do hook de planos (logs removidos para produção)
-
-  useEffect(() => {
-    if (studentData.email) {
-      const fetchMensagensNaoLidas = async () => {
-        const count = await buscarMensagensNaoLidasAluno(studentData.email);
-        setMensagensNaoLidas(count);
-      };
-      
-      fetchMensagensNaoLidas();
-      
-      // Atualizar a cada 30 segundos
-      const interval = setInterval(fetchMensagensNaoLidas, 30000);
-      
-      // Escutar evento customizado para atualizar badge quando mensagens forem lidas
-      const handleMensagensLidas = () => {
-        fetchMensagensNaoLidas();
-      };
-      
-      window.addEventListener('mensagensLidas', handleMensagensLidas);
-      
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('mensagensLidas', handleMensagensLidas);
-      };
-    }
-  }, [studentData.email, buscarMensagensNaoLidasAluno]);
-
-  // Filtra os itens do menu baseado na disponibilidade de conteúdo
-  const visibleMenuItems = menuItems.filter(item => {
-    if (item.showAlways) return true;
-    return item.showCondition === true;
-  });
-
-  const handleBlockedClick = (resourceName: string) => {
-    setSelectedResource(resourceName);
-    setShowUnlockModal(true);
-  };
+  const { isFeatureEnabled, funcionalidadesOrdenadas, isPSCandidate, isVisitante, isLoading: planLoading } = usePlanFeatures(studentData.email);
+  const { professor } = useProfessorAuth();
+  const isProfessor = !!professor;
 
   // Mapeamento de títulos dos cards para nomes das funcionalidades
   const getFunctionalityName = (title: string): string => {
@@ -92,16 +54,48 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
       'Aulas': 'aulas_gravadas',
       'Aulas Gravadas': 'aulas_gravadas',
       'Aulas ao Vivo': 'aulas_ao_vivo',
-      'Ajuda Rápida': 'ajuda_rapida', // Não controlada por plano
-      'Minhas Redações': 'minhas_redacoes', // Não controlada por plano
-      'Minhas Conquistas': 'minhas_conquistas',
+      'Minhas Redações': 'minhas_redacoes',
       'Simulados': 'simulados',
       // Funcionalidades que estavam faltando no mapeamento:
       'Top 5': 'top_5',
       'Diário Online': 'diario_online',
-      'Gamificação': 'gamificacao'
+      'Boletim Escolar': 'diario_online',
+      'Gamificação': 'gamificacao',
+      'Repertório Orientado': 'repertorio_orientado',
+      'Jarvis': 'jarvis',
+      'Microaprendizagem': 'microaprendizagem',
+      'Guia Temático': 'guia_tematico',
+      'Laboratório de Repertório': 'laboratorio_repertorio',
+      'Redações Comentadas': 'redacoes_comentadas',
     };
     return mapping[title] || '';
+  };
+
+  // Filtra os itens do menu baseado na disponibilidade de conteúdo
+  let visibleMenuItems = menuItems.filter(item => {
+    if (item.showAlways) return true;
+    return item.showCondition === true;
+  });
+
+  // Ordena pelos valores de ordem_aluno vindos do banco (fallback: ordem original)
+  if (funcionalidadesOrdenadas && funcionalidadesOrdenadas.length > 0) {
+    visibleMenuItems = [...visibleMenuItems].sort((a, b) => {
+      const chaveA = getFunctionalityName(a.title);
+      const chaveB = getFunctionalityName(b.title);
+      const orderA = chaveA ? (funcionalidadesOrdenadas.find(f => f.chave === chaveA)?.ordem_aluno ?? 9999) : 9999;
+      const orderB = chaveB ? (funcionalidadesOrdenadas.find(f => f.chave === chaveB)?.ordem_aluno ?? 9999) : 9999;
+      return orderA - orderB;
+    });
+  }
+
+  // Se maxCards foi definido, limitar quantidade de cards
+  if (maxCards && maxCards > 0) {
+    visibleMenuItems = visibleMenuItems.slice(0, maxCards);
+  }
+
+  const handleBlockedClick = (resourceName: string) => {
+    setSelectedResource(resourceName);
+    setShowUnlockModal(true);
   };
 
   // Paleta harmonizada baseada em tons roxos/lilás
@@ -132,12 +126,13 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           const isFreeTopicDisabled = isFreeTopicCard && settings && settings.free_topic_enabled === false;
 
           // Verificar se a funcionalidade está desabilitada pelo plano/override
+          // Professores têm acesso a todos os módulos sem restrição de plano
           const functionalityName = getFunctionalityName(item.title);
-          const isPlanFeatureDisabled = functionalityName && !isFeatureEnabled(functionalityName);
+          const isPlanFeatureDisabled = !isProfessor && !planLoading && functionalityName && !isFeatureEnabled(functionalityName);
 
-          // Funcionalidades que sempre devem estar disponíveis (não controladas por plano)
-          const alwaysAvailableFeatures = ['ajuda_rapida', 'minhas_redacoes'];
-          const isAlwaysAvailable = alwaysAvailableFeatures.includes(functionalityName || '');
+          // "Minhas Redações" nunca fica indisponível: o aluno sempre deve acessar histórico e correções.
+          // Para todos os outros cards, o plano tem controle total.
+          const isAlwaysAvailable = functionalityName === 'minhas_redacoes';
 
           // Verificação de funcionalidades (logs de debug removidos para produção)
           
@@ -145,7 +140,21 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           return (
             <Tooltip key={index}>
               <TooltipTrigger asChild>
-                {isBlocked ? (
+                {item.disabled ? (
+                  <div className="group relative flex flex-col items-center justify-center p-6 bg-gray-100 rounded-2xl shadow-sm opacity-50 min-h-[120px] cursor-not-allowed">
+                    <div className="mb-3">
+                      <item.icon className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-400 text-center leading-tight">
+                      {item.title}
+                    </h3>
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-gray-400 text-white text-xs px-2 py-1 rounded-full">
+                        Em breve
+                      </div>
+                    </div>
+                  </div>
+                ) : isBlocked ? (
                   <div 
                     onClick={() => handleBlockedClick(item.title)}
                     className={`group relative flex flex-col items-center justify-center p-6 ${cardColor.bg} rounded-2xl shadow-lg hover:bg-muted/70 transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px] cursor-pointer opacity-75`}
@@ -187,34 +196,31 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                     </div>
                   </div>
                 ) : (
-                  <Link 
-                    to={item.path} 
-                    onClick={() => handleCardClick(item.title)}
-                    className={`group relative flex flex-col items-center justify-center p-6 ${cardColor.bg} rounded-2xl shadow-lg ${cardColor.hover} transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px]`}
+                  <Link
+                    to={item.path}
+                    className={`group relative flex flex-col items-center justify-center p-6 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px] ${
+                      item.highlight
+                        ? 'bg-gradient-to-br from-[#3F0077] to-[#662F96] ring-2 ring-[#3F0077] ring-offset-2 animate-pulse-subtle'
+                        : `${cardColor.bg} ${cardColor.hover}`
+                    }`}
                   >
                     {/* Ícone com estilo flat */}
                     <div className="mb-3">
-                      <item.icon className={`w-8 h-8 ${cardColor.icon}`} />
+                      <item.icon className={`w-8 h-8 ${item.highlight ? 'text-white' : cardColor.icon}`} />
                     </div>
-                    
+
                     {/* Título do card */}
-                    <h3 className={`text-sm font-bold ${cardColor.icon} text-center leading-tight`}>
+                    <h3 className={`text-sm font-bold text-center leading-tight ${item.highlight ? 'text-white' : cardColor.icon}`}>
                       {item.title}
                     </h3>
 
-                    {/* Tag NOVO */}
-                    {shouldShowNewTag(item.title) && (
-                      <span className="absolute top-2 right-2 bg-[#F97316] text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
-                        NOVO
+                    {/* Tag PENDENTE para cards com highlight */}
+                    {item.highlight && (
+                      <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-bounce">
+                        PENDENTE
                       </span>
                     )}
 
-                    {/* Badge de notificação para Ajuda Rápida */}
-                    {item.title === "Ajuda Rápida" && mensagensNaoLidas > 0 && (
-                      <Badge variant="destructive" className="absolute top-2 left-2 rounded-full text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
-                        {mensagensNaoLidas}
-                      </Badge>
-                    )}
                   </Link>
                 )}
               </TooltipTrigger>

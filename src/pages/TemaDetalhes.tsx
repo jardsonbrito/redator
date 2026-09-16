@@ -2,8 +2,9 @@
 import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Home, Edit } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Home, Edit, ClipboardList } from "lucide-react";
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -14,6 +15,8 @@ import { getTemaCoverUrl, getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { FormattedText } from '@/components/shared/FormattedText';
 import { useNavigationContext } from "@/hooks/useNavigationContext";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
+import { MotivatorWithImage } from '@/components/shared/MotivatorWithImage';
 
 // Type extension para incluir os campos novos e legado
 type TemaWithImage = {
@@ -21,16 +24,44 @@ type TemaWithImage = {
   frase_tematica: string;
   eixo_tematico: string;
   texto_1: string | null;
+  texto_1_fonte: string | null;
   texto_2: string | null;
+  texto_2_fonte: string | null;
   texto_3: string | null;
+  texto_3_fonte: string | null;
+  texto_4: string | null;
+  texto_4_fonte: string | null;
+  texto_5: string | null;
+  texto_5_fonte: string | null;
   // New cover fields
   cover_source?: string | null;
   cover_url?: string | null;
   cover_file_path?: string | null;
-  // New motivator IV fields
+  // Motivator 1 fields
+  motivator1_source?: string | null;
+  motivator1_url?: string | null;
+  motivator1_file_path?: string | null;
+  motivator1_image_position?: string | null;
+  // Motivator 2 fields
+  motivator2_source?: string | null;
+  motivator2_url?: string | null;
+  motivator2_file_path?: string | null;
+  motivator2_image_position?: string | null;
+  // Motivator 3 fields
+  motivator3_source?: string | null;
+  motivator3_url?: string | null;
+  motivator3_file_path?: string | null;
+  motivator3_image_position?: string | null;
+  // Motivator 4 fields
   motivator4_source?: string | null;
   motivator4_url?: string | null;
   motivator4_file_path?: string | null;
+  motivator4_image_position?: string | null;
+  // Motivator 5 fields
+  motivator5_source?: string | null;
+  motivator5_url?: string | null;
+  motivator5_file_path?: string | null;
+  motivator5_image_position?: string | null;
   // Legacy field
   imagem_texto_4_url: string | null;
   publicado_em: string | null;
@@ -39,20 +70,33 @@ type TemaWithImage = {
 const TemaDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { studentData } = useStudentAuth();
+  const { professor } = useProfessorAuth();
   const { checkIfTodayAllowsTopicSubmissions, getDaysAllowedText, settings } = useAppSettings();
-  
+
+  // Verificar se veio do processo seletivo
+  const processoSeletivoCandidatoId = searchParams.get('processo_seletivo');
+  const isProcessoSeletivo = !!processoSeletivoCandidatoId;
+
   // Permitir acesso tanto para alunos quanto visitantes
   const canWriteRedacao = studentData.userType === "aluno" || studentData.userType === "visitante";
-  
-  // Verificar se hoje é permitido envio por tema
-  const todayAllowsSubmission = checkIfTodayAllowsTopicSubmissions();
+
+  // Verificar se hoje é permitido envio por tema (ignorar restrição se for processo seletivo)
+  const todayAllowsSubmission = isProcessoSeletivo || checkIfTodayAllowsTopicSubmissions();
   const daysAllowedText = getDaysAllowedText();
-  
+
   const handleEscreverRedacao = () => {
     if (tema && todayAllowsSubmission) {
       // Redirecionar para página de envio com parâmetros
-      navigate(`/envie-redacao?tema=${encodeURIComponent(tema.frase_tematica)}&fonte=tema&temaId=${id}`);
+      let url = `/envie-redacao?tema=${encodeURIComponent(tema.frase_tematica)}&fonte=tema&temaId=${id}`;
+
+      // Se for processo seletivo, adicionar o parâmetro
+      if (processoSeletivoCandidatoId) {
+        url += `&processo_seletivo_candidato_id=${processoSeletivoCandidatoId}`;
+      }
+
+      navigate(url);
     }
   };
   
@@ -83,8 +127,8 @@ const TemaDetalhes = () => {
   useEffect(() => {
     if (tema?.frase_tematica) {
       setBreadcrumbs([
-        { label: 'Início', href: '/app' },
-        { label: 'Temas', href: '/temas' },
+        { label: 'Início', href: professor ? '/professor/dashboard' : '/app' },
+        { label: 'Temas', href: professor ? '/professor/temas' : '/temas' },
         { label: tema.frase_tematica }
       ]);
       setPageTitle(tema.frase_tematica);
@@ -102,6 +146,7 @@ const TemaDetalhes = () => {
         .select('id, data_envio')
         .eq('frase_tematica', tema.frase_tematica)
         .eq('email_aluno', studentData.email)
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order('data_envio', { ascending: false })
         .limit(1);
       
@@ -185,65 +230,59 @@ const TemaDetalhes = () => {
 
               {/* 3. Textos Motivadores */}
               {(() => {
-                const textos = [tema.texto_1, tema.texto_2, tema.texto_3].filter(Boolean);
                 let textoCounter = 1;
 
                 return (
                   <>
-                    {tema.texto_1 && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-redator-accent">
-                          <FormattedText text={tema.texto_1} />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_1}
+                      fonte={tema.texto_1_fonte}
+                      imageSource={tema.motivator1_source}
+                      imageUrl={tema.motivator1_url}
+                      imageFilePath={tema.motivator1_file_path}
+                      imagePosition={tema.motivator1_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
 
-                    {tema.texto_2 && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-redator-accent">
-                          <FormattedText text={tema.texto_2} />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_2}
+                      fonte={tema.texto_2_fonte}
+                      imageSource={tema.motivator2_source}
+                      imageUrl={tema.motivator2_url}
+                      imageFilePath={tema.motivator2_file_path}
+                      imagePosition={tema.motivator2_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
 
-                    {tema.texto_3 && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-redator-accent">
-                          <FormattedText text={tema.texto_3} />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_3}
+                      fonte={tema.texto_3_fonte}
+                      imageSource={tema.motivator3_source}
+                      imageUrl={tema.motivator3_url}
+                      imageFilePath={tema.motivator3_file_path}
+                      imagePosition={tema.motivator3_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
 
-                    {/* Texto 4 (Imagem) */}
-                    {getTemaMotivatorIVUrl({
-                      motivator4_source: tema.motivator4_source,
-                      motivator4_url: tema.motivator4_url,
-                      motivator4_file_path: tema.motivator4_file_path,
-                      imagem_texto_4_url: tema.imagem_texto_4_url
-                    }) && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter}</h3>
-                        <div className="rounded-lg overflow-hidden">
-                          <img
-                            src={getTemaMotivatorIVUrl({
-                              motivator4_source: tema.motivator4_source,
-                              motivator4_url: tema.motivator4_url,
-                              motivator4_file_path: tema.motivator4_file_path,
-                              imagem_texto_4_url: tema.imagem_texto_4_url
-                            })!}
-                            alt="Charge/Infográfico — Texto 4"
-                            className="w-full h-auto"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                          />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_4}
+                      fonte={tema.texto_4_fonte}
+                      imageSource={tema.motivator4_source}
+                      imageUrl={tema.motivator4_url}
+                      imageFilePath={tema.motivator4_file_path}
+                      imagePosition={tema.motivator4_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
+
+                    <MotivatorWithImage
+                      text={tema.texto_5}
+                      fonte={tema.texto_5_fonte}
+                      imageSource={tema.motivator5_source}
+                      imageUrl={tema.motivator5_url}
+                      imageFilePath={tema.motivator5_file_path}
+                      imagePosition={tema.motivator5_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
                   </>
                 );
               })()}
@@ -251,6 +290,16 @@ const TemaDetalhes = () => {
               {/* Botão para escrever redação - para alunos e visitantes */}
               {canWriteRedacao && (
                 <div className="mt-8 pt-6 border-t border-gray-200 bg-gray-50/50 rounded-lg p-6 shadow-sm text-center">
+                  {/* Badge do Processo Seletivo */}
+                  {isProcessoSeletivo && (
+                    <div className="mb-4">
+                      <Badge className="bg-purple-600 text-white px-3 py-1">
+                        <ClipboardList className="w-3 h-3 mr-1" />
+                        Processo Seletivo - Etapa Final
+                      </Badge>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleEscreverRedacao}
                     disabled={!todayAllowsSubmission}
@@ -261,10 +310,10 @@ const TemaDetalhes = () => {
                     }`}
                   >
                     <Edit className="w-4 h-4 mr-2" />
-                    Escreva sobre este tema
+                    {isProcessoSeletivo ? 'Escrever Redação do Processo Seletivo' : 'Escreva sobre este tema'}
                   </Button>
 
-                  {!todayAllowsSubmission && (
+                  {!todayAllowsSubmission && !isProcessoSeletivo && (
                     <p className="text-xs text-gray-500 mt-3 text-center">
                       Envios por tema não estão liberados hoje. Dias permitidos: {daysAllowedText}
                     </p>

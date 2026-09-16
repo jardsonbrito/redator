@@ -81,7 +81,7 @@ const Videoteca = () => {
     const success = await markAsWatched(video.id, video.titulo);
 
     // Determinar a melhor URL para abrir
-    let videoUrl = video.url;
+    const videoUrl = video.url;
 
     if (videoUrl) {
       // Verificar se é uma URL do YouTube e abrir diretamente no YouTube
@@ -131,7 +131,7 @@ const Videoteca = () => {
                   }
 
                   // Determinar URL do vídeo
-                  let videoUrl = video.video_url_original || video.youtube_url;
+                  const videoUrl = video.video_url_original || video.youtube_url;
 
                   // Determinar se é novo baseado na data (últimos 7 dias)
                   const isNovo = video.created_at ?

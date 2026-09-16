@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useNavigationContext } from "@/hooks/useNavigationContext";
+import { verificarDivergencia } from "@/utils/simuladoDivergencia";
+import { AlertTriangle } from "lucide-react";
 
 // Interface para representar uma redação de simulado
 interface RedacaoSimulado {
@@ -71,6 +73,15 @@ interface RedacaoSimulado {
   // Campos necessários para o RedacaoEnviadaCard
   created_at?: string;
   observacoes_coordenacao?: string;
+  // Terceira correção
+  par_utilizado?: string | null;
+  status_terceira_correcao?: string | null;
+  c1_admin?: number | null;
+  c2_admin?: number | null;
+  c3_admin?: number | null;
+  c4_admin?: number | null;
+  c5_admin?: number | null;
+  nota_final_admin?: number | null;
 }
 
 const SimuladoRedacaoCorrigida = () => {
@@ -80,6 +91,8 @@ const SimuladoRedacaoCorrigida = () => {
   const { setBreadcrumbs, setPageTitle } = useNavigationContext();
   const [redacoesCorretor, setRedacoesCorretor] = useState<RedacaoSimulado[]>([]);
   const [selectedCorretor, setSelectedCorretor] = useState<number>(1);
+  // Estado de bloqueio: null = não bloqueado | 'aguardando' | 'em_revisao'
+  const [estadoBloqueio, setEstadoBloqueio] = useState<null | 'aguardando' | 'em_revisao'>(null);
 
   // Query para buscar as redações do simulado do aluno
   const { data: redacoesSimulado, isLoading, error } = useQuery({
@@ -112,6 +125,31 @@ const SimuladoRedacaoCorrigida = () => {
 
       const redacaoOriginal = redacao[0];
 
+      // Bloquear exibição enquanto a nota não foi liberada (corrigida = false)
+      if (!redacaoOriginal.corrigida) {
+        // Discrepância detectada ou em processo de terceira correção
+        const statusTerceira = redacaoOriginal.status_terceira_correcao;
+        if (statusTerceira === 'pendente' || statusTerceira === 'salva') {
+          setEstadoBloqueio('em_revisao');
+          return [];
+        }
+        // Ambos finalizaram mas admin ainda não liberou (sem discrepância)
+        const div = verificarDivergencia(redacaoOriginal);
+        if (div && !div.temDivergencia) {
+          setEstadoBloqueio('aguardando');
+          return [];
+        }
+        // Divergência ainda não gravada no campo (edge case)
+        if (div?.temDivergencia) {
+          setEstadoBloqueio('em_revisao');
+          return [];
+        }
+        // Aguardando corretores
+        setEstadoBloqueio('aguardando');
+        return [];
+      }
+      setEstadoBloqueio(null);
+
       // Buscar nomes dos corretores
       const idsCorretores: string[] = [];
       if (redacaoOriginal.corretor_id_1) idsCorretores.push(redacaoOriginal.corretor_id_1);
@@ -135,8 +173,15 @@ const SimuladoRedacaoCorrigida = () => {
       // Processar as correções em entradas separadas
       const redacoesProcessadas: RedacaoSimulado[] = [];
 
+      // Determina quais avaliadores exibir com base no par_utilizado
+      // Quando par está definido (terceira correção concluída), exibe apenas o par usado
+      const par = redacaoOriginal.par_utilizado as '1_2' | '1_admin' | '2_admin' | null;
+      const mostrarCorretor1 = !par || par === '1_2' || par === '1_admin';
+      const mostrarCorretor2 = !par || par === '1_2' || par === '2_admin';
+      const mostrarAdmin = par === '1_admin' || par === '2_admin';
+
       // Corretor 1
-      if (redacaoOriginal.corretor_id_1) {
+      if (redacaoOriginal.corretor_id_1 && mostrarCorretor1) {
         const statusCorretor1 = redacaoOriginal.status_corretor_1 || 'pendente';
         redacoesProcessadas.push({
           ...redacaoOriginal,
@@ -149,18 +194,15 @@ const SimuladoRedacaoCorrigida = () => {
           corrigida: statusCorretor1 === 'corrigida',
           corretor: nomesCorretores[redacaoOriginal.corretor_id_1] || 'Corretor 1',
           corretor_numero: 1,
-          // Campos adicionais necessários - manter apenas os IDs do corretor específico
           corretor_id_1: redacaoOriginal.corretor_id_1,
-          corretor_id_2: null, // Limpar ID do outro corretor para evitar confusão
+          corretor_id_2: null,
           created_at: redacaoOriginal.data_envio,
-          // Notas específicas do corretor 1
           nota_c1: redacaoOriginal.c1_corretor_1,
           nota_c2: redacaoOriginal.c2_corretor_1,
           nota_c3: redacaoOriginal.c3_corretor_1,
           nota_c4: redacaoOriginal.c4_corretor_1,
           nota_c5: redacaoOriginal.c5_corretor_1,
           nota_total: redacaoOriginal.nota_final_corretor_1,
-          // Comentários do corretor 1
           comentario_c1_corretor_1: redacaoOriginal.comentario_c1_corretor_1,
           comentario_c2_corretor_1: redacaoOriginal.comentario_c2_corretor_1,
           comentario_c3_corretor_1: redacaoOriginal.comentario_c3_corretor_1,
@@ -173,7 +215,7 @@ const SimuladoRedacaoCorrigida = () => {
       }
 
       // Corretor 2
-      if (redacaoOriginal.corretor_id_2) {
+      if (redacaoOriginal.corretor_id_2 && mostrarCorretor2) {
         const statusCorretor2 = redacaoOriginal.status_corretor_2 || 'pendente';
         redacoesProcessadas.push({
           ...redacaoOriginal,
@@ -186,18 +228,15 @@ const SimuladoRedacaoCorrigida = () => {
           corrigida: statusCorretor2 === 'corrigida',
           corretor: nomesCorretores[redacaoOriginal.corretor_id_2] || 'Corretor 2',
           corretor_numero: 2,
-          // Campos adicionais necessários - manter apenas os IDs do corretor específico
-          corretor_id_1: null, // Limpar ID do outro corretor para evitar confusão
+          corretor_id_1: null,
           corretor_id_2: redacaoOriginal.corretor_id_2,
           created_at: redacaoOriginal.data_envio,
-          // Notas específicas do corretor 2
           nota_c1: redacaoOriginal.c1_corretor_2,
           nota_c2: redacaoOriginal.c2_corretor_2,
           nota_c3: redacaoOriginal.c3_corretor_2,
           nota_c4: redacaoOriginal.c4_corretor_2,
           nota_c5: redacaoOriginal.c5_corretor_2,
           nota_total: redacaoOriginal.nota_final_corretor_2,
-          // Comentários do corretor 2
           comentario_c1_corretor_2: redacaoOriginal.comentario_c1_corretor_2,
           comentario_c2_corretor_2: redacaoOriginal.comentario_c2_corretor_2,
           comentario_c3_corretor_2: redacaoOriginal.comentario_c3_corretor_2,
@@ -206,6 +245,49 @@ const SimuladoRedacaoCorrigida = () => {
           elogios_pontos_atencao_corretor_2: redacaoOriginal.elogios_pontos_atencao_corretor_2,
           correcao_arquivo_url_corretor_2: redacaoOriginal.correcao_arquivo_url_corretor_2,
           audio_url: redacaoOriginal.audio_url_corretor_2
+        });
+      }
+
+      // Admin (terceira correção) — exibido como "Coordenação"
+      if (mostrarAdmin) {
+        redacoesProcessadas.push({
+          ...redacaoOriginal,
+          id: `${redacaoOriginal.id}-admin`,
+          original_id: redacaoOriginal.id,
+          frase_tematica: redacaoOriginal.simulados?.frase_tematica || 'Simulado',
+          redacao_texto: redacaoOriginal.texto || '',
+          tipo_envio: 'simulado',
+          status: 'corrigida',
+          corrigida: true,
+          corretor: 'Coordenação',
+          corretor_numero: 3,
+          corretor_id_1: null,
+          corretor_id_2: null,
+          created_at: redacaoOriginal.data_envio,
+          nota_c1: redacaoOriginal.c1_admin,
+          nota_c2: redacaoOriginal.c2_admin,
+          nota_c3: redacaoOriginal.c3_admin,
+          nota_c4: redacaoOriginal.c4_admin,
+          nota_c5: redacaoOriginal.c5_admin,
+          nota_total: redacaoOriginal.nota_final_admin,
+          // Admin não fornece feedback pedagógico — limpar campos de comentário
+          comentario_c1_corretor_1: null,
+          comentario_c2_corretor_1: null,
+          comentario_c3_corretor_1: null,
+          comentario_c4_corretor_1: null,
+          comentario_c5_corretor_1: null,
+          elogios_pontos_atencao_corretor_1: null,
+          comentario_c1_corretor_2: null,
+          comentario_c2_corretor_2: null,
+          comentario_c3_corretor_2: null,
+          comentario_c4_corretor_2: null,
+          comentario_c5_corretor_2: null,
+          elogios_pontos_atencao_corretor_2: null,
+          correcao_arquivo_url_corretor_1: null,
+          correcao_arquivo_url_corretor_2: null,
+          audio_url: null,
+          audio_url_corretor_1: null,
+          audio_url_corretor_2: null,
         });
       }
 
@@ -232,12 +314,12 @@ const SimuladoRedacaoCorrigida = () => {
     if (redacoesSimulado) {
       setRedacoesCorretor(redacoesSimulado);
       if (redacoesSimulado.length > 0) {
-        setSelectedCorretor(1); // Começar sempre pelo corretor 1
+        setSelectedCorretor(redacoesSimulado[0].corretor_numero ?? 1);
       }
     }
   }, [redacoesSimulado]);
 
-  if (isLoading) {
+  if (isLoading || !studentData.email) {
     return (
       <ProtectedRoute>
         <TooltipProvider>
@@ -245,6 +327,49 @@ const SimuladoRedacaoCorrigida = () => {
             <StudentHeader pageTitle="Carregando..." />
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <div className="text-center">Carregando sua redação corrigida...</div>
+            </main>
+          </div>
+        </TooltipProvider>
+      </ProtectedRoute>
+    );
+  }
+
+  if (estadoBloqueio !== null) {
+    const config = estadoBloqueio === 'em_revisao'
+      ? {
+          pageTitle: 'Correção em Revisão',
+          icon: <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />,
+          titulo: 'Correção em revisão',
+          mensagem: 'Sua redação está em processo de revisão. A nota será disponibilizada assim que o processo for concluído.',
+        }
+      : {
+          pageTitle: 'Aguardando Resultado',
+          icon: <AlertTriangle className="w-12 h-12 text-blue-400 mx-auto mb-4" />,
+          titulo: 'Aguardando resultado',
+          mensagem: 'Sua redação está sendo corrigida. A nota será disponibilizada em breve.',
+        };
+
+    return (
+      <ProtectedRoute>
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+            <StudentHeader pageTitle={config.pageTitle} />
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <Button onClick={() => navigate('/simulados')} variant="outline" className="mb-4">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar para Simulados
+              </Button>
+              <Card>
+                <CardContent className="p-8 text-center">
+                  {config.icon}
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                    {config.titulo}
+                  </h2>
+                  <p className="text-gray-600">
+                    {config.mensagem}
+                  </p>
+                </CardContent>
+              </Card>
             </main>
           </div>
         </TooltipProvider>

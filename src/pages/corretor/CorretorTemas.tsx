@@ -1,18 +1,37 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, CheckCircle2, PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { TemaCardPadrao } from "@/components/shared/TemaCard";
 import { FormattedText } from "@/components/shared/FormattedText";
 import { getTemaMotivatorIVUrl } from "@/utils/temaImageUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
+import { useToast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
+
+type TemaRow = Database['public']['Tables']['temas']['Row'];
 
 const CorretorTemas = () => {
-  const [selectedTema, setSelectedTema] = useState<any>(null);
+  const navigate = useNavigate();
+  const { corretor } = useCorretorAuth();
+  const { toast } = useToast();
+  const { podeGerenciar } = useCorretorPermissoes();
+  const queryClient = useQueryClient();
+  const [selectedTema, setSelectedTema] = useState<TemaRow | null>(null);
+  const [orderBy, setOrderBy] = useState<'recente' | 'mais_redacoes'>('recente');
+  const [solicitando, setSolicitando] = useState<string | null>(null);
 
+  const turmasCorretor: string[] = (corretor?.turmas_autorizadas as string[]) ?? [];
+
+  // Buscar temas publicados
   const { data: temas, isLoading, error } = useQuery({
     queryKey: ['temas-corretor'],
     queryFn: async () => {
@@ -20,22 +39,104 @@ const CorretorTemas = () => {
         .from('temas')
         .select('*')
         .eq('status', 'publicado')
-        .order('publicado_em', { ascending: false });
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: false });
 
       if (error) throw error;
       return data || [];
     }
   });
 
+  // Verifica se o tema já está disponível para alguma turma do corretor
+  const temaDisponivelParaCorretor = (tema: TemaRow): boolean => {
+    if (turmasCorretor.length === 0) return false;
+    const permitidas: string[] = (tema.turmas_permitidas as string[]) ?? [];
+    return turmasCorretor.some(t => permitidas.includes(t));
+  };
+
+  const handleSolicitar = async (tema: TemaRow) => {
+    if (!corretor?.email) return;
+    setSolicitando(tema.id);
+    try {
+      const { data, error } = await supabase.rpc('solicitar_tema_para_turma', {
+        p_corretor_email: corretor.email,
+        p_tema_id: tema.id,
+      });
+      if (error) throw error;
+      if (data === 'ja_disponivel') {
+        toast({ title: "Tema já disponível", description: "Este tema já está listado para suas turmas." });
+      } else {
+        toast({ title: "Tema adicionado!", description: "O tema agora está disponível para suas turmas." });
+        await queryClient.invalidateQueries({ queryKey: ['temas-corretor'] });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao solicitar tema.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
+    } finally {
+      setSolicitando(null);
+    }
+  };
+
+  // Buscar contagem de redações por tema
+  const { data: redacoesCount } = useQuery({
+    queryKey: ['redacoes-count-por-tema'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('frase_tematica')
+        .is('deleted_at', null);  // Filtrar soft deletes
+
+      if (error) throw error;
+
+      // Contar redações por frase temática
+      const countMap: Record<string, number> = {};
+      data?.forEach((redacao) => {
+        const frase = redacao.frase_tematica;
+        if (frase) {
+          countMap[frase] = (countMap[frase] || 0) + 1;
+        }
+      });
+
+      return countMap;
+    },
+    enabled: orderBy === 'mais_redacoes' // Só busca quando necessário
+  });
+
+  // Ordenar temas baseado no filtro selecionado
+  const temasOrdenados = useMemo(() => {
+    if (!temas) return [];
+
+    if (orderBy === 'mais_redacoes' && redacoesCount) {
+      // Ordenar por quantidade de redações (maior para menor)
+      return [...temas].sort((a, b) => {
+        const countA = redacoesCount[a.frase_tematica] || 0;
+        const countB = redacoesCount[b.frase_tematica] || 0;
+        return countB - countA;
+      });
+    }
+
+    // Ordenação padrão (recente) já vem da query
+    return temas;
+  }, [temas, orderBy, redacoesCount]);
+
   if (isLoading) {
     return (
       <CorretorLayout>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
-            <p className="text-gray-600">Visualização dos temas disponíveis</p>
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
+            <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
           </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="space-y-3">
+              <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
+              <div className="px-4 space-y-3">
+                <div className="h-5 w-20 bg-muted rounded animate-pulse" />
+                <div className="h-6 w-full bg-muted rounded animate-pulse" />
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                <div className="h-9 w-full bg-muted rounded animate-pulse" />
+              </div>
+            </div>
             <div className="space-y-3">
               <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
               <div className="px-4 space-y-3">
@@ -72,8 +173,14 @@ const CorretorTemas = () => {
   if (error) {
     return (
       <CorretorLayout>
-        <div className="text-center py-8">
-          <p className="text-red-600">Erro ao carregar temas. Tente novamente.</p>
+        <div className="space-y-6">
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
+            <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
+          </div>
+          <div className="text-center py-8">
+            <p className="text-red-600">Erro ao carregar temas. Tente novamente.</p>
+          </div>
         </div>
       </CorretorLayout>
     );
@@ -82,12 +189,39 @@ const CorretorTemas = () => {
   return (
     <CorretorLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
-          <p className="text-gray-600">Visualização dos temas disponíveis</p>
+        {/* Hero */}
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-200">Biblioteca</p>
+              <h1 className="text-2xl sm:text-3xl font-black mt-1">Temas</h1>
+            </div>
+            {podeGerenciar && (
+              <Button
+                size="sm"
+                className="bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-700 font-semibold shrink-0"
+                onClick={() => navigate("/corretor/temas/novo")}
+              >
+                Cadastrar Tema
+              </Button>
+            )}
+          </div>
         </div>
 
-        {(!temas || temas.length === 0) ? (
+        {/* Filtro de ordenação */}
+        <div className="flex items-center justify-end">
+          <Select value={orderBy} onValueChange={(value) => setOrderBy(value as 'recente' | 'mais_redacoes')}>
+            <SelectTrigger className="w-full sm:w-[250px]">
+              <SelectValue placeholder="Ordenar por..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recente">Mais recentes</SelectItem>
+              <SelectItem value="mais_redacoes">Mais redações</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(!temasOrdenados || temasOrdenados.length === 0) ? (
           <Card>
             <CardContent className="text-center py-12">
               <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -100,17 +234,38 @@ const CorretorTemas = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {temas?.map((tema) => (
-              <TemaCardPadrao
-                key={tema.id}
-                tema={tema}
-                perfil="corretor"
-                actions={{
-                  onVerTema: () => setSelectedTema(tema)
-                }}
-              />
-            ))}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {temasOrdenados.map((tema) => {
+              const disponivel = temaDisponivelParaCorretor(tema);
+              return (
+                <div key={tema.id} className="flex flex-col gap-2">
+                  <TemaCardPadrao
+                    tema={tema}
+                    perfil="corretor"
+                    actions={{ onVerTema: () => setSelectedTema(tema) }}
+                  />
+                  {turmasCorretor.length > 0 && (
+                    disponivel ? (
+                      <div className="flex items-center gap-1.5 px-1 text-xs text-emerald-600 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Disponível para suas turmas
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs border-violet-200 text-violet-700 hover:bg-violet-50 gap-1.5"
+                        disabled={solicitando === tema.id}
+                        onClick={() => handleSolicitar(tema)}
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        {solicitando === tema.id ? "Adicionando..." : "Adicionar às minhas turmas"}
+                      </Button>
+                    )
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

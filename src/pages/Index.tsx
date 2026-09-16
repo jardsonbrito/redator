@@ -1,20 +1,71 @@
-
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Layers, Award } from "lucide-react";
+import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
+import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
-import { MeuDesempenho } from "@/components/MeuDesempenho";
+import { CalendarioAtividades } from "@/components/CalendarioAtividades";
 import { StudentInboxManager } from "@/components/student/StudentInboxManager";
+import { AlertasAtividadesModal } from "@/components/AlertasAtividadesModal";
+import { BottomNavigation } from "@/components/BottomNavigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
+  const {
+    elegivel: elegivelProcessoSeletivo,
+    pendentePreencher,
+    candidatoStatus
+  } = useProcessoSeletivo(studentData.email || '');
+  const navigate = useNavigate();
+
+  // Estado para o popup de formulário pendente
+  const [showPendingPopup, setShowPendingPopup] = useState(false);
+  const [popupDismissed, setPopupDismissed] = useState(false);
+
+  // Mostrar popup para candidatos que precisam preencher o formulário
+  useEffect(() => {
+    if (pendentePreencher && studentData.userType === 'aluno' && !popupDismissed) {
+      // Verificar se já foi mostrado nesta sessão
+      const sessionKey = `ps-popup-shown-${studentData.email}`;
+      const alreadyShown = sessionStorage.getItem(sessionKey);
+
+      if (!alreadyShown) {
+        setShowPendingPopup(true);
+        sessionStorage.setItem(sessionKey, 'true');
+      }
+    }
+  }, [pendentePreencher, studentData.userType, studentData.email, popupDismissed]);
+
+  const handleGoToProcessoSeletivo = () => {
+    setShowPendingPopup(false);
+    setPopupDismissed(true);
+    navigate('/processo-seletivo');
+  };
+
+  const handleDismissPopup = () => {
+    setShowPendingPopup(false);
+    setPopupDismissed(true);
+  };
 
   // Determina a turma/código do usuário
   let turmaCode = "Visitante";
@@ -24,12 +75,43 @@ const Index = () => {
     turmaCode = "Visitante";
   }
 
-  const menuItems = [
+  // Verifica se o aluno está participando do processo seletivo (qualquer status exceto null)
+  const participandoProcessoSeletivo = elegivelProcessoSeletivo && studentData.userType === 'aluno';
+
+  // Card de Processo Seletivo (definido separadamente para controle de posição)
+  const processoSeletivoCard = {
+    title: "Processo Seletivo",
+    path: "/processo-seletivo",
+    icon: ClipboardList,
+    tooltip: pendentePreencher
+      ? "Complete sua inscrição no processo seletivo de bolsas!"
+      : "Participe do processo seletivo de bolsas.",
+    showAlways: false,
+    showCondition: participandoProcessoSeletivo,
+    highlight: pendentePreencher // Destaque especial se pendente
+  };
+
+  // Cards padrão do menu
+  const baseMenuItems = [
+    {
+      title: "Jarvis",
+      path: "/jarvis",
+      icon: JarvisIcon as any,
+      tooltip: "Assistente pedagógico para melhorar sua escrita - 1 crédito por análise.",
+      showAlways: true
+    },
     {
       title: "Temas",
       path: "/temas",
       icon: BookOpen,
       tooltip: "Explore propostas de redação organizadas por eixo temático.",
+      showAlways: true
+    },
+    {
+      title: "Guia Temático",
+      path: "/guia-tematico",
+      icon: Map,
+      tooltip: "Percorra um roteiro completo de aprofundamento sobre a frase temática.",
       showAlways: true
     },
     {
@@ -41,7 +123,7 @@ const Index = () => {
     },
     {
       title: "Exercícios",
-      path: "/exercicios", 
+      path: "/exercicios",
       icon: NotebookPen,
       tooltip: "Pratique com exercícios direcionados.",
       showAlways: true
@@ -51,6 +133,20 @@ const Index = () => {
       path: "/lousa",
       icon: Presentation,
       tooltip: "Participe de exercícios rápidos criados pelos professores.",
+      showAlways: true
+    },
+    {
+      title: "Repertório Orientado",
+      path: "/repertorio-orientado",
+      icon: Library,
+      tooltip: "Publique parágrafos com repertório e receba feedback dos colegas e professores.",
+      showAlways: true
+    },
+    {
+      title: "Laboratório de Repertório",
+      path: "/laboratorio-repertorio",
+      icon: LaboratorioIcon as any,
+      tooltip: "Aulas em 3 etapas: Contexto → Repertório → Aplicação.",
       showAlways: true
     },
     {
@@ -65,6 +161,13 @@ const Index = () => {
       path: "/redacoes",
       icon: FileText,
       tooltip: "Veja textos nota 1000 e aprenda estratégias eficazes.",
+      showAlways: true
+    },
+    {
+      title: "Redações Comentadas",
+      path: "/redacoes-comentadas",
+      icon: RedacoesComentadasIcon as any,
+      tooltip: "Analise redações com comentários detalhados e anotações por trecho.",
       showAlways: true
     },
     {
@@ -117,17 +220,10 @@ const Index = () => {
       showAlways: true
     },
     {
-      title: "Minhas Conquistas",
-      path: "/minhas-conquistas",
-      icon: Trophy,
-      tooltip: "Acompanhe suas atividades por mês.",
-      showAlways: true
-    },
-    {
-      title: "Diário Online",
+      title: "Boletim Escolar",
       path: "/diario-online",
-      icon: Calendar,
-      tooltip: "Visualize seu desempenho acadêmico dividido por etapas do ano letivo.",
+      icon: Award,
+      tooltip: "Veja seu boletim visual com desempenho em redações, simulados, frequência e engajamento.",
       showAlways: true
     },
     {
@@ -136,8 +232,20 @@ const Index = () => {
       icon: Gamepad2,
       tooltip: "Participe de jogos educativos para treinar redação.",
       showAlways: true
+    },
+    {
+      title: "Microaprendizagem",
+      path: "/microaprendizagem",
+      icon: BookOpen,
+      tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais para aprender no seu ritmo.",
+      showAlways: true
     }
   ];
+
+  // Se o aluno está participando do processo seletivo, colocar o card primeiro
+  const menuItems = participandoProcessoSeletivo
+    ? [processoSeletivoCard, ...baseMenuItems]
+    : baseMenuItems;
 
   // Determinar se deve mostrar seção "Minhas Redações" - tanto para alunos quanto visitantes
   const showMinhasRedacoes = (studentData.userType === "aluno" && studentData.turma) || studentData.userType === "visitante";
@@ -145,41 +253,81 @@ const Index = () => {
   return (
     <ProtectedRoute>
       <TooltipProvider>
-        <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
-          {/* Header com botão Sair */}
+        <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 pb-20">
+          {/* Header */}
           <StudentHeader />
 
           {/* Main Content */}
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Seção limpa com logo */}
-            <div className="text-center mb-8">
-              <div className="flex justify-center mb-6">
-                <img 
-                  src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
-                  alt="App do Redator" 
-                  className="h-20 w-auto" 
-                />
-              </div>
+            {/* Saudação simples */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-800">
+                Olá, {studentData.nomeUsuario || 'Usuário'}!
+              </h1>
             </div>
 
-
-            {/* Cards do painel */}
+            {/* Calendário de Atividades Pedagógicas */}
             <div className="max-w-5xl mx-auto mb-8">
-              <MeuDesempenho />
+              <CalendarioAtividades turmaCode={turmaCode} />
             </div>
 
-            {/* Mural de Avisos */}
-            <MuralAvisos turmaCode={turmaCode} />
+            {/* Mural de Avisos (legado — mantido até migração definitiva) */}
+            <div className="max-w-5xl mx-auto mb-8">
+              <MuralAvisos turmaCode={turmaCode} />
+            </div>
 
-            {/* Menu Principal Horizontal */}
+            {/* Menu Principal com cards limitados */}
             <MenuGrid
               menuItems={menuItems}
               showMinhasRedacoes={!!showMinhasRedacoes}
+              maxCards={6}
             />
           </main>
 
+          {/* Bottom Navigation */}
+          <BottomNavigation />
+
           {/* Gerenciador de mensagens do Inbox */}
           <StudentInboxManager />
+
+          {/* Modal de alertas de atividades disponíveis */}
+          <AlertasAtividadesModal
+            turma={studentData.turma || null}
+            userType={studentData.userType || 'visitante'}
+            email={studentData.email || ''}
+          />
+
+          {/* Popup para candidatos que precisam completar o formulário do processo seletivo */}
+          <Dialog open={showPendingPopup} onOpenChange={setShowPendingPopup}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-[#3F0077]">
+                  <AlertCircle className="h-5 w-5" />
+                  Complete sua Inscrição
+                </DialogTitle>
+                <DialogDescription className="text-base pt-2">
+                  Você iniciou sua inscrição no <strong>Processo Seletivo de Bolsas</strong>, mas ainda não preencheu o formulário completo.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground">
+                  Para participar da seleção, é necessário preencher todas as informações solicitadas no formulário. Clique no botão abaixo para continuar.
+                </p>
+              </div>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button variant="outline" onClick={handleDismissPopup}>
+                  Preencher depois
+                </Button>
+                <Button
+                  onClick={handleGoToProcessoSeletivo}
+                  className="bg-[#3F0077] hover:bg-[#662F96]"
+                >
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Preencher Agora
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </TooltipProvider>
     </ProtectedRoute>

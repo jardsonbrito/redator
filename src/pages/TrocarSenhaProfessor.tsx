@@ -19,7 +19,7 @@ export const TrocarSenhaProfessor = () => {
   useEffect(() => {
     // Se não estiver logado ou não for primeiro login, redirecionar
     if (!professor) {
-      navigate('/professor/login');
+      navigate('/');
     } else if (!professor.primeiro_login) {
       navigate('/professor/dashboard');
     }

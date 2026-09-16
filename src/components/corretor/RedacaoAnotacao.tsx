@@ -7,7 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Palette, Save, Edit3, Trash2 } from "lucide-react";
+import { Palette, Save, Edit3, Trash2, Mic, MicOff } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 
 interface MarcacaoVisual {
   id?: string;
@@ -37,6 +39,7 @@ const CORES_COMPETENCIAS = {
   3: { cor: '#3b82f6', nome: 'Azul', label: 'C3 - Argumentação' },
   4: { cor: '#a855f7', nome: 'Roxo', label: 'C4 - Coesão' },
   5: { cor: '#f97316', nome: 'Laranja', label: 'C5 - Proposta' },
+  6: { cor: '#9CA3AF', nome: 'Cinza', label: 'PA - Ponto de Atenção' },
 };
 
 export const RedacaoAnotacao = ({ 
@@ -63,6 +66,15 @@ export const RedacaoAnotacao = ({
   const [competenciasExpanded, setCompetenciasExpanded] = useState<boolean>(true);
   const [editandoMarcacao, setEditandoMarcacao] = useState<MarcacaoVisual | null>(null);
   const { toast } = useToast();
+
+  // Ref e hook de voz para o textarea de comentário no dialog
+  const comentarioTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const { isRecording: isMicRecording, isSupported: isMicSupported, toggleRecording: toggleMicRecording, stopRecording: stopMicRecording } =
+    useVoiceTranscription(setComentarioTemp, comentarioTemp, comentarioTextareaRef);
+
+  useEffect(() => {
+    if (!dialogAberto) stopMicRecording();
+  }, [dialogAberto, stopMicRecording]);
 
   // Carregar marcações existentes - apenas do corretor atual
   const carregarMarcacoes = useCallback(async () => {
@@ -559,11 +571,11 @@ export const RedacaoAnotacao = ({
               className="flex items-center gap-1"
               style={competenciaSelecionada === parseInt(num) ? { backgroundColor: cor, borderColor: cor } : {}}
             >
-              <div 
-                className="w-3 h-3 rounded-full" 
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: cor }}
               />
-              C{num}
+              {num === '6' ? 'PA' : `C${num}`}
             </Button>
           ))}
         </div>
@@ -655,15 +667,15 @@ export const RedacaoAnotacao = ({
                 const compAtual = competenciaDialog ?? marcacaoTemp?.competencia ?? null;
                 
                 return (competenciasExpanded || !compAtual) ? (
-                  // EXPANDIDO → 5 bolinhas
+                  // EXPANDIDO → 6 bolinhas
                   <div className="flex items-center gap-2">
-                    {[1,2,3,4,5].map((num) => (
+                    {[1,2,3,4,5,6].map((num) => (
                       <button
                         key={num}
                         onClick={() => selecionarCompetencia(num)}
                         className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
                         style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
-                        aria-label={`Competência ${num}`}
+                        aria-label={num === 6 ? 'Ponto de Atenção' : `Competência ${num}`}
                         data-testid={`bolinha-c${num}`}
                       />
                     ))}
@@ -679,7 +691,7 @@ export const RedacaoAnotacao = ({
                       className="w-8 h-8 rounded-full border-2 border-gray-300"
                       style={{ backgroundColor: CORES_COMPETENCIAS[compAtual].cor }}
                     />
-                    <span>Competência {compAtual}</span>
+                    <span>{compAtual === 6 ? 'Ponto de Atenção' : `Competência ${compAtual}`}</span>
                   </button>
                 );
               })()}
@@ -689,13 +701,43 @@ export const RedacaoAnotacao = ({
               <label className="text-sm font-medium mb-2 block">
                 Digite seu comentário sobre esta marcação...
               </label>
-              <Textarea
-                value={comentarioTemp}
-                onChange={(e) => setComentarioTemp(e.target.value)}
-                placeholder="Digite seu comentário sobre esta marcação..."
-                className="min-h-[120px]"
-                maxLength={500}
-              />
+              <div className="relative">
+                <textarea
+                  ref={comentarioTextareaRef}
+                  value={comentarioTemp}
+                  onChange={(e) => setComentarioTemp(e.target.value)}
+                  placeholder="Digite seu comentário sobre esta marcação..."
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none min-h-[120px] pr-10"
+                  maxLength={500}
+                  autoCapitalize="sentences"
+                  spellCheck={true}
+                  lang="pt-BR"
+                />
+                <button
+                  type="button"
+                  onClick={toggleMicRecording}
+                  disabled={!isMicSupported}
+                  title={
+                    !isMicSupported
+                      ? "Seu navegador não suporta reconhecimento de voz"
+                      : isMicRecording
+                      ? "Parar gravação"
+                      : "Ditar comentário por voz"
+                  }
+                  className={cn(
+                    "absolute bottom-2 right-2 p-1.5 rounded-full transition-colors",
+                    isMicRecording
+                      ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                      : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                    !isMicSupported && "opacity-40 cursor-not-allowed"
+                  )}
+                >
+                  {isMicRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+              </div>
+              {isMicRecording && (
+                <p className="text-xs text-red-500 font-medium animate-pulse mt-1">Ouvindo...</p>
+              )}
               <div className="text-xs text-muted-foreground mt-1">
                 {comentarioTemp.length}/500 caracteres
               </div>

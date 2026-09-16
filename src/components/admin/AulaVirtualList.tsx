@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Video } from "lucide-react";
+import { Video, Calendar } from "lucide-react";
 import { FrequenciaModal } from "./FrequenciaModal";
 import { AulaCardPadrao } from '@/components/shared/AulaCardPadrao';
 import { computeStatus } from "@/utils/aulaStatus";
@@ -26,9 +26,11 @@ interface AulaVirtual {
   status_transmissao?: string;
 }
 
-export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit?: (aula: AulaVirtual) => void }) => {
+export const AulaVirtualList = ({ refresh, onEdit, turmasRestricao }: { refresh?: boolean; onEdit?: (aula: AulaVirtual) => void; turmasRestricao?: string[] }) => {
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
   const [frequenciaModal, setFrequenciaModal] = useState<{
     isOpen: boolean;
     aulaId: string;
@@ -49,8 +51,18 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
 
       if (error) throw error;
 
+      // Filtrar por turmas gerenciadas quando o corretor gestor usa esta lista
+      let lista = data || [];
+      if (turmasRestricao && turmasRestricao.length > 0) {
+        lista = lista.filter(a => {
+          const turmas = a.turmas_autorizadas as string[] | null;
+          if (!turmas || turmas.length === 0) return true;
+          return turmas.some(t => turmasRestricao.includes(t));
+        });
+      }
+
       // Ordenar aulas: primeiro as que estão ao vivo, depois por data (mais recente primeiro)
-      const aulasOrdenadas = (data || []).sort((a, b) => {
+      const aulasOrdenadas = lista.sort((a, b) => {
         const statusA = getStatusAula(a);
         const statusB = getStatusAula(b);
 
@@ -78,13 +90,21 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
 
   const toggleAulaStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('aulas_virtuais')
-        .update({ ativo: !currentStatus })
-        .eq('id', id);
+      if (turmasRestricao && turmasRestricao.length > 0) {
+        // Corretor gestor: usa RPC SECURITY DEFINER
+        const { error } = await supabase.rpc('corretor_toggle_aula_virtual_status', {
+          p_id: id,
+          p_ativo: !currentStatus,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('aulas_virtuais')
+          .update({ ativo: !currentStatus })
+          .eq('id', id);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
-      
       toast.success(`Aula ${!currentStatus ? 'ativada' : 'desativada'} com sucesso!`);
       fetchAulas();
     } catch (error: any) {
@@ -107,12 +127,17 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     }
 
     try {
-      const { error } = await supabase
-        .from('aulas_virtuais')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      if (turmasRestricao && turmasRestricao.length > 0) {
+        // Corretor gestor: usa RPC SECURITY DEFINER (anon não pode DELETE via RLS)
+        const { error } = await supabase.rpc('corretor_excluir_aula_virtual', { p_id: id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('aulas_virtuais')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      }
 
       toast.success('Aula excluída com sucesso!');
       fetchAulas();
@@ -172,6 +197,13 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     );
   }
 
+  const aulasFiltradas = apenasAnoAtual
+    ? aulas.filter((a) => {
+        const d = new Date(a.data_aula);
+        return !isNaN(d.getTime()) && d.getFullYear() === anoAtual;
+      })
+    : aulas;
+
   return (
     <>
       <Card>
@@ -179,22 +211,32 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Video className="w-5 h-5" />
-              Aulas ao Vivo ({aulas.length})
+              Aulas ao Vivo ({aulasFiltradas.length})
             </span>
-            <Button onClick={fetchAulas} variant="outline" size="sm">
-              Atualizar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={apenasAnoAtual ? "default" : "outline"}
+                size="sm"
+                onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+              >
+                <Calendar className="w-3 h-3 mr-1" />
+                {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+              </Button>
+              <Button onClick={fetchAulas} variant="outline" size="sm">
+                Atualizar
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {aulas.length === 0 ? (
+          {aulasFiltradas.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Video className="w-8 h-8 mx-auto mb-2" />
-              <p>Nenhuma aula virtual criada ainda</p>
+              <p>{apenasAnoAtual ? `Nenhuma aula em ${anoAtual}` : "Nenhuma aula virtual criada ainda"}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {aulas.map((aula) => (
+              {aulasFiltradas.map((aula) => (
                 <AulaCardPadrao
                   key={aula.id}
                   aula={aula}

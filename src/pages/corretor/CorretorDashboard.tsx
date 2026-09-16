@@ -1,145 +1,431 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useCorretorMetricas } from "@/hooks/useCorretorMetricas";
+import { useCorretorRedacoes } from "@/hooks/useCorretorRedacoes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Clock, FileText } from "lucide-react";
-import { AjudaRapidaCorretorCard } from "@/components/ajuda-rapida/AjudaRapidaCorretorCard";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  TrendingUp, CheckCircle2, ArrowRight,
+  User, Calendar, BookOpen, Inbox, Loader2, AlertTriangle, BarChart2, Users
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { verificarDivergencia } from "@/utils/simuladoDivergencia";
+import { Top5Widget } from "@/components/shared/Top5Widget";
+import { resolverGenero, tituloCorretor } from "@/utils/generoUtils";
+import { Area, AreaChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  pendente:     { label: "Pendente",     className: "bg-amber-100 text-amber-700 border-amber-200" },
+  em_correcao:  { label: "Em correção",  className: "bg-blue-100 text-blue-700 border-blue-200" },
+  incompleta:   { label: "Incompleta",   className: "bg-red-100 text-red-700 border-red-200" },
+  corrigida:    { label: "Corrigida",    className: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  devolvida:    { label: "Devolvida",    className: "bg-slate-100 text-slate-600 border-slate-200" },
+};
+
+const MetricCard = ({
+  title, value, sub, icon: Icon, accent
+}: {
+  title: string; value: string | number; sub?: string;
+  icon: React.ElementType; accent: string;
+}) => (
+  <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-0 ring-1 ring-violet-100">
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{title}</p>
+          <p className="text-3xl font-bold text-slate-900">{value}</p>
+          {sub && <p className="text-xs text-slate-400">{sub}</p>}
+        </div>
+        <div className={`${accent} p-2.5 rounded-xl`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const ChartCard = ({ title, data, dataKey, color = "#8b5cf6" }: {
+  title: string; data: Record<string, string | number>[]; dataKey: string; color?: string;
+}) => (
+  <Card className="bg-white border-0 ring-1 ring-violet-100 shadow-sm">
+    <CardHeader className="pb-2 pt-4 px-5">
+      <CardTitle className="text-sm font-semibold text-slate-700">{title}</CardTitle>
+    </CardHeader>
+    <CardContent className="px-5 pb-4">
+      <div className="h-40 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={32} />
+            <Area
+              type="monotone"
+              dataKey={dataKey}
+              stroke={color}
+              strokeWidth={2.5}
+              fill={`url(#grad-${dataKey})`}
+              dot={{ fill: color, strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, fill: color }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const CorretorDashboard = () => {
   const { corretor, loading } = useCorretorAuth();
+  const { podeGerenciar, nomesTurmasGerenciadas, featuresPlano } = useCorretorPermissoes();
   const isMobile = useIsMobile();
-  const { metricas, loading: loadingMetricas } = useCorretorMetricas(corretor?.email || '');
+
+  // Conta discrepâncias pendentes nas turmas gerenciadas
+  const { data: discrepanciasPendentes = 0 } = useQuery({
+    queryKey: ["gestor-discrepancias-count", nomesTurmasGerenciadas],
+    queryFn: async () => {
+      if (nomesTurmasGerenciadas.length === 0) return 0;
+      const { data } = await supabase
+        .from("redacoes_simulado")
+        .select("id, status_corretor_1, status_corretor_2, c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2, status_terceira_correcao, corrigida")
+        .in("turma", nomesTurmasGerenciadas)
+        .eq("corrigida", false)
+        .is("deleted_at", null);
+      if (!data) return 0;
+      return data.filter((r) => {
+        const div = verificarDivergencia(r as any);
+        return div?.temDivergencia && !r.status_terceira_correcao;
+      }).length;
+    },
+    enabled: podeGerenciar && nomesTurmasGerenciadas.length > 0,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Conta redações prontas para finalizar (sem discrepância, ambos corrigiram)
+  const { data: prontas = 0 } = useQuery({
+    queryKey: ["gestor-prontas-count", nomesTurmasGerenciadas],
+    queryFn: async () => {
+      if (nomesTurmasGerenciadas.length === 0) return 0;
+      const { data } = await supabase
+        .from("redacoes_simulado")
+        .select("id, status_corretor_1, status_corretor_2, c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2, status_terceira_correcao, corrigida")
+        .in("turma", nomesTurmasGerenciadas)
+        .eq("corrigida", false)
+        .is("deleted_at", null);
+      if (!data) return 0;
+      return data.filter((r) => {
+        const div = verificarDivergencia(r as any);
+        return div !== null && !div.temDivergencia;
+      }).length;
+    },
+    enabled: podeGerenciar && nomesTurmasGerenciadas.length > 0,
+    staleTime: 2 * 60 * 1000,
+  });
+  const navigate = useNavigate();
+  const { metricas, loading: loadingMetricas } = useCorretorMetricas(
+    corretor?.email || '',
+    (corretor?.turmas_autorizadas as string[]) ?? []
+  );
+  const { getRedacoesPorStatus, loading: loadingRedacoes } = useCorretorRedacoes(corretor?.email || '');
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-white to-cyan-50">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto" />
+          <p className="text-slate-500 text-sm">Carregando...</p>
         </div>
       </div>
     );
   }
 
-  if (!corretor) {
-    return <Navigate to="/corretor/login" replace />;
-  }
+  if (!corretor) return <Navigate to="/corretor/login" replace />;
 
-  const MetricCard = ({ title, value, icon: Icon, suffix = "" }: {
-    title: string;
-    value: number;
-    icon: any;
-    suffix?: string;
-  }) => (
-    <Card className="bg-white hover:shadow-md transition-shadow">
-      <CardContent className="flex items-center justify-between p-4 sm:p-6">
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">{title}</p>
-          <p className="text-2xl sm:text-3xl font-bold text-foreground">
-            {value}{suffix}
-          </p>
-        </div>
-        <div className="bg-primary/10 p-2 sm:p-3 rounded-lg">
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const { pendentes, incompletas, corrigidas } = getRedacoesPorStatus();
+  const filaAtiva = [...pendentes, ...incompletas].slice(0, 8);
 
-  const ChartCard = ({ title, data, dataKey, color = "#8b5cf6" }: {
-    title: string;
-    data: any[];
-    dataKey: string;
-    color?: string;
-  }) => (
-    <Card className="bg-white">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id={`gradient-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={color} stopOpacity={0.1}/>
-                </linearGradient>
-              </defs>
-              <XAxis 
-                dataKey="mes" 
-                tick={{ fontSize: 12, fill: '#6b7280' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 12, fill: '#6b7280' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Area
-                type="monotone"
-                dataKey={dataKey}
-                stroke={color}
-                strokeWidth={3}
-                fill={`url(#gradient-${dataKey})`}
-                dot={{ fill: color, strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, fill: color }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const generoCorretor = resolverGenero(corretor.sexo, corretor.nome_completo ?? '');
+  const firstName = corretor.nome_completo?.split(' ')[0] ?? tituloCorretor(generoCorretor);
+  const nomeExibido = isMobile ? firstName : corretor.nome_completo;
 
-  if (loadingMetricas) {
-    return (
-      <CorretorLayout>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </CorretorLayout>
-    );
-  }
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
 
   return (
     <CorretorLayout>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-xl sm:text-3xl font-bold text-foreground break-words">
-            Olá, {isMobile ? corretor.nome_completo.split(' ')[0] : corretor.nome_completo}!
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Acompanhe suas métricas de correção
-          </p>
+      <div className="space-y-6">
+
+        {/* ── HERO ─────────────────────────────────────────────────────── */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-900 via-violet-700 to-fuchsia-700 p-6 text-white shadow-lg">
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-violet-200 text-sm font-medium">{saudacao},</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mt-0.5">{nomeExibido}!</h1>
+            </div>
+            <div className="flex gap-3 flex-wrap sm:flex-nowrap">
+              <div className="rounded-xl bg-white/10 backdrop-blur px-4 py-3 min-w-[90px] text-center">
+                <p className="text-2xl font-bold">{pendentes.length}</p>
+                <p className="text-violet-200 text-xs mt-0.5">Pendentes</p>
+              </div>
+              <div className="rounded-xl bg-white/10 backdrop-blur px-4 py-3 min-w-[90px] text-center">
+                <p className="text-2xl font-bold">{incompletas.length}</p>
+                <p className="text-violet-200 text-xs mt-0.5">Incompletas</p>
+              </div>
+              <div className="rounded-xl bg-white/10 backdrop-blur px-4 py-3 min-w-[90px] text-center">
+                <p className="text-2xl font-bold">{corrigidas.length}</p>
+                <p className="text-violet-200 text-xs mt-0.5">Concluídas</p>
+              </div>
+            </div>
+          </div>
+          {/* Decorative blobs */}
+          <div className="pointer-events-none absolute -top-8 -right-8 h-40 w-40 rounded-full bg-white/5" />
+          <div className="pointer-events-none absolute -bottom-10 -left-10 h-52 w-52 rounded-full bg-fuchsia-500/10" />
         </div>
 
+        {/* ── MÉTRICAS ─────────────────────────────────────────────────── */}
+        {loadingMetricas ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-6 h-6 animate-spin text-violet-500" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <MetricCard
+              title="Média das notas"
+              value={metricas.mediaNota}
+              sub="pontos médios"
+              icon={TrendingUp}
+              accent="bg-violet-600"
+            />
+            <MetricCard
+              title="Total de envios"
+              value={metricas.totalEnvios}
+              sub="redações recebidas"
+              icon={CheckCircle2}
+              accent="bg-emerald-500"
+            />
+          </div>
+        )}
 
-        {/* Cards de métricas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          <MetricCard
-            title="Média"
-            value={metricas.mediaNota}
-            icon={TrendingUp}
-          />
-          <MetricCard
-            title="Pendências"
-            value={metricas.totalPendencias}
-            icon={Clock}
-          />
-          <MetricCard
-            title="Envios"
-            value={metricas.totalEnvios}
-            icon={FileText}
-          />
-        </div>
+        {/* ── FILA DE CORREÇÃO ─────────────────────────────────────────── */}
+        <Card className="bg-white border-0 ring-1 ring-violet-100 shadow-sm">
+          <CardHeader className="pb-3 pt-5 px-5 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base font-semibold text-slate-800">Fila de correção</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 text-xs gap-1 h-7 px-2"
+              onClick={() => navigate('/corretor/redacoes-corretor')}
+            >
+              Ver todas <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            {loadingRedacoes ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
+              </div>
+            ) : filaAtiva.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                <p className="text-slate-600 font-medium text-sm">Fila zerada!</p>
+                <p className="text-slate-400 text-xs">Nenhuma redação pendente no momento.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filaAtiva.map((r) => {
+                  const cfg = STATUS_CONFIG[r.status_minha_correcao] ?? STATUS_CONFIG.pendente;
+                  const dataFormatada = (() => {
+                    try { return format(parseISO(r.data_envio), "dd/MM/yy", { locale: ptBR }); }
+                    catch { return r.data_envio?.slice(0, 10) ?? '—'; }
+                  })();
+                  return (
+                    <div
+                      key={r.id}
+                      className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 hover:bg-violet-50/50 hover:border-violet-100 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-slate-800 truncate max-w-[140px] sm:max-w-[200px]">
+                            {r.nome_aluno || 'Aluno'}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 h-4 border ${cfg.className}`}
+                          >
+                            {cfg.label}
+                          </Badge>
+                          {r.turma && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border bg-slate-100 text-slate-500 border-slate-200">
+                              {r.turma}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">{r.frase_tematica}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] text-slate-400 hidden sm:block">{dataFormatada}</span>
+                        <Button
+                          size="sm"
+                          className="h-7 px-2.5 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-lg"
+                          onClick={() => navigate('/corretor/redacoes-corretor')}
+                        >
+                          Corrigir
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(pendentes.length + incompletas.length) > 8 && (
+                  <button
+                    onClick={() => navigate('/corretor/redacoes-corretor')}
+                    className="w-full text-center text-xs text-violet-500 hover:text-violet-700 py-2"
+                  >
+                    + {(pendentes.length + incompletas.length) - 8} mais redações aguardando
+                  </button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* ── ATALHOS DE GESTÃO (apenas gestor, filtrados pelo plano) ─── */}
+        {podeGerenciar && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Temas — exibe só se o plano tem temas */}
+            {featuresPlano["temas"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/temas')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-fuchsia-100 p-2.5 rounded-xl">
+                    <BookOpen className="w-4 h-4 text-fuchsia-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Temas</p>
+                    <p className="text-xs text-slate-500 truncate">Gerenciar temas</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Discrepâncias — exibe só se o plano tem simulados */}
+            {featuresPlano["simulados"] && (
+              <Card
+                className={`bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+                  discrepanciasPendentes > 0 ? 'ring-2 ring-red-300' : 'ring-1 ring-violet-100'
+                }`}
+                onClick={() => navigate('/corretor/gestao-simulados')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className={`p-2.5 rounded-xl ${discrepanciasPendentes > 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
+                    <AlertTriangle className={`w-4 h-4 ${discrepanciasPendentes > 0 ? 'text-red-600' : 'text-amber-600'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Discrepâncias</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {discrepanciasPendentes > 0
+                        ? `${discrepanciasPendentes} pendente${discrepanciasPendentes > 1 ? 's' : ''}`
+                        : prontas > 0
+                          ? `${prontas} pronta${prontas > 1 ? 's' : ''} p/ finalizar`
+                          : 'Sem pendências'}
+                    </p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Alunos — sempre disponível para o gestor */}
+            <Card
+              className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate('/corretor/alunos')}
+            >
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="bg-blue-100 p-2.5 rounded-xl">
+                  <Users className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 text-sm">Alunos</p>
+                  <p className="text-xs text-slate-500 truncate">Turmas gerenciadas</p>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </CardContent>
+            </Card>
+
+            {/* Simulados — exibe só se o plano tem simulados */}
+            {featuresPlano["simulados"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/simulados')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-violet-100 p-2.5 rounded-xl">
+                    <BarChart2 className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Simulados</p>
+                    <p className="text-xs text-slate-500 truncate">Gerenciar simulados</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Aulas Gravadas — exibe só se o plano tem aulas_gravadas */}
+            {featuresPlano["aulas_gravadas"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/aulas')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-emerald-100 p-2.5 rounded-xl">
+                    <Calendar className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Aulas Gravadas</p>
+                    <p className="text-xs text-slate-500 truncate">Gerenciar aulas</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Aulas ao Vivo — exibe só se o plano tem aulas_ao_vivo */}
+            {featuresPlano["aulas_ao_vivo"] && (
+              <Card
+                className="bg-white border-0 ring-1 ring-violet-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate('/corretor/aulas-ao-vivo')}
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="bg-cyan-100 p-2.5 rounded-xl">
+                    <Inbox className="w-4 h-4 text-cyan-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">Aulas ao Vivo</p>
+                    <p className="text-xs text-slate-500 truncate">Agendar e gerenciar</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ── GRÁFICOS ─────────────────────────────────────────────────── */}
+        <div className="grid xl:grid-cols-2 gap-4">
           <ChartCard
             title="Evolução de notas por mês"
             data={metricas.evolucaoNotasPorMes}
@@ -147,12 +433,23 @@ const CorretorDashboard = () => {
             color="#8b5cf6"
           />
           <ChartCard
-            title="Evolução número de envios por mês"
+            title="Evolução de envios por mês"
             data={metricas.evolucaoEnviosPorMes}
             dataKey="envios"
-            color="#8b5cf6"
+            color="#06b6d4"
           />
         </div>
+
+        {/* ── GALERIA DE HONRA + TOP 5 (apenas para gestores, restrito às turmas gerenciadas) */}
+        {podeGerenciar && featuresPlano["top_5"] && nomesTurmasGerenciadas.length > 0 && (
+          <Top5Widget
+            variant="corretor"
+            showHeader
+            horizontal
+            turmasPermitidas={nomesTurmasGerenciadas}
+          />
+        )}
+
       </div>
     </CorretorLayout>
   );

@@ -2,24 +2,41 @@
  * Utilitários para normalização e comparação de turmas
  *
  * PADRÃO ADOTADO:
- * - Armazenamento: apenas letras "A", "B", "C", "D", "E" ou "VISITANTE"
+ * - Armazenamento: apenas letras "A", "B", "C", "D", "E", "F", "G", "H" ou "VISITANTE"
  * - Exibição: "Turma A", "Turma B", etc. (formatado dinamicamente)
  */
 
 /**
  * Tipos válidos de turma
  */
-export type TurmaLetra = 'A' | 'B' | 'C' | 'D' | 'E' | 'VISITANTE';
+export type TurmaLetra = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'VISITANTE' | 'AGUARDANDO' | 'REPROVADOS';
 
 /**
- * Lista de turmas válidas (exceto VISITANTE)
+ * Lista de turmas válidas para alocação de alunos ativos
  */
-export const TURMAS_VALIDAS: readonly TurmaLetra[] = ['A', 'B', 'C', 'D', 'E'] as const;
+export const TURMAS_VALIDAS: readonly TurmaLetra[] = ['A', 'B', 'C', 'D', 'G', 'H'] as const;
 
 /**
- * Todas as turmas possíveis incluindo VISITANTE
+ * Status especiais de turma (não são turmas de aula)
  */
-export const TODAS_TURMAS: readonly TurmaLetra[] = [...TURMAS_VALIDAS, 'VISITANTE'] as const;
+export const STATUS_ESPECIAIS: readonly TurmaLetra[] = ['AGUARDANDO', 'REPROVADOS'] as const;
+
+/**
+ * Verifica se a turma é um status especial (não é uma turma de aula real)
+ *
+ * @param turma - String com turma
+ * @returns true se for AGUARDANDO ou REPROVADOS
+ */
+export const isStatusEspecial = (turma: string | null | undefined): boolean => {
+  if (!turma) return false;
+  const upper = turma.toUpperCase().trim();
+  return STATUS_ESPECIAIS.includes(upper as TurmaLetra);
+};
+
+/**
+ * Todas as turmas possíveis incluindo VISITANTE e status especiais
+ */
+export const TODAS_TURMAS: readonly TurmaLetra[] = [...TURMAS_VALIDAS, 'VISITANTE', ...STATUS_ESPECIAIS] as const;
 
 /**
  * Normaliza qualquer formato de turma para letra única
@@ -44,19 +61,21 @@ export const normalizeTurmaToLetter = (turma: string | null | undefined): TurmaL
 
   const upper = turma.toUpperCase().trim();
 
-  // Caso especial: VISITANTE
+  // Casos especiais: status que não são turmas de aula
   if (upper === 'VISITANTE') return 'VISITANTE';
+  if (upper === 'AGUARDANDO') return 'AGUARDANDO';
+  if (upper === 'REPROVADOS') return 'REPROVADOS';
 
   // Formato "TURMA X" ou "Turma X"
-  const matchTurma = upper.match(/TURMA\s*([A-E])/);
+  const matchTurma = upper.match(/TURMA\s*([A-H])/);
   if (matchTurma) return matchTurma[1] as TurmaLetra;
 
   // Formato "LRX 2025" ou "LRX" (legado)
-  const matchLR = upper.match(/LR([A-E])(?:\s*\d{4})?/);
+  const matchLR = upper.match(/LR([A-H])(?:\s*\d{4})?/);
   if (matchLR) return matchLR[1] as TurmaLetra;
 
   // Apenas letra única
-  if (/^[A-E]$/.test(upper)) return upper as TurmaLetra;
+  if (/^[A-H]$/.test(upper)) return upper as TurmaLetra;
 
   return null;
 };
@@ -76,15 +95,19 @@ export const normalizeTurmaToLetter = (turma: string | null | undefined): TurmaL
 export const formatTurmaDisplay = (letra: TurmaLetra | string | null | undefined): string => {
   if (!letra) return '';
 
-  // Se já está no formato correto
-  if (letra === 'VISITANTE') return 'VISITANTE';
+  const upper = String(letra).toUpperCase().trim();
+
+  // Status especiais com formatação amigável
+  if (upper === 'VISITANTE') return 'Visitante';
+  if (upper === 'AGUARDANDO') return 'Aguardando';
+  if (upper === 'REPROVADOS') return 'Reprovados';
 
   // Normaliza primeiro (para aceitar qualquer formato)
   const normalized = normalizeTurmaToLetter(letra);
 
   if (!normalized) return String(letra); // Fallback para valor original
 
-  return normalized; // Retorna apenas a letra (A, B, C, D, E ou VISITANTE)
+  return normalized; // Retorna apenas a letra (A, B, C, D, E, etc.)
 };
 
 /**
@@ -159,6 +182,8 @@ export const normalizeTurmaName = (turma: string): string => {
 export const getTurmaCode = (turmaInput: string, ano: number = 2025): string => {
   const letra = normalizeTurmaToLetter(turmaInput);
   if (!letra || letra === "VISITANTE") return "visitante";
+  if (letra === "AGUARDANDO") return "aguardando";
+  if (letra === "REPROVADOS") return "reprovados";
   return `LR${letra}${ano}`;
 };
 
@@ -180,7 +205,12 @@ export const getTurmaColorClasses = (turmaInput: string): string => {
     "C": "bg-purple-100 text-purple-800",
     "D": "bg-orange-100 text-orange-800",
     "E": "bg-pink-100 text-pink-800",
-    "VISITANTE": "bg-gray-100 text-gray-800"
+    "F": "bg-teal-100 text-teal-800",
+    "G": "bg-indigo-100 text-indigo-800",
+    "H": "bg-rose-100 text-rose-800",
+    "VISITANTE": "bg-gray-100 text-gray-800",
+    "AGUARDANDO": "bg-amber-100 text-amber-800",
+    "REPROVADOS": "bg-red-100 text-red-800"
   };
 
   return colors[letra || ""] || "bg-gray-100 text-gray-800";

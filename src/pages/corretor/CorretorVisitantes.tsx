@@ -55,6 +55,7 @@ const CorretorVisitantes = () => {
         .from('redacoes_enviadas')
         .select('*')
         .eq('turma', 'visitante')
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order('data_envio', { ascending: false })
         .limit(50);
 
@@ -328,10 +329,8 @@ const CorretorVisitantes = () => {
                       />
                     </div>
                   ) : (
-                    <div className="bg-white p-4 border rounded-lg">
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {selectedRedacao.redacao_texto || 'Conteúdo não disponível'}
-                      </p>
+                    <div className="bg-white p-4 border rounded-lg whitespace-pre-wrap text-sm leading-relaxed">
+                      {selectedRedacao.redacao_texto || 'Conteúdo não disponível'}
                     </div>
                   )}
                 </div>

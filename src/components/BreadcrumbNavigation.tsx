@@ -53,38 +53,39 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({ clas
       <div className="max-w-7xl mx-auto">
         <Breadcrumb>
           <BreadcrumbList>
-            {breadcrumbs.map((crumb, index) => {
+            {breadcrumbs.flatMap((crumb, index) => {
               const isLast = index === breadcrumbs.length - 1;
               const isFirst = index === 0;
 
-              return (
-                <React.Fragment key={`breadcrumb-${index}`}>
-                  <BreadcrumbItem>
-                    {isLast ? (
-                      <BreadcrumbPage className="flex items-center gap-1.5">
+              const item = (
+                <BreadcrumbItem key={`breadcrumb-item-${index}`}>
+                  {isLast ? (
+                    <BreadcrumbPage className="flex items-center gap-1.5">
+                      {isFirst && <Home className="w-4 h-4" />}
+                      {crumb.label}
+                    </BreadcrumbPage>
+                  ) : crumb.href ? (
+                    <BreadcrumbLink asChild>
+                      <Link
+                        to={crumb.href}
+                        className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         {isFirst && <Home className="w-4 h-4" />}
                         {crumb.label}
-                      </BreadcrumbPage>
-                    ) : crumb.href ? (
-                      <BreadcrumbLink asChild>
-                        <Link
-                          to={crumb.href}
-                          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {isFirst && <Home className="w-4 h-4" />}
-                          {crumb.label}
-                        </Link>
-                      </BreadcrumbLink>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        {isFirst && <Home className="w-4 h-4" />}
-                        {crumb.label}
-                      </span>
-                    )}
-                  </BreadcrumbItem>
-                  {!isLast && <BreadcrumbSeparator />}
-                </React.Fragment>
+                      </Link>
+                    </BreadcrumbLink>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      {isFirst && <Home className="w-4 h-4" />}
+                      {crumb.label}
+                    </span>
+                  )}
+                </BreadcrumbItem>
               );
+
+              return isLast
+                ? [item]
+                : [item, <BreadcrumbSeparator key={`breadcrumb-sep-${index}`} />];
             })}
           </BreadcrumbList>
         </Breadcrumb>

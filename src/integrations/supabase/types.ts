@@ -145,6 +145,62 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notes: {
+        Row: {
+          id: string
+          admin_id: string
+          titulo: string
+          conteudo: string | null
+          cor: string
+          categoria: string | null
+          tags: string[] | null
+          imagens: Json
+          links: Json
+          fixado: boolean
+          arquivado: boolean
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          titulo: string
+          conteudo?: string | null
+          cor?: string
+          categoria?: string | null
+          tags?: string[] | null
+          imagens?: Json
+          links?: Json
+          fixado?: boolean
+          arquivado?: boolean
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          titulo?: string
+          conteudo?: string | null
+          cor?: string
+          categoria?: string | null
+          tags?: string[] | null
+          imagens?: Json
+          links?: Json
+          fixado?: boolean
+          arquivado?: boolean
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       ajuda_rapida_mensagens: {
         Row: {
           aluno_id: string
@@ -534,6 +590,8 @@ export type Database = {
       }
       corretores: {
         Row: {
+          aceita_digitada: boolean
+          aceita_manuscrita: boolean
           ativo: boolean
           atualizado_em: string
           criado_em: string
@@ -543,6 +601,8 @@ export type Database = {
           visivel_no_formulario: boolean
         }
         Insert: {
+          aceita_digitada?: boolean
+          aceita_manuscrita?: boolean
           ativo?: boolean
           atualizado_em?: string
           criado_em?: string
@@ -552,6 +612,8 @@ export type Database = {
           visivel_no_formulario?: boolean
         }
         Update: {
+          aceita_digitada?: boolean
+          aceita_manuscrita?: boolean
           ativo?: boolean
           atualizado_em?: string
           criado_em?: string
@@ -1434,6 +1496,368 @@ export type Database = {
         }
         Relationships: []
       }
+      ps_candidatos: {
+        Row: {
+          id: string
+          aluno_id: string | null
+          email_aluno: string
+          nome_aluno: string
+          turma: string | null
+          status: string
+          formulario_id: string
+          data_inscricao: string | null
+          data_aprovacao: string | null
+          aprovado_por: string | null
+          motivo_reprovacao: string | null
+          data_conclusao: string | null
+        }
+        Insert: {
+          id?: string
+          aluno_id?: string | null
+          email_aluno: string
+          nome_aluno: string
+          turma?: string | null
+          status?: string
+          formulario_id: string
+          data_inscricao?: string | null
+          data_aprovacao?: string | null
+          aprovado_por?: string | null
+          motivo_reprovacao?: string | null
+          data_conclusao?: string | null
+        }
+        Update: {
+          id?: string
+          aluno_id?: string | null
+          email_aluno?: string
+          nome_aluno?: string
+          turma?: string | null
+          status?: string
+          formulario_id?: string
+          data_inscricao?: string | null
+          data_aprovacao?: string | null
+          aprovado_por?: string | null
+          motivo_reprovacao?: string | null
+          data_conclusao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_candidatos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_candidatos_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_candidatos_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_comunicados: {
+        Row: {
+          id: string
+          formulario_id: string
+          titulo: string
+          descricao: string | null
+          imagem_url: string | null
+          link_externo: string | null
+          data_evento: string | null
+          hora_evento: string | null
+          ativo: boolean
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          formulario_id: string
+          titulo: string
+          descricao?: string | null
+          imagem_url?: string | null
+          link_externo?: string | null
+          data_evento?: string | null
+          hora_evento?: string | null
+          ativo?: boolean
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          formulario_id?: string
+          titulo?: string
+          descricao?: string | null
+          imagem_url?: string | null
+          link_externo?: string | null
+          data_evento?: string | null
+          hora_evento?: string | null
+          ativo?: boolean
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_comunicados_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_etapa_final: {
+        Row: {
+          id: string
+          formulario_id: string
+          tema_redacao: string
+          instrucoes: string | null
+          data_inicio: string
+          hora_inicio: string
+          data_fim: string
+          hora_fim: string
+          ativo: boolean
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          formulario_id: string
+          tema_redacao: string
+          instrucoes?: string | null
+          data_inicio: string
+          hora_inicio: string
+          data_fim: string
+          hora_fim: string
+          ativo?: boolean
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          formulario_id?: string
+          tema_redacao?: string
+          instrucoes?: string | null
+          data_inicio?: string
+          hora_inicio?: string
+          data_fim?: string
+          hora_fim?: string
+          ativo?: boolean
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_etapa_final_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_formularios: {
+        Row: {
+          id: string
+          titulo: string
+          descricao: string | null
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+        }
+        Insert: {
+          id?: string
+          titulo: string
+          descricao?: string | null
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Update: {
+          id?: string
+          titulo?: string
+          descricao?: string | null
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_formularios_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_perguntas: {
+        Row: {
+          id: string
+          secao_id: string
+          texto: string
+          tipo: string
+          obrigatoria: boolean
+          ordem: number
+          opcoes: string[]
+          texto_aceite: string | null
+        }
+        Insert: {
+          id?: string
+          secao_id: string
+          texto: string
+          tipo: string
+          obrigatoria?: boolean
+          ordem?: number
+          opcoes?: string[]
+          texto_aceite?: string | null
+        }
+        Update: {
+          id?: string
+          secao_id?: string
+          texto?: string
+          tipo?: string
+          obrigatoria?: boolean
+          ordem?: number
+          opcoes?: string[]
+          texto_aceite?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_perguntas_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "ps_secoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_redacoes: {
+        Row: {
+          id: string
+          candidato_id: string
+          etapa_final_id: string
+          texto: string
+          data_envio: string
+          status: string
+          nota_total: number | null
+          comentario: string | null
+        }
+        Insert: {
+          id?: string
+          candidato_id: string
+          etapa_final_id: string
+          texto: string
+          data_envio?: string
+          status?: string
+          nota_total?: number | null
+          comentario?: string | null
+        }
+        Update: {
+          id?: string
+          candidato_id?: string
+          etapa_final_id?: string
+          texto?: string
+          data_envio?: string
+          status?: string
+          nota_total?: number | null
+          comentario?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_redacoes_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "ps_candidatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_redacoes_etapa_final_id_fkey"
+            columns: ["etapa_final_id"]
+            isOneToOne: false
+            referencedRelation: "ps_etapa_final"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_respostas: {
+        Row: {
+          id: string
+          candidato_id: string
+          pergunta_id: string
+          resposta_texto: string | null
+          resposta_opcao: string | null
+          resposta_opcoes: string[]
+          aceite_confirmado: boolean
+        }
+        Insert: {
+          id?: string
+          candidato_id: string
+          pergunta_id: string
+          resposta_texto?: string | null
+          resposta_opcao?: string | null
+          resposta_opcoes?: string[]
+          aceite_confirmado?: boolean
+        }
+        Update: {
+          id?: string
+          candidato_id?: string
+          pergunta_id?: string
+          resposta_texto?: string | null
+          resposta_opcao?: string | null
+          resposta_opcoes?: string[]
+          aceite_confirmado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_respostas_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "ps_candidatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_respostas_pergunta_id_fkey"
+            columns: ["pergunta_id"]
+            isOneToOne: false
+            referencedRelation: "ps_perguntas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_secoes: {
+        Row: {
+          id: string
+          formulario_id: string
+          titulo: string
+          descricao: string | null
+          ordem: number
+        }
+        Insert: {
+          id?: string
+          formulario_id: string
+          titulo: string
+          descricao?: string | null
+          ordem?: number
+        }
+        Update: {
+          id?: string
+          formulario_id?: string
+          titulo?: string
+          descricao?: string | null
+          ordem?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_secoes_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           aprovado_por: string | null
@@ -1448,6 +1872,7 @@ export type Database = {
           id: string
           is_authenticated_student: boolean | null
           nome: string
+          participou_processo_seletivo: boolean | null
           sobrenome: string
           status_aprovacao: string | null
           theme_preference: string | null
@@ -1469,6 +1894,7 @@ export type Database = {
           id: string
           is_authenticated_student?: boolean | null
           nome: string
+          participou_processo_seletivo?: boolean | null
           sobrenome: string
           status_aprovacao?: string | null
           theme_preference?: string | null
@@ -1490,6 +1916,7 @@ export type Database = {
           id?: string
           is_authenticated_student?: boolean | null
           nome?: string
+          participou_processo_seletivo?: boolean | null
           sobrenome?: string
           status_aprovacao?: string | null
           theme_preference?: string | null
@@ -2252,6 +2679,8 @@ export type Database = {
           c2_corretor_2?: number | null
           c3_admin?: number | null
           c3_corretor_1?: number | null
+          c2_admin?: number | null
+          c3_admin?: number | null
           c3_corretor_2?: number | null
           c4_admin?: number | null
           c4_corretor_1?: number | null
@@ -2581,9 +3010,28 @@ export type Database = {
           frase_tematica: string
           id: string
           imagem_texto_4_url: string | null
+          motivator1_dimensions: Json | null
+          motivator1_file_path: string | null
+          motivator1_file_size: number | null
+          motivator1_image_position: string | null
+          motivator1_source: string | null
+          motivator1_url: string | null
+          motivator2_dimensions: Json | null
+          motivator2_file_path: string | null
+          motivator2_file_size: number | null
+          motivator2_image_position: string | null
+          motivator2_source: string | null
+          motivator2_url: string | null
+          motivator3_dimensions: Json | null
+          motivator3_file_path: string | null
+          motivator3_file_size: number | null
+          motivator3_image_position: string | null
+          motivator3_source: string | null
+          motivator3_url: string | null
           motivator4_dimensions: Json | null
           motivator4_file_path: string | null
           motivator4_file_size: number | null
+          motivator4_image_position: string | null
           motivator4_source: string | null
           motivator4_url: string | null
           needs_media_update: boolean | null
@@ -2593,8 +3041,21 @@ export type Database = {
           scheduled_publish_at: string | null
           status: string | null
           texto_1: string | null
+          texto_1_fonte: string | null
           texto_2: string | null
+          texto_2_fonte: string | null
           texto_3: string | null
+          texto_3_fonte: string | null
+          texto_4: string | null
+          texto_4_fonte: string | null
+          texto_5: string | null
+          texto_5_fonte: string | null
+          motivator5_dimensions: Json | null
+          motivator5_file_path: string | null
+          motivator5_file_size: number | null
+          motivator5_image_position: string | null
+          motivator5_source: string | null
+          motivator5_url: string | null
         }
         Insert: {
           cabecalho_enem?: string | null
@@ -2607,9 +3068,28 @@ export type Database = {
           frase_tematica: string
           id?: string
           imagem_texto_4_url?: string | null
+          motivator1_dimensions?: Json | null
+          motivator1_file_path?: string | null
+          motivator1_file_size?: number | null
+          motivator1_image_position?: string | null
+          motivator1_source?: string | null
+          motivator1_url?: string | null
+          motivator2_dimensions?: Json | null
+          motivator2_file_path?: string | null
+          motivator2_file_size?: number | null
+          motivator2_image_position?: string | null
+          motivator2_source?: string | null
+          motivator2_url?: string | null
+          motivator3_dimensions?: Json | null
+          motivator3_file_path?: string | null
+          motivator3_file_size?: number | null
+          motivator3_image_position?: string | null
+          motivator3_source?: string | null
+          motivator3_url?: string | null
           motivator4_dimensions?: Json | null
           motivator4_file_path?: string | null
           motivator4_file_size?: number | null
+          motivator4_image_position?: string | null
           motivator4_source?: string | null
           motivator4_url?: string | null
           needs_media_update?: boolean | null
@@ -2619,8 +3099,21 @@ export type Database = {
           scheduled_publish_at?: string | null
           status?: string | null
           texto_1?: string | null
+          texto_1_fonte?: string | null
           texto_2?: string | null
+          texto_2_fonte?: string | null
           texto_3?: string | null
+          texto_3_fonte?: string | null
+          texto_4?: string | null
+          texto_4_fonte?: string | null
+          texto_5?: string | null
+          texto_5_fonte?: string | null
+          motivator5_dimensions?: Json | null
+          motivator5_file_path?: string | null
+          motivator5_file_size?: number | null
+          motivator5_image_position?: string | null
+          motivator5_source?: string | null
+          motivator5_url?: string | null
         }
         Update: {
           cabecalho_enem?: string | null
@@ -2633,9 +3126,28 @@ export type Database = {
           frase_tematica?: string
           id?: string
           imagem_texto_4_url?: string | null
+          motivator1_dimensions?: Json | null
+          motivator1_file_path?: string | null
+          motivator1_file_size?: number | null
+          motivator1_image_position?: string | null
+          motivator1_source?: string | null
+          motivator1_url?: string | null
+          motivator2_dimensions?: Json | null
+          motivator2_file_path?: string | null
+          motivator2_file_size?: number | null
+          motivator2_image_position?: string | null
+          motivator2_source?: string | null
+          motivator2_url?: string | null
+          motivator3_dimensions?: Json | null
+          motivator3_file_path?: string | null
+          motivator3_file_size?: number | null
+          motivator3_image_position?: string | null
+          motivator3_source?: string | null
+          motivator3_url?: string | null
           motivator4_dimensions?: Json | null
           motivator4_file_path?: string | null
           motivator4_file_size?: number | null
+          motivator4_image_position?: string | null
           motivator4_source?: string | null
           motivator4_url?: string | null
           needs_media_update?: boolean | null
@@ -2645,8 +3157,21 @@ export type Database = {
           scheduled_publish_at?: string | null
           status?: string | null
           texto_1?: string | null
+          texto_1_fonte?: string | null
           texto_2?: string | null
+          texto_2_fonte?: string | null
           texto_3?: string | null
+          texto_3_fonte?: string | null
+          texto_4?: string | null
+          texto_4_fonte?: string | null
+          texto_5?: string | null
+          texto_5_fonte?: string | null
+          motivator5_dimensions?: Json | null
+          motivator5_file_path?: string | null
+          motivator5_file_size?: number | null
+          motivator5_image_position?: string | null
+          motivator5_source?: string | null
+          motivator5_url?: string | null
         }
         Relationships: []
       }

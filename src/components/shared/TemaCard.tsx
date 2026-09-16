@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle, FileText } from 'lucide-react';
+import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle, FileText, Download } from 'lucide-react';
 import { TemaSubmissionsModal } from '@/components/admin/TemaSubmissionsModal';
+import { supabase } from '@/integrations/supabase/client';
+import { fetchFullTema, generateTemaPDF } from '@/utils/temaPdfUtils';
+import { toast } from 'sonner';
 
 export interface TemaCardData {
   id: string;
@@ -60,7 +63,10 @@ const getStatusInfo = (tema: TemaCardData) => {
     return {
       label: 'Publicado',
       variant: 'default' as const,
-      bgColor: 'bg-blue-600'
+      bgColor: 'bg-blue-600',
+      dateLabel: 'Publicado em',
+      dateColor: 'text-blue-600',
+      dateBg: 'bg-blue-50',
     };
   }
 
@@ -68,7 +74,10 @@ const getStatusInfo = (tema: TemaCardData) => {
     return {
       label: 'Agendado',
       variant: 'secondary' as const,
-      bgColor: 'bg-yellow-500'
+      bgColor: 'bg-yellow-500',
+      dateLabel: 'Agendado para',
+      dateColor: 'text-yellow-700',
+      dateBg: 'bg-yellow-50',
     };
   }
 
@@ -76,18 +85,35 @@ const getStatusInfo = (tema: TemaCardData) => {
     return {
       label: 'Pendente',
       variant: 'destructive' as const,
-      bgColor: 'bg-orange-500'
+      bgColor: 'bg-orange-500',
+      dateLabel: 'Previsto para',
+      dateColor: 'text-orange-600',
+      dateBg: 'bg-orange-50',
     };
   }
 
   return {
     label: 'Rascunho',
     variant: 'secondary' as const,
-    bgColor: 'bg-purple-600'
+    bgColor: 'bg-purple-600',
+    dateLabel: 'Criado em',
+    dateColor: 'text-gray-500',
+    dateBg: 'bg-gray-50',
   };
 };
 
 const getFormattedDate = (tema: TemaCardData) => {
+  const now = new Date();
+  const scheduledDate = tema.scheduled_publish_at ? new Date(tema.scheduled_publish_at) : null;
+
+  if (scheduledDate && scheduledDate > now) {
+    return format(scheduledDate, "dd/MM/yyyy", { locale: ptBR });
+  }
+
+  if (scheduledDate && scheduledDate <= now) {
+    return format(scheduledDate, "dd/MM/yyyy", { locale: ptBR });
+  }
+
   const publishedDate = tema.published_at || tema.publicado_em;
   if (publishedDate) {
     return format(new Date(publishedDate), "dd/MM/yyyy", { locale: ptBR });
@@ -103,9 +129,92 @@ const getFormattedDate = (tema: TemaCardData) => {
 export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCardProps) => {
   const statusInfo = getStatusInfo(tema);
   const formattedDate = getFormattedDate(tema);
+  const { dateLabel, dateColor, dateBg } = statusInfo;
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setDropdownOpen(false);
+    setDownloadingPdf(true);
+    const toastId = toast.loading('Gerando PDF...');
+
+    // Abre a janela sincronicamente enquanto ainda está no contexto de gesto do usuário.
+    // Após um await, o browser bloqueia window.open() como popup.
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast.error('Popup bloqueado. Permita popups para este site e tente novamente.', { id: toastId });
+      setDownloadingPdf(false);
+      return;
+    }
+
+    try {
+      const fullTema = await fetchFullTema(tema.id);
+      if (!fullTema) throw new Error('Tema não encontrado');
+      await generateTemaPDF(fullTema, win);
+      toast.success('PDF gerado com sucesso!', { id: toastId });
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      win.close();
+      toast.error('Erro ao gerar PDF. Tente novamente.', { id: toastId });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  useEffect(() => {
+    if (perfil === 'admin') {
+      fetchSubmissionsCount();
+    }
+  }, [tema.id, perfil]);
+
+  const fetchSubmissionsCount = async () => {
+    try {
+      // 1. Buscar redações regulares (excluindo soft-deleted)
+      const { count: countRegulares, error: errorRegulares } = await supabase
+        .from("redacoes_enviadas")
+        .select("*", { count: "exact", head: true })
+        .eq("frase_tematica", tema.frase_tematica)
+        .is("deleted_at", null);
+
+      if (errorRegulares) {
+        console.error("Erro ao buscar contagem de redações regulares:", errorRegulares);
+      }
+
+      // 2. Verificar se existe simulado com esse tema_id (chave estrangeira correta)
+      const { data: simulado, error: errorSimulado } = await supabase
+        .from("simulados")
+        .select("id")
+        .eq("tema_id", tema.id)
+        .maybeSingle();
+
+      let countSimulados = 0;
+
+      if (!errorSimulado && simulado?.id) {
+        // 3. Buscar redações do simulado (excluindo soft-deleted)
+        const { count, error: errorRedacoesSimulado } = await supabase
+          .from("redacoes_simulado")
+          .select("*", { count: "exact", head: true })
+          .eq("id_simulado", simulado.id)
+          .is("deleted_at", null);
+
+        if (errorRedacoesSimulado) {
+          console.error("Erro ao buscar contagem de redações do simulado:", errorRedacoesSimulado);
+        } else {
+          countSimulados = count || 0;
+        }
+      }
+
+      // Total = regulares + simulados
+      const totalCount = (countRegulares || 0) + countSimulados;
+      setSubmissionsCount(totalCount);
+    } catch (error) {
+      console.error("Erro ao buscar contagem de envios:", error);
+      setSubmissionsCount(0);
+    }
+  };
 
   const handleExcluir = () => {
     if (actions.onExcluir) {
@@ -156,11 +265,29 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
       <div className="px-4 py-3 border-t border-gray-100 mt-auto">
         {perfil === 'admin' ? (
           <div className="flex items-center justify-between">
-            {/* Data à esquerda */}
-            <div className="text-xs text-gray-500 flex items-center gap-1">
-              <span>📅</span>
-              <span className="hidden sm:inline">{formattedDate || 'Sem data'}</span>
-              <span className="sm:hidden">{formattedDate?.split('/').slice(0, 2).join('/') || 'S/D'}</span>
+            {/* Informações à esquerda */}
+            <div className="flex items-center gap-3">
+              {/* Data com contexto de status */}
+              {formattedDate && (
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${dateBg} ${dateColor}`}>
+                  <span className="hidden sm:inline">
+                    <span className="opacity-70">{dateLabel}:</span> {formattedDate}
+                  </span>
+                  <span className="sm:hidden">{formattedDate}</span>
+                </div>
+              )}
+
+              {/* Contador de envios - clicável */}
+              <button
+                onClick={() => setShowSubmissionsModal(true)}
+                className="flex items-center gap-2 text-sm hover:bg-purple-50 px-2 py-1 rounded-md transition-colors group"
+              >
+                <FileText className="w-4 h-4 text-purple-600 group-hover:text-purple-700" />
+                <span className="font-medium text-gray-700 group-hover:text-purple-700">Enviaram:</span>
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold group-hover:bg-purple-200">
+                  {submissionsCount}
+                </Badge>
+              </button>
             </div>
 
             {/* Menu de ações */}
@@ -216,6 +343,17 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Alunos que Enviaram
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDownloadPdf();
+                  }}
+                  disabled={downloadingPdf}
+                  className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <Download className="h-4 w-4 mr-2 text-purple-600" />
+                  {downloadingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {

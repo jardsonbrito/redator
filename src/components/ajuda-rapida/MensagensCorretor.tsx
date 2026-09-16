@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Inbox, Archive } from "lucide-react";
 import { useAjudaRapida, type Conversa } from "@/hooks/useAjudaRapida";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { ChatConversa } from "./ChatConversa";
@@ -18,10 +17,10 @@ export const MensagensCorretor = () => {
   } | null>(null);
 
   useEffect(() => {
-    if (corretor?.id) {
-      console.log('🔍 Carregando conversas para corretor:', corretor.id);
-      buscarConversasCorretor(corretor.id);
-    }
+    if (!corretor?.id) return;
+    buscarConversasCorretor(corretor.id);
+    const interval = setInterval(() => buscarConversasCorretor(corretor.id), 30000);
+    return () => clearInterval(interval);
   }, [corretor?.id]);
 
   if (conversaAtiva) {
@@ -30,14 +29,21 @@ export const MensagensCorretor = () => {
         alunoId={conversaAtiva.alunoId}
         corretorId={corretor?.id || ''}
         alunoNome={conversaAtiva.alunoNome}
-        onVoltar={() => setConversaAtiva(null)}
+        onVoltar={() => {
+          setConversaAtiva(null);
+          if (corretor?.id) buscarConversasCorretor(corretor.id);
+        }}
         tipoUsuario="corretor"
       />
     );
   }
 
-  const conversasPendentes = conversas.filter(c => !c.eh_respondida && c.mensagens_nao_lidas > 0);
-  const conversasRespondidas = conversas.filter(c => c.eh_respondida || c.mensagens_nao_lidas === 0);
+  // Pendentes: conversas onde a última mensagem foi do aluno (precisa resposta do corretor)
+  // Inclui tanto conversas novas quanto continuações onde o aluno enviou nova mensagem
+  const conversasPendentes = conversas.filter(c => !c.eh_respondida);
+
+  // Respondidas: conversas onde a última mensagem foi do corretor (já respondeu)
+  const conversasRespondidas = conversas.filter(c => c.eh_respondida);
 
   const ConversaCard = ({ conversa }: { conversa: Conversa }) => (
     <Card 
@@ -75,28 +81,24 @@ export const MensagensCorretor = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 p-4">
-      <div className="max-w-4xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">Recados dos Alunos</CardTitle>
+    <div className="w-full">
+      <div className="max-w-4xl">
+        <Card className="border-0 ring-1 ring-violet-100 shadow-sm rounded-3xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold text-slate-800">Conversas</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="pendentes" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="pendentes" className="flex items-center space-x-2">
-                  <Inbox className="w-4 h-4" />
-                  <span>Pendentes</span>
+              <TabsList>
+                <TabsTrigger value="pendentes">
+                  Pendentes
                   {conversasPendentes.length > 0 && (
                     <Badge variant="destructive" className="rounded-full ml-2">
                       {conversasPendentes.length}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="respondidas" className="flex items-center space-x-2">
-                  <Archive className="w-4 h-4" />
-                  <span>Respondidas</span>
-                </TabsTrigger>
+                <TabsTrigger value="respondidas">Respondidas</TabsTrigger>
               </TabsList>
               
               <TabsContent value="pendentes" className="mt-6">

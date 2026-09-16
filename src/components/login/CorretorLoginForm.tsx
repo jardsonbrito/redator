@@ -34,7 +34,7 @@ export const CorretorLoginForm = ({
         <p className="text-xs text-redator-accent mt-1"></p>
       </div>
       
-      <Button type="submit" className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white" disabled={loading}>
+      <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white h-12 rounded-xl font-semibold" disabled={loading}>
         {loading ? "Verificando..." : "Acessar Painel"}
       </Button>
     </form>;

@@ -16,6 +16,9 @@ export interface StudentInboxMessage {
   status: "pendente" | "lida" | "respondida";
   response_text: string | null;
   responded_at: string | null;
+  aula_id: string | null;
+  acao: string | null;
+  send_at: string | null;
 }
 
 export function useStudentInbox() {
@@ -25,11 +28,12 @@ export function useStudentInbox() {
 
   // Usar studentData.email como fonte principal
   const emailToUse = studentData?.email || user?.email;
+  const turmaDoAluno = studentData?.turma ?? null;
 
 
   // Buscar mensagens do aluno
   const { data: messages = [], isLoading, error } = useQuery({
-    queryKey: ['student-inbox', emailToUse],
+    queryKey: ['student-inbox', emailToUse, turmaDoAluno],
     queryFn: async () => {
 
       try {
@@ -48,7 +52,11 @@ export function useStudentInbox() {
               valid_until,
               extra_link,
               extra_image,
-              created_at
+              created_at,
+              aula_id,
+              acao,
+              send_at,
+              turmas_alvo
             )
           `)
           .eq('student_email', emailToUse)
@@ -72,8 +80,14 @@ export function useStudentInbox() {
           .filter((item) => {
             const message = item.inbox_messages;
             if (!message) return false;
-            if (!message.valid_until) return true; // Permanente
-            return new Date(message.valid_until) > now; // Não expirada
+            // Mensagem expirada
+            if (message.valid_until && new Date(message.valid_until) <= now) return false;
+            // Mensagem agendada ainda não no horário
+            if ((message as any).send_at && new Date((message as any).send_at) > now) return false;
+            // Filtro por turma: se turmas_alvo definido, aluno deve ser da turma
+            const turmasAlvo = (message as any).turmas_alvo as string[] | null;
+            if (turmasAlvo && turmasAlvo.length > 0 && turmaDoAluno && !turmasAlvo.includes(turmaDoAluno)) return false;
+            return true;
           })
           .map((item) => ({
             id: item.id,
@@ -87,6 +101,9 @@ export function useStudentInbox() {
             status: item.status,
             response_text: item.response_text,
             responded_at: item.responded_at,
+            aula_id: (item.inbox_messages as any).aula_id ?? null,
+            acao: (item.inbox_messages as any).acao ?? null,
+            send_at: (item.inbox_messages as any).send_at ?? null,
           })) as StudentInboxMessage[];
 
         return validMessages;

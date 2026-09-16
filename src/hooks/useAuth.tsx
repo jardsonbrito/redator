@@ -72,78 +72,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener
+    // Set up auth state listener (apenas para Supabase Auth — não interfere no admin direto)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-
-        console.log('🔄 Auth state changed:', event, 'User:', session?.user?.email);
-        
-        if (session?.user) {
-          setSession(session);
-          setUser(session.user);
-          
-          // Verificar status admin de forma assíncrona
-          setTimeout(async () => {
-            const isAdminUser = await checkAdminStatus(session.user.email);
-            if (isAdminUser) {
-              localStorage.setItem('admin_session', JSON.stringify({
-                email: session.user.email,
-                timestamp: new Date().toISOString()
-              }));
-            }
-          }, 0);
-        } else {
-          setSession(null);
-          setUser(null);
-          setIsAdmin(false);
-          // Limpar sessão admin
-          localStorage.removeItem('admin_session');
-        }
-        
-        setLoading(false);
+      async (_event, _session) => {
+        // Admin usa sessão própria via localStorage; ignorar eventos do Supabase Auth
+        if (mounted) setLoading(false);
       }
     );
 
     // Check for existing session
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        if (error) {
-          console.error('❌ Error getting session:', error);
-          // Verificar se há sessão admin salva localmente como fallback
-          const adminSession = localStorage.getItem('admin_session');
-          if (adminSession) {
-            try {
-              const adminData = JSON.parse(adminSession);
-              console.log('🔄 Tentando restaurar sessão admin local:', adminData.email);
-              // Tentar reautenticar silenciosamente se necessário
-            } catch (e) {
+        // Restaurar sessão admin salva no localStorage
+        const savedSession = localStorage.getItem('admin_session');
+        if (savedSession) {
+          try {
+            const sessionData = JSON.parse(savedSession);
+            const now = Math.floor(Date.now() / 1000);
+            if (sessionData.expires_at && sessionData.expires_at > now) {
+              const adminUser = {
+                id: sessionData.id,
+                email: sessionData.email,
+                aud: 'authenticated',
+                role: 'authenticated',
+                email_confirmed_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                user_metadata: { nome_completo: sessionData.nome_completo },
+                app_metadata: { provider: 'admin_direct' }
+              } as any;
+              if (mounted) {
+                setUser(adminUser);
+                setIsAdmin(true);
+                setSession({ user: adminUser } as any);
+              }
+              return;
+            } else {
               localStorage.removeItem('admin_session');
             }
+          } catch {
+            localStorage.removeItem('admin_session');
           }
-          setLoading(false);
-          return;
         }
 
-        console.log('✅ Initial session check:', session?.user?.email);
-        
-        if (session?.user) {
-          setSession(session);
-          setUser(session.user);
-          
-          // Verificar status admin de forma assíncrona  
-          setTimeout(async () => {
-            await checkAdminStatus(session.user.email);
-          }, 0);
-        } else {
-          // Verificar sessão local salva
-          const adminSession = localStorage.getItem('admin_session');
-          if (adminSession) {
-            console.log('🔄 Sessão local encontrada, tentando restaurar...');
-          }
+        if (mounted) {
           setSession(null);
           setUser(null);
           setIsAdmin(false);
@@ -166,141 +137,64 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔐 Tentando login para:', email);
-    console.log('📊 Status inicial - Loading:', loading, 'User:', user?.email, 'IsAdmin:', isAdmin);
     setLoading(true);
-    
     try {
-      // Primeiro: Tentar login via Supabase Auth
-      console.log('📧 Etapa 1: Tentando Supabase Auth...');
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      console.log('🔍 Resposta Supabase Auth:', {
-        user: authData?.user?.email,
-        session: !!authData?.session,
-        error: authError?.message,
-        errorCode: authError?.name
-      });
-      
-      if (!authError && authData.user) {
-        console.log('✅ Supabase Auth successful para:', authData.user.email);
-        console.log('👤 User ID:', authData.user.id);
-        console.log('🎫 Session expires at:', new Date(authData.session?.expires_at! * 1000));
-        // A sessão será definida pelo listener onAuthStateChange automaticamente
-        return { error: null };
-      }
-
-      console.log('⚠️ Supabase Auth falhou:', authError?.message);
-      console.log('🔍 Detalhes do erro Auth:', {
-        name: authError?.name,
-        message: authError?.message,
-        status: (authError as any)?.status
-      });
-      console.log('🔄 Etapa 2: Tentando validação direta de admin...');
-      
-      // Segundo: Tentar validação direta para admins
       const { data: adminResponse, error: adminError } = await supabase.rpc('validate_admin_credentials', {
         p_email: email,
         p_password: password
       });
-      
-      console.log('🔍 Resposta da validação direta:', { 
-        adminResponse, 
-        adminError,
-        adminErrorDetails: adminError?.message
-      });
-      
+
       const validationResult = adminResponse as unknown as AdminValidationResponse;
-      
+
       if (!adminError && validationResult?.success && validationResult.admin) {
-        console.log('✅ Validação direta de admin successful para:', email);
-        console.log('👤 Admin info:', validationResult.admin);
-        console.log('🔑 Admin ID:', validationResult.admin.id);
-        
-        // Teste adicional de função is_main_admin
-        try {
-          const { data: isMainAdminTest } = await supabase.rpc('is_main_admin');
-          console.log('🔍 Teste is_main_admin():', isMainAdminTest);
-        } catch (testError) {
-          console.log('⚠️ Erro no teste is_main_admin():', testError);
+        // Criar sessão real no Supabase Auth para que auth.email() funcione nas RLS policies
+        const { data: authData, error: authSignInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+
+        if (authSignInError) {
+          console.warn('⚠️ Supabase Auth signIn falhou:', authSignInError.message);
         }
-        
-        // Criar sessão administrativa personalizada
-        const adminUser = {
+
+        const adminUser = authData?.user ?? ({
           id: validationResult.admin.id,
           email: validationResult.admin.email,
           aud: 'authenticated',
           role: 'authenticated',
           email_confirmed_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
-          user_metadata: {
-            nome_completo: validationResult.admin.nome_completo
-          },
-          app_metadata: {
-            provider: 'admin_direct',
-            providers: ['admin_direct']
-          }
-        } as any;
-        
-        const adminSession = {
+          user_metadata: { nome_completo: validationResult.admin.nome_completo },
+          app_metadata: { provider: 'admin_direct' }
+        } as any);
+
+        const adminSession = authData?.session ?? ({
           user: adminUser,
           access_token: `admin_session_${Date.now()}`,
           token_type: 'bearer',
-          expires_in: 3600,
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          expires_in: 86400,
+          expires_at: Math.floor(Date.now() / 1000) + 86400,
           refresh_token: `admin_refresh_${Date.now()}`
-        } as any;
-        
-        console.log('🎯 Criando sessão admin customizada');
-        console.log('📝 Session details:', {
-          userEmail: adminUser.email,
-          userId: adminUser.id,
-          expiresAt: new Date(adminSession.expires_at * 1000)
-        });
-        
+        } as any);
+
         setSession(adminSession);
         setUser(adminUser);
         setIsAdmin(true);
-        
-        // Salvar sessão localmente
-        const sessionData = {
-          email: adminUser.email,
-          id: adminUser.id,
+
+        localStorage.setItem('admin_session', JSON.stringify({
+          email: validationResult.admin.email,
+          id: validationResult.admin.id,
           nome_completo: validationResult.admin.nome_completo,
-          timestamp: new Date().toISOString(),
-          login_method: 'direct_validation'
-        };
-        
-        localStorage.setItem('admin_session', JSON.stringify(sessionData));
-        console.log('💾 Sessão salva no localStorage:', sessionData);
-        
-        console.log('✅ Login direct admin completed successfully!');
+          expires_at: Math.floor(Date.now() / 1000) + 86400
+        }));
+
         setLoading(false);
         return { error: null };
       }
-      
-      // Ambos os métodos falharam - logs detalhados
-      console.error('❌ Ambos os métodos falharam:');
-      console.error('   📧 Supabase Auth:');
-      console.error('      - Error:', authError?.message);
-      console.error('      - Name:', authError?.name);
-      console.error('      - Status:', (authError as any)?.status);
-      console.error('   🔍 Validação direta:');
-      console.error('      - Error:', adminError?.message);
-      console.error('      - Response:', adminResponse);
-      console.error('      - Validation success:', validationResult?.success);
-      
+
       setLoading(false);
-      return { 
-        error: authError || adminError || new Error('Credenciais inválidas') 
-      };
-      
+      return { error: adminError || new Error(validationResult?.message || 'Email ou senha inválidos') };
     } catch (error) {
-      console.error('❌ Exceção durante login:', error);
-      console.error('❌ Stack trace:', (error as Error).stack);
       setLoading(false);
       return { error };
     }

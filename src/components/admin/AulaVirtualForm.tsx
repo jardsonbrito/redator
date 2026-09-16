@@ -1,22 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-const TURMAS = ['A', 'B', 'C', 'D', 'E'];
+import { normalizeTurmaToLetter } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
+import { Info } from "lucide-react";
 
 interface AulaVirtualFormProps {
   onSuccess?: () => void;
+  turmasRestricao?: string[];
 }
 
-export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
+type AulaDisponivel = { id: string; titulo: string; data_aula: string };
+
+const formatarData = (data: string) => {
+  if (!data) return '';
+  const [y, m, d] = data.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+export const AulaVirtualForm = ({ onSuccess, turmasRestricao }: AulaVirtualFormProps) => {
+  const { turmasDinamicas: todasAsTurmas } = useTurmasAtivas();
+  const turmasDinamicas = turmasRestricao && turmasRestricao.length > 0
+    ? todasAsTurmas.filter(t => turmasRestricao.includes(t.valor))
+    : todasAsTurmas;
+
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
+  const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
+
+  const modoRestrito = !!(turmasRestricao && turmasRestricao.length > 0);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -24,16 +44,67 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
     data_aula: "",
     horario_inicio: "",
     horario_fim: "",
-    turmas_autorizadas: [] as string[],
+    turmas_autorizadas: turmasRestricao && turmasRestricao.length > 0 ? turmasRestricao : [] as string[],
     imagem_capa_url: "",
     link_meet: "",
     abrir_aba_externa: false,
     permite_visitante: false,
     ativo: true,
-    eh_aula_ao_vivo: true
+    eh_aula_ao_vivo: true,
+    eh_repeticao: false,
+    aula_mae_id: null as string | null,
   });
 
-  const handleAction = () => {
+  useEffect(() => {
+    const carregarDados = async () => {
+      const { data } = await (supabase
+        .from('aulas_virtuais')
+        .select('id, titulo, data_aula')
+        .eq('eh_aula_ao_vivo', true)
+        .eq('ativo', true)
+        .is('aula_mae_id', null)
+        .order('data_aula', { ascending: false }) as any);
+      setAulasDisponiveis((data || []) as AulaDisponivel[]);
+    };
+    carregarDados();
+  }, []);
+
+  // Função para verificar etapas vigentes para as turmas selecionadas
+  const verificarEtapasVigentes = async (): Promise<{ valido: boolean; turmasSemEtapa: string[] }> => {
+    // "Professor" não é uma turma de aluno — ignorar na verificação de etapas
+    const turmasAluno = formData.turmas_autorizadas.filter(t => t !== 'Professor');
+    if (!formData.eh_aula_ao_vivo || turmasAluno.length === 0) {
+      return { valido: true, turmasSemEtapa: [] };
+    }
+
+    const turmasSemEtapa: string[] = [];
+
+    for (const turma of turmasAluno) {
+      const turmaNormalizada = normalizeTurmaToLetter(turma) || turma;
+
+      // Buscar etapa vigente para esta turma na data da aula
+      const { data: etapa } = await supabase
+        .from('etapas_estudo')
+        .select('id')
+        .eq('turma', turmaNormalizada)
+        .eq('ativo', true)
+        .lte('data_inicio', formData.data_aula)
+        .gte('data_fim', formData.data_aula)
+        .limit(1)
+        .maybeSingle();
+
+      if (!etapa) {
+        turmasSemEtapa.push(turma);
+      }
+    }
+
+    return {
+      valido: turmasSemEtapa.length === 0,
+      turmasSemEtapa
+    };
+  };
+
+  const handleAction = async () => {
     // Validações básicas
     if (!formData.titulo.trim()) {
       toast.error('Título é obrigatório');
@@ -65,11 +136,48 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
       return;
     }
 
+    // Aviso se a data/hora da aula já passou
+    if (formData.eh_aula_ao_vivo && formData.data_aula && formData.horario_fim) {
+      const dataHoraFim = new Date(formData.data_aula + 'T' + formData.horario_fim);
+      if (dataHoraFim < new Date()) {
+        toast.warning('Atenção: a data/hora desta aula já passou. O card ficará com status "Encerrada" imediatamente.', { duration: 6000 });
+      }
+    }
+
+    if (formData.eh_aula_ao_vivo && formData.eh_repeticao && !formData.aula_mae_id) {
+      toast.error('Selecione a aula original para criar uma repetição');
+      setActiveSection('configuracao');
+      return;
+    }
+
+    // Validação de etapa vigente (apenas para aulas ao vivo que NÃO são repetições)
+    // Repetições não criam entrada no diário, então a etapa não é necessária
+    // "Professor" não é turma de aluno — ignorar na verificação
+    // Corretor gestor externo não usa Diário Online — pula validação
+    const turmasAlunoParaValidar = formData.turmas_autorizadas.filter(t => t !== 'Professor');
+    if (!modoRestrito && formData.eh_aula_ao_vivo && !formData.eh_repeticao && turmasAlunoParaValidar.length > 0) {
+      setLoading(true);
+      const { valido, turmasSemEtapa } = await verificarEtapasVigentes();
+
+      if (!valido) {
+        setLoading(false);
+        toast.error(
+          `As seguintes turmas não têm etapa configurada para a data ${formData.data_aula}: ${turmasSemEtapa.join(', ')}. Configure as etapas no Diário Online primeiro.`,
+          { duration: 6000 }
+        );
+        setActiveSection('turmas');
+        return;
+      }
+    }
+
     handleSubmit();
   };
 
   const handleSubmit = async () => {
     setLoading(true);
+
+    // ID do módulo "Aula ao vivo" — usado ao criar a aula gravada correspondente
+    const MODULO_AULA_AO_VIVO_ID = 'b14dd9be-a203-45df-97b7-ae592f5c60ed';
 
     try {
       const aulaData = {
@@ -84,14 +192,70 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
         abrir_aba_externa: formData.abrir_aba_externa,
         permite_visitante: formData.permite_visitante,
         ativo: formData.ativo,
-        eh_aula_ao_vivo: formData.eh_aula_ao_vivo
+        eh_aula_ao_vivo: formData.eh_aula_ao_vivo,
+        aula_mae_id: (formData.eh_aula_ao_vivo && formData.eh_repeticao) ? formData.aula_mae_id : null,
       };
 
-      const { error } = await supabase
-        .from('aulas_virtuais')
-        .insert([aulaData]);
+      let novaAulaVirtual: { id: string } | null = null;
 
-      if (error) throw error;
+      if (modoRestrito) {
+        // Corretor gestor: usa RPC SECURITY DEFINER (sem sessão Supabase Auth)
+        const { data: novoId, error: rpcError } = await supabase.rpc('corretor_criar_aula_virtual', {
+          p_data: aulaData,
+        });
+        if (rpcError) throw rpcError;
+        novaAulaVirtual = { id: novoId as string };
+      } else {
+        const { data, error } = await supabase
+          .from('aulas_virtuais')
+          .insert([aulaData])
+          .select('id')
+          .single();
+        if (error) throw error;
+        novaAulaVirtual = data;
+      }
+
+      // ── Criar aula gravada correspondente (apenas para aulas não-repetição, modo admin)
+      if (!modoRestrito && formData.eh_aula_ao_vivo && !formData.eh_repeticao && novaAulaVirtual) {
+        const { data: novaGravada } = await supabase
+          .from('aulas')
+          .insert([{
+            titulo: formData.titulo.trim(),
+            descricao: formData.descricao.trim() || null,
+            link_conteudo: '',           // admin adiciona o YouTube depois
+            turmas_autorizadas: formData.turmas_autorizadas,
+            permite_visitante: formData.permite_visitante,
+            cover_url: formData.imagem_capa_url.trim() || null,
+            cover_source: formData.imagem_capa_url.trim() ? 'url' : null,
+            modulo_id: MODULO_AULA_AO_VIVO_ID,
+            ativo: false,               // ativa quando o YouTube link for inserido
+          }])
+          .select('id')
+          .single();
+
+        if (novaGravada) {
+          await supabase
+            .from('aulas_virtuais')
+            .update({ aula_gravada_id: novaGravada.id })
+            .eq('id', novaAulaVirtual.id);
+        }
+      }
+
+      // ── Para repetições: herdar aula_gravada_id da aula mãe
+      if (!modoRestrito && formData.eh_aula_ao_vivo && formData.eh_repeticao && formData.aula_mae_id && novaAulaVirtual) {
+        const { data: mae } = await supabase
+          .from('aulas_virtuais')
+          .select('aula_gravada_id')
+          .eq('id', formData.aula_mae_id)
+          .maybeSingle();
+
+        if (mae?.aula_gravada_id) {
+          await supabase
+            .from('aulas_virtuais')
+            .update({ aula_gravada_id: mae.aula_gravada_id })
+            .eq('id', novaAulaVirtual.id);
+        }
+      }
 
       toast.success('Aula ao vivo criada com sucesso!');
 
@@ -108,7 +272,9 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
         abrir_aba_externa: false,
         permite_visitante: false,
         ativo: true,
-        eh_aula_ao_vivo: true
+        eh_aula_ao_vivo: true,
+        eh_repeticao: false,
+        aula_mae_id: null,
       });
       setActiveSection('detalhes');
 
@@ -235,6 +401,18 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
             {/* Configuração Section */}
             {activeSection === 'configuracao' && (
               <div className="space-y-6">
+                {/* Alerta informativo sobre presença automática (oculto no modo restrito) */}
+                {!modoRestrito && formData.eh_aula_ao_vivo && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      <strong>Presença Automática:</strong> Quando "Aula ao vivo" está ativada, a presença dos alunos será
+                      registrada automaticamente no Diário Online quando eles entrarem e saírem da aula.
+                      Certifique-se de que as turmas selecionadas tenham etapas configuradas para a data da aula.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Link do Meet */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-2">
@@ -264,6 +442,7 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
                 {/* Configurações */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-4">
+                    {!modoRestrito && (
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-0.5">
                         <div className="text-sm font-medium">Aula ao vivo</div>
@@ -271,9 +450,53 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
                       </div>
                       <Switch
                         checked={formData.eh_aula_ao_vivo}
-                        onCheckedChange={(checked) => setFormData({...formData, eh_aula_ao_vivo: checked})}
+                        onCheckedChange={(checked) => setFormData({
+                          ...formData,
+                          eh_aula_ao_vivo: checked,
+                          eh_repeticao: checked ? formData.eh_repeticao : false,
+                          aula_mae_id: checked ? formData.aula_mae_id : null,
+                        })}
                       />
                     </div>
+                    )}
+
+                    {!modoRestrito && formData.eh_aula_ao_vivo && (
+                      <div className="flex items-center justify-between p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">Repetição de outra aula</div>
+                          <div className="text-xs text-gray-500">Alunos presentes em qualquer sessão terão presença contabilizada</div>
+                        </div>
+                        <Switch
+                          checked={formData.eh_repeticao}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData,
+                            eh_repeticao: checked,
+                            aula_mae_id: checked ? formData.aula_mae_id : null,
+                          })}
+                        />
+                      </div>
+                    )}
+
+                    {!modoRestrito && formData.eh_aula_ao_vivo && formData.eh_repeticao && (
+                      <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
+                        <label className="text-sm font-medium">Aula original (sessão principal)</label>
+                        <Select
+                          value={formData.aula_mae_id || ''}
+                          onValueChange={(value) => setFormData({...formData, aula_mae_id: value || null})}
+                        >
+                          <SelectTrigger className="text-sm bg-white">
+                            <SelectValue placeholder="Selecione a aula original..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {aulasDisponiveis.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.titulo} — {formatarData(a.data_aula)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-0.5">
@@ -309,21 +532,23 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
                   <div className="space-y-3">
                     <div className="text-sm font-medium">Turmas Autorizadas</div>
                     <div className="grid grid-cols-3 gap-2">
-                      {TURMAS.map((turma) => (
-                        <div key={turma} className="flex items-center space-x-2">
+                      {turmasDinamicas.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`turma-${turma}`}
-                            checked={formData.turmas_autorizadas.includes(turma)}
+                            id={`turma-${valor}`}
+                            checked={formData.turmas_autorizadas.includes(valor)}
+                            disabled={modoRestrito}
                             onCheckedChange={(checked) => {
+                              if (modoRestrito) return;
                               if (checked) {
-                                setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, turma]});
+                                setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, valor]});
                               } else {
-                                setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== turma)});
+                                setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== valor)});
                               }
                             }}
                           />
-                          <label htmlFor={`turma-${turma}`} className="text-sm font-medium">
-                            {turma}
+                          <label htmlFor={`turma-${valor}`} className="text-sm font-medium">
+                            {label}
                           </label>
                         </div>
                       ))}

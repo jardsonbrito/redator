@@ -11,6 +11,7 @@ import { X, Search, Users, User, GraduationCap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 export interface AlunoSelecionado {
   id: string;
@@ -24,12 +25,17 @@ export interface AlunoSelecionado {
 interface InboxDestinatariosListaAlunosProps {
   onDestinatariosChange: (destinatarios: AlunoSelecionado[]) => void;
   destinatariosSelecionados?: AlunoSelecionado[];
+  onTurmasAlvoChange?: (turmas: string[]) => void;
+  turmasAlvoSelecionadas?: string[];
 }
 
 export function InboxDestinatariosListaAlunos({
   onDestinatariosChange,
-  destinatariosSelecionados = []
+  destinatariosSelecionados = [],
+  onTurmasAlvoChange,
+  turmasAlvoSelecionadas = [],
 }: InboxDestinatariosListaAlunosProps) {
+  const { turmasDinamicas } = useTurmasAtivas();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTurma, setSelectedTurma] = useState<string>("todas");
   const [selectedAlunos, setSelectedAlunos] = useState<AlunoSelecionado[]>(destinatariosSelecionados);
@@ -261,6 +267,13 @@ export function InboxDestinatariosListaAlunos({
     });
   };
 
+  const handleToggleTurmaAlvo = (turmaValor: string) => {
+    const novaLista = turmasAlvoSelecionadas.includes(turmaValor)
+      ? turmasAlvoSelecionadas.filter(t => t !== turmaValor)
+      : [...turmasAlvoSelecionadas, turmaValor];
+    onTurmasAlvoChange?.(novaLista);
+  };
+
   const handleRemoveAluno = (alunoId: string) => {
     setSelectedAlunos(prev => prev.filter(a => a.id !== alunoId));
   };
@@ -282,6 +295,46 @@ export function InboxDestinatariosListaAlunos({
 
   return (
     <div className="space-y-6">
+      {/* Turmas alvo — obrigatório */}
+      {onTurmasAlvoChange && (
+        <Card className="border-2 border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              Turmas alvo <span className="text-red-500">*</span>
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Selecione para quais turmas esta mensagem deve aparecer. Obrigatório.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {turmasDinamicas.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma turma ativa encontrada.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {turmasDinamicas.map(({ valor, label }) => (
+                  <div key={valor} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`turma-alvo-${valor}`}
+                      checked={turmasAlvoSelecionadas.includes(valor)}
+                      onCheckedChange={() => handleToggleTurmaAlvo(valor)}
+                    />
+                    <label htmlFor={`turma-alvo-${valor}`} className="text-sm font-medium cursor-pointer">
+                      {label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+            {turmasAlvoSelecionadas.length > 0 && (
+              <p className="text-xs text-primary mt-3 font-medium">
+                Turmas selecionadas: {turmasAlvoSelecionadas.join(', ')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

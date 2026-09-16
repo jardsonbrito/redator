@@ -1,0 +1,48 @@
+import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Home, Grid3x3, ClipboardList } from "lucide-react";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
+
+const navItems = [
+  { path: "/professor",                 label: "Início",         icon: Home,          isJarvis: false },
+  { path: "/professor/jarvis-correcao", label: "Jarvis",         icon: null,          isJarvis: true  },
+  { path: "/interatividade",            label: "Interatividade", icon: ClipboardList, isJarvis: false },
+  { path: "/professor/mais",            label: "Mais",           icon: Grid3x3,       isJarvis: false },
+];
+
+export const ProfessorBottomNavigation = () => {
+  const location = useLocation();
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+      <div className="flex items-center justify-around max-w-md mx-auto">
+        {navItems.map((item) => {
+          const isActive =
+            item.path === "/professor"
+              ? location.pathname === "/professor" || location.pathname === "/professor/dashboard"
+              : location.pathname.startsWith(item.path);
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center justify-center py-3 px-3 min-w-[64px] transition-colors duration-200 ${
+                isActive ? "text-primary" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {item.isJarvis ? (
+                <JarvisIcon size={24} className="mb-1" />
+              ) : (
+                Icon && <Icon className={`w-6 h-6 mb-1 ${isActive ? "stroke-[2.5]" : ""}`} />
+              )}
+              <span className={`text-xs ${isActive ? "font-semibold" : "font-medium"}`}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};

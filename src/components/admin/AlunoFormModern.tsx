@@ -10,7 +10,9 @@ import { cn } from "@/lib/utils";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfServiceModern } from "./AlunoSelfServiceModern";
 import { AlunoList } from "./AlunoList";
-import { TURMAS_VALIDAS, formatTurmaDisplay, normalizeTurmaToLetter } from "@/utils/turmaUtils";
+import { LoginDashboardTab } from "./LoginDashboardTab";
+import { formatTurmaDisplay, normalizeTurmaToLetter } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface AlunoFormModernProps {
   onSuccess: () => void;
@@ -23,8 +25,9 @@ interface AlunoFormModernProps {
 
 export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refresh, onEdit }: AlunoFormModernProps) => {
   const [loading, setLoading] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>('cm');
+  const [activeSection, setActiveSection] = useState<string>('autoatendimento');
   const { toast } = useToast();
+  const { turmasDinamicas } = useTurmasAtivas();
 
   // Estados do formulário manual
   const [formData, setFormData] = useState({
@@ -33,8 +36,8 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
     turma: ''
   });
 
-  // Lista de turmas usando padrão normalizado
-  const turmas = TURMAS_VALIDAS;
+  // Lista de turmas usando padrão dinâmico
+  const turmas = turmasDinamicas.map(t => t.valor);
 
   // Preencher formulário quando um aluno for selecionado para edição
   useEffect(() => {
@@ -263,10 +266,9 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
   }
 
   const sections = [
-    { id: 'cm', label: 'CM' },
-    { id: 'importar', label: 'Importar' },
-    { id: 'autoatendimento', label: 'Autoatendimento' },
-    { id: 'lista', label: 'Lista' }
+    { id: 'autoatendimento', label: 'Convites' },
+    { id: 'lista', label: 'Lista' },
+    { id: 'login', label: 'Login' }
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -303,74 +305,7 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
 
           {/* Content area */}
           <div className="p-5">
-            {/* CM Section (Cadastro Manual) */}
-            {activeSection === 'cm' && (
-              <div className="space-y-4">
-                {/* Nome */}
-                <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                  <Label htmlFor="nome">Nome Completo</Label>
-                  <Input
-                    id="nome"
-                    value={formData.nome}
-                    onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                    className="text-sm mt-2"
-                    spellCheck={true}
-                  />
-                </div>
-
-                {/* Email */}
-                <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="text-sm mt-2"
-                  />
-                </div>
-
-                {/* TURMA */}
-                <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                  <Label htmlFor="turma">TURMA</Label>
-                  <Select
-                    value={formData.turma}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, turma: value }))}
-                  >
-                    <SelectTrigger className="mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {turmas.map((turmaOption) => (
-                        <SelectItem key={turmaOption} value={turmaOption}>
-                          {formatTurmaDisplay(turmaOption)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={loading || !isFormValid()}
-                    className="bg-[#3F0077] text-white hover:bg-[#662F96]"
-                  >
-                    {loading ? 'Salvando...' : 'Cadastrar Aluno'}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Importar Section */}
-            {activeSection === 'importar' && (
-              <div>
-                <AlunoCSVImport onSuccess={onSuccess} />
-              </div>
-            )}
-
-            {/* Autoatendimento Section */}
+            {/* Convites Section (antigo Autoatendimento) */}
             {activeSection === 'autoatendimento' && (
               <div>
                 <AlunoSelfServiceModern onSuccess={onSuccess} />
@@ -384,6 +319,13 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
                   refresh={refresh || false}
                   onEdit={onEdit || (() => {})}
                 />
+              </div>
+            )}
+
+            {/* Login Section */}
+            {activeSection === 'login' && (
+              <div>
+                <LoginDashboardTab />
               </div>
             )}
           </div>

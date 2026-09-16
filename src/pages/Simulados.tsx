@@ -1,8 +1,9 @@
 
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Calendar, Clock } from "lucide-react";
+import { FileText, Calendar, Clock, CalendarDays } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -24,10 +25,12 @@ const TZ = 'America/Fortaleza';
 const Simulados = () => {
   // Configurar título da página
   usePageTitle('Simulados');
-  
+
   const { studentData } = useStudentAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
   
   // Determina a turma do usuário - NOMES CORRETOS DAS TURMAS (sem anos)
   let turmaCode = "Visitante";
@@ -35,10 +38,17 @@ const Simulados = () => {
     turmaCode = studentData.turma; // Usar o nome real da turma
   }
 
+  console.log('🔍 [Simulados] Dados do aluno:', {
+    userType: studentData.userType,
+    turma: studentData.turma,
+    turmaCode: turmaCode,
+    email: studentData.email
+  });
+
 const { data: simulados, isLoading } = useQuery({
-  queryKey: ['simulados', turmaCode],
+  queryKey: ['simulados', turmaCode, studentData.email],
   queryFn: async () => {
-    let query = supabase
+    const query = supabase
       .from('simulados')
       .select('*')
       .eq('ativo', true);
@@ -46,18 +56,39 @@ const { data: simulados, isLoading } = useQuery({
     const { data: sims, error } = await query;
     if (error) throw error;
 
-    // Filtrar simulados baseado na turma do usuário no frontend para controle total
+    // Buscar simulados que o aluno já participou (para mostrar mesmo se turma mudou)
+    let simuladosParticipados: string[] = [];
+    if (studentData.email && studentData.userType === 'aluno') {
+      const { data: participacoes } = await supabase
+        .from('redacoes_simulado')
+        .select('id_simulado')
+        .eq('email_aluno', studentData.email);
+
+      simuladosParticipados = (participacoes || []).map(p => p.id_simulado);
+      console.log('🔍 [Simulados] Simulados já participados pelo aluno:', simuladosParticipados);
+    }
+
+    // Filtrar simulados baseado na turma do usuário OU se já participou
     const simuladosFiltrados = (sims || []).filter((simulado) => {
       const turmasAutorizadas = simulado.turmas_autorizadas || [];
       const permiteVisitante = simulado.permite_visitante;
+      const jaParticipou = simuladosParticipados.includes(simulado.id);
+
+      console.log('🔍 [Simulados] Filtro:', {
+        simulado: simulado.titulo,
+        turmasAutorizadas: turmasAutorizadas,
+        turmaCode: turmaCode,
+        includes: turmasAutorizadas.includes(turmaCode),
+        permiteVisitante: permiteVisitante,
+        jaParticipou: jaParticipou
+      });
 
       if (turmaCode === "Visitante") {
-        // Visitantes só veem simulados que permitem visitantes
-        return permiteVisitante;
+        // Visitantes só veem simulados que permitem visitantes OU que já participaram
+        return permiteVisitante || jaParticipou;
       } else {
-        // Alunos veem apenas simulados da sua turma específica
-        // Simulados exclusivos para visitantes (permite_visitante=true E sem turmas) NÃO são vistos por turmas
-        return turmasAutorizadas.includes(turmaCode);
+        // Alunos veem simulados da sua turma OU que já participaram (caso tenham mudado de turma)
+        return turmasAutorizadas.includes(turmaCode) || jaParticipou;
       }
     });
 
@@ -134,8 +165,11 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
   // Usar dados completos diretamente do useSimuladoSubmission
   const redacaoData = submissionData?.submissionData;
 
-  // Nota final já calculada pelo banco (considera terceira correção da Coordenação quando houver)
-  const notaMedia = redacaoData?.nota_total ?? null;
+  // Nota final já calculada pelo banco (considera terceira correção da Coordenação quando houver).
+  // Exibir apenas quando o admin liberou manualmente (corrigida = true + nota_total preenchida)
+  const notaMedia = (redacaoData?.corrigida && redacaoData.nota_total != null)
+    ? redacaoData.nota_total
+    : null;
 
   const simuladoWithSubmission = {
     ...simulado,
@@ -221,7 +255,30 @@ if (isLoading) {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-{!simulados || simulados.length === 0 ? (
+  {/* Filtro de ano */}
+  <div className="flex justify-end mb-4">
+    <button
+      onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+        apenasAnoAtual
+          ? "bg-primary text-white border-primary"
+          : "bg-white text-gray-600 border-gray-300 hover:border-primary hover:text-primary"
+      }`}
+    >
+      <CalendarDays className="w-3.5 h-3.5" />
+      {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+    </button>
+  </div>
+
+{(() => {
+  const simuladosFiltrados = apenasAnoAtual
+    ? (simulados || []).filter((s: any) => {
+        const d = new Date(s.data_inicio);
+        return !isNaN(d.getTime()) && d.getFullYear() === anoAtual;
+      })
+    : (simulados || []);
+
+  return !simuladosFiltrados.length ? (
   <Card>
     <CardContent className="text-center py-12">
       <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -229,13 +286,15 @@ if (isLoading) {
         Nenhum simulado disponível
       </h3>
       <p className="text-gray-500">
-        Não há simulados disponíveis para sua turma no momento.
+        {apenasAnoAtual
+          ? `Não há simulados em ${anoAtual}. Clique em "Todos os anos" para ver os anteriores.`
+          : "Não há simulados disponíveis para sua turma no momento."}
       </p>
     </CardContent>
   </Card>
 ) : (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {simulados.map((simulado: any) => (
+    {simuladosFiltrados.map((simulado: any) => (
       <SimuladoWithSubmissionWrapper
         key={simulado.id}
         simulado={simulado}
@@ -243,7 +302,8 @@ if (isLoading) {
       />
     ))}
   </div>
-)}
+);
+})()}
       </main>
         </div>
       </TooltipProvider>

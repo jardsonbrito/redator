@@ -6,9 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Eye, User, GraduationCap, Star } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Search, Eye, User, GraduationCap, Star, AlertTriangle, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useCorretorPermissoes } from "@/hooks/useCorretorPermissoes";
+import { verificarDivergencia } from "@/utils/simuladoDivergencia";
+import { normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 interface RedacaoSimulado {
   id: string;
@@ -37,6 +41,10 @@ interface RedacaoSimulado {
   c4_corretor_2?: number | null;
   c5_corretor_2?: number | null;
   nota_final_corretor_2?: number | null;
+  // Terceira correção
+  par_utilizado?: string | null;
+  status_terceira_correcao?: string | null;
+  corrigida?: boolean | null;
   // Dados do simulado
   simulados?: {
     frase_tematica: string;
@@ -48,7 +56,17 @@ const CorretorSimuladoRedacoes = () => {
   const { simuladoId } = useParams();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedDivergencia, setExpandedDivergencia] = useState<Set<string>>(new Set());
   const { corretor } = useCorretorAuth();
+  const { nomesTurmasGerenciadas } = useCorretorPermissoes();
+
+  const toggleDivergencia = (id: string) => {
+    setExpandedDivergencia(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const { data: redacoes, isLoading, error } = useQuery({
     queryKey: ['corretor-simulado-redacoes', simuladoId],
@@ -64,6 +82,7 @@ const CorretorSimuladoRedacoes = () => {
           simulados(frase_tematica, titulo)
         `)
         .eq('id_simulado', simuladoId)
+        .is('deleted_at', null)
         .order('nome_aluno', { ascending: true });
 
       if (error) {
@@ -71,7 +90,34 @@ const CorretorSimuladoRedacoes = () => {
         throw error;
       }
 
-      return data as RedacaoSimulado[];
+      // Buscar nomes reais dos alunos no profiles (registros antigos têm "Aluno")
+      const emails = Array.from(new Set((data || []).map((r) => r.email_aluno).filter(Boolean)));
+      let nomesMap: Record<string, string> = {};
+      if (emails.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('email, nome')
+          .in('email', emails);
+        (profiles || []).forEach((p: any) => {
+          if (p.email && p.nome) nomesMap[p.email.toLowerCase()] = p.nome;
+        });
+      }
+
+      // Sobrescrever nome_aluno quando for genérico ou vazio
+      const enriched = (data || []).map((r) => {
+        const emailKey = (r.email_aluno || '').toLowerCase();
+        const nomeReal = nomesMap[emailKey];
+        const nomeAtual = (r.nome_aluno || '').trim();
+        const isGenerico = !nomeAtual || nomeAtual.toLowerCase() === 'aluno';
+        return isGenerico && nomeReal ? { ...r, nome_aluno: nomeReal } : r;
+      });
+
+      // Filtra pelas turmas gerenciadas — o gestor só vê redações das suas turmas
+      const filtrado = nomesTurmasGerenciadas.length > 0
+        ? enriched.filter((r) => nomesTurmasGerenciadas.includes(r.turma))
+        : enriched;
+
+      return filtrado as RedacaoSimulado[];
     },
     enabled: !!simuladoId
   });
@@ -85,21 +131,44 @@ const CorretorSimuladoRedacoes = () => {
 
   // Função para calcular status geral da redação
   const getStatusGeral = (redacao: RedacaoSimulado) => {
+    if (redacao.corrigida) return { label: 'Concluída', color: 'bg-green-600' };
+
+    if (redacao.status_terceira_correcao === 'salva') {
+      return { label: 'Aguardando Liberação', color: 'bg-orange-500' };
+    }
+    if (redacao.status_terceira_correcao === 'pendente') {
+      return { label: 'Discrepância', color: 'bg-red-500' };
+    }
+
     const corrigida1 = redacao.status_corretor_1 === 'corrigida';
     const corrigida2 = redacao.status_corretor_2 === 'corrigida';
     const temCorretor1 = !!redacao.corretor_id_1;
     const temCorretor2 = !!redacao.corretor_id_2;
 
+    if (temCorretor1 && temCorretor2 && corrigida1 && corrigida2) {
+      const div = verificarDivergencia(redacao);
+      if (div?.temDivergencia) return { label: 'Discrepância', color: 'bg-red-500' };
+      return { label: 'Aguardando Admin', color: 'bg-blue-500' };
+    }
+
     if (temCorretor1 && temCorretor2) {
-      if (corrigida1 && corrigida2) return { label: 'Corrigida', color: 'bg-green-600' };
       if (corrigida1 || corrigida2) return { label: 'Parcial', color: 'bg-yellow-600' };
       return { label: 'Pendente', color: 'bg-gray-500' };
     } else if (temCorretor1) {
-      return corrigida1 ? { label: 'Corrigida', color: 'bg-green-600' } : { label: 'Pendente', color: 'bg-gray-500' };
+      return corrigida1 ? { label: 'Aguardando Admin', color: 'bg-blue-500' } : { label: 'Pendente', color: 'bg-gray-500' };
     } else if (temCorretor2) {
-      return corrigida2 ? { label: 'Corrigida', color: 'bg-green-600' } : { label: 'Pendente', color: 'bg-gray-500' };
+      return corrigida2 ? { label: 'Aguardando Admin', color: 'bg-blue-500' } : { label: 'Pendente', color: 'bg-gray-500' };
     }
     return { label: 'Sem Corretor', color: 'bg-red-500' };
+  };
+
+  // Verifica se a nota deste corretor não foi utilizada no par final
+  const getNotaNaoUtilizada = (redacao: RedacaoSimulado, meuNumero: number | null): boolean => {
+    if (!redacao.corrigida || !redacao.par_utilizado || !meuNumero) return false;
+    // Se o par não inclui o slot deste corretor, sua nota não foi utilizada
+    if (meuNumero === 1 && redacao.par_utilizado === '2_admin') return true;
+    if (meuNumero === 2 && redacao.par_utilizado === '1_admin') return true;
+    return false;
   };
 
   // Função para calcular nota final consolidada
@@ -216,10 +285,102 @@ const CorretorSimuladoRedacoes = () => {
               const status = getStatusGeral(redacao);
               const notaFinal = getNotaFinalConsolidada(redacao);
               const notasCompetencias = getNotasCompetencias(redacao);
+              const div = verificarDivergencia(redacao);
+              const isDivergente = div?.temDivergencia ?? false;
+              const mostrarDetalhes = expandedDivergencia.has(redacao.id);
+
+              // Determinar qual corretor é baseado no ID logado
+              let corretorNumero: number | null = null;
+              if (corretor?.id === redacao.corretor_id_1) {
+                corretorNumero = 1;
+              } else if (corretor?.id === redacao.corretor_id_2) {
+                corretorNumero = 2;
+              }
+              // Se não é corretor desta redação, não exibir o aviso de nota não utilizada
+
+              const notaNaoUtilizada = getNotaNaoUtilizada(redacao, corretorNumero);
 
               return (
-                <Card key={redacao.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card
+                  key={redacao.id}
+                  className={`hover:shadow-md transition-shadow ${isDivergente && !redacao.status_terceira_correcao ? 'border-red-300' : ''}`}
+                >
+                  <CardContent className="p-6 space-y-3">
+                    {/* Aviso: nota não utilizada no par final */}
+                    {notaNaoUtilizada && (
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-amber-700">Avaliação não compôs a nota final</p>
+                          <p className="text-xs text-amber-600">
+                            Para esta redação, a nota final foi calculada a partir das avaliações mais próximas entre os três avaliadores. Sua nota original está preservada, mas não foi utilizada na composição do resultado oficial.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Alerta de divergência (somente enquanto pendente) */}
+                    {isDivergente && !redacao.status_terceira_correcao && (
+                      <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-700">Discrepância detectada</p>
+                          <p className="text-xs text-red-600">
+                            Diferença total de <strong>{div!.diferencaTotal} pts</strong> entre os dois corretores.
+                            O coordenador realizará a terceira correção.
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 h-7 px-2"
+                          onClick={() => toggleDivergencia(redacao.id)}
+                        >
+                          {mostrarDetalhes ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <span className="text-xs ml-1">Comparar notas</span>
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Tabela comparativa de notas – visível quando expandido e ainda pendente */}
+                    {isDivergente && !redacao.status_terceira_correcao && mostrarDetalhes && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="text-xs">Competência</TableHead>
+                              <TableHead className="text-xs text-center">Corretor 1</TableHead>
+                              <TableHead className="text-xs text-center">Corretor 2</TableHead>
+                              <TableHead className="text-xs text-center">Diferença</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {div!.competencias.map(c => (
+                              <TableRow key={c.competencia} className={c.temDivergencia ? 'bg-red-50' : ''}>
+                                <TableCell className="text-xs font-medium">
+                                  C{c.competencia}
+                                  {c.temDivergencia && <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />}
+                                </TableCell>
+                                <TableCell className="text-xs text-center">{c.nota_c1}</TableCell>
+                                <TableCell className="text-xs text-center">{c.nota_c2}</TableCell>
+                                <TableCell className={`text-xs text-center font-semibold ${c.temDivergencia ? 'text-red-600' : 'text-gray-600'}`}>
+                                  {c.diferenca}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="font-bold border-t">
+                              <TableCell className="text-xs">Total</TableCell>
+                              <TableCell className="text-xs text-center">{div!.nota_final_1}</TableCell>
+                              <TableCell className="text-xs text-center">{div!.nota_final_2}</TableCell>
+                              <TableCell className={`text-xs text-center font-bold ${div!.diferencaTotal > 100 ? 'text-red-600' : 'text-gray-700'}`}>
+                                {div!.diferencaTotal}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start lg:items-center">
                       {/* Informações do aluno */}
                       <div className="lg:col-span-4">
@@ -229,7 +390,7 @@ const CorretorSimuladoRedacoes = () => {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <GraduationCap className="w-4 h-4" />
-                          <span>Turma: {redacao.turma}</span>
+                          <span>Turma: {normalizeTurmaToLetter(redacao.turma) || redacao.turma}</span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}
@@ -239,6 +400,7 @@ const CorretorSimuladoRedacoes = () => {
                       {/* Status */}
                       <div className="lg:col-span-2">
                         <Badge className={`${status.color} text-white`}>
+                          {status.label === 'Discrepância' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
                           {status.label}
                         </Badge>
                       </div>
@@ -264,22 +426,7 @@ const CorretorSimuladoRedacoes = () => {
                       {/* Ações */}
                       <div className="lg:col-span-2">
                         <Button
-                          onClick={() => {
-                            // Determinar qual corretor é baseado no ID logado
-                            let corretorNumero = null;
-                            if (corretor?.id === redacao.corretor_id_1) {
-                              corretorNumero = 1;
-                            } else if (corretor?.id === redacao.corretor_id_2) {
-                              corretorNumero = 2;
-                            } else {
-                              // Fallback: usar o primeiro corretor disponível
-                              corretorNumero = redacao.corretor_id_1 ? 1 : 2;
-                            }
-
-                            // Navegar para a página com o sufixo correto do corretor
-                            const redacaoUrlId = `${redacao.id}-corretor${corretorNumero}`;
-                            navigate(`/redacoes/manuscrita/${redacaoUrlId}?origem=corretor`);
-                          }}
+                          onClick={() => navigate(`/corretor/simulados/redacao/${redacao.id}${corretorNumero ? `?corretor=${corretorNumero}` : ''}`)}
                           variant="outline"
                           size="sm"
                           className="w-full"

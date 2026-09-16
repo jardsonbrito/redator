@@ -8,10 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { AppSettingsForm } from './AppSettingsForm';
-import { CreditManagement } from './CreditManagement';
-import { SubscriptionManagementClean } from './SubscriptionManagementClean';
-import { DatabaseInitializer } from '../DatabaseInitializer';
-import { Mail, Key, User, Clock, AlertTriangle, Settings, CreditCard, Crown } from 'lucide-react';
+import { Mail, Key, User, Clock, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AdminUser {
@@ -47,7 +44,7 @@ export const AdminConfigForm = () => {
   // Verificar parâmetro subtab para definir aba ativa
   useEffect(() => {
     const subtab = searchParams.get('subtab');
-    if (subtab && ['account', 'submissions', 'credits', 'subscriptions'].includes(subtab)) {
+    if (subtab && ['account', 'submissions'].includes(subtab)) {
       setActiveTab(subtab);
     }
   }, [searchParams]);
@@ -138,23 +135,9 @@ export const AdminConfigForm = () => {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="account" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Conta
-          </TabsTrigger>
-          <TabsTrigger value="submissions" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Envios
-          </TabsTrigger>
-          <TabsTrigger value="credits" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            Créditos
-          </TabsTrigger>
-          <TabsTrigger value="subscriptions" className="flex items-center gap-2">
-            <Crown className="h-4 w-4" />
-            Assinatura
-          </TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="account">Conta</TabsTrigger>
+          <TabsTrigger value="submissions">Envios</TabsTrigger>
         </TabsList>
 
         <TabsContent value="account" className="space-y-6">
@@ -330,16 +313,6 @@ export const AdminConfigForm = () => {
 
         <TabsContent value="submissions">
           <AppSettingsForm />
-        </TabsContent>
-
-        <TabsContent value="credits">
-          <CreditManagement />
-        </TabsContent>
-
-        <TabsContent value="subscriptions">
-          <DatabaseInitializer>
-            <SubscriptionManagementClean />
-          </DatabaseInitializer>
         </TabsContent>
       </Tabs>
     </div>

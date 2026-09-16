@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users } from "lucide-react";
+import { Users, Copy, Check } from "lucide-react";
 import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 
 interface TurmaFormProps {
@@ -14,86 +14,78 @@ interface TurmaFormProps {
   onCancel?: () => void;
 }
 
+function gerarCodigoAcesso(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
+}
+
 export const TurmaForm = ({ onSuccess, onCancel }: TurmaFormProps) => {
   const [nomeTurma, setNomeTurma] = useState("");
-  const [professorId, setProfessorId] = useState("");
-  const [professores, setProfessores] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [copiado, setCopiado] = useState(false);
   const { toast } = useToast();
   const { professor } = useProfessorAuth();
 
-  // Buscar lista de professores
-  useEffect(() => {
-    const fetchProfessores = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("professores")
-          .select("id, nome_completo, email")
-          .eq("ativo", true)
-          .order("nome_completo");
-
-        if (error) throw error;
-        setProfessores(data || []);
-        
-        // Pré-selecionar o professor logado
-        if (professor?.id) {
-          setProfessorId(professor.id);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar professores:", error);
-      }
-    };
-
-    fetchProfessores();
-  }, [professor]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nomeTurma.trim() || !professorId) return;
+    if (!nomeTurma.trim() || !professor?.id) return;
 
     setLoading(true);
     try {
-      // Por enquanto, vamos criar uma entrada na tabela profiles para simular uma turma
-      // No futuro, você pode criar uma tabela específica para turmas
-      const turmaData = {
-        id: `turma-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        nome: nomeTurma.trim(),
-        sobrenome: "",
-        email: `turma-${Date.now()}@sistema.com`, // Email fictício para compatibilidade
-        turma: nomeTurma.trim(),
-        user_type: "turma",
-        ativo: true,
-        aprovado_por: professorId
-      };
+      // Gerar código único — tenta até encontrar um não colidente
+      let codigoAcesso = gerarCodigoAcesso();
+      let tentativas = 0;
+
+      while (tentativas < 5) {
+        const { data: existente } = await supabase
+          .from("turmas_professores")
+          .select("id")
+          .eq("codigo_acesso", codigoAcesso)
+          .maybeSingle();
+
+        if (!existente) break;
+        codigoAcesso = gerarCodigoAcesso();
+        tentativas++;
+      }
 
       const { error } = await supabase
-        .from("profiles")
-        .insert(turmaData);
+        .from("turmas_professores")
+        .insert({
+          nome: nomeTurma.trim(),
+          codigo_acesso: codigoAcesso,
+          ativo: true,
+          criado_pelo_professor_id: professor.id,
+        });
 
       if (error) throw error;
 
       toast({
         title: "Turma criada com sucesso!",
-        description: `A turma "${nomeTurma}" foi criada.`
+        description: `Turma "${nomeTurma}" criada. Código de acesso: ${codigoAcesso}`,
       });
 
       setNomeTurma("");
-      setProfessorId(professor?.id || "");
       onSuccess();
-
     } catch (error: any) {
       console.error("Erro ao criar turma:", error);
       toast({
         title: "Erro ao criar turma",
         description: error.message || "Ocorreu um erro inesperado.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const isFormValid = nomeTurma.trim() && professorId;
+  const copiarCodigo = (codigo: string) => {
+    navigator.clipboard.writeText(codigo).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    });
+  };
 
   return (
     <Card>
@@ -116,34 +108,23 @@ export const TurmaForm = ({ onSuccess, onCancel }: TurmaFormProps) => {
             />
           </div>
 
-          <div>
-            <Label htmlFor="professor">Vincular ao Docente *</Label>
-            <Select value={professorId} onValueChange={setProfessorId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o professor responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                {professores.map((prof) => (
-                  <SelectItem key={prof.id} value={prof.id}>
-                    {prof.nome_completo} ({prof.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Um código de acesso único será gerado automaticamente e poderá ser
+            compartilhado com os alunos.
+          </p>
 
           <div className="flex gap-2">
-            <Button 
-              type="submit" 
-              disabled={!isFormValid || loading}
+            <Button
+              type="submit"
+              disabled={!nomeTurma.trim() || loading}
               className="flex-1"
             >
               {loading ? "Criando..." : "Criar Turma"}
             </Button>
             {onCancel && (
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={onCancel}
                 disabled={loading}
               >

@@ -25,9 +25,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const adminSession = localStorage.getItem('admin_session');
     const isAdminLoggedIn = !!adminSession;
 
+    // Verificar se é professor logado
+    const professorSession = localStorage.getItem('professor_session');
+    const isProfessorLoggedIn = !!professorSession;
 
-    // Se nem aluno nem corretor nem admin está logado e não está numa página de login
-    if (!isStudentLoggedIn && !isCorretorLoggedIn && !isAdminLoggedIn && !isLoginPage) {
+    // Se nenhuma sessão válida e não está numa página de login
+    if (!isStudentLoggedIn && !isCorretorLoggedIn && !isAdminLoggedIn && !isProfessorLoggedIn && !isLoginPage) {
       console.log('Redirecionando para login - usuário não logado');
       navigate('/', { replace: true });
     }
@@ -40,8 +43,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const isCorretorLoggedIn = !!corretorSession;
   const adminSession = localStorage.getItem('admin_session');
   const isAdminLoggedIn = !!adminSession;
+  const professorSession = localStorage.getItem('professor_session');
+  const isProfessorLoggedIn = !!professorSession;
 
-  if (!isStudentLoggedIn && !isCorretorLoggedIn && !isAdminLoggedIn && !isLoginPage) {
+  if (!isStudentLoggedIn && !isCorretorLoggedIn && !isAdminLoggedIn && !isProfessorLoggedIn && !isLoginPage) {
     return null;
   }
 

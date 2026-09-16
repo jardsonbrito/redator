@@ -14,7 +14,7 @@ import { Upload, FileText } from "lucide-react";
 import { ImageSelector } from "@/components/admin/ImageSelector";
 import { VideoParser, processAulaVideoMetadata, resolveAulaCover } from "@/utils/aulaImageUtils";
 import { VideoThumbnailReprocessor } from "@/components/admin/VideoThumbnailReprocessor";
-import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface AulaEditando {
   id: string;
@@ -43,9 +43,15 @@ interface AulaFormProps {
   aulaEditando?: AulaEditando | null;
   onSuccess?: () => void;
   onCancelEdit?: () => void;
+  turmasRestricao?: string[];
 }
 
-export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProps) => {
+export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit, turmasRestricao }: AulaFormProps) => {
+  const { turmasDinamicas: todasAsTurmas } = useTurmasAtivas();
+  const turmasDinamicas = turmasRestricao && turmasRestricao.length > 0
+    ? todasAsTurmas.filter(t => turmasRestricao.includes(t.valor))
+    : todasAsTurmas;
+  const modoRestrito = !!(turmasRestricao && turmasRestricao.length > 0);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -53,7 +59,7 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
   const [linkConteudo, setLinkConteudo] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const [pdfNome, setPdfNome] = useState("");
-  const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>([]);
+  const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>(turmasRestricao ?? []);
   const [permiteVisitante, setPermiteVisitante] = useState(false);
   const [ativo, setAtivo] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +69,6 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [currentAulaData, setCurrentAulaData] = useState<AulaEditando | null>(null);
   const [modulos, setModulos] = useState<{id: string, nome: string}[]>([]);
-  const [turmas, setTurmas] = useState<string[]>([]);
 
   const [novoModuloNome, setNovoModuloNome] = useState("");
   const [mostrarNovoModulo, setMostrarNovoModulo] = useState(false);
@@ -101,8 +106,6 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
         ]);
       }
 
-      // Definir turmas normalizadas
-      setTurmas(TURMAS_VALIDAS as any);
     };
 
     fetchData();
@@ -254,8 +257,10 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
       return;
     }
 
-    if (turmasAutorizadas.length === 0 && !permiteVisitante) {
-      toast.error('Pelo menos uma turma deve ser selecionada OU visitantes permitidos');
+    const turmasAluno = turmasAutorizadas.filter(t => t !== "Professor");
+    const permiteProfesor = turmasAutorizadas.includes("Professor");
+    if (turmasAluno.length === 0 && !permiteVisitante && !permiteProfesor) {
+      toast.error('Selecione pelo menos uma turma, habilite visitantes ou marque como visível para professores');
       setActiveSection('turmas');
       return;
     }
@@ -312,8 +317,16 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
       let aulaId: string;
       let error;
 
-      if (aulaEditando) {
-        // Atualizar aula existente
+      if (aulaEditando && modoRestrito) {
+        // Corretor gestor editando: RPC SECURITY DEFINER
+        const { error: updateError } = await supabase.rpc('corretor_atualizar_aula', {
+          p_id: aulaEditando.id,
+          p_data: aulaData,
+        });
+        error = updateError;
+        aulaId = aulaEditando.id;
+      } else if (aulaEditando) {
+        // Admin autenticado editando
         const { error: updateError } = await supabase
           .from("aulas")
           .update(aulaData)
@@ -321,8 +334,16 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
         error = updateError;
         aulaId = aulaEditando.id;
         console.log('✅ Aula atualizada:', aulaEditando.id);
+      } else if (modoRestrito) {
+        // Corretor gestor: usa RPC SECURITY DEFINER (sem sessão Supabase Auth)
+        const { data: newId, error: insertError } = await supabase.rpc('corretor_criar_aula', {
+          p_data: aulaData,
+        });
+        error = insertError;
+        aulaId = newId as string;
+        console.log('✅ Nova aula criada via RPC:', newId);
       } else {
-        // Criar nova aula
+        // Criar nova aula (admin autenticado)
         const { data: newAula, error: insertError } = await supabase
           .from("aulas")
           .insert([aulaData])
@@ -677,20 +698,41 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
                   <div className="space-y-3">
                     <div className="text-sm font-medium">Turmas Autorizadas</div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {turmas.map((turma) => (
-                        <div key={turma} className="flex items-center space-x-2">
+                      {turmasDinamicas.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
                           <Checkbox
-                            id={turma}
-                            checked={turmasAutorizadas.includes(turma)}
-                            onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
+                            id={valor}
+                            checked={turmasAutorizadas.includes(valor)}
+                            disabled={modoRestrito}
+                            onCheckedChange={(checked) => !modoRestrito && handleTurmaChange(valor, checked as boolean)}
                           />
-                          <Label htmlFor={turma} className="text-sm font-medium">
-                            {formatTurmaDisplay(turma)}
+                          <Label htmlFor={valor} className="text-sm font-medium">
+                            {label}
                           </Label>
                         </div>
                       ))}
                     </div>
                   </div>
+
+                  {/* Visível para Professores — oculto quando a aula é criada pelo corretor gestor */}
+                  {!modoRestrito && (
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Visível para Professores</div>
+                      <div className="text-xs text-gray-500">Professores podem acessar esta aula na área deles</div>
+                    </div>
+                    <Switch
+                      checked={turmasAutorizadas.includes("Professor")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setTurmasAutorizadas(prev => [...prev, "Professor"]);
+                        } else {
+                          setTurmasAutorizadas(prev => prev.filter(t => t !== "Professor"));
+                        }
+                      }}
+                    />
+                  </div>
+                  )}
 
                   {/* Permitir Visitantes */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">

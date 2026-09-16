@@ -7,12 +7,13 @@ interface Professor {
   email: string;
   role: string;
   primeiro_login: boolean;
+  turma_nome?: string | null;
 }
 
 interface ProfessorAuthContextType {
   professor: Professor | null;
   loading: boolean;
-  loginAsProfessor: (email: string, senha: string) => Promise<{ error?: string }>;
+  loginAsProfessor: (email: string) => Promise<{ error?: string }>;
   logout: () => void;
   isProfessor: boolean;
   isAdmin: boolean;
@@ -39,27 +40,53 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
 
   // Verificar se há sessão salva
   React.useEffect(() => {
-    const savedProfessorSession = localStorage.getItem('professor_session');
-    if (savedProfessorSession) {
-      try {
-        const professorData = JSON.parse(savedProfessorSession);
-        setProfessor(professorData);
-      } catch (error) {
-        console.error('Erro ao recuperar sessão do professor:', error);
-        localStorage.removeItem('professor_session');
+    const restoreSession = async () => {
+      const savedProfessorSession = localStorage.getItem('professor_session');
+      if (savedProfessorSession) {
+        try {
+          const professorData = JSON.parse(savedProfessorSession);
+
+          // Sempre re-busca turma_nome para garantir que está atualizado
+          if (professorData.id) {
+            try {
+              const { data: profRow } = await supabase
+                .from('professores')
+                .select('turma_id')
+                .eq('id', professorData.id)
+                .maybeSingle();
+              if (profRow?.turma_id) {
+                const { data: turmaRow } = await supabase
+                  .from('turmas_professores')
+                  .select('nome')
+                  .eq('id', profRow.turma_id)
+                  .maybeSingle();
+                professorData.turma_nome = turmaRow?.nome ?? null;
+              } else {
+                professorData.turma_nome = null;
+              }
+              localStorage.setItem('professor_session', JSON.stringify(professorData));
+            } catch {
+              // mantém turma_nome que já estava na sessão
+            }
+          }
+
+          setProfessor(professorData);
+        } catch (error) {
+          console.error('Erro ao recuperar sessão do professor:', error);
+          localStorage.removeItem('professor_session');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    restoreSession();
   }, []);
 
-  const loginAsProfessor = async (email: string, senha: string): Promise<{ error?: string }> => {
+  const loginAsProfessor = async (email: string): Promise<{ error?: string }> => {
     setLoading(true);
-    
+
     try {
-      // Chamar função de validação de login
       const { data, error } = await supabase.rpc('validate_professor_login', {
-        p_email: email,
-        p_senha: senha
+        p_email: email
       });
 
       if (error) {
@@ -73,11 +100,33 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
       }
 
       const professorData = result.professor;
+
+      // Buscar turma do professor para enriquecer a sessão
+      try {
+        const { data: profRow } = await supabase
+          .from('professores')
+          .select('turma_id')
+          .eq('id', professorData.id)
+          .maybeSingle();
+        if (profRow?.turma_id) {
+          const { data: turmaRow } = await supabase
+            .from('turmas_professores')
+            .select('nome')
+            .eq('id', profRow.turma_id)
+            .maybeSingle();
+          professorData.turma_nome = turmaRow?.nome ?? null;
+        } else {
+          professorData.turma_nome = null;
+        }
+      } catch {
+        professorData.turma_nome = null;
+      }
+
       setProfessor(professorData);
-      
+
       // Salvar sessão no localStorage
       localStorage.setItem('professor_session', JSON.stringify(professorData));
-      
+
       return {};
     } catch (error: any) {
       console.error('Erro no login do professor:', error);
@@ -127,8 +176,7 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
     // Fazer logout do Supabase também
     supabase.auth.signOut();
     
-    // Redirecionar para a página de login
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   const isProfessor = professor?.role === 'professor';

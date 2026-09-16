@@ -8,17 +8,24 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn, CheckSquare, ChevronDown, ArrowRightLeft, AlertTriangle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { VisitanteInfoModal } from "./VisitanteInfoModal";
 import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
+import { StudentLoginActivityModal } from "./StudentLoginActivityModal";
 import { formatTurmaDisplay, getTurmaColorClasses } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface Aluno {
   id: string;
   nome: string;
   email: string;
   turma: string;
+  turma_id?: string | null;
   created_at: string;
   ativo: boolean;
   tipo?: 'aluno' | 'visitante';
@@ -26,14 +33,17 @@ interface Aluno {
   total_redacoes?: number;
   session_id?: string;
   whatsapp?: string;
+  temPlanoAtivo?: boolean;
 }
 
 interface AlunoListProps {
   refresh: boolean;
   onEdit: (aluno: Aluno) => void;
+  /** Quando fornecido, cliques em "Ver Perfil" abrem o sheet centralizado em vez da edição inline */
+  onOpenPerfil?: (aluno: Aluno) => void;
 }
 
-export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
+export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,37 +52,66 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [visitanteParaMigrar, setVisitanteParaMigrar] = useState<Aluno | null>(null);
   const [isMigrarModalOpen, setIsMigrarModalOpen] = useState(false);
+  const [loginModalAluno, setLoginModalAluno] = useState<Aluno | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isChangingTurma, setIsChangingTurma] = useState(false);
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const [showTurmaModal, setShowTurmaModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [bulkDropdownOpen, setBulkDropdownOpen] = useState(false);
+  const [selectedNewTurma, setSelectedNewTurma] = useState<string>("");
+  const [alunoParaExcluirDefinitivo, setAlunoParaExcluirDefinitivo] = useState<Aluno | null>(null);
+  const [confirmEmailInput, setConfirmEmailInput] = useState("");
+  const [isDeletingDefinitivo, setIsDeletingDefinitivo] = useState(false);
   const { toast } = useToast();
+  const { turmasDinamicas } = useTurmasAtivas();
 
   const fetchAlunos = async () => {
     setLoading(true);
     try {
       const todosUsuarios: Aluno[] = [];
+      const hojeStr = new Date().toISOString().split('T')[0];
 
-      // Buscar alunos tradicionais e visitantes em paralelo
+      // Buscar alunos tradicionais, visitantes e assinaturas em paralelo
       const [
         { data: alunosData, error: alunosError },
         { data: visitantesData, error: visitantesError },
-        { data: todasRedacoes, error: redacoesError }
+        { data: todasRedacoes, error: redacoesError },
+        { data: assinaturasAtivas, error: assinaturasError }
       ] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, nome, email, turma, created_at, ativo")
+          .select("id, nome, email, turma, turma_id, created_at, ativo")
           .eq("user_type", "aluno")
           .eq("is_authenticated_student", true)
           .order("nome", { ascending: true }),
-        
-        // Simulate visitor data (no visitante_sessoes table exists)
-        Promise.resolve({ data: [], error: null }),
-        
-        // Buscar TODAS as redações de uma vez
+
+        // Buscar visitantes da tabela visitante_sessoes
+        supabase
+          .from("visitante_sessoes")
+          .select("id, email_visitante, nome_visitante, session_id, primeiro_acesso, ultimo_acesso, ativo, whatsapp")
+          .order("ultimo_acesso", { ascending: false }),
+
+        // Buscar TODAS as redações de uma vez (excluindo apagadas)
         supabase
           .from('redacoes_enviadas')
           .select('email_aluno, turma')
+          .is('deleted_at', null),
+
+        // Buscar assinaturas ativas (data_validade >= hoje)
+        supabase
+          .from('assinaturas')
+          .select('aluno_id')
+          .gte('data_validade', hojeStr)
       ]);
 
       if (alunosError) throw alunosError;
       if (redacoesError) throw redacoesError;
+      if (assinaturasError) throw assinaturasError;
+
+      // Criar Set de alunos com plano ativo
+      const alunosComPlanoSet = new Set(assinaturasAtivas?.map(a => a.aluno_id) || []);
 
       // Criar mapa de contagem de redações por email (otimização)
       const redacoesPorEmail = new Map<string, number>();
@@ -89,41 +128,36 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         alunosData.forEach(aluno => {
           const emailLower = aluno.email.toLowerCase();
           const totalRedacoes = redacoesPorEmail.get(emailLower) || 0;
-          
+          const temPlanoAtivo = alunosComPlanoSet.has(aluno.id);
+
           todosUsuarios.push({
             ...aluno,
             tipo: 'aluno',
-            total_redacoes: totalRedacoes
+            total_redacoes: totalRedacoes,
+            temPlanoAtivo
           });
         });
       }
 
-      // Processar visitantes (no table exists, create from redacoes data)
-      if (todasRedacoes) {
-        const visitantesEmails = new Set<string>();
-        todasRedacoes.forEach(redacao => {
-          if (redacao.turma === 'VISITANTE') { // Formato normalizado
-            visitantesEmails.add(redacao.email_aluno.toLowerCase());
-          }
-        });
-
-        visitantesEmails.forEach(email => {
-          const redacoesVisitante = todasRedacoes.filter(r =>
-            r.turma === 'VISITANTE' && r.email_aluno.toLowerCase() === email
-          ).length;
+      // Processar visitantes da tabela visitante_sessoes
+      if (visitantesData) {
+        visitantesData.forEach(visitante => {
+          const emailLower = visitante.email_visitante.toLowerCase();
+          const totalRedacoes = redacoesPorEmail.get(emailLower) || 0;
 
           todosUsuarios.push({
-            id: `visitante-${email}`,
-            nome: 'Visitante',
-            email: email,
-            turma: 'VISITANTE', // Formato normalizado
-            created_at: new Date().toISOString(),
-            ativo: true,
+            id: visitante.id,
+            nome: visitante.nome_visitante,
+            email: visitante.email_visitante,
+            turma: 'VISITANTE',
+            created_at: visitante.primeiro_acesso,
+            ativo: visitante.ativo,
             tipo: 'visitante',
-            ultimo_acesso: new Date().toISOString(),
-            session_id: null,
-            total_redacoes: redacoesVisitante,
-            whatsapp: null
+            ultimo_acesso: visitante.ultimo_acesso,
+            session_id: visitante.session_id,
+            total_redacoes: totalRedacoes,
+            whatsapp: visitante.whatsapp,
+            temPlanoAtivo: false // Visitantes não têm plano
           });
         });
       }
@@ -152,41 +186,70 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     fetchAlunos();
   }, [refresh]);
 
-  // Lista fixa de turmas do sistema + visitantes
   const turmasDisponiveis = useMemo(() => {
-    // Usando formato normalizado: letras únicas
-    const turmasFixas = ['VISITANTE', 'A', 'B', 'C', 'D', 'E'];
-    return turmasFixas;
-  }, []);
+    return ['VISITANTE', ...turmasDinamicas.map(t => t.valor), 'AGUARDANDO'];
+  }, [turmasDinamicas]);
+
+  const turmasComPlano = useMemo(() => turmasDinamicas.map(t => t.valor), [turmasDinamicas]);
+
+  // Mapa: codigo_acesso -> turma_id para filtrar corretamente
+  const codigoToIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    turmasDinamicas.forEach(t => {
+      map.set(t.valor, t.id);
+    });
+    return map;
+  }, [turmasDinamicas]);
 
   // Filtrar alunos baseado na turma ativa e termo de busca
   const filteredAlunos = useMemo(() => {
     let filtered = alunos;
 
     // Filtrar por turma
-    if (activeTurma !== "todos") {
-      filtered = filtered.filter(aluno => aluno.turma === activeTurma);
+    if (activeTurma === "AGUARDANDO") {
+      // Aba especial: apenas turma literal 'AGUARDANDO' (cadastros antigos/pendentes)
+      filtered = filtered.filter(aluno => aluno.turma === 'AGUARDANDO');
+    } else if (activeTurma !== "todos") {
+      if (turmasComPlano.includes(activeTurma)) {
+        // Turmas dinâmicas: filtrar por turma_id (independente de plano ativo)
+        const turmaId = codigoToIdMap.get(activeTurma);
+        filtered = filtered.filter(aluno => aluno.turma_id === turmaId);
+      } else {
+        // VISITANTE ou outras turmas: filtro normal pelo nome
+        filtered = filtered.filter(aluno => aluno.turma === activeTurma);
+      }
     }
 
     // Filtrar por termo de busca (apenas nome e email)
     if (searchTerm.trim()) {
-      filtered = filtered.filter(aluno => 
+      filtered = filtered.filter(aluno =>
         aluno.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         aluno.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     return filtered;
-  }, [alunos, activeTurma, searchTerm]);
+  }, [alunos, activeTurma, searchTerm, turmasComPlano, codigoToIdMap]);
 
   // Contar alunos por turma
   const contadorPorTurma = useMemo(() => {
     const contador: { [key: string]: number } = {};
+
     alunos.forEach(aluno => {
-      contador[aluno.turma] = (contador[aluno.turma] || 0) + 1;
+      if (aluno.turma_id) {
+        // Turmas dinâmicas: contar por turma_id, independente de plano ativo
+        const codigoDaTurma = turmasDinamicas.find(t => t.id === aluno.turma_id)?.valor;
+        if (codigoDaTurma && turmasComPlano.includes(codigoDaTurma)) {
+          contador[codigoDaTurma] = (contador[codigoDaTurma] || 0) + 1;
+        }
+      } else {
+        // VISITANTE, AGUARDANDO e outras: contagem pelo campo turma
+        contador[aluno.turma] = (contador[aluno.turma] || 0) + 1;
+      }
     });
+
     return contador;
-  }, [alunos]);
+  }, [alunos, turmasDinamicas, turmasComPlano]);
 
 
   const handleEdit = (aluno: Aluno) => {
@@ -238,6 +301,58 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     }
   };
 
+  const handleDeleteDefinitivo = async () => {
+    if (!alunoParaExcluirDefinitivo) return;
+
+    if (confirmEmailInput.toLowerCase() !== alunoParaExcluirDefinitivo.email.toLowerCase()) {
+      toast({
+        title: "E-mail incorreto",
+        description: "O e-mail digitado não confere. Verifique e tente novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsDeletingDefinitivo(true);
+    try {
+      const { data, error } = await supabase.rpc('delete_aluno_aguardando', {
+        p_aluno_id: alunoParaExcluirDefinitivo.id,
+        p_email: alunoParaExcluirDefinitivo.email
+      });
+
+      if (error) throw error;
+
+      const resumo = data as {
+        redacoes_enviadas_excluidas: number;
+        redacoes_simulado_excluidas: number;
+        redacoes_exercicio_excluidas: number;
+        lousa_respostas_excluidas: number;
+      };
+
+      const totalRedacoes =
+        (resumo.redacoes_enviadas_excluidas ?? 0) +
+        (resumo.redacoes_simulado_excluidas ?? 0) +
+        (resumo.redacoes_exercicio_excluidas ?? 0);
+
+      toast({
+        title: "Aluno excluído definitivamente",
+        description: `${alunoParaExcluirDefinitivo.nome} removido. ${totalRedacoes} redação(ões) e ${resumo.lousa_respostas_excluidas ?? 0} resposta(s) de lousa apagadas.`
+      });
+
+      setAlunoParaExcluirDefinitivo(null);
+      setConfirmEmailInput("");
+      fetchAlunos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir aluno",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeletingDefinitivo(false);
+    }
+  };
+
   const handleToggleStatus = async (aluno: Aluno) => {
     try {
       const { error } = await supabase
@@ -264,6 +379,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   };
 
   const handleShowVisitanteInfo = (visitante: Aluno) => {
+    if (onOpenPerfil) {
+      onOpenPerfil(visitante);
+      return;
+    }
     setSelectedVisitante(visitante);
     setIsInfoModalOpen(true);
   };
@@ -276,6 +395,260 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const handleMigracaoSuccess = () => {
     // Recarregar a lista após migração bem-sucedida
     fetchAlunos();
+  };
+
+  const handleDeleteVisitante = async (visitante: Aluno) => {
+    try {
+      // 1. Excluir redações enviadas pelo visitante
+      const { error: redacoesError } = await supabase
+        .from('redacoes_enviadas')
+        .delete()
+        .eq('email_aluno', visitante.email);
+
+      if (redacoesError) {
+        console.error('Erro ao excluir redações:', redacoesError);
+      }
+
+      // 2. Excluir sessão do visitante
+      const { error: sessaoError } = await supabase
+        .from('visitante_sessoes')
+        .delete()
+        .eq('id', visitante.id);
+
+      if (sessaoError) throw sessaoError;
+
+      toast({
+        title: "Visitante excluído",
+        description: `${visitante.nome} e todos os seus dados foram removidos do sistema.`
+      });
+
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao excluir visitante:", error);
+      toast({
+        title: "Erro ao excluir visitante",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Funções de seleção múltipla
+  const handleSelectItem = (id: string, checked: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredAlunos.map(a => a.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  // Qualquer aluno sem assinatura ativa pode ser excluído definitivamente.
+  // O backend (RPC) bloqueia a exclusão se houver assinatura ativa.
+  const isAlunoAguardando = (aluno: Aluno) =>
+    aluno.tipo === 'aluno' && !aluno.temPlanoAtivo;
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const visitantes         = selectedItems.filter(a => a.tipo === 'visitante');
+    const alunosAguardando   = selectedItems.filter(isAlunoAguardando);
+    const alunosAtivos       = selectedItems.filter(a => a.tipo === 'aluno' && !isAlunoAguardando(a));
+
+    setIsDeleting(true);
+    try {
+      // 1. Visitantes: apaga redacoes_enviadas + sessão
+      for (const visitante of visitantes) {
+        await supabase.from('redacoes_enviadas').delete().eq('email_aluno', visitante.email);
+        await supabase.from('visitante_sessoes').delete().eq('id', visitante.id);
+      }
+
+      // 2. Alunos AGUARDANDO: exclusão definitiva via RPC (limpa todas as tabelas)
+      for (const aluno of alunosAguardando) {
+        const { error } = await supabase.rpc('delete_aluno_aguardando', {
+          p_aluno_id: aluno.id,
+          p_email: aluno.email
+        });
+        if (error) throw error;
+      }
+
+      // 3. Alunos ativos: exclusão simples do profile (CASCADE cuida do resto)
+      if (alunosAtivos.length > 0) {
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .in('id', alunosAtivos.map(a => a.id));
+        if (error) throw error;
+      }
+
+      const total = selectedIds.size;
+      toast({
+        title: "Exclusão concluída",
+        description: `${total} ${total === 1 ? 'item excluído' : 'itens excluídos'} com sucesso.`
+      });
+
+      setSelectedIds(new Set());
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao excluir itens:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // Função para mudar turma em massa
+  const handleChangeTurmaSelected = async () => {
+    if (selectedIds.size === 0 || !selectedNewTurma) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+
+    if (alunosRegulares.length === 0) {
+      toast({
+        title: "Ação não permitida",
+        description: "Não é possível mudar a turma de visitantes. Migre-os para alunos primeiro.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsChangingTurma(true);
+    try {
+      const alunoIds = alunosRegulares.map(a => a.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ turma: selectedNewTurma })
+        .in('id', alunoIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Turma alterada",
+        description: `${alunosRegulares.length} ${alunosRegulares.length === 1 ? 'aluno movido' : 'alunos movidos'} para a Turma ${selectedNewTurma}.`
+      });
+
+      setSelectedIds(new Set());
+      setShowTurmaModal(false);
+      setSelectedNewTurma("");
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao mudar turma:", error);
+      toast({
+        title: "Erro ao mudar turma",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsChangingTurma(false);
+    }
+  };
+
+  // Função para ativar alunos em massa
+  const handleActivateSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+
+    if (alunosRegulares.length === 0) {
+      toast({
+        title: "Ação não permitida",
+        description: "Selecione pelo menos um aluno regular.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsChangingStatus(true);
+    try {
+      const alunoIds = alunosRegulares.map(a => a.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ativo: true })
+        .in('id', alunoIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Alunos ativados",
+        description: `${alunosRegulares.length} ${alunosRegulares.length === 1 ? 'aluno ativado' : 'alunos ativados'} com sucesso.`
+      });
+
+      setSelectedIds(new Set());
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao ativar alunos:", error);
+      toast({
+        title: "Erro ao ativar alunos",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsChangingStatus(false);
+    }
+  };
+
+  // Função para desativar alunos em massa
+  const handleDeactivateSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+
+    if (alunosRegulares.length === 0) {
+      toast({
+        title: "Ação não permitida",
+        description: "Selecione pelo menos um aluno regular.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsChangingStatus(true);
+    try {
+      const alunoIds = alunosRegulares.map(a => a.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ativo: false })
+        .in('id', alunoIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Alunos desativados",
+        description: `${alunosRegulares.length} ${alunosRegulares.length === 1 ? 'aluno desativado' : 'alunos desativados'} com sucesso.`
+      });
+
+      setSelectedIds(new Set());
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao desativar alunos:", error);
+      toast({
+        title: "Erro ao desativar alunos",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsChangingStatus(false);
+    }
   };
 
   const getTurmaColor = (turma: string) => {
@@ -329,8 +702,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
             ))}
           </TabsList>
 
-          <div className="mt-4 mb-4">
-            <div className="relative">
+          <div className="mt-4 mb-4 flex gap-4 items-center">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Buscar por nome ou e-mail..."
@@ -339,11 +712,62 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                 className="pl-10"
               />
             </div>
+            {selectedIds.size > 0 && (
+              <DropdownMenu open={bulkDropdownOpen} onOpenChange={setBulkDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={isDeleting || isChangingTurma || isChangingStatus}
+                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+                  >
+                    <CheckSquare className="h-4 w-4" />
+                    Ações ({selectedIds.size} {selectedIds.size === 1 ? 'selecionado' : 'selecionados'})
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => {
+                    setBulkDropdownOpen(false);
+                    setTimeout(() => setShowTurmaModal(true), 100);
+                  }}>
+                    <ArrowRightLeft className="mr-2 h-4 w-4" />
+                    Mudar Turma
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    setBulkDropdownOpen(false);
+                    handleActivateSelected();
+                  }}>
+                    <UserCheck className="mr-2 h-4 w-4 text-green-600" />
+                    Ativar Selecionados
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setBulkDropdownOpen(false);
+                    handleDeactivateSelected();
+                  }}>
+                    <UserX className="mr-2 h-4 w-4 text-orange-600" />
+                    Desativar Selecionados
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setBulkDropdownOpen(false);
+                      setTimeout(() => setShowDeleteConfirm(true), 100);
+                    }}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir Selecionados
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           <TabsContent value="todos" className="mt-0">
-            <AlunoTable 
-              alunos={filteredAlunos} 
+            <AlunoTable
+              alunos={filteredAlunos}
               loading={loading}
               searchTerm={searchTerm}
               onEdit={handleEdit}
@@ -353,13 +777,20 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               getTipoBadge={getTipoBadge}
               onShowVisitanteInfo={handleShowVisitanteInfo}
               onShowMigrarModal={handleShowMigrarModal}
+              onShowLoginModal={setLoginModalAluno}
+              onDeleteVisitante={handleDeleteVisitante}
+              onDeleteDefinitivo={setAlunoParaExcluirDefinitivo}
+              selectedIds={selectedIds}
+              onSelectItem={handleSelectItem}
+              onSelectAll={handleSelectAll}
+              turmasComPlano={turmasComPlano}
             />
           </TabsContent>
 
           {turmasDisponiveis.map((turma) => (
             <TabsContent key={turma} value={turma} className="mt-0">
-              <AlunoTable 
-                alunos={filteredAlunos} 
+              <AlunoTable
+                alunos={filteredAlunos}
                 loading={loading}
                 searchTerm={searchTerm}
                 onEdit={handleEdit}
@@ -369,6 +800,13 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                 getTipoBadge={getTipoBadge}
                 onShowVisitanteInfo={handleShowVisitanteInfo}
                 onShowMigrarModal={handleShowMigrarModal}
+                onShowLoginModal={setLoginModalAluno}
+                onDeleteVisitante={handleDeleteVisitante}
+                onDeleteDefinitivo={setAlunoParaExcluirDefinitivo}
+                selectedIds={selectedIds}
+                onSelectItem={handleSelectItem}
+                onSelectAll={handleSelectAll}
+                turmasComPlano={turmasComPlano}
               />
             </TabsContent>
           ))}
@@ -420,6 +858,180 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         }}
         onSuccess={handleMigracaoSuccess}
       />
+
+      {/* Modal de Histórico de Login */}
+      {loginModalAluno && (
+        <StudentLoginActivityModal
+          studentEmail={loginModalAluno.email}
+          studentName={loginModalAluno.nome}
+          isOpen={!!loginModalAluno}
+          onClose={() => setLoginModalAluno(null)}
+        />
+      )}
+
+      {/* Modal de Mudar Turma em Massa */}
+      <Dialog open={showTurmaModal} onOpenChange={setShowTurmaModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mudar Turma em Massa</DialogTitle>
+            <DialogDescription>
+              Selecione a nova turma para os {selectedIds.size} {selectedIds.size === 1 ? 'aluno selecionado' : 'alunos selecionados'}.
+              {alunos.filter(a => selectedIds.has(a.id) && a.tipo === 'visitante').length > 0 && (
+                <span className="block mt-2 text-orange-600">
+                  Visitantes serão ignorados. Migre-os para alunos primeiro.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="nova-turma" className="text-sm font-medium">
+              Nova Turma
+            </Label>
+            <Select value={selectedNewTurma} onValueChange={setSelectedNewTurma}>
+              <SelectTrigger id="nova-turma" className="mt-2">
+                <SelectValue placeholder="Selecione a turma" />
+              </SelectTrigger>
+              <SelectContent>
+                {turmasDinamicas.map(({ valor, label }) => (
+                  <SelectItem key={valor} value={valor}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTurmaModal(false);
+                setSelectedNewTurma("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleChangeTurmaSelected}
+              disabled={!selectedNewTurma || isChangingTurma}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isChangingTurma ? "Movendo..." : "Confirmar Mudança"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Exclusão Definitiva (aluno AGUARDANDO) */}
+      <Dialog
+        open={!!alunoParaExcluirDefinitivo}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAlunoParaExcluirDefinitivo(null);
+            setConfirmEmailInput("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir Aluno Definitivamente
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é <strong>permanente e irreversível</strong>. Todos os dados do aluno serão apagados: redações enviadas, correções, notas, histórico de exercícios e o cadastro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3 space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm space-y-1">
+              <div><span className="font-medium">Aluno:</span> {alunoParaExcluirDefinitivo?.nome}</div>
+              <div><span className="font-medium">E-mail:</span> {alunoParaExcluirDefinitivo?.email}</div>
+              <div><span className="font-medium">Turma:</span> {alunoParaExcluirDefinitivo?.turma}</div>
+            </div>
+            <div>
+              <Label htmlFor="confirm-email-definitivo" className="text-sm font-medium">
+                Digite o e-mail do aluno para confirmar:
+              </Label>
+              <Input
+                id="confirm-email-definitivo"
+                type="email"
+                placeholder={alunoParaExcluirDefinitivo?.email}
+                value={confirmEmailInput}
+                onChange={(e) => setConfirmEmailInput(e.target.value)}
+                className="mt-2"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAlunoParaExcluirDefinitivo(null);
+                setConfirmEmailInput("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDeleteDefinitivo}
+              disabled={
+                isDeletingDefinitivo ||
+                confirmEmailInput.toLowerCase() !== (alunoParaExcluirDefinitivo?.email ?? "").toLowerCase()
+              }
+              className="bg-red-700 hover:bg-red-800 text-white"
+            >
+              {isDeletingDefinitivo ? "Excluindo..." : "Excluir Definitivamente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão em Massa */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão em lote</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p>
+                  Tem certeza que deseja excluir{' '}
+                  <strong>{selectedIds.size} {selectedIds.size === 1 ? 'item' : 'itens'}</strong>?
+                </p>
+                {(() => {
+                  const selecionados = alunos.filter(a => selectedIds.has(a.id));
+                  const qtdAguardando = selecionados.filter(isAlunoAguardando).length;
+                  const qtdVisitantes = selecionados.filter(a => a.tipo === 'visitante').length;
+                  return (
+                    <div className="mt-3 space-y-2 text-sm">
+                      {qtdAguardando > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded p-2 text-red-800">
+                          <strong>⚠ {qtdAguardando} aluno(s) AGUARDANDO:</strong> exclusão permanente com todos os dados — redações, correções, histórico e cadastro.
+                        </div>
+                      )}
+                      {qtdVisitantes > 0 && (
+                        <div className="bg-orange-50 border border-orange-200 rounded p-2 text-orange-800">
+                          <strong>{qtdVisitantes} visitante(s):</strong> redações enviadas também serão excluídas.
+                        </div>
+                      )}
+                      <p className="text-red-600 font-medium">Esta ação não pode ser desfeita.</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
@@ -436,20 +1048,37 @@ interface AlunoTableProps {
   getTipoBadge: (usuario: Aluno) => React.ReactNode;
   onShowVisitanteInfo: (visitante: Aluno) => void;
   onShowMigrarModal: (visitante: Aluno) => void;
+  onShowLoginModal: (aluno: Aluno) => void;
+  onDeleteVisitante: (visitante: Aluno) => void;
+  onDeleteDefinitivo: (aluno: Aluno) => void;
+  selectedIds: Set<string>;
+  onSelectItem: (id: string, checked: boolean) => void;
+  onSelectAll: (checked: boolean) => void;
+  turmasComPlano: string[];
 }
 
-const AlunoTable = ({ 
-  alunos, 
-  loading, 
-  searchTerm, 
-  onEdit, 
-  onDelete, 
-  onToggleStatus, 
+const AlunoTable = ({
+  alunos,
+  loading,
+  searchTerm,
+  onEdit,
+  onDelete,
+  onToggleStatus,
   getTurmaColor,
   getTipoBadge,
   onShowVisitanteInfo,
-  onShowMigrarModal
+  onShowMigrarModal,
+  onShowLoginModal,
+  onDeleteVisitante,
+  onDeleteDefinitivo,
+  selectedIds,
+  onSelectItem,
+  onSelectAll,
+  turmasComPlano,
 }: AlunoTableProps) => {
+  const [openRowDropdownId, setOpenRowDropdownId] = useState<string | null>(null);
+  const allSelected = alunos.length > 0 && alunos.every(a => selectedIds.has(a.id));
+  const someSelected = alunos.some(a => selectedIds.has(a.id)) && !allSelected;
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -471,6 +1100,14 @@ const AlunoTable = ({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[40px] p-2">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={onSelectAll}
+                aria-label="Selecionar todos"
+                className={someSelected ? "data-[state=checked]:bg-primary/50" : ""}
+              />
+            </TableHead>
             <TableHead className="w-[120px]">Nome</TableHead>
             <TableHead className="w-[160px]">E-mail</TableHead>
             <TableHead className="w-[80px]">Tipo</TableHead>
@@ -483,7 +1120,14 @@ const AlunoTable = ({
         </TableHeader>
         <TableBody>
           {alunos.map((aluno) => (
-            <TableRow key={aluno.id}>
+            <TableRow key={aluno.id} className={selectedIds.has(aluno.id) ? "bg-muted/50" : ""}>
+              <TableCell className="p-2">
+                <Checkbox
+                  checked={selectedIds.has(aluno.id)}
+                  onCheckedChange={(checked) => onSelectItem(aluno.id, checked as boolean)}
+                  aria-label={`Selecionar ${aluno.nome}`}
+                />
+              </TableCell>
               <TableCell className="font-medium text-xs p-2 max-w-[120px] truncate" title={aluno.nome}>
                 {aluno.nome}
               </TableCell>
@@ -523,7 +1167,10 @@ const AlunoTable = ({
                 </div>
               </TableCell>
               <TableCell className="text-right p-2">
-                <DropdownMenu>
+                <DropdownMenu
+                  open={openRowDropdownId === aluno.id}
+                  onOpenChange={(open) => setOpenRowDropdownId(open ? aluno.id : null)}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreHorizontal className="h-4 w-4" />
@@ -533,53 +1180,103 @@ const AlunoTable = ({
                     {aluno.tipo === 'visitante' ? (
                       // Ações para visitantes
                       <>
-                        <DropdownMenuItem onClick={() => onShowVisitanteInfo(aluno)}>
+                        <DropdownMenuItem onClick={() => {
+                          setOpenRowDropdownId(null);
+                          setTimeout(() => onShowVisitanteInfo(aluno), 100);
+                        }}>
                           <Info className="mr-2 h-4 w-4" />
                           Ver Informações
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onShowMigrarModal(aluno)}>
+                        <DropdownMenuItem onClick={() => {
+                          setOpenRowDropdownId(null);
+                          setTimeout(() => onShowMigrarModal(aluno), 100);
+                        }}>
                           <UserCheck className="mr-2 h-4 w-4" />
                           Migrar para Aluno
                         </DropdownMenuItem>
-                      </>
-                    ) : (
-                      // Ações para alunos regulares
-                      <>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onEdit(aluno);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onToggleStatus(aluno)}>
-                          {aluno.ativo ? (
-                            <>
-                              <UserX className="mr-2 h-4 w-4" />
-                              Desativar
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="mr-2 h-4 w-4" />
-                              Ativar
-                            </>
-                          )}
-                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome}?`)) {
-                              onDelete(aluno);
+                            setOpenRowDropdownId(null);
+                            if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome} e TODOS os seus dados (incluindo redações enviadas)?`)) {
+                              onDeleteVisitante(aluno);
                             }
                           }}
                           className="text-red-600 focus:text-red-600"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
+                          Excluir Visitante
                         </DropdownMenuItem>
                       </>
+                    ) : (
+                      // Ações para alunos regulares
+                      (() => {
+                        const isAguardando =
+                          aluno.turma === 'AGUARDANDO' ||
+                          (!aluno.temPlanoAtivo && turmasComPlano.includes(aluno.turma));
+                        return (
+                          <>
+                            <DropdownMenuItem onClick={() => {
+                              setOpenRowDropdownId(null);
+                              setTimeout(() => onShowLoginModal(aluno), 100);
+                            }}>
+                              <LogIn className="mr-2 h-4 w-4" />
+                              Ver Login
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setOpenRowDropdownId(null);
+                                setTimeout(() => onEdit(aluno), 100);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setOpenRowDropdownId(null);
+                              onToggleStatus(aluno);
+                            }}>
+                              {aluno.ativo ? (
+                                <>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Desativar
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Ativar
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setOpenRowDropdownId(null);
+                                if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome}?`)) {
+                                  onDelete(aluno);
+                                }
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                            {isAguardando && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setOpenRowDropdownId(null);
+                                    setTimeout(() => onDeleteDefinitivo(aluno), 100);
+                                  }}
+                                  className="text-red-800 focus:text-red-800 font-semibold"
+                                >
+                                  <AlertTriangle className="mr-2 h-4 w-4" />
+                                  Excluir Definitivamente
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>

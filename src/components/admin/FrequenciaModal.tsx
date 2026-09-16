@@ -1,21 +1,15 @@
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Clock, Users, Download } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { Clock, Users, Download, Bell, Link2 } from "lucide-react";
 
-interface PresencaRecord {
-  id: string;
-  nome_aluno: string;
-  email_aluno: string;
-  turma: string;
-  entrada_at: string | null;
-  saida_at: string | null;
-  aluno_id: string | null;
-}
 
 interface FrequenciaAluno {
   nome: string;
@@ -24,6 +18,10 @@ interface FrequenciaAluno {
   entrada?: string;
   saida?: string;
   status: 'em_aula' | 'presente' | 'ausente';
+  justificativa?: string;
+  justificativaCriadoEm?: string;
+  /** true quando presença foi registrada em outra sessão do grupo, não nesta */
+  presencaEmOutraSessao?: boolean;
 }
 
 interface FrequenciaModalProps {
@@ -36,62 +34,200 @@ interface FrequenciaModalProps {
 export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: FrequenciaModalProps) => {
   const [frequenciaData, setFrequenciaData] = useState<FrequenciaAluno[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingNotif, setIsSendingNotif] = useState(false);
+  const [justificativaModal, setJustificativaModal] = useState<{ texto: string; criadoEm: string; nome: string } | null>(null);
+  const [aulaInfo, setAulaInfo] = useState<{ data_aula: string; horario_fim: string } | null>(null);
+  // ID canônico do grupo para inbox_messages (sempre o da mãe)
+  const [aulaMaeId, setAulaMaeId] = useState<string>(aulaId);
+  const [grupoSessoes, setGrupoSessoes] = useState<number>(1);
+  const [dispensadosNotif, setDispensadosNotif] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
 
   const fetchFrequencia = async () => {
     if (!aulaId) return;
-    
+
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('presenca_aulas')
-        .select('*')
-        .eq('aula_id', aulaId)
-        .order('nome_aluno', { ascending: true });
+      // ── 1. Dados da aula atual (inclui aula_mae_id)
+      const { data: aulaData } = await supabase
+        .from('aulas_virtuais')
+        .select('turmas_autorizadas, data_aula, horario_fim, aula_mae_id')
+        .eq('id', aulaId)
+        .single();
 
-      if (error) throw error;
+      const turmasAutorizadas: string[] = aulaData?.turmas_autorizadas || [];
 
-      if (!data || data.length === 0) {
-        setFrequenciaData([]);
-        return;
+      // ── 2. Identificar o grupo (mãe + filhas)
+      const maeid: string = (aulaData as any)?.aula_mae_id || aulaId;
+      setAulaMaeId(maeid);
+
+      const { data: grupoAulas } = await supabase
+        .from('aulas_virtuais')
+        .select('id, data_aula, horario_fim')
+        .or(`id.eq.${maeid},aula_mae_id.eq.${maeid}`);
+
+      const grupo = grupoAulas && grupoAulas.length > 0
+        ? grupoAulas
+        : [{ id: aulaId, data_aula: aulaData?.data_aula, horario_fim: aulaData?.horario_fim }];
+
+      const grupoIds = grupo.map((a: any) => a.id);
+      setGrupoSessoes(grupoIds.length);
+
+      // Mapa aulaId → encerradaHá24h
+      const grupoEncerradaMap = new Map<string, boolean>();
+      grupo.forEach((a: any) => {
+        const fim = a.data_aula && a.horario_fim
+          ? new Date(`${a.data_aula}T${a.horario_fim}`)
+          : null;
+        grupoEncerradaMap.set(a.id, fim ? Date.now() - fim.getTime() > 24 * 3600 * 1000 : false);
+      });
+
+      // aulaInfo = sessão mais recente do grupo (para calcular send_at dos follow-ups)
+      const latestSessao = grupo.reduce((acc: any, cur: any) => {
+        if (!acc.data_aula || !acc.horario_fim) return cur;
+        return new Date(`${cur.data_aula}T${cur.horario_fim}`) > new Date(`${acc.data_aula}T${acc.horario_fim}`)
+          ? cur
+          : acc;
+      }, grupo[0]);
+      if (latestSessao?.data_aula && latestSessao?.horario_fim) {
+        setAulaInfo({ data_aula: latestSessao.data_aula, horario_fim: latestSessao.horario_fim });
       }
 
-      // Processar registros agrupando por aluno
-      const alunosMap = new Map<string, FrequenciaAluno>();
+      // ── 3. Buscar dados em paralelo
+      const [presencaRes, justificativaRes, alunosMatriculadosRes] = await Promise.all([
+        // Presença de TODAS as sessões do grupo
+        supabase
+          .from('presenca_aulas')
+          .select('*')
+          .in('aula_id', grupoIds)
+          .order('nome_aluno', { ascending: true }),
+        // Justificativas de TODAS as sessões do grupo
+        supabase
+          .from('justificativas_ausencia')
+          .select('email_aluno, nome_aluno, turma, justificativa, criado_em, aula_id')
+          .in('aula_id', grupoIds),
+        turmasAutorizadas.length > 0
+          ? supabase
+              .from('profiles')
+              .select('email, nome, turma, created_at, dispensar_notif_frequencia')
+              .in('turma', turmasAutorizadas)
+              .eq('ativo', true)
+              .eq('user_type', 'aluno')
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-      data.forEach((record: any) => {
-        const alunoKey = record.email_aluno;
-        let alunoExistente = alunosMap.get(alunoKey);
-        
-        if (!alunoExistente) {
-          alunoExistente = {
-            nome: record.nome_aluno,
-            email: record.email_aluno,
-            turma: record.turma,
-            status: 'ausente'
-          };
-          alunosMap.set(alunoKey, alunoExistente);
-        }
+      if (presencaRes.error) throw presencaRes.error;
 
-        // Atualizar entrada e saída baseado nos registros
-        if (record.entrada_at) {
-          alunoExistente.entrada = record.entrada_at;
-        }
-        
-        if (record.saida_at) {
-          alunoExistente.saida = record.saida_at;
-        }
-
-        // Determinar status
-        if (alunoExistente.entrada && alunoExistente.saida) {
-          alunoExistente.status = 'presente';
-        } else if (alunoExistente.entrada && !alunoExistente.saida) {
-          alunoExistente.status = 'em_aula';
+      // Mapa de justificativas por email (usa a mais recente do grupo)
+      const justMap = new Map<string, { texto: string; criadoEm: string; nome: string; turma: string }>();
+      (justificativaRes.data || []).forEach((j: any) => {
+        const existing = justMap.get(j.email_aluno);
+        if (!existing || new Date(j.criado_em) > new Date(existing.criadoEm)) {
+          justMap.set(j.email_aluno, {
+            texto: j.justificativa,
+            criadoEm: j.criado_em,
+            nome: j.nome_aluno || '',
+            turma: j.turma || '',
+          });
         }
       });
 
-      const frequenciaList = Array.from(alunosMap.values());
+      // ── 4. Montar mapa base: todos os matriculados = ausente
+      // Excluir alunos que se matricularam APÓS a sessão mais recente do grupo
+      const latestClassDate = latestSessao?.data_aula
+        ? new Date(latestSessao.data_aula + 'T23:59:59')
+        : null;
+
+      const novoDispensadosSet = new Set<string>();
+      const alunosMap = new Map<string, FrequenciaAluno>();
+      (alunosMatriculadosRes.data || []).forEach((aluno: any) => {
+        // Se temos data da aula e data de cadastro do aluno, verificar se ele já estava matriculado
+        if (latestClassDate && aluno.created_at) {
+          const enrolledAt = new Date(aluno.created_at);
+          if (enrolledAt > latestClassDate) return; // matriculado após a aula — não contabilizar falta
+        }
+        if (aluno.dispensar_notif_frequencia) novoDispensadosSet.add(aluno.email);
+        const just = justMap.get(aluno.email);
+        alunosMap.set(aluno.email, {
+          nome: aluno.nome || aluno.email,
+          email: aluno.email,
+          turma: aluno.turma,
+          status: 'ausente',
+          justificativa: just?.texto,
+          justificativaCriadoEm: just?.criadoEm,
+        });
+      });
+      setDispensadosNotif(novoDispensadosSet);
+
+      // ── 5. Aplicar registros de presença do grupo inteiro
+      // Status reflete o grupo; entrada/saída exibe apenas a sessão atual (aulaId)
+      (presencaRes.data || []).forEach((record: any) => {
+        const alunoKey = record.email_aluno;
+        let aluno = alunosMap.get(alunoKey);
+
+        if (!aluno) {
+          const just = justMap.get(alunoKey);
+          aluno = {
+            nome: record.nome_aluno,
+            email: record.email_aluno,
+            turma: record.turma,
+            status: 'ausente',
+            justificativa: just?.texto,
+            justificativaCriadoEm: just?.criadoEm,
+          };
+          alunosMap.set(alunoKey, aluno);
+        }
+
+        // Horários de entrada/saída: apenas para a sessão específica aberta no modal
+        if (record.aula_id === aulaId) {
+          if (record.entrada_at) aluno.entrada = record.entrada_at;
+          if (record.saida_at) aluno.saida = record.saida_at;
+        }
+
+        // STATUS considera qualquer sessão do grupo
+        if (aluno.status === 'presente') return; // já presente, não regredir
+
+        const encerrada = grupoEncerradaMap.get(record.aula_id) ?? false;
+        const temEntrada = !!record.entrada_at;
+        const temSaida = !!record.saida_at;
+
+        if (temEntrada && temSaida) {
+          aluno.status = 'presente';
+          aluno.presencaEmOutraSessao = record.aula_id !== aulaId;
+        } else if (temEntrada && !temSaida) {
+          if (encerrada) {
+            // Saída esquecida → considerar presente
+            aluno.status = 'presente';
+            aluno.presencaEmOutraSessao = record.aula_id !== aulaId;
+          } else {
+            aluno.status = 'em_aula';
+          }
+        }
+      });
+
+      // Adicionar alunos que só justificaram (não estão no cadastro nem na presença)
+      justMap.forEach((just, email) => {
+        if (!alunosMap.has(email)) {
+          alunosMap.set(email, {
+            nome: just.nome,
+            email,
+            turma: just.turma,
+            status: 'ausente',
+            justificativa: just.texto,
+            justificativaCriadoEm: just.criadoEm,
+          });
+        }
+      });
+
+      // Ordenar: presentes primeiro, depois por nome
+      const frequenciaList = Array.from(alunosMap.values()).sort((a, b) => {
+        const ordem = { presente: 0, em_aula: 1, ausente: 2 };
+        const diff = ordem[a.status] - ordem[b.status];
+        if (diff !== 0) return diff;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      });
       setFrequenciaData(frequenciaList);
-      
+
     } catch (error) {
       console.error('Erro ao buscar frequência:', error);
       setFrequenciaData([]);
@@ -102,9 +238,9 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
   const exportCSV = () => {
     const csvContent = [
-      'Nome,Email,Turma,Entrada,Saida,Status',
-      ...frequenciaData.map(aluno => 
-        `"${aluno.nome}","${aluno.email}","${aluno.turma}","${aluno.entrada ? new Date(aluno.entrada).toLocaleString('pt-BR') : ''}","${aluno.saida ? new Date(aluno.saida).toLocaleString('pt-BR') : ''}","${getStatusText(aluno.status)}"`
+      'Nome,Email,Turma,Entrada,Saida,Status,Justificativa',
+      ...frequenciaData.map(aluno =>
+        `"${aluno.nome}","${aluno.email}","${aluno.turma}","${aluno.entrada ? new Date(aluno.entrada).toLocaleString('pt-BR') : ''}","${aluno.saida ? new Date(aluno.saida).toLocaleString('pt-BR') : ''}","${getStatusText(aluno.status)}","${aluno.justificativa ?? ''}"`
       )
     ].join('\n');
 
@@ -113,6 +249,169 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
     link.href = URL.createObjectURL(blob);
     link.download = `frequencia_${aulaTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+  };
+
+  const notificarAusentes = async () => {
+    const ausentesSemJustificativa = frequenciaData.filter(
+      (a) => a.status === 'ausente' && !a.justificativa && !dispensadosNotif.has(a.email)
+    );
+    const todosAusentes = frequenciaData.filter(
+      a => a.status === 'ausente' && !dispensadosNotif.has(a.email)
+    );
+
+    if (todosAusentes.length === 0) {
+      toast.info('Não há faltas a notificar.');
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error('Usuário admin não identificado.');
+      return;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      let notificadosCount = 0;
+
+      // Usar o ID canônico do grupo (mãe) para evitar duplicatas ao notificar de dias distintos
+      const canonicalAulaId = aulaMaeId || aulaId;
+
+      // ── 1. Mensagem bloqueante de justificativa (apenas sem justificativa)
+      if (ausentesSemJustificativa.length > 0) {
+        const { data: existingMsg } = await supabase
+          .from('inbox_messages')
+          .select('id')
+          .eq('acao', 'justificativa_ausencia')
+          .eq('aula_id', canonicalAulaId)
+          .maybeSingle();
+
+        let messageId: string;
+
+        if (existingMsg) {
+          messageId = existingMsg.id;
+        } else {
+          const { data: newMsg, error: msgError } = await supabase
+            .from('inbox_messages')
+            .insert({
+              message: `Você faltou à aula: "${aulaTitle}"\n\nJustifique sua ausência abaixo. Essa justificativa será registrada no sistema e ficará visível para o professor.`,
+              type: 'bloqueante',
+              valid_until: null,
+              created_by: user.id,
+              aula_id: canonicalAulaId,
+              acao: 'justificativa_ausencia',
+            } as any)
+            .select('id')
+            .single();
+
+          if (msgError || !newMsg) throw msgError || new Error('Falha ao criar mensagem');
+          messageId = newMsg.id;
+        }
+
+        const { data: existingRecipients } = await supabase
+          .from('inbox_recipients')
+          .select('student_email')
+          .eq('message_id', messageId);
+
+        const jaNotificados = new Set(
+          (existingRecipients || []).map((r: any) => r.student_email)
+        );
+
+        const novos = ausentesSemJustificativa.filter(a => !jaNotificados.has(a.email));
+
+        if (novos.length > 0) {
+          const { error: recError } = await supabase.from('inbox_recipients').insert(
+            novos.map(a => ({
+              message_id: messageId,
+              student_email: a.email,
+              status: 'pendente',
+            }))
+          );
+          if (recError) throw recError;
+          notificadosCount = novos.length;
+        }
+      }
+
+      // ── 2. Follow-ups agendados (todos os ausentes, incluindo os que justificaram)
+      if (aulaInfo) {
+        const { data: templates } = await supabase
+          .from('inbox_templates' as any)
+          .select('*')
+          .in('acao', ['followup_gravacao', 'followup_duvidas']);
+
+        const fimAula = new Date(`${aulaInfo.data_aula}T${aulaInfo.horario_fim}`);
+
+        for (const tpl of (templates || []) as any[]) {
+          if (!tpl.delay_horas) continue;
+
+          const sendAt = new Date(fimAula.getTime() + tpl.delay_horas * 60 * 60 * 1000);
+          const messageText = (tpl.message as string).replace(/\{\{titulo\}\}/g, aulaTitle);
+
+          // Usar canonicalAulaId para deduplicar por grupo
+          const { data: existingFollowup } = await supabase
+            .from('inbox_messages')
+            .select('id')
+            .eq('acao', tpl.acao)
+            .eq('aula_id', canonicalAulaId)
+            .maybeSingle();
+
+          let followupMsgId: string;
+
+          if (existingFollowup) {
+            followupMsgId = existingFollowup.id;
+          } else {
+            const { data: newFollowup, error: followupError } = await supabase
+              .from('inbox_messages')
+              .insert({
+                message: messageText,
+                type: tpl.type,
+                valid_until: null,
+                created_by: user.id,
+                aula_id: canonicalAulaId,
+                acao: tpl.acao,
+                send_at: sendAt.toISOString(),
+              } as any)
+              .select('id')
+              .single();
+
+            if (followupError || !newFollowup) continue;
+            followupMsgId = newFollowup.id;
+          }
+
+          // Adicionar todos os ausentes que ainda não são destinatários
+          const { data: existingRec } = await supabase
+            .from('inbox_recipients')
+            .select('student_email')
+            .eq('message_id', followupMsgId);
+
+          const jaDestinatarios = new Set((existingRec || []).map((r: any) => r.student_email));
+          const novos = todosAusentes.filter(a => !jaDestinatarios.has(a.email));
+
+          if (novos.length > 0) {
+            await supabase.from('inbox_recipients').insert(
+              novos.map(a => ({
+                message_id: followupMsgId,
+                student_email: a.email,
+                status: 'pendente',
+              }))
+            );
+          }
+        }
+      }
+
+      const partes: string[] = [];
+      if (notificadosCount > 0) {
+        partes.push(`${notificadosCount} aluno${notificadosCount > 1 ? 's' : ''} notificado${notificadosCount > 1 ? 's' : ''}`);
+      }
+      if (aulaInfo) {
+        partes.push('follow-ups agendados');
+      }
+      toast.success(partes.length > 0 ? partes.join(' • ') + '.' : 'Ação concluída.');
+    } catch (err: any) {
+      console.error('Erro ao notificar ausentes:', err);
+      toast.error('Erro ao enviar notificações. Tente novamente.');
+    } finally {
+      setIsSendingNotif(false);
+    }
   };
 
   const getStatusText = (status: string) => {
@@ -124,14 +423,18 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (aluno: FrequenciaAluno) => {
+    switch (aluno.status) {
       case 'presente':
-        return <Badge className="bg-green-100 text-green-800">✔ Presente</Badge>;
+        return aluno.presencaEmOutraSessao
+          ? <Badge className="bg-green-100 text-green-800">✔ Presente (outra sessão)</Badge>
+          : <Badge className="bg-green-100 text-green-800">✔ Presente</Badge>;
       case 'em_aula':
         return <Badge className="bg-blue-100 text-blue-800">⏰ Em aula</Badge>;
       case 'ausente':
-        return <Badge variant="destructive">✖ Ausente</Badge>;
+        return aluno.justificativa
+          ? <Badge className="bg-amber-100 text-amber-800">✖ Falta justificada</Badge>
+          : <Badge variant="destructive">✖ Ausente</Badge>;
       default:
         return <Badge variant="destructive">✖ Ausente</Badge>;
     }
@@ -144,6 +447,33 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   }, [isOpen, aulaId]);
 
   return (
+    <>
+    <AlertDialog open={!!justificativaModal} onOpenChange={(open) => { if (!open) setJustificativaModal(null); }}>
+      <AlertDialogContent className="max-w-lg">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Justificativa de ausência</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Aluno: <span className="font-medium text-foreground">{justificativaModal?.nome}</span>
+              </p>
+              <div className="rounded-md border bg-muted/40 p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                {justificativaModal?.texto}
+              </div>
+              {justificativaModal?.criadoEm && (
+                <p className="text-xs text-muted-foreground">
+                  Enviada em {new Date(justificativaModal.criadoEm).toLocaleString('pt-BR')}
+                </p>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Fechar</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
@@ -154,6 +484,16 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         </DialogHeader>
 
         <div className="space-y-4">
+          {grupoSessoes > 1 && (
+            <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <Link2 className="w-4 h-4 shrink-0" />
+              <span>
+                Esta aula faz parte de um grupo de <strong>{grupoSessoes} sessões</strong>.
+                Um aluno só é considerado ausente se faltou a <strong>todas</strong> as sessões.
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
@@ -166,10 +506,21 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
               </div>
             </div>
             
-            <Button onClick={exportCSV} variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={notificarAusentes}
+                variant="outline"
+                size="sm"
+                disabled={isSendingNotif || frequenciaData.filter(a => a.status === 'ausente').length === 0}
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                {isSendingNotif ? 'Notificando...' : 'Notificar ausentes'}
+              </Button>
+              <Button onClick={exportCSV} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -192,6 +543,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
                     <TableHead>Entrada</TableHead>
                     <TableHead>Saída</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Justificativa</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -225,7 +577,26 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
                         )}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(aluno.status)}
+                        {getStatusBadge(aluno)}
+                      </TableCell>
+                      <TableCell className="max-w-[180px]">
+                        {aluno.justificativa ? (
+                          <button
+                            className="text-sm text-left text-blue-700 hover:underline truncate max-w-[160px] block"
+                            title="Clique para ver a justificativa completa"
+                            onClick={() => setJustificativaModal({
+                              texto: aluno.justificativa!,
+                              criadoEm: aluno.justificativaCriadoEm!,
+                              nome: aluno.nome,
+                            })}
+                          >
+                            {aluno.justificativa.length > 45
+                              ? aluno.justificativa.slice(0, 45) + '…'
+                              : aluno.justificativa}
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -236,5 +607,6 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
 import { usePlanFeatures } from '@/hooks/usePlanFeatures';
+import { useProfessorAuth } from '@/hooks/useProfessorAuth';
+import { useProfessorFeatures } from '@/hooks/useProfessorFeatures';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,12 @@ export const ProtectedFeatureRoute = ({
 }: ProtectedFeatureRouteProps) => {
   const { studentData } = useStudentAuth();
   const { isFeatureEnabled } = usePlanFeatures(studentData.email);
+  const { professor } = useProfessorAuth();
+  const { isFeatureEnabled: isProfessorFeatureEnabled } = useProfessorFeatures();
   const navigate = useNavigate();
 
-  const isEnabled = isFeatureEnabled(feature);
+  // Professor: acesso conforme as funcionalidades liberadas no seu plano
+  const isEnabled = professor ? isProfessorFeatureEnabled(feature) : isFeatureEnabled(feature);
 
   // Se a funcionalidade não está habilitada, mostrar bloqueio
   if (!isEnabled) {

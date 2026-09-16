@@ -173,8 +173,8 @@ const getFormattedDates = (simulado: SimuladoCardData) => {
     const dataFim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
 
     return {
-      inicio: format(dataInicio, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR }),
-      fim: format(dataFim, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR })
+      inicio: format(dataInicio, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }),
+      fim: format(dataFim, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
     };
   } catch {
     return { inicio: 'Data inválida', fim: 'Data inválida' };
@@ -198,15 +198,19 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
     }
   });
 
+  // Estado do dropdown
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   // Determinar se pode cancelar redação
+  // Quando o simulado está encerrado, o cancelamento não é permitido
   const podeCancelar = perfil === 'aluno' &&
                        simulado.hasSubmitted &&
                        simulado.redacaoData &&
-                       canCancelRedacao(simulado.redacaoData);
+                       canCancelRedacao(simulado.redacaoData) &&
+                       !isEncerrado;
 
-
-
-  // Determinar se o card é clicável (remover clicabilidade para alunos que já enviaram redação)
+  // Determinar se o card é clicável
   const isClickable = (perfil === 'aluno' && isAtivo) ||
                      (perfil === 'corretor' && isEncerrado);
 
@@ -226,9 +230,12 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
   };
 
   const handleExcluir = () => {
+    console.log('🗑️ [SimuladoCardPadrao] Executando exclusão do simulado:', simulado.id);
     if (actions.onExcluir) {
       actions.onExcluir(simulado.id);
     }
+    setDeleteDialogOpen(false);
+    setDropdownOpen(false);
   };
 
   const handleCancelarRedacao = () => {
@@ -314,7 +321,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
       </div>
 
       {/* Rodapé condicional */}
-      {(perfil === 'admin' || !isAgendado) && (
+      {(perfil === 'admin' || perfil === 'corretor' || !isAgendado) && (
         <div className="px-4 py-3 border-t border-gray-100 mt-auto">
           {perfil === 'admin' ? (
             <div className="flex items-center justify-between">
@@ -330,7 +337,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
               </div>
 
               {/* Menu de ações */}
-              <DropdownMenu>
+              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -342,14 +349,20 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
                   <DropdownMenuItem
-                    onClick={() => actions.onEditar?.(simulado.id)}
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      actions.onEditar?.(simulado.id);
+                    }}
                     className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => actions.onToggleStatus?.(simulado.id, simulado.ativo ? 'ativo' : 'inativo')}
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      actions.onToggleStatus?.(simulado.id, simulado.ativo ? 'ativo' : 'inativo');
+                    }}
                     className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     {simulado.ativo ? (
@@ -364,37 +377,17 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                       </>
                     )}
                   </DropdownMenuItem>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem
-                        onSelect={(e) => e.preventDefault()}
-                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-md mx-4 rounded-lg">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <AlertTriangle className="h-5 w-5 text-red-500" />
-                          Confirmar Exclusão
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir este simulado? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleExcluir}
-                          className="w-full sm:w-auto bg-red-600 hover:bg-red-700 transition-colors"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setDropdownOpen(false);
+                      setTimeout(() => setDeleteDialogOpen(true), 100);
+                    }}
+                    className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -588,17 +581,92 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                   Você não enviou sua redação para este simulado
                 </div>
               )}
-              {perfil === 'corretor' && isEncerrado && (
-                <Button
-                  onClick={handleCardClick}
-                  className="w-full bg-purple-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Ver Redações
-                </Button>
+              {perfil === 'corretor' && (
+                <div className="flex items-center justify-between">
+                  {isEncerrado ? (
+                    <Button
+                      onClick={handleCardClick}
+                      size="sm"
+                      className="bg-violet-600 text-white hover:bg-violet-700 text-xs px-3 py-1.5 h-8 rounded-lg"
+                    >
+                      Ver Redações
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                  {(actions.onEditar || actions.onExcluir) && (
+                    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                        >
+                          <MoreVertical className="h-4 w-4 text-gray-600" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+                        {actions.onEditar && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setDropdownOpen(false);
+                              actions.onEditar?.(simulado.id);
+                            }}
+                            className="flex items-center cursor-pointer hover:bg-gray-50"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                        )}
+                        {actions.onExcluir && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setDropdownOpen(false);
+                              setTimeout(() => setDeleteDialogOpen(true), 100);
+                            }}
+                            className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               )}
             </>
           )}
         </div>
+      )}
+
+      {/* AlertDialog de confirmação de exclusão - FORA do DropdownMenu */}
+      {(perfil === 'admin' || perfil === 'corretor') && (
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="max-w-md mx-4 rounded-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                Confirmar Exclusão
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o simulado <strong>"{simulado.titulo}"</strong>?
+                <br /><br />
+                Esta ação não pode ser desfeita e todas as redações relacionadas a este simulado serão afetadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleExcluir}
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Excluir Simulado
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </Card>
   );

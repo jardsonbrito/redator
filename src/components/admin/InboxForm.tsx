@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, Save } from "lucide-react";
+import { Send, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,12 +13,15 @@ import { InboxDestinatariosListaAlunos, type AlunoSelecionado } from "./InboxDes
 import { InboxExtrasForm, type InboxExtras } from "./InboxExtrasForm";
 import { InboxMensagensList } from "./InboxMensagensList";
 import { InboxProgressIndicator } from "./InboxProgressIndicator";
+import { InboxTemplatesForm } from "./InboxTemplatesForm";
 
 interface InboxFormData {
   message: string;
   config: InboxConfiguracao;
   destinatarios: AlunoSelecionado[];
   extras: InboxExtras;
+  turmasAlvo: string[];
+  acao?: string;
 }
 
 export function InboxForm() {
@@ -34,6 +37,7 @@ export function InboxForm() {
     },
     destinatarios: [],
     extras: {},
+    turmasAlvo: [],
   });
 
   // Mutação para criar mensagem
@@ -70,6 +74,8 @@ export function InboxForm() {
           extra_link: data.extras.extraLink || null,
           extra_image: data.extras.extraImage || null,
           created_by: user.id,
+          turmas_alvo: data.turmasAlvo.length > 0 ? data.turmasAlvo : null,
+          acao: data.acao || null,
         })
         .select()
         .single();
@@ -101,12 +107,11 @@ export function InboxForm() {
       // Limpar formulário
       setFormData({
         message: "",
-        config: {
-          type: "amigavel",
-          validity: "permanente",
-        },
+        config: { type: "amigavel", validity: "permanente" },
         destinatarios: [],
         extras: {},
+        turmasAlvo: [],
+        acao: undefined,
       });
 
       // Voltar para aba de mensagens
@@ -134,6 +139,10 @@ export function InboxForm() {
     setFormData(prev => ({ ...prev, extras }));
   };
 
+  const handleTurmasAlvoChange = (turmasAlvo: string[]) => {
+    setFormData(prev => ({ ...prev, turmasAlvo }));
+  };
+
   const handleSendMessage = () => {
     createMessageMutation.mutate(formData);
   };
@@ -142,6 +151,7 @@ export function InboxForm() {
     return (
       formData.message.trim().length >= 1 &&
       formData.destinatarios.length > 0 &&
+      formData.turmasAlvo.length > 0 &&
       (formData.config.validity !== "ate_data" || formData.config.validUntil)
     );
   };
@@ -191,11 +201,53 @@ export function InboxForm() {
     { value: 'configuracao', label: 'Configuração' },
     { value: 'destinatarios', label: 'Destinatários' },
     { value: 'extras', label: 'Extras' },
-    { value: 'mensagens', label: 'Mensagens' }
+    { value: 'mensagens', label: 'Mensagens' },
+    { value: 'automaticas', label: 'Automáticas' },
   ];
+
+  const handleAtalhoPreencherPerfil = () => {
+    setFormData(prev => ({
+      ...prev,
+      message:
+        "Olá! Para continuar aproveitando ao máximo a plataforma, precisamos que você complete seu perfil.\n\n" +
+        "Por favor, acesse a página de perfil e preencha todos os campos:\n" +
+        "• Foto de perfil\n" +
+        "• WhatsApp\n" +
+        "• Data de nascimento\n" +
+        "• Cidade\n" +
+        "• Escola\n" +
+        "• Série\n" +
+        "• Identificação (Aluno/Aluna)\n\n" +
+        "Clique no botão abaixo para ir direto ao perfil.",
+      config: { type: "bloqueante", validity: "permanente" },
+      acao: "preencher_perfil",
+    }));
+    setActiveTab("destinatarios");
+    toast.info("Mensagem pré-preenchida. Selecione os destinatários e envie.");
+  };
 
   return (
     <div className="space-y-6">
+      {/* Atalho rápido: mensagem bloqueante de completar perfil */}
+      <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-violet-800">Completar perfil — mensagem bloqueante</p>
+          <p className="text-xs text-violet-600 mt-0.5">
+            Pré-preenche a mensagem, define tipo bloqueante e ação <code>preencher_perfil</code>.
+            O bloqueio só é removido quando o aluno salvar todos os campos + foto.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0 border-violet-300 text-violet-700 hover:bg-violet-100 gap-1.5"
+          onClick={handleAtalhoPreencherPerfil}
+        >
+          <UserCheck className="w-4 h-4" />
+          Usar atalho
+        </Button>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           {/* Tabs com scroll horizontal no mobile */}
@@ -217,7 +269,7 @@ export function InboxForm() {
           </div>
 
           {/* Botão de enviar */}
-          {activeTab !== "mensagens" && (
+          {activeTab !== "mensagens" && activeTab !== "automaticas" && (
             <Button
               onClick={handleSendMessage}
               disabled={!canSendMessage() || createMessageMutation.isPending}
@@ -260,6 +312,8 @@ export function InboxForm() {
           <InboxDestinatariosListaAlunos
             onDestinatariosChange={handleDestinatariosChange}
             destinatariosSelecionados={formData.destinatarios}
+            onTurmasAlvoChange={handleTurmasAlvoChange}
+            turmasAlvoSelecionadas={formData.turmasAlvo}
           />
         </TabsContent>
 
@@ -275,6 +329,10 @@ export function InboxForm() {
             onEdit={handleEditMessage}
             onDuplicate={handleDuplicateMessage}
           />
+        </TabsContent>
+
+        <TabsContent value="automaticas" className="space-y-6">
+          <InboxTemplatesForm />
         </TabsContent>
       </Tabs>
     </div>

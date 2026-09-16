@@ -10,7 +10,7 @@ export interface MetricasCorretor {
   evolucaoEnviosPorMes: { mes: string; envios: number }[];
 }
 
-export const useCorretorMetricas = (corretorEmail: string) => {
+export const useCorretorMetricas = (corretorEmail: string, turmasAutorizadas: string[] = []) => {
   const [metricas, setMetricas] = useState<MetricasCorretor>({
     mediaNota: 0,
     totalPendencias: 0,
@@ -25,13 +25,13 @@ export const useCorretorMetricas = (corretorEmail: string) => {
     if (corretorEmail) {
       fetchMetricas();
     }
-  }, [corretorEmail]);
+  }, [corretorEmail, turmasAutorizadas.join(',')]);
 
   const fetchMetricas = async () => {
     try {
       setLoading(true);
 
-      // Buscar dados das redações do corretor
+      // Buscar dados das redações do corretor (lista de envios)
       const { data: redacoes, error } = await supabase
         .rpc('get_redacoes_corretor_detalhadas', {
           corretor_email: corretorEmail
@@ -39,30 +39,65 @@ export const useCorretorMetricas = (corretorEmail: string) => {
 
       if (error) throw error;
 
-      // Calcular métricas
       const totalEnvios = redacoes?.length || 0;
-      const redacoesCorrigidas = redacoes?.filter(r => r.status_minha_correcao === 'corrigida') || [];
       const pendencias = redacoes?.filter(r => r.status_minha_correcao === 'pendente') || [];
 
-      // Simular notas médias (na implementação real, você precisaria ter uma tabela com as notas das correções)
-      const mediaNota = redacoesCorrigidas.length > 0 ? 713 : 0; // Valor exemplo como mostrado na imagem
+      // Evolução de envios por mês — calculado dos dados reais
+      const enviosPorMes = new Map<string, number>();
+      (redacoes || []).forEach(r => {
+        if (!r.data_envio) return;
+        const d = new Date(r.data_envio);
+        const mes = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`;
+        enviosPorMes.set(mes, (enviosPorMes.get(mes) || 0) + 1);
+      });
+      const evolucaoEnviosPorMes = Array.from(enviosPorMes.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([mes, envios]) => ({ mes, envios }));
 
-      // Criar dados simulados para os gráficos (em implementação real, buscar do banco)
-      const evolucaoNotasPorMes = [
-        { mes: "02/25", nota: 840 },
-        { mes: "03/25", nota: 641 },
-        { mes: "04/25", nota: 516 },
-        { mes: "05/25", nota: 855 },
-        { mes: "06/25", nota: 841 }
-      ];
+      // Evolução de notas por mês — busca notas reais das redações corrigidas das turmas do corretor
+      let evolucaoNotasPorMes: { mes: string; nota: number }[] = [];
+      let mediaNota = 0;
 
-      const evolucaoEnviosPorMes = [
-        { mes: "02/25", envios: 75 },
-        { mes: "03/25", envios: 115 },
-        { mes: "04/25", envios: 115 },
-        { mes: "05/25", envios: 77 },
-        { mes: "06/25", envios: 63 }
-      ];
+      if (turmasAutorizadas.length > 0) {
+        const [enviadasRes, simuladoRes] = await Promise.all([
+          supabase
+            .from('redacoes_enviadas')
+            .select('nota_total, data_envio')
+            .in('turma', turmasAutorizadas)
+            .eq('corrigida', true)
+            .is('deleted_at', null)
+            .not('nota_total', 'is', null),
+          supabase
+            .from('redacoes_simulado')
+            .select('nota_total, data_envio')
+            .in('turma', turmasAutorizadas)
+            .eq('corrigida', true)
+            .is('deleted_at', null)
+            .not('nota_total', 'is', null),
+        ]);
+
+        const todasCorrigidas = [
+          ...(enviadasRes.data || []),
+          ...(simuladoRes.data || []),
+        ];
+
+        if (todasCorrigidas.length > 0) {
+          const somaTotal = todasCorrigidas.reduce((sum, r) => sum + Number(r.nota_total), 0);
+          mediaNota = Math.round(somaTotal / todasCorrigidas.length);
+
+          const notasPorMes = new Map<string, { soma: number; count: number }>();
+          todasCorrigidas.forEach(r => {
+            if (!r.data_envio) return;
+            const d = new Date(r.data_envio);
+            const mes = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`;
+            const atual = notasPorMes.get(mes) || { soma: 0, count: 0 };
+            notasPorMes.set(mes, { soma: atual.soma + Number(r.nota_total), count: atual.count + 1 });
+          });
+          evolucaoNotasPorMes = Array.from(notasPorMes.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([mes, { soma, count }]) => ({ mes, nota: Math.round(soma / count) }));
+        }
+      }
 
       setMetricas({
         mediaNota,

@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { useToast } from "@/hooks/use-toast";
-import { getTurmaCode } from "@/utils/turmaUtils";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { RedacaoAnotacaoVisual } from "@/components/corretor/RedacaoAnotacaoVisual";
 
 // Função para verificar se deve mostrar as notas
@@ -41,17 +41,15 @@ const shouldShowScores = (redacao: any) => {
 
 const MeusSimulados = () => {
   const { toast } = useToast();
+  const { studentData } = useStudentAuth();
   const [emailVerificacao, setEmailVerificacao] = useState<{[key: string]: string}>({});
   const [redacaoAutenticada, setRedacaoAutenticada] = useState<{[key: string]: boolean}>({});
   const [isValidating, setIsValidating] = useState<{[key: string]: boolean}>({});
 
-  // Recupera a turma do usuário
-  const userType = localStorage.getItem("userType");
-  const alunoTurma = localStorage.getItem("alunoTurma");
-  
+  // Recupera a turma do usuário do hook (já sincronizada com o banco de dados)
   let turmaUsuario = "visitante";
-  if (userType === "aluno" && alunoTurma) {
-    turmaUsuario = getTurmaCode(alunoTurma);
+  if (studentData?.userType === "aluno" && studentData?.turma) {
+    turmaUsuario = studentData.turma;
   }
 
   const { data: redacoesCorrigidas, isLoading } = useQuery({

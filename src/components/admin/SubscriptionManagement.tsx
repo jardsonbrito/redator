@@ -514,7 +514,7 @@ export const SubscriptionManagement = () => {
                                 if (aluno?.turma) {
                                   // Buscar ID da turma
                                   supabase
-                                    .from('turmas')
+                                    .from('turmas_alunos')
                                     .select('id')
                                     .eq('nome', aluno.turma)
                                     .single()

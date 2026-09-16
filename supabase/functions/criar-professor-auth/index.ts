@@ -9,6 +9,7 @@ interface RequestBody {
   nome_completo: string;
   email: string;
   role: string;
+  turma_id?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -19,7 +20,7 @@ Deno.serve(async (req) => {
 
   try {
     // Parse request body
-    const { nome_completo, email, role }: RequestBody = await req.json();
+    const { nome_completo, email, role, turma_id }: RequestBody = await req.json();
 
     console.log('Criando professor:', { nome_completo, email, role });
 
@@ -118,8 +119,8 @@ Deno.serve(async (req) => {
         nome_completo: nome_completo.trim(),
         email: email.toLowerCase().trim(),
         role: role,
-        senha_hash: '123456',
-        primeiro_login: true,
+        turma_id: turma_id || null,
+        primeiro_login: false,
         ativo: true
       });
 

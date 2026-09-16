@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageSquare, EyeOff, Clock, Users, Trash2, UserCheck } from 'lucide-react';
-import { Plus } from 'lucide-react';
+import { MessageSquare, EyeOff, Clock, Users, Trash2, UserCheck, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +35,8 @@ export default function LousaList() {
   const [lousas, setLousas] = useState<Lousa[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingLousa, setEditingLousa] = useState<Lousa | null>(null);
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -76,7 +76,7 @@ export default function LousaList() {
       const lousasWithPendingCount = await Promise.all(
         (lousasData || []).map(async (lousa) => {
           // Since corretor_id doesn't exist in the schema, set to null
-          let corretorNome = null;
+          const corretorNome = null;
 
           // Count pending responses
           const { count, error: countError } = await supabase
@@ -200,46 +200,55 @@ export default function LousaList() {
     );
   }
 
+  const lousasFiltradas = apenasAnoAtual
+    ? lousas.filter((l) => {
+        const d = new Date(l.created_at);
+        return !isNaN(d.getTime()) && d.getFullYear() === anoAtual;
+      })
+    : lousas;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Lousas</h1>
+        <Button
+          variant={apenasAnoAtual ? "default" : "outline"}
+          size="sm"
+          onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+        >
+          <Calendar className="w-3 h-3 mr-1" />
+          {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+        </Button>
       </div>
 
       <Tabs defaultValue="list" value={editingLousa ? "create" : undefined} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList>
           <TabsTrigger value="list">Gerenciar Lousas</TabsTrigger>
           <TabsTrigger value="create">
-            {editingLousa ? (
-              <>
-                <Edit className="w-4 h-4 mr-2" />
-                Editar Lousa
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Lousa
-              </>
-            )}
+            {editingLousa ? 'Editar Lousa' : 'Nova Lousa'}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="space-y-6">
-          {lousas.length === 0 ? (
+          {lousasFiltradas.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
                   📝
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Nenhuma lousa criada</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  {apenasAnoAtual ? `Nenhuma lousa em ${anoAtual}` : "Nenhuma lousa criada"}
+                </h3>
                 <p className="text-muted-foreground mb-4">
-                  Crie sua primeira lousa para começar a interagir com os alunos. Clique na aba "Nova Lousa" para começar.
+                  {apenasAnoAtual
+                    ? "Nenhuma lousa foi criada neste ano."
+                    : `Crie sua primeira lousa para começar a interagir com os alunos. Clique na aba "Nova Lousa" para começar.`}
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {lousas.map((lousa) => (
+              {lousasFiltradas.map((lousa) => (
                 <LousaCardPadrao
                   key={lousa.id}
                   lousa={lousa}
@@ -247,8 +256,8 @@ export default function LousaList() {
                   actions={{
                     onVerRespostas: (id) => navigate(`/admin/lousa/${id}/respostas`),
                     onEditar: (id) => {
-                      const lousa = lousas.find(l => l.id === id);
-                      if (lousa) handleEditLousa(lousa);
+                      const found = lousas.find(l => l.id === id);
+                      if (found) handleEditLousa(found);
                     },
                     onEncerrar: (id) => handleEndLousa(id),
                     onDeletar: (id) => handleDeleteLousa(id)

@@ -35,7 +35,6 @@ export default function ResumoTurma() {
       'Nome do Aluno',
       'Email do Aluno',
       'Frequência (%)',
-      'Participação (%)',
       'Redações',
       'Nota Média Redações',
       'Lousas',
@@ -43,7 +42,6 @@ export default function ResumoTurma() {
       'Simulados',
       'Nota Média Simulados',
       'Exercícios',
-      'Avaliação Presencial',
       'Nota Final'
     ];
 
@@ -51,7 +49,6 @@ export default function ResumoTurma() {
       aluno.aluno_nome,
       aluno.aluno_email,
       aluno.dados.frequencia.percentual_frequencia,
-      aluno.dados.participacao.percentual_participacao,
       aluno.dados.redacoes.total_redacoes,
       aluno.dados.redacoes.nota_media,
       aluno.dados.lousas?.total_lousas || 0,
@@ -59,7 +56,6 @@ export default function ResumoTurma() {
       aluno.dados.simulados.total_simulados,
       aluno.dados.simulados.nota_media,
       aluno.dados.exercicios.total_exercicios,
-      aluno.dados.avaliacao_presencial?.nota ?? '-',
       aluno.dados.media_final
     ]);
 
@@ -77,12 +73,10 @@ export default function ResumoTurma() {
   const formatPercentual = (valor: number) => `${valor.toFixed(1)}%`;
   const formatNota = (valor: number) => valor > 0 ? valor.toFixed(1) : '-';
 
-  const getStatusBadge = (percentual: number, tipo: 'frequencia' | 'participacao') => {
-    const limite = tipo === 'frequencia' ? 75 : 50; // 75% frequência, 50% participação
-    
-    if (percentual >= limite) {
+  const getStatusBadge = (percentual: number) => {
+    if (percentual >= 75) {
       return <Badge variant="default" className="bg-green-600">Bom</Badge>;
-    } else if (percentual >= limite * 0.7) {
+    } else if (percentual >= 52) {
       return <Badge variant="secondary" className="bg-yellow-600">Regular</Badge>;
     } else {
       return <Badge variant="destructive">Baixo</Badge>;
@@ -96,7 +90,6 @@ export default function ResumoTurma() {
     
     return {
       frequenciaMedia: dados.reduce((acc, d) => acc + d.frequencia.percentual_frequencia, 0) / dados.length,
-      participacaoMedia: dados.reduce((acc, d) => acc + d.participacao.percentual_participacao, 0) / dados.length,
       mediaFinalMedia: dados.reduce((acc, d) => acc + d.media_final, 0) / dados.length,
       totalRedacoes: dados.reduce((acc, d) => acc + d.redacoes.total_redacoes, 0),
       totalSimulados: dados.reduce((acc, d) => acc + d.simulados.total_simulados, 0),
@@ -110,7 +103,7 @@ export default function ResumoTurma() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Resumo da Turma</h1>
+          <h1 className="text-3xl font-bold">Desempenho Acadêmico dos Alunos</h1>
           <p className="text-muted-foreground">
             Visualize o desempenho dos alunos por etapa e exporte relatórios
           </p>
@@ -130,7 +123,6 @@ export default function ResumoTurma() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5" />
-            Filtros
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -189,14 +181,6 @@ export default function ResumoTurma() {
                 {formatPercentual(estatisticas.frequenciaMedia)}
               </div>
               <div className="text-sm text-muted-foreground">Frequência Média</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {formatPercentual(estatisticas.participacaoMedia)}
-              </div>
-              <div className="text-sm text-muted-foreground">Participação Média</div>
             </CardContent>
           </Card>
           <Card>
@@ -266,7 +250,7 @@ export default function ResumoTurma() {
                   <div className="space-y-2">
                     <div className="text-lg font-semibold">Processando dados da turma...</div>
                     <div className="text-sm text-muted-foreground">
-                      Calculando frequência, participação, redações e simulados
+                      Calculando frequência, redações e simulados
                     </div>
                     <div className="text-xs text-muted-foreground">
                       Isso pode levar alguns segundos devido ao volume de dados
@@ -300,12 +284,10 @@ export default function ResumoTurma() {
                     <TableRow>
                       <TableHead>Aluno</TableHead>
                       <TableHead className="text-center">Frequência</TableHead>
-                      <TableHead className="text-center">Participação</TableHead>
                       <TableHead className="text-center">Redações</TableHead>
                       <TableHead className="text-center">Lousa</TableHead>
                       <TableHead className="text-center">Simulados</TableHead>
                       <TableHead className="text-center">Exercícios</TableHead>
-                      <TableHead className="text-center">Aval. Presencial</TableHead>
                       <TableHead className="text-center">Nota Final</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -326,16 +308,7 @@ export default function ResumoTurma() {
                             <div className="text-xs text-muted-foreground">
                               {aluno.dados.frequencia.aulas_presentes}/{aluno.dados.frequencia.total_aulas}
                             </div>
-                            {getStatusBadge(aluno.dados.frequencia.percentual_frequencia, 'frequencia')}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="space-y-1">
-                            <div>{formatPercentual(aluno.dados.participacao.percentual_participacao)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {aluno.dados.participacao.aulas_participou}/{aluno.dados.participacao.total_aulas}
-                            </div>
-                            {getStatusBadge(aluno.dados.participacao.percentual_participacao, 'participacao')}
+                            {getStatusBadge(aluno.dados.frequencia.percentual_frequencia)}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -364,20 +337,6 @@ export default function ResumoTurma() {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="font-medium">{aluno.dados.exercicios.total_exercicios}</div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="space-y-1">
-                            {aluno.dados.avaliacao_presencial?.nota !== null && aluno.dados.avaliacao_presencial?.nota !== undefined ? (
-                              <>
-                                <div className="text-lg font-bold text-green-600">
-                                  {aluno.dados.avaliacao_presencial.nota.toFixed(1)}
-                                </div>
-                                <Badge variant="default" className="bg-green-600">Realizada</Badge>
-                              </>
-                            ) : (
-                              <div className="text-sm text-muted-foreground">—</div>
-                            )}
-                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-lg font-bold text-primary">

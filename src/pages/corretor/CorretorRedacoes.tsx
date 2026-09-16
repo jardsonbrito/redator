@@ -5,6 +5,7 @@ import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { ListaRedacoesCorretor } from "@/components/corretor/ListaRedacoesCorretor";
 import { FormularioCorrecaoCompletoComAnotacoes } from "@/components/corretor/FormularioCorrecaoCompletoComAnotacoes";
+import { FormularioCorrecaoProducaoGuiada } from "@/components/corretor/FormularioCorrecaoProducaoGuiada";
 import { RedacaoCorretor, useCorretorRedacoes } from "@/hooks/useCorretorRedacoes";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -49,20 +50,23 @@ const CorretorRedacoes = () => {
   return (
     <CorretorLayout>
       <div className="space-y-4 sm:space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 break-words">
-            Painel de Correção
-          </h1>
-        </div>
-
         {redacaoSelecionada ? (
-          <FormularioCorrecaoCompletoComAnotacoes
-            redacao={redacaoSelecionada}
-            corretorEmail={corretor.email}
-            onVoltar={handleVoltarLista}
-            onSucesso={handleSucessoCorrecao}
-            onRefreshList={refreshRedacoes}
-          />
+          redacaoSelecionada.exercicio_tipo === 'Produção Guiada' ? (
+            <FormularioCorrecaoProducaoGuiada
+              redacao={redacaoSelecionada}
+              corretorEmail={corretor.email}
+              onVoltar={handleVoltarLista}
+              onSucesso={handleSucessoCorrecao}
+            />
+          ) : (
+            <FormularioCorrecaoCompletoComAnotacoes
+              redacao={redacaoSelecionada}
+              corretorEmail={corretor.email}
+              onVoltar={handleVoltarLista}
+              onSucesso={handleSucessoCorrecao}
+              onRefreshList={refreshRedacoes}
+            />
+          )
         ) : (
           <ListaRedacoesCorretor
             corretorEmail={corretor.email}

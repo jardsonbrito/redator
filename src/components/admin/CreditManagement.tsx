@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Minus, Eye, Users, CreditCard, History } from 'lucide-react';
-import { TODAS_TURMAS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 interface Student {
   id: string;
@@ -33,11 +33,9 @@ interface CreditAudit {
   created_at: string;
 }
 
-// Turmas normalizadas
-const TURMAS = TODAS_TURMAS;
-
 export const CreditManagement = () => {
   const { toast } = useToast();
+  const { turmasDinamicas } = useTurmasAtivas();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedTurma, setSelectedTurma] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -339,9 +337,9 @@ export const CreditManagement = () => {
                   <SelectValue placeholder="Selecione uma turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TURMAS.map((turma) => (
-                    <SelectItem key={turma} value={turma}>
-                      {formatTurmaDisplay(turma)}
+                  {turmasDinamicas.map(({ valor, label }) => (
+                    <SelectItem key={valor} value={valor}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>

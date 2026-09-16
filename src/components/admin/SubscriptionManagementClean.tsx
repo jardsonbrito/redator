@@ -15,7 +15,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Crown, Edit2, History, Calendar, MoreVertical, Trash2, Settings2 } from 'lucide-react';
 import { formatDateSafe, isDateActiveOrFuture, formatDateTimeSafe } from '@/utils/dateUtils';
-import { TURMAS_VALIDAS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { STATUS_ESPECIAIS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
+import { usePlanos } from '@/hooks/usePlansAdmin';
 
 interface Student {
   id: string;
@@ -28,7 +30,7 @@ interface Student {
 interface Subscription {
   id: string;
   aluno_id: string;
-  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
+  plano: string;
   data_inscricao: string;
   data_validade: string;
   status: 'Ativo' | 'Vencido';
@@ -42,10 +44,13 @@ interface SubscriptionHistory {
   admin_responsavel: string;
 }
 
-const TURMAS = TURMAS_VALIDAS;
-const PLANOS = ['Liderança', 'Lapidação', 'Largada', 'Bolsista'] as const;
-
 export const SubscriptionManagementClean = () => {
+  const { turmasDinamicas } = useTurmasAtivas();
+  const { data: planosData = [] } = usePlanos();
+  const turmasFiltro = [
+    ...turmasDinamicas.map(t => ({ valor: t.valor, label: t.label })),
+    ...STATUS_ESPECIAIS.map(s => ({ valor: s, label: formatTurmaDisplay(s) })),
+  ];
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -58,10 +63,11 @@ export const SubscriptionManagementClean = () => {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Estados do formulário de edição
   const [editForm, setEditForm] = useState({
-    plano: '' as 'Liderança' | 'Lapidação' | 'Largada' | '',
+    plano: '' as string,
     data_inscricao: '2025-02-03',
     data_validade: '',
     reason: ''
@@ -70,18 +76,17 @@ export const SubscriptionManagementClean = () => {
   // Verificar parâmetro turma da URL ou sessionStorage
   useEffect(() => {
     const turmaParam = searchParams.get('turma');
-    if (turmaParam && TURMAS.includes(decodeURIComponent(turmaParam))) {
-      const turmaNormalizada = decodeURIComponent(turmaParam);
-      setSelectedTurma(turmaNormalizada);
-      sessionStorage.setItem('last_selected_turma', turmaNormalizada);
+    const decoded = turmaParam ? decodeURIComponent(turmaParam) : null;
+    if (decoded && turmasFiltro.some(t => t.valor === decoded)) {
+      setSelectedTurma(decoded);
+      sessionStorage.setItem('last_selected_turma', decoded);
     } else {
-      // Tentar recuperar última turma selecionada do sessionStorage
       const lastTurma = sessionStorage.getItem('last_selected_turma');
-      if (lastTurma && TURMAS.includes(lastTurma)) {
+      if (lastTurma && turmasFiltro.some(t => t.valor === lastTurma)) {
         setSelectedTurma(lastTurma);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, turmasFiltro.length]);
 
   useEffect(() => {
     if (selectedTurma) {
@@ -341,9 +346,9 @@ export const SubscriptionManagementClean = () => {
                   <SelectValue placeholder="Selecione uma turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TURMAS.map((turma) => (
-                    <SelectItem key={turma} value={turma}>
-                      {formatTurmaDisplay(turma)}
+                  {turmasFiltro.map(({ valor, label }) => (
+                    <SelectItem key={valor} value={valor}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -399,7 +404,10 @@ export const SubscriptionManagementClean = () => {
                         <TableCell>
                           <div className="flex gap-2">
                             {/* Menu de três pontos */}
-                            <DropdownMenu>
+                            <DropdownMenu
+                              open={openDropdownId === student.id}
+                              onOpenChange={(open) => setOpenDropdownId(open ? student.id : null)}
+                            >
                               <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="outline">
                                   <MoreVertical className="h-4 w-4" />
@@ -407,9 +415,9 @@ export const SubscriptionManagementClean = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    openEditDialog(student);
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    setTimeout(() => openEditDialog(student), 100);
                                   }}
                                 >
                                   <Edit2 className="h-4 w-4 mr-2" />
@@ -418,7 +426,10 @@ export const SubscriptionManagementClean = () => {
 
                                   {subscription && (
                                     <DropdownMenuItem
-                                      onClick={() => deleteSubscription(subscription.id)}
+                                      onClick={() => {
+                                        setOpenDropdownId(null);
+                                        deleteSubscription(subscription.id);
+                                      }}
                                       className="text-red-600"
                                     >
                                       <Trash2 className="h-4 w-4 mr-2" />
@@ -428,6 +439,7 @@ export const SubscriptionManagementClean = () => {
 
                                   <DropdownMenuItem
                                     onClick={() => {
+                                      setOpenDropdownId(null);
                                       navigate(`/admin/customize-student-plan/${student.id}`);
                                     }}
                                   >
@@ -436,11 +448,13 @@ export const SubscriptionManagementClean = () => {
                                   </DropdownMenuItem>
 
                                   <DropdownMenuItem
-                                    onSelect={(e) => {
-                                      e.preventDefault();
-                                      setSelectedStudent(student);
-                                      loadSubscriptionHistory(student.id);
-                                      setHistoryDialogOpen(true);
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      setTimeout(() => {
+                                        setSelectedStudent(student);
+                                        loadSubscriptionHistory(student.id);
+                                        setHistoryDialogOpen(true);
+                                      }, 100);
                                     }}
                                   >
                                     <History className="h-4 w-4 mr-2" />
@@ -481,7 +495,7 @@ export const SubscriptionManagementClean = () => {
                 <Label>Plano *</Label>
                 <Select
                   value={editForm.plano}
-                  onValueChange={(value: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista') =>
+                  onValueChange={(value: string) =>
                     setEditForm(prev => ({ ...prev, plano: value }))
                   }
                 >
@@ -489,9 +503,9 @@ export const SubscriptionManagementClean = () => {
                     <SelectValue placeholder="Selecione o plano" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PLANOS.map((plano) => (
-                      <SelectItem key={plano} value={plano}>
-                        {plano}
+                    {planosData.filter(p => p.ativo).map((p) => (
+                      <SelectItem key={p.nome} value={p.nome}>
+                        {p.nome_exibicao}
                       </SelectItem>
                     ))}
                   </SelectContent>

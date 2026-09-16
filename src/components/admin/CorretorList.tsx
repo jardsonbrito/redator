@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, UserCheck, UserX, MoreVertical, Eye, EyeOff } from "lucide-react";
+import { Edit, Trash2, UserCheck, UserX, MoreVertical, Eye, EyeOff, FileImage, FileText, Filter, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +16,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CorretorTurmasDialog } from "./CorretorTurmasDialog";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface Corretor {
   id: string;
@@ -30,6 +32,9 @@ interface Corretor {
   email: string;
   ativo: boolean;
   visivel_no_formulario: boolean;
+  turmas_autorizadas: string[] | null;
+  aceita_manuscrita: boolean;
+  aceita_digitada: boolean;
   criado_em: string;
   atualizado_em: string;
 }
@@ -42,6 +47,13 @@ interface CorretorListProps {
 export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   const [corretores, setCorretores] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [turmasDialogOpen, setTurmasDialogOpen] = useState(false);
+  const [corretorSelecionado, setCorretorSelecionado] = useState<Corretor | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [deleteTargetCorretor, setDeleteTargetCorretor] = useState<Corretor | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [turmaFiltro, setTurmaFiltro] = useState<string>("__all__");
+  const [turmasDisponiveis, setTurmasDisponiveis] = useState<string[]>([]);
   const { toast } = useToast();
 
   const fetchCorretores = async () => {
@@ -53,7 +65,15 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
 
       if (error) throw error;
 
-      setCorretores(data || []);
+      const lista = data || [];
+      setCorretores(lista);
+
+      // Coletar todas as turmas únicas de todos os corretores
+      const turmasSet = new Set<string>();
+      lista.forEach((c) => {
+        (c.turmas_autorizadas || []).forEach((t: string) => turmasSet.add(t));
+      });
+      setTurmasDisponiveis(Array.from(turmasSet).sort());
     } catch (error: any) {
       console.error("Erro ao buscar corretores:", error);
       toast({
@@ -69,6 +89,13 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   useEffect(() => {
     fetchCorretores();
   }, [refresh]);
+
+  const corretoresFiltrados = useMemo(() => {
+    if (turmaFiltro === "__all__") return corretores;
+    return corretores.filter((c) =>
+      Array.isArray(c.turmas_autorizadas) && c.turmas_autorizadas.includes(turmaFiltro)
+    );
+  }, [corretores, turmaFiltro]);
 
   const handleToggleStatus = async (corretor: Corretor) => {
     try {
@@ -96,27 +123,34 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   };
 
   const handleToggleVisibilityInForm = async (corretor: Corretor) => {
-    try {
-      const { error } = await supabase
-        .from("corretores")
-        .update({ visivel_no_formulario: !corretor.visivel_no_formulario })
-        .eq("id", corretor.id);
+    // Se está disponível, tornar indisponível diretamente
+    if (corretor.visivel_no_formulario) {
+      try {
+        const { error } = await supabase
+          .from("corretores")
+          .update({ visivel_no_formulario: false })
+          .eq("id", corretor.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Disponibilidade atualizada!",
-        description: `Corretor agora está ${corretor.visivel_no_formulario ? 'indisponível' : 'disponível'} para seleção.`,
-      });
+        toast({
+          title: "Disponibilidade atualizada!",
+          description: "Corretor agora está indisponível para seleção.",
+        });
 
-      fetchCorretores();
-    } catch (error: any) {
-      console.error("Erro ao alterar visibilidade:", error);
-      toast({
-        title: "Erro ao alterar disponibilidade",
-        description: error.message || "Ocorreu um erro inesperado.",
-        variant: "destructive"
-      });
+        fetchCorretores();
+      } catch (error: any) {
+        console.error("Erro ao alterar visibilidade:", error);
+        toast({
+          title: "Erro ao alterar disponibilidade",
+          description: error.message || "Ocorreu um erro inesperado.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Se está indisponível, abrir dialog para selecionar turmas
+      setCorretorSelecionado(corretor);
+      setTurmasDialogOpen(true);
     }
   };
 
@@ -152,22 +186,60 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Lista de Corretores ({corretores.length})</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardTitle>
+            Lista de Corretores ({corretoresFiltrados.length}
+            {turmaFiltro !== "__all__" && corretores.length !== corretoresFiltrados.length
+              ? ` de ${corretores.length}`
+              : ""})
+          </CardTitle>
+          {turmasDisponiveis.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Select value={turmaFiltro} onValueChange={setTurmaFiltro}>
+                <SelectTrigger className="w-52 h-8 text-xs">
+                  <SelectValue placeholder="Filtrar por turma..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todas as turmas</SelectItem>
+                  {turmasDisponiveis.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {formatTurmaDisplay(t)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {turmaFiltro !== "__all__" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setTurmaFiltro("__all__")}
+                  title="Limpar filtro"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        {corretores.length === 0 ? (
+        {corretoresFiltrados.length === 0 ? (
           <p className="text-muted-foreground text-center py-4">
-            Nenhum corretor cadastrado ainda.
+            {turmaFiltro !== "__all__"
+              ? "Nenhum corretor autorizado para esta turma."
+              : "Nenhum corretor cadastrado ainda."}
           </p>
         ) : (
           <div className="space-y-4">
-            {corretores.map((corretor) => (
+            {corretoresFiltrados.map((corretor) => (
               <div
                 key={corretor.id}
                 className="flex items-center justify-between p-4 border rounded-lg"
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold">{corretor.nome_completo}</h3>
                     <Badge variant={corretor.ativo ? "default" : "secondary"}>
                       {corretor.ativo ? "Ativo" : "Inativo"}
@@ -177,25 +249,67 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{corretor.email}</p>
+
+                  {/* Tipos de redação aceitos */}
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground">Aceita:</span>
+                    {corretor.aceita_manuscrita ? (
+                      <Badge variant="outline" className="text-xs gap-1 border-blue-300 text-blue-700">
+                        <FileImage className="w-3 h-3" />
+                        Manuscrita
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs gap-1 border-gray-200 text-gray-400 line-through">
+                        <FileImage className="w-3 h-3" />
+                        Manuscrita
+                      </Badge>
+                    )}
+                    {corretor.aceita_digitada ? (
+                      <Badge variant="outline" className="text-xs gap-1 border-purple-300 text-purple-700">
+                        <FileText className="w-3 h-3" />
+                        Digitada
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs gap-1 border-gray-200 text-gray-400 line-through">
+                        <FileText className="w-3 h-3" />
+                        Digitada
+                      </Badge>
+                    )}
+                  </div>
+
+                  {corretor.visivel_no_formulario && corretor.turmas_autorizadas && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Turmas: {corretor.turmas_autorizadas.map(t => formatTurmaDisplay(t)).join(", ")}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Cadastrado em: {new Date(corretor.criado_em).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 
                 <div className="flex gap-2">
-                  <DropdownMenu>
+                  <DropdownMenu
+                    open={openDropdownId === corretor.id}
+                    onOpenChange={(open) => setOpenDropdownId(open ? corretor.id : null)}
+                  >
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem onClick={() => onEdit?.(corretor)}>
+                      <DropdownMenuItem onClick={() => {
+                        setOpenDropdownId(null);
+                        onEdit?.(corretor);
+                      }}>
                         <Edit className="w-4 h-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
-                      
-                      <DropdownMenuItem onClick={() => handleToggleStatus(corretor)}>
+
+                      <DropdownMenuItem onClick={() => {
+                        setOpenDropdownId(null);
+                        handleToggleStatus(corretor);
+                      }}>
                         {corretor.ativo ? (
                           <>
                             <UserX className="w-4 h-4 mr-2" />
@@ -209,7 +323,10 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                         )}
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem onClick={() => handleToggleVisibilityInForm(corretor)}>
+                      <DropdownMenuItem onClick={() => {
+                        setOpenDropdownId(null);
+                        handleToggleVisibilityInForm(corretor);
+                      }}>
                         {corretor.visivel_no_formulario ? (
                           <>
                             <EyeOff className="w-4 h-4 mr-2" />
@@ -223,32 +340,17 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                         )}
                       </DropdownMenuItem>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem 
-                            onSelect={(e) => e.preventDefault()}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja excluir o corretor "{corretor.nome_completo}"? 
-                              Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(corretor)}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          setDeleteTargetCorretor(corretor);
+                          setTimeout(() => setShowDeleteDialog(true), 100);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -257,6 +359,42 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
           </div>
         )}
       </CardContent>
+
+      {corretorSelecionado && (
+        <CorretorTurmasDialog
+          open={turmasDialogOpen}
+          onOpenChange={(open) => {
+            setTurmasDialogOpen(open);
+            if (!open) {
+              setTimeout(() => {
+                setCorretorSelecionado(null);
+              }, 200);
+            }
+          }}
+          corretor={corretorSelecionado}
+          onSuccess={fetchCorretores}
+        />
+      )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o corretor "{deleteTargetCorretor?.nome_completo}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (deleteTargetCorretor) handleDelete(deleteTargetCorretor);
+            }}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

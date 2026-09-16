@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { isDateActiveOrFuture, getDaysUntilExpiration } from '@/utils/dateUtils';
 
 interface SubscriptionInfo {
-  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista' | null;
+  plano: string | null;
   data_inscricao: string | null;
   data_validade: string | null;
   status: 'Ativo' | 'Vencido' | 'Sem Assinatura';

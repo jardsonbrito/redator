@@ -23,18 +23,45 @@ export const useAdminConfig = () => {
 
   const getCurrentAdmin = async (): Promise<AdminUser | null> => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user?.email) return null;
+      // Admin usa sessão própria no localStorage; Supabase Auth pode estar sem sessão após reload
+      let adminEmail: string | null = null;
+      let localSession: { id: string; email: string; nome_completo: string } | null = null;
+
+      const saved = localStorage.getItem('admin_session');
+      if (saved) {
+        try {
+          localSession = JSON.parse(saved);
+          adminEmail = localSession?.email ?? null;
+        } catch { /* ignorar parse error */ }
+      }
+
+      // Fallback: Supabase Auth (quando há sessão nativa ativa)
+      if (!adminEmail) {
+        const { data: authUser } = await supabase.auth.getUser();
+        adminEmail = authUser.user?.email ?? null;
+      }
+
+      if (!adminEmail) return null;
 
       const { data, error } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', user.user.email)
+        .eq('email', adminEmail)
         .eq('ativo', true)
         .single();
 
       if (error) {
         console.error('Erro ao buscar admin atual:', error);
+        // RLS pode bloquear sem sessão Auth ativa — montar dados mínimos do localStorage
+        if (localSession) {
+          return {
+            id: localSession.id,
+            email: localSession.email,
+            nome_completo: localSession.nome_completo,
+            ativo: true,
+            criado_em: new Date().toISOString(),
+          };
+        }
         return null;
       }
 

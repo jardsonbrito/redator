@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { computeSimuladoStatus } from "@/utils/simuladoStatus";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
@@ -12,7 +13,13 @@ import {
   Download,
   Settings,
   ShieldCheck,
-  Mail
+  Mail,
+  StickyNote,
+  Map,
+  Bot,
+  Layers,
+  MessageCircle,
+  ExternalLink
 } from "lucide-react";
 import {
   BookOpen as PhosphorBookOpen,
@@ -41,18 +48,20 @@ import {
   File as PhosphorFile,
   GraduationCap as PhosphorGraduationCap,
   NotebookPen as PhosphorNotebookPen,
-  MessageSquare as PhosphorMessageSquare,
   Users as PhosphorUsers,
   UserCheck as PhosphorUserCheck,
   Presentation as PhosphorPresentation,
   Gamepad2 as PhosphorGamepad2,
   Award as PhosphorAward,
-  Calendar as PhosphorCalendar
+  Calendar as PhosphorCalendar,
+  ListChecks,
+  Article
 } from "phosphor-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DetailedDashboardCard } from "@/components/admin/DetailedDashboardCard";
 import { getExerciseAvailability } from "@/utils/exerciseUtils";
+import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 
 // Import existing admin components with correct named imports
 import { TemaForm } from "@/components/admin/TemaForm";
@@ -83,29 +92,32 @@ import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
 import { MuralFormModern as AvisoForm } from "@/components/admin/MuralFormModern";
 import { AvisoList } from "@/components/admin/AvisoList";
 
+// Import calendário components
+import { CalendarioAdmin } from "./admin/CalendarioAdmin";
+
 // Import inbox components
 import { InboxForm } from "@/components/admin/InboxForm";
 
 // Import radar components
 import { RadarUpload } from "@/components/admin/RadarUpload";
 import { RadarList } from "@/components/admin/RadarList";
-import { RadarRedacoes } from "@/components/admin/RadarRedacoes";
 import { MonitoramentoPage } from "@/components/admin/MonitoramentoPage";
 import { AulaVirtualForm } from "@/components/admin/AulaVirtualForm";
 import { AulaVirtualList } from "@/components/admin/AulaVirtualList";
 import { AulaVirtualEditForm } from "@/components/admin/AulaVirtualEditForm";
 import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
+
 // Import aluno components
 import { AlunoFormModern } from "@/components/admin/AlunoFormModern";
+import { AlunosHub } from "@/components/admin/hub/AlunosHub";
+import { TurmasAlunosManager } from "@/components/admin/TurmasAlunosManager";
 
 // Import corretor components
-import { CorretorForm } from "@/components/admin/CorretorForm";
-import { CorretorList } from "@/components/admin/CorretorList";
+import { CorretoresHub } from "@/components/admin/hub/CorretoresHub";
 
 // Import professor components
-import { ProfessorForm } from "@/components/admin/ProfessorForm";
-import { ProfessorList } from "@/components/admin/ProfessorList";
+import { ProfessoresHub } from "@/components/admin/hub/ProfessoresHub";
 
 // Import lousa components
 import LousaForm from "@/components/admin/LousaForm";
@@ -129,17 +141,56 @@ import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
 // Import TOP 5 component
 import { Top5Widget } from "@/components/shared/Top5Widget";
 
+// Import métricas de temas
+import { TemasMetricsPanel } from "@/components/admin/TemasMetricsPanel";
+
+// Import componentes Jarvis
+import { JarvisHub } from "@/components/admin/hub/JarvisHub";
+
+// Import microaprendizagem admin
+import { MicroTopicosAdmin } from "@/components/microaprendizagem/admin/MicroTopicosAdmin";
+
+// Import interacoes admin
+import { InteracoesAdmin } from "@/components/interacoes/admin/InteracoesAdmin";
+
 // Import diário components
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
 import RegistroAulas from "@/pages/admin/RegistroAulas";
 import ResumoTurma from "@/pages/admin/ResumoTurma";
 import AvaliacaoPresencial from "@/pages/admin/AvaliacaoPresencial";
+import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
+import { ProfessorasIcon } from "@/components/icons/ProfessorasIcon";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminProfileDrawer } from "@/components/admin/AdminProfileDrawer";
+import { PriorityCards } from "@/components/admin/dashboard/PriorityCards";
+import { WorkCenter } from "@/components/admin/dashboard/WorkCenter";
+import { RecentActivity } from "@/components/admin/dashboard/RecentActivity";
+import { ModuleGroups } from "@/components/admin/dashboard/ModuleGroups";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeView, setActiveView] = useState("dashboard");
+
+  // Views que navegam para rotas externas ao Admin — chamadas via useEffect para
+  // evitar navigate() durante render (causa tela branca no React 18)
+  const EXTERNAL_VIEWS: Record<string, string> = {
+    'anotacoes':          '/admin/anotacoes',
+    'ajuda-rapida':       '/admin/ajuda-rapida',
+    'repertorio-orientado': '/repertorio-orientado',
+    'laboratorio':        '/admin/laboratorio',
+    'guia-tematico':      '/admin/guia-tematico',
+    'plano-estudo':       '/admin/plano-estudo',
+    'redacoes-comentadas':'/admin/redacoes-comentadas',
+    'exportacao':         '/admin/exportacao',
+    'gamificacao':        '/admin/gamificacao',
+    'processo-seletivo':  '/admin/processo-seletivo',
+  };
+  const [jarvisTab, setJarvisTab] = useState("tutor");
+  const [showProfile, setShowProfile] = useState(false);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("visao-geral");
   const [refreshAvisos, setRefreshAvisos] = useState(false);
   const [showAvisosList, setShowAvisosList] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
@@ -148,17 +199,55 @@ const Admin = () => {
   const [alunoEditando, setAlunoEditando] = useState(null);
   const [refreshCorretores, setRefreshCorretores] = useState(false);
   const [corretorEditando, setCorretorEditando] = useState(null);
-  const [refreshProfessores, setRefreshProfessores] = useState(false);
-  const [professorEditando, setProfessorEditando] = useState(null);
-  
   // Hook para gerenciar alunos pendentes
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
+
+  // Atalho para painel do corretor (quando o admin também tem conta de corretor)
+  const [meuCorretor, setMeuCorretor] = useState<{ id: string; nome_completo: string; email: string } | null>(null);
+  const [mensagensCorretorNaoLidas, setMensagensCorretorNaoLidas] = useState(0);
+
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const fetchCorretorData = async () => {
+      const { data: corretorData } = await supabase
+        .from('corretores')
+        .select('id, nome_completo, email')
+        .eq('acesso_admin', true)
+        .eq('ativo', true)
+        .maybeSingle();
+
+      if (!corretorData) return;
+      setMeuCorretor(corretorData);
+
+      const { data: count } = await supabase.rpc('contar_mensagens_nao_lidas_corretor', {
+        corretor_email: corretorData.email,
+      });
+      setMensagensCorretorNaoLidas(count || 0);
+    };
+
+    fetchCorretorData();
+    const interval = setInterval(fetchCorretorData, 30000);
+    return () => clearInterval(interval);
+  }, [user?.email]);
+
+  const handleAcessarPainelCorretor = () => {
+    if (!meuCorretor) return;
+    localStorage.setItem('corretor_session', JSON.stringify({
+      id: meuCorretor.id,
+      nome_completo: meuCorretor.nome_completo,
+      email: meuCorretor.email,
+      ativo: true,
+    }));
+    // Full reload necessário para que CorretorAuthProvider releia o localStorage
+    window.location.href = '/corretor';
+  };
   const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
 
   // Função para carregar dados dos cards
   const loadCardData = async () => {
     try {
-      const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
+      const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline"; chips?: string[] }> = {};
       const hoje = new Date();
 
       // Temas - quantos publicados e quantos agendados
@@ -168,11 +257,29 @@ const Admin = () => {
 
       const temasPublicados = temas?.filter(t => !t.scheduled_publish_at || new Date(t.scheduled_publish_at) <= hoje).length || 0;
       const temasAgendados = temas?.filter(t => t.scheduled_publish_at && new Date(t.scheduled_publish_at) > hoje).length || 0;
+      const temasRascunho = temas?.filter(t => {
+        const scheduled = t.scheduled_publish_at ? new Date(t.scheduled_publish_at) : null;
+        return t.status === 'rascunho' && (!scheduled || scheduled <= hoje);
+      }).length || 0;
+      const temasSemCapa = temas?.filter(t => !t.cover_file_path && !t.cover_url && !t.imagem_texto_4_url).length || 0;
 
+      // Solicitações de tema por corretores (últimos 30 dias)
+      const trintaDiasAtras = new Date();
+      trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+      const { count: solicitacoesCount } = await supabase
+        .from('solicitacoes_tema')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', trintaDiasAtras.toISOString());
+
+      const temasChips: string[] = [];
+      if (temasAgendados > 0) temasChips.push(`${temasAgendados} agendados`);
+      if (temasRascunho > 0) temasChips.push(`${temasRascunho} rascunhos`);
+      if (temasSemCapa > 0) temasChips.push(`${temasSemCapa} sem capa ⚠️`);
+      if ((solicitacoesCount ?? 0) > 0) temasChips.push(`${solicitacoesCount} solicitação${solicitacoesCount === 1 ? '' : 'ões'} de corretor 🔔`);
 
       data.temas = {
         info: `${temasPublicados} publicados`,
-        badge: temasAgendados > 0 ? `${temasAgendados} agendados` : undefined
+        chips: temasChips.length > 0 ? temasChips : undefined,
       };
 
       // Redações Exemplares - quantas publicadas e quantas agendadas
@@ -188,57 +295,34 @@ const Admin = () => {
         badge: redacoesAgendadas > 0 ? `${redacoesAgendadas} agendadas` : undefined
       };
 
-      // Redações Enviadas - testar query mais ampla primeiro
-      const { data: todasRedacoes, error: todasError } = await supabase
+      // Redações Enviadas - regulares não corrigidas (status corrigida=false, exceto devolvida=retornou ao aluno)
+      const { data: redacoesEnviadas } = await supabase
         .from('redacoes_enviadas')
-        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
-        .order('data_envio', { ascending: false })
-        .limit(10);
+        .select('id, corretor_id_1')
+        .is('deleted_at', null)
+        .eq('corrigida', false)
+        .neq('status', 'devolvida');
 
-
-      // Buscar especificamente as 3 redações mencionadas
-      const { data: redacoesEspecificas, error: especificasError } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida, data_envio')
-        .or('nome_aluno.ilike.%lara%,nome_aluno.ilike.%kauani%,nome_aluno.ilike.%anne%,nome_aluno.ilike.%isabele%,nome_aluno.ilike.%renam%');
-
-
-      // Query original com log detalhado
-      const { data: redacoesEnviadas, error: redacoesError } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
+      // Redações de simulado não corrigidas
+      const { count: countSimuladosPendentes } = await supabase
+        .from('redacoes_simulado')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
         .eq('corrigida', false);
 
-      console.log('🔍 Query redações NÃO corrigidas (todas):', {
-        total: redacoesEnviadas?.length,
-        redacoesEnviadas,
-        redacoesError
-      });
+      const aguardando = (redacoesEnviadas?.length || 0) + (countSimuladosPendentes || 0);
 
-      // Filtrar apenas aguardando e em_correcao
-      const redacoesAguardando = redacoesEnviadas?.filter(r =>
-        r.status === 'aguardando' || r.status === 'em_correcao'
-      ) || [];
+      // Agrupar por corretor (apenas redações regulares atribuídas)
+      const corretoresIds = [...new Set(redacoesEnviadas?.map(r => r.corretor_id_1).filter(Boolean) || [])];
+      const { data: corretoresRedacoes } = corretoresIds.length > 0
+        ? await supabase.from('corretores').select('id, nome').in('id', corretoresIds)
+        : { data: [] };
 
-
-      const aguardando = redacoesAguardando.length;
-
-      // Buscar nomes dos corretores separadamente para evitar problemas de join
-      const corretoresIds = [...new Set(redacoesAguardando.map(r => r.corretor_id_1).filter(Boolean))];
-      const { data: corretoresRedacoes } = await supabase
-        .from('corretores')
-        .select('id, nome')
-        .in('id', corretoresIds);
-
-      // Agrupar apenas por corretores ATRIBUÍDOS (ignorar não atribuídas)
-      const redacoesAtribuidas = redacoesAguardando.filter(r => r.corretor_id_1);
-      const porCorretor = redacoesAtribuidas.reduce((acc: Record<string, number>, r: any) => {
+      const porCorretor = (redacoesEnviadas || []).filter(r => r.corretor_id_1).reduce((acc: Record<string, number>, r: any) => {
         const corretor = corretoresRedacoes?.find(c => c.id === r.corretor_id_1);
-        if (corretor?.nome) {
-          acc[corretor.nome] = (acc[corretor.nome] || 0) + 1;
-        }
+        if (corretor?.nome) acc[corretor.nome] = (acc[corretor.nome] || 0) + 1;
         return acc;
-      }, {}) || {};
+      }, {});
 
       const corretorInfo = Object.keys(porCorretor).length > 0
         ? Object.entries(porCorretor).map(([nome, count]) => `${nome}: ${count}`).join(', ')
@@ -246,7 +330,7 @@ const Admin = () => {
 
       data["redacoes-enviadas"] = {
         info: `${aguardando} aguardando`,
-        badge: corretorInfo, // Só mostra se houver redações atribuídas a corretores
+        badge: corretorInfo,
         badgeVariant: aguardando > 0 ? "destructive" : undefined
       };
 
@@ -262,9 +346,19 @@ const Admin = () => {
         return availability.status === 'disponivel';
       }).length || 0;
 
+      // Contar submissões aguardando correção (inclui reenvios após devolução)
+      const { count: aguardandoCorrecao } = await supabase
+        .from('redacoes_exercicio')
+        .select('*', { count: 'exact', head: true })
+        .in('status_corretor_1', ['pendente', 'em_correcao', 'reenviado'])
+        .eq('corrigida', false);
+
+      const totalAguardando = aguardandoCorrecao ?? 0;
+      const pluralDisp = exerciciosDisponiveis === 1 ? 'disponível' : 'disponíveis';
+
       data.exercicios = {
-        info: `${exerciciosDisponiveis} disponíveis`,
-        badge: undefined
+        info: `${totalAguardando} aguardando correção`,
+        badge: `${exerciciosDisponiveis} ${pluralDisp}`
       };
 
       // Simulados - quantos agendados (futuros baseado na data_inicio)
@@ -273,11 +367,9 @@ const Admin = () => {
         .select('*')
         .eq('ativo', true);
 
-      const simuladosAgendados = simulados?.filter(s => {
-        if (!s.data_inicio) return false;
-        const dataInicio = new Date(s.data_inicio);
-        return dataInicio > hoje;
-      }).length || 0;
+      const simuladosAgendados = simulados?.filter(s =>
+        computeSimuladoStatus(s) === 'agendado'
+      ).length || 0;
 
       data.simulados = {
         info: `${simuladosAgendados} agendados`,
@@ -307,9 +399,19 @@ const Admin = () => {
         return true;
       }).length || 0;
 
+      // Lousa - respostas aguardando correção
+      const { count: lousaRespostasPendentes } = await supabase
+        .from('lousa_resposta')
+        .select('*', { count: 'exact', head: true })
+        .is('nota', null)
+        .not('conteudo', 'is', null);
+
+      const totalLousaPendentes = lousaRespostasPendentes ?? 0;
+      const pluralLousaDisp = lousasDisponiveis === 1 ? 'disponível' : 'disponíveis';
+
       data.lousa = {
-        info: `${lousasDisponiveis} disponíveis`,
-        badge: undefined
+        info: `${totalLousaPendentes} aguardando correção`,
+        badge: `${lousasDisponiveis} ${pluralLousaDisp}`
       };
 
       // Aula ao Vivo (salas-virtuais) - quantas agendadas
@@ -317,8 +419,9 @@ const Admin = () => {
         .from('aulas_virtuais')
         .select('*');
 
+      const hojeDataStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
       const aulasAgendadas = aulasVirtuais?.filter(a => {
-        return a.data_aula && new Date(a.data_aula) > hoje;
+        return a.data_aula && a.data_aula >= hojeDataStr;
       }).length || 0;
 
       data["salas-virtuais"] = {
@@ -402,17 +505,30 @@ const Admin = () => {
         badge: statusBadge
       };
 
-      // Alunos
+      // Alunos - buscar com status de plano
       const { data: alunos } = await supabase
         .from('profiles')
-        .select('ativo')
+        .select('id, ativo')
         .eq('user_type', 'aluno');
 
-      const alunosAtivos = alunos?.filter(a => a.ativo).length || 0;
+      // Buscar assinaturas ativas (data_validade >= hoje)
+      const hojeStr = new Date().toISOString().split('T')[0];
+      const { data: assinaturasCard } = await supabase
+        .from('assinaturas')
+        .select('aluno_id')
+        .gte('data_validade', hojeStr);
+
+      // Criar Set de alunos com plano ativo
+      const alunosComPlanoSet = new Set(assinaturasCard?.map(a => a.aluno_id) || []);
+
+      // Categorizar alunos
       const alunosInativos = alunos?.filter(a => !a.ativo).length || 0;
+      const alunosAtivosComPlano = alunos?.filter(a => a.ativo && alunosComPlanoSet.has(a.id)).length || 0;
+      const alunosSemPlano = alunos?.filter(a => a.ativo && !alunosComPlanoSet.has(a.id)).length || 0;
+
       data.alunos = {
-        info: `${alunosAtivos} ativos`,
-        badge: alunosInativos > 0 ? `${alunosInativos} inativos` : undefined,
+        info: `${alunosAtivosComPlano} com plano`,
+        badge: `${alunosSemPlano} sem plano · ${alunosInativos} inativos`,
         badgeVariant: "outline"
       };
 
@@ -435,11 +551,12 @@ const Admin = () => {
         badge: undefined
       };
 
-      // Ajuda Rápida - mensagens pendentes de resposta
+      // Ajuda Rápida - mensagens de alunos não lidas (aguardando resposta)
       const { data: mensagensPendentes } = await supabase
-        .from('ajuda_rapida')
-        .select('id, respondida')
-        .eq('respondida', false);
+        .from('ajuda_rapida_mensagens')
+        .select('id, autor, lida')
+        .eq('autor', 'aluno')
+        .eq('lida', false);
 
       const totalPendentes = mensagensPendentes?.length || 0;
 
@@ -463,6 +580,174 @@ const Admin = () => {
         badge: undefined
       };
 
+      // Processo Seletivo - alunos elegíveis e que já participaram
+      const { data: profilesProcesso } = await supabase
+        .from('profiles')
+        .select('id, email, turma, participou_processo_seletivo')
+        .eq('user_type', 'aluno')
+        .neq('turma', 'VISITANTE');
+
+      // Buscar alunos com assinatura ativa
+      const { data: assinaturasAtivas } = await supabase
+        .from('assinaturas')
+        .select('aluno_id, data_validade')
+        .gte('data_validade', hoje.toISOString().split('T')[0]);
+
+      const alunosComPlanoAtivo = new Set(assinaturasAtivas?.map(a => a.aluno_id) || []);
+
+      // Alunos elegíveis: sem plano ativo e não participaram
+      const alunosElegiveis = profilesProcesso?.filter(p =>
+        !alunosComPlanoAtivo.has(p.id) && !p.participou_processo_seletivo
+      ).length || 0;
+
+      // Alunos que já participaram
+      const alunosParticiparam = profilesProcesso?.filter(p =>
+        p.participou_processo_seletivo === true
+      ).length || 0;
+
+      data["processo-seletivo"] = {
+        info: `${alunosElegiveis} ${alunosElegiveis === 1 ? 'aluno elegível' : 'alunos elegíveis'}`,
+        badge: alunosParticiparam > 0 ? `${alunosParticiparam} já participaram` : undefined
+      };
+
+      // Anotações - buscar quantidade e cores (apenas do admin logado)
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', (user?.email || '').toLowerCase())
+        .single();
+
+      const { data: anotacoes } = adminData
+        ? await supabase
+            .from('admin_notes')
+            .select('cor, arquivado')
+            .eq('admin_id', adminData.id)
+        : { data: [] };
+
+      const anotacoesAtivas = anotacoes?.filter(a => !a.arquivado) || [];
+      const totalAnotacoes = anotacoesAtivas.length;
+
+      // Agrupar por cor e contar
+      const coresCounts: Record<string, number> = {};
+      anotacoesAtivas.forEach(nota => {
+        const cor = nota.cor || 'default';
+        coresCounts[cor] = (coresCounts[cor] || 0) + 1;
+      });
+
+      // Mapear cores para nomes em português (singular e plural)
+      const coresNomes: Record<string, { singular: string; plural: string }> = {
+        default: { singular: 'padrão', plural: 'padrão' },
+        yellow: { singular: 'amarela', plural: 'amarelas' },
+        blue: { singular: 'azul', plural: 'azuis' },
+        green: { singular: 'verde', plural: 'verdes' },
+        red: { singular: 'vermelha', plural: 'vermelhas' },
+        purple: { singular: 'roxa', plural: 'roxas' },
+        pink: { singular: 'rosa', plural: 'rosas' }
+      };
+
+      // Criar texto do badge com as cores
+      const coresBadge = Object.entries(coresCounts)
+        .map(([cor, count]) => {
+          const corInfo = coresNomes[cor] || { singular: cor, plural: cor };
+          const corNome = count > 1 ? corInfo.plural : corInfo.singular;
+          return `${count} ${corNome}`;
+        })
+        .join(' • ');
+
+      data.anotacoes = {
+        info: `${totalAnotacoes} ${totalAnotacoes === 1 ? 'anotação' : 'anotações'}`,
+        badge: coresBadge || undefined
+      };
+
+      // Laboratório de Repertório - contar aulas ativas por tipo_paragrafo
+      const { data: labAulas } = await supabase
+        .from('repertorio_laboratorio')
+        .select('tipo_paragrafo')
+        .eq('ativo', true);
+
+      const labTotal = labAulas?.length || 0;
+      const labIntro = labAulas?.filter(a => a.tipo_paragrafo === 'introducao').length || 0;
+      const labArg = labAulas?.filter(a => a.tipo_paragrafo === 'argumentativo').length || 0;
+      const labConc = labAulas?.filter(a => a.tipo_paragrafo === 'conclusao').length || 0;
+
+      data.laboratorio = {
+        info: `${labTotal} ${labTotal === 1 ? 'aula publicada' : 'aulas publicadas'}`,
+        badge: labTotal > 0 ? `${labIntro} intro · ${labArg} arg · ${labConc} conc` : undefined
+      };
+
+      // Guia Temático - contar guias ativos e total
+      const { data: guiasAtivos } = await (supabase as any)
+        .from('guias_tematicos')
+        .select('id')
+        .eq('ativo', true);
+
+      const { data: guiasTodos } = await (supabase as any)
+        .from('guias_tematicos')
+        .select('id');
+
+      const guiasAtivoCount = guiasAtivos?.length || 0;
+      const guiasTodosCount = guiasTodos?.length || 0;
+      const guiasInativoCount = guiasTodosCount - guiasAtivoCount;
+
+      data['guia-tematico'] = {
+        info: `${guiasAtivoCount} ${guiasAtivoCount === 1 ? 'guia ativo' : 'guias ativos'}`,
+        badge: guiasInativoCount > 0 ? `${guiasInativoCount} inativo${guiasInativoCount > 1 ? 's' : ''}` : undefined
+      };
+
+      // Jarvis - estatísticas de uso
+      const [
+        { data: jarvisInteractions },
+        { data: jarvisSessoes },
+        { data: jarvisConfigs },
+      ] = await Promise.all([
+        supabase.from('jarvis_interactions').select('id, created_at'),
+        (supabase as any).from('jarvis_sessoes_sintetizadas').select('id, created_at'),
+        supabase.from('jarvis_config').select('id, ativo, versao'),
+      ]);
+
+      const umDiaAtras = new Date(hoje.getTime() - 24 * 60 * 60 * 1000);
+
+      const totalInteracoes = (jarvisInteractions?.length || 0) + (jarvisSessoes?.length || 0);
+      const configAtiva = jarvisConfigs?.find((c: any) => c.ativo);
+      const totalConfigs = jarvisConfigs?.length || 0;
+
+      const interacoesRecentes =
+        (jarvisInteractions?.filter(i => new Date(i.created_at) >= umDiaAtras).length || 0) +
+        ((jarvisSessoes as any[])?.filter((s: any) => new Date(s.created_at) >= umDiaAtras).length || 0);
+
+      // Jarvis Corretor (professores) — versões principais
+      const { data: jarvisCorrecoes } = await supabase
+        .from('jarvis_correcoes')
+        .select('id, criado_em')
+        .eq('is_versao_principal', true);
+
+      const totalCorrecoes = jarvisCorrecoes?.length || 0;
+      const correcoesHoje = jarvisCorrecoes?.filter(c =>
+        new Date(c.criado_em) >= umDiaAtras
+      ).length || 0;
+
+      data.jarvis = {
+        info: `${totalInteracoes} ${totalInteracoes === 1 ? 'análise' : 'análises'} realizadas`,
+        badge: configAtiva
+          ? `v${configAtiva.versao} ativa • ${interacoesRecentes} hoje • ${totalConfigs} configs`
+          : `${totalConfigs} configurações`,
+        secondInfo: `${totalCorrecoes} ${totalCorrecoes === 1 ? 'correção' : 'correções'}`,
+        secondNote: `${correcoesHoje} hoje`,
+      };
+
+      // Redações Comentadas
+      const { data: redacoesComentadas } = await supabase
+        .from('redacoes_comentadas')
+        .select('id, ativo');
+
+      const rcPublicadas = redacoesComentadas?.filter(r => r.ativo).length || 0;
+      const rcRascunhos = redacoesComentadas?.filter(r => !r.ativo).length || 0;
+
+      data['redacoes-comentadas'] = {
+        info: `${rcPublicadas} ${rcPublicadas === 1 ? 'publicada' : 'publicadas'}`,
+        badge: rcRascunhos > 0 ? `${rcRascunhos} rascunho${rcRascunhos > 1 ? 's' : ''}` : undefined
+      };
+
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
         "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
@@ -482,8 +767,8 @@ const Admin = () => {
       // Em caso de erro, retornar dados padrão
       const defaultData: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
       const allCards = [
-        "temas", "redacoes", "redacoes-enviadas", "diario", "exercicios", "simulados",
-        "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos", "inbox",
+        "temas", "redacoes", "redacoes-enviadas", "redacoes-comentadas", "diario", "exercicios", "simulados",
+        "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos", "calendario", "inbox",
         "radar", "gamificacao", "ajuda-rapida", "alunos", "corretores",
         "professores", "administradores", "exportacao", "configuracoes", "top5"
       ];
@@ -515,9 +800,20 @@ const Admin = () => {
 
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
+    // Eixos principais do sistema
+    { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
+    { id: "professores", label: "Professores", icon: GearSix, iconColor: "#9C27B0" },
+
+    // PRIMEIRO: Jarvis - Assistente Pedagógico
+    { id: "jarvis", label: "Jarvis", icon: Bot, iconColor: "#7C3AED", chips: ["Créditos", "Modos", "Parâmetros", "Tutoria", "Histórico"] },
+
+    // Destaque: Processo Seletivo
+    { id: "processo-seletivo", label: "Processo Seletivo", icon: ListChecks, iconColor: "#8B5CF6" },
+
     // Linha 1: Conteúdo Pedagógico Principal
     { id: "temas", label: "Temas", icon: PhosphorBookOpen, iconColor: "#FF6B35" },
     { id: "redacoes", label: "Redações Exemplares", icon: Star, iconColor: "#FFD700" },
+    { id: "redacoes-comentadas", label: "Redações Comentadas", icon: ChatCircle, iconColor: "#7C3AED" },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: PaperPlaneTilt, iconColor: "#4CAF50" },
 
     // Linha 2: Atividades e Avaliações
@@ -533,20 +829,26 @@ const Admin = () => {
     // Linha 4: Recursos e Comunicação
     { id: "videos", label: "Videoteca", icon: VideoCamera, iconColor: "#FF4444" },
     { id: "biblioteca", label: "Biblioteca", icon: Books, iconColor: "#607D8B" },
+    { id: "calendario", label: "Calendário de Atividades", icon: PhosphorCalendar, iconColor: "#662F96" },
     { id: "avisos", label: "Mural de Avisos", icon: PushPin, iconColor: "#FFC107" },
 
     // Linha 5: Comunicação e Notificações
+    { id: "anotacoes", label: "Anotações", icon: StickyNote, iconColor: "#10B981" },
     { id: "inbox", label: "Inbox", icon: Mail, iconColor: "#FF9800" },
 
     // Linha 6: Análise e Engajamento
     { id: "radar", label: "Radar", icon: ChartPieSlice, iconColor: "#3F51B5" },
     { id: "gamificacao", label: "Gamificação", icon: Trophy, iconColor: "#FFD700" },
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
+    { id: "repertorio-orientado", label: "Repertório Orientado", icon: Article, iconColor: "#8B5CF6" },
+    { id: "laboratorio", label: "Laboratório", icon: LaboratorioIcon, iconColor: "#7C3AED" },
+    { id: "microaprendizagem", label: "Microaprendizagem", icon: Layers, iconColor: "#8B5CF6" },
+    { id: "interatividade", label: "Interatividade", icon: ListChecks, iconColor: "#6D28D9" },
+    { id: "guia-tematico", label: "Guia Temático", icon: Map, iconColor: "#7C3AED" },
+    { id: "plano-estudo", label: "Plano de Estudo", icon: ListChecks, iconColor: "#3F0776" },
 
     // Linha 7: Gestão de Usuários
-    { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
     { id: "corretores", label: "Corretores", icon: MagnifyingGlass, iconColor: "#FF5722" },
-    { id: "professores", label: "Professores", icon: GearSix, iconColor: "#9C27B0" },
 
     // Linha 8: Administração Avançada
     { id: "administradores", label: "Administradores", icon: ShieldCheck, iconColor: "#9E9E9E" },
@@ -572,24 +874,72 @@ const Admin = () => {
     }
   }, [temAlunosPendentes, mostrarPopupAprovacao]);
 
-
-
+  // Navega para rotas externas fora do ciclo de render
+  useEffect(() => {
+    if (activeView in EXTERNAL_VIEWS) {
+      navigate(EXTERNAL_VIEWS[activeView]);
+    }
+  }, [activeView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleLogout = async () => {
-    console.log('🔐 Iniciando logout do admin...');
     try {
       await supabase.auth.signOut();
-      console.log('✅ Supabase auth signOut completo');
       signOut();
-      console.log('✅ Context signOut completo');
-      navigate('/login', { replace: true });
-      console.log('✅ Navegação para /login completa');
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('❌ Erro no logout:', error);
+    }
+  };
+
+  const handleSectionClick = (sectionId: string) => {
+    setActiveSection(sectionId);
+    if (activeView !== "dashboard") {
+      setActiveView("dashboard");
+      navigate('/admin', { replace: true });
+      setTimeout(() => {
+        const el = document.getElementById(`section-${sectionId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 200);
+    } else {
+      const el = document.getElementById(`section-${sectionId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleSearchResultClick = (type: string, id: string) => {
+    if (type === 'pagina') { setActiveView(id); return; }
+    if (type === 'aluno') { setActiveView('alunos'); return; }
+    if (type === 'tema')  { setActiveView('temas');  return; }
+    if (type === 'funcionalidade') {
+      const viewMap: Record<string, string> = {
+        temas:                 'temas',
+        exercicios:            'exercicios',
+        simulados:             'simulados',
+        aulas_gravadas:        'aulas',
+        aulas_ao_vivo:         'salas-virtuais',
+        biblioteca:            'biblioteca',
+        videoteca:             'videos',
+        lousa:                 'lousa',
+        calendario_atividades: 'calendario',
+        redacoes_exemplares:   'redacoes',
+        redacoes_comentadas:   'redacoes',
+        diario_online:         'diario',
+        gamificacao:           'gamificacao',
+        jarvis:                'jarvis',
+        jarvis_correcao:       'jarvis',
+        guia_tematico:         'guia-tematico',
+        microaprendizagem:     'microaprendizagem',
+        interatividade:        'interatividade',
+        repertorio_orientado:  'repertorio-orientado',
+        laboratorio_repertorio: 'laboratorio',
+        top_5:                 'top5',
+      };
+      const view = viewMap[id];
+      if (view) setActiveView(view);
     }
   };
 
@@ -598,39 +948,23 @@ const Admin = () => {
   const renderContent = () => {
     switch (activeView) {
       case "corretores":
-        const handleCorretorSuccess = () => {
-          setRefreshCorretores(!refreshCorretores);
-          setCorretorEditando(null);
-        };
-
-        const handleEditCorretor = (corretor: any) => {
-          setCorretorEditando(corretor);
-        };
-
-        const handleCancelCorretorEdit = () => {
-          setCorretorEditando(null);
-        };
-
         return (
-          <div className="space-y-6">
-            <CorretorForm 
-              onSuccess={handleCorretorSuccess}
-              corretorEditando={corretorEditando}
-              onCancelEdit={handleCancelCorretorEdit}
-            />
-            <CorretorList 
-              refresh={refreshCorretores}
-              onEdit={handleEditCorretor}
-            />
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Corretores</h1>
+              <p className="text-muted-foreground mt-1">Gerencie a equipe de corretores da plataforma</p>
+            </div>
+            <CorretoresHub />
           </div>
         );
 
       case "temas":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Temas</TabsTrigger>
               <TabsTrigger value="create">Criar Tema</TabsTrigger>
+              <TabsTrigger value="metrics">Métricas</TabsTrigger>
             </TabsList>
             <TabsContent value="list">
               <TemaList />
@@ -638,13 +972,16 @@ const Admin = () => {
             <TabsContent value="create">
               <TemaForm />
             </TabsContent>
+            <TabsContent value="metrics">
+              <TemasMetricsPanel />
+            </TabsContent>
           </Tabs>
         );
       
       case "redacoes":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Redações</TabsTrigger>
               <TabsTrigger value="create">Criar Redação</TabsTrigger>
             </TabsList>
@@ -660,7 +997,7 @@ const Admin = () => {
       case "videos":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Vídeos</TabsTrigger>
               <TabsTrigger value="create">Criar Vídeo</TabsTrigger>
             </TabsList>
@@ -676,7 +1013,7 @@ const Admin = () => {
       case "biblioteca":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Materiais</TabsTrigger>
               <TabsTrigger value="create">Cadastrar Material</TabsTrigger>
             </TabsList>
@@ -692,7 +1029,7 @@ const Admin = () => {
       case "simulados":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Simulados</TabsTrigger>
               <TabsTrigger value="create">Criar Simulado</TabsTrigger>
             </TabsList>
@@ -708,7 +1045,7 @@ const Admin = () => {
       case "aulas":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Aulas</TabsTrigger>
               <TabsTrigger value="create">Criar Aula</TabsTrigger>
             </TabsList>
@@ -724,7 +1061,7 @@ const Admin = () => {
       case "exercicios":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Exercícios</TabsTrigger>
               <TabsTrigger value="create">Criar Exercício</TabsTrigger>
             </TabsList>
@@ -740,6 +1077,9 @@ const Admin = () => {
 
       case "lousa":
         return <LousaList />;
+
+      case "calendario":
+        return <CalendarioAdmin />;
 
       case "avisos":
         const handleAvisoSuccess = () => {
@@ -817,7 +1157,7 @@ const Admin = () => {
 
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Salas</TabsTrigger>
               <TabsTrigger value="create">Criar Sala</TabsTrigger>
             </TabsList>
@@ -833,36 +1173,20 @@ const Admin = () => {
       case "radar":
         return (
           <div className="space-y-6">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Painel de Resultados - Radar</h3>
-              <p className="text-sm text-muted-foreground">
-                Acompanhe aqui o desempenho geral dos alunos nos exercícios e redações corrigidas.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Radar de Monitoramento</h1>
+                <p className="text-muted-foreground mt-1">Acompanhe o desempenho e situação dos alunos por turma</p>
+              </div>
             </div>
-            <Tabs defaultValue="monitoramento" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="monitoramento">Monitoramento</TabsTrigger>
-                <TabsTrigger value="exercicios">Dados de Exercícios</TabsTrigger>
-                <TabsTrigger value="redacoes">Redações Corrigidas</TabsTrigger>
-              </TabsList>
-              <TabsContent value="monitoramento" className="space-y-6">
-                <MonitoramentoPage />
-              </TabsContent>
-              <TabsContent value="exercicios" className="space-y-6">
-                <RadarUpload />
-                <RadarList />
-              </TabsContent>
-              <TabsContent value="redacoes">
-                <RadarRedacoes />
-              </TabsContent>
-            </Tabs>
+            <MonitoramentoPage />
           </div>
         );
       
       case "redacoes-enviadas":
         return (
           <Tabs defaultValue="avulsas" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="avulsas">Redações</TabsTrigger>
               <TabsTrigger value="simulados">Simulados</TabsTrigger>
             </TabsList>
@@ -878,64 +1202,66 @@ const Admin = () => {
       case "inbox":
         return <InboxForm />;
 
+      case "anotacoes":
+        return null;
+
       case "alunos":
-        const handleAlunoSuccess = () => {
-          setRefreshAlunos(!refreshAlunos);
-          setAlunoEditando(null);
-        };
+        return <AlunosHub />;
 
-        const handleEditAluno = (aluno: any) => {
-          setAlunoEditando(aluno);
-        };
-
-        const handleCancelAlunoEdit = () => {
-          setAlunoEditando(null);
-        };
-
-        return (
-          <AlunoFormModern
-            onSuccess={handleAlunoSuccess}
-            alunoEditando={alunoEditando}
-            onCancelEdit={handleCancelAlunoEdit}
-            refresh={refreshAlunos}
-            onEdit={handleEditAluno}
-          />
-        );
+      case "turmas":
+        return <TurmasAlunosManager />;
 
       case "professores":
-        const handleProfessorSuccess = () => {
-          setRefreshProfessores(!refreshProfessores);
-          setProfessorEditando(null);
-        };
+        return <ProfessoresHub />;
 
-        const handleEditProfessor = (professor: any) => {
-          setProfessorEditando(professor);
-        };
+      case "jarvis":
+        return <JarvisHub key={jarvisTab} defaultTab={jarvisTab} />;
 
-        const handleCancelProfessorEdit = () => {
-          setProfessorEditando(null);
-        };
+      case "ajuda-rapida":
+        return null;
 
+      case "repertorio-orientado":
+        return null;
+
+      case "laboratorio":
+        return null;
+
+      case "microaprendizagem":
         return (
           <div className="space-y-6">
-            <ProfessorForm 
-              onSuccess={handleProfessorSuccess}
-              professorEditando={professorEditando}
-              onCancelEdit={handleCancelProfessorEdit}
-            />
-            <ProfessorList 
-              refresh={refreshProfessores}
-              onEdit={handleEditProfessor}
-            />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Microaprendizagem</h1>
+                <p className="text-muted-foreground mt-1">Gerencie tópicos e conteúdos. O acesso é controlado por plano em cada item.</p>
+              </div>
+            </div>
+            <MicroTopicosAdmin />
           </div>
         );
 
-      case "ajuda-rapida":
-        navigate('/admin/ajuda-rapida');
+      case "interatividade":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Interatividade</h1>
+                <p className="text-muted-foreground mt-1">Crie enquetes e atividades para os alunos responderem.</p>
+              </div>
+            </div>
+            <InteracoesAdmin />
+          </div>
+        );
+
+      case "guia-tematico":
+        return null;
+
+      case "plano-estudo":
+        return null;
+
+      case "redacoes-comentadas":
         return null;
 
       case "exportacao":
-        navigate('/admin/exportacao');
         return null;
 
       case "configuracoes":
@@ -962,7 +1288,6 @@ const Admin = () => {
         );
 
       case "gamificacao":
-        navigate('/admin/gamificacao');
         return null;
 
       case "top5":
@@ -972,6 +1297,9 @@ const Admin = () => {
             <Top5Widget variant="admin" showHeader={false} />
           </div>
         );
+
+      case "processo-seletivo":
+        return null;
       
       case "diario":
         const subtab = searchParams.get('subtab');
@@ -997,62 +1325,102 @@ const Admin = () => {
 
       default:
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {menuItems.map((item, index) => {
+          <div id="section-visao-geral" className="space-y-6 pb-10">
+            {/* Overview banner */}
+            <div
+              className="relative overflow-hidden"
+              style={{
+                borderRadius: '28px',
+                padding: '24px 26px',
+                background: 'linear-gradient(135deg, rgba(255,255,255,.95) 0%, rgba(247,241,255,.96) 100%)',
+                border: '1px solid rgba(183,140,255,.28)',
+                boxShadow: '0 18px 42px rgba(63,32,104,.07)',
+              }}
+            >
+              {/* Círculo decorativo */}
+              <div
+                className="pointer-events-none"
+                style={{
+                  position: 'absolute',
+                  right: '-64px',
+                  top: '-80px',
+                  width: '240px',
+                  height: '240px',
+                  borderRadius: '50%',
+                  border: '42px solid rgba(183,140,255,.13)',
+                }}
+              />
+              <h2
+                className="font-bold text-[#21122f]"
+                style={{ fontSize: '20px', letterSpacing: '-.03em', margin: 0 }}
+              >
+                Resumo da operação pedagógica
+              </h2>
+              <p className="text-[#8a8096] text-[13px] mt-1">
+                Acompanhe os principais fluxos da plataforma e tome ações rápidas.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {[
+                  { label: 'Calendário', view: 'calendario' },
+                  { label: 'Temas', view: 'temas' },
+                  { label: 'Gerenciar turmas', view: 'turmas' },
+                  { label: 'Gerenciar alunos', view: 'alunos' },
+                  { label: 'Gerenciar professores', view: 'professores' },
+                  { label: 'Gerenciar corretores', view: 'corretores' },
+                ].map((item) => (
+                  <button
+                    key={item.view}
+                    type="button"
+                    onClick={() => setActiveView(item.view)}
+                    className="text-[#4B078F] font-semibold text-[12px] bg-white hover:bg-[#f1e8ff] transition-colors"
+                    style={{
+                      borderRadius: '999px',
+                      padding: '6px 14px',
+                      border: '1px solid rgba(107,33,168,.12)',
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
+            {/* Cards de prioridade */}
+            <PriorityCards
+              cardData={cardData}
+              isLoading={isLoadingCards}
+              onCardClick={(id) => {
+                if (id === 'jarvis') { setJarvisTab('tutor'); setActiveView('jarvis'); }
+                else if (id === 'jarvis_correcao') { setJarvisTab('correcao'); setActiveView('jarvis'); }
+                else setActiveView(id);
+              }}
+            />
 
+            {/* Central de trabalho + Movimento recente */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-6">
+              <WorkCenter
+                cardData={cardData}
+                isLoading={isLoadingCards}
+                onCardClick={setActiveView}
+              />
+              <RecentActivity
+                cardData={cardData}
+                isLoading={isLoadingCards}
+                onCardClick={setActiveView}
+              />
+            </div>
 
-              // Cards normais para os outros itens
-              return (
-                <DetailedDashboardCard
-                  key={item.id}
-                  title={item.label}
-                  icon={<item.icon size={32} color={item.iconColor} weight="fill" />}
-                  primaryInfo={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "")}
-                  secondaryInfo={cardData[item.id]?.badge}
-                  description=""
-                  chips={item.chips}
-                  chipColor={item.iconColor}
-                  onClick={() => setActiveView(item.id)}
-                  onChipClick={(chipIndex, chipValue) => {
-                    // Handle Diário Online chips
-                    if (item.id === "diario") {
-                      const subtabMap: Record<string, string> = {
-                        "Etapas": "etapas",
-                        "Aulas": "aulas",
-                        "Turma": "turma",
-                        "Avaliação": "avaliação"
-                      };
-                      const subtab = subtabMap[chipValue];
-                      if (subtab) {
-                        setActiveView("diario");
-                        const newParams = new URLSearchParams();
-                        newParams.set('view', 'diario');
-                        newParams.set('subtab', subtab);
-                        navigate(`?${newParams.toString()}`);
-                      }
-                    }
-                    // Handle Configurações chips
-                    else if (item.id === "configuracoes") {
-                      const subtabMap: Record<string, string> = {
-                        "Conta": "account",
-                        "Envios": "submissions",
-                        "Créditos": "credits",
-                        "Assinatura": "subscriptions"
-                      };
-                      const subtab = subtabMap[chipValue];
-                      if (subtab) {
-                        setActiveView("configuracoes");
-                        const newParams = new URLSearchParams();
-                        newParams.set('view', 'configuracoes');
-                        newParams.set('subtab', subtab);
-                        navigate(`?${newParams.toString()}`);
-                      }
-                    }
-                  }}
-                />
-              );
-            })}
+            {/* Módulos agrupados por setor */}
+            <ModuleGroups
+              menuItems={menuItems}
+              cardData={cardData}
+              isLoading={isLoadingCards}
+              setActiveView={setActiveView}
+              navigate={navigate}
+              meuCorretor={meuCorretor}
+              mensagensCorretorNaoLidas={mensagensCorretorNaoLidas}
+              handleAcessarPainelCorretor={handleAcessarPainelCorretor}
+            />
           </div>
         );
     }
@@ -1068,42 +1436,68 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Modern Header */}
-      <ModernAdminHeader
-        userEmail={user?.email}
-        onLogout={handleLogout}
+    <div className="min-h-screen bg-[#f7f6fb] flex">
+      {/* Sidebar lateral */}
+      <AdminSidebar
+        activeSection={activeSection}
+        onSectionClick={handleSectionClick}
+        onNavigateDashboard={() => {
+          setActiveView("dashboard");
+          navigate('/admin', { replace: true });
+        }}
+        isMobileOpen={sidebarMobileOpen}
+        onMobileClose={() => setSidebarMobileOpen(false)}
       />
 
-      {/* Navigation */}
-      {activeView !== "dashboard" && (
-        <nav className="bg-white/80 backdrop-blur-sm border-b border-primary/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3 py-3">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setActiveView("dashboard");
-                  navigate('/admin', { replace: true });
-                }}
-                className="hover:bg-primary/10 text-primary"
-              >
-                Dashboard
-              </Button>
-              <span className="text-primary/40">/</span>
-              <span className="text-primary font-semibold">
-                {menuItems.find(item => item.id === activeView)?.label}
-              </span>
-            </div>
-          </div>
-        </nav>
-      )}
+      {/* Área principal */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <ModernAdminHeader
+          userEmail={user?.email}
+          onLogout={handleLogout}
+          onProfileClick={() => setShowProfile(true)}
+          onMenuClick={() => setSidebarMobileOpen(true)}
+          onSearchResultClick={handleSearchResultClick}
+        />
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderContent()}
-      </main>
+        {/* Breadcrumb — visível apenas fora do dashboard */}
+        {activeView !== "dashboard" && (
+          <nav className="bg-white border-b border-gray-200 flex-shrink-0">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-3 py-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setActiveView("dashboard");
+                    navigate('/admin', { replace: true });
+                  }}
+                  className="hover:bg-primary/10 text-primary"
+                >
+                  Dashboard
+                </Button>
+                <span className="text-gray-300">/</span>
+                <span className="text-gray-700 font-medium text-sm">
+                  {menuItems.find(item => item.id === activeView)?.label}
+                </span>
+              </div>
+            </div>
+          </nav>
+        )}
+
+        {/* Conteúdo principal */}
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 overflow-auto">
+          {renderContent()}
+        </main>
+      </div>
+
+      {/* Painel Meu Perfil */}
+      <AdminProfileDrawer
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        onLogout={handleLogout}
+        user={user}
+      />
 
       {/* Pop-up de aprovação de alunos */}
       <AlunosAprovacaoPopup

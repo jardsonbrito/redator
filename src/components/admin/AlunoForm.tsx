@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UserPlus, Upload, Link } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfService } from "./AlunoSelfService";
-import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { useTurmas } from "@/hooks/usePlansAdmin";
 
 interface AlunoFormProps {
   onSuccess: () => void;
@@ -25,9 +25,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
   const [turma, setTurma] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  // Turmas geradas dinamicamente a partir do utils
-  const turmas = TODAS_TURMAS.map(turma => formatTurmaDisplay(turma));
+  const { data: turmasDisponiveis = [] } = useTurmas();
 
   // Preencher formulário quando um aluno for selecionado para edição
   useEffect(() => {
@@ -60,18 +58,20 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
 
     setLoading(true);
     try {
+      const turmaObj = turmasDisponiveis.find(t => t.nome === turma);
       if (alunoEditando) {
         console.log("AlunoForm - Modo de edição - Atualizando aluno:", alunoEditando.id);
-        
+
         // Modo de edição - fazer UPDATE
         const dadosAluno = {
           nome: nome.trim(),
-          sobrenome: "", // Mantém campo vazio para compatibilidade
+          sobrenome: "",
           email: email.trim().toLowerCase(),
           turma,
+          turma_id: turmaObj?.id ?? null,
           user_type: "aluno",
           is_authenticated_student: true,
-          ativo: true // Cadastros manuais são sempre ativos
+          ativo: true
         };
 
         console.log("AlunoForm - Dados para update:", dadosAluno);
@@ -116,12 +116,13 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
         const dadosAluno = {
           id: crypto.randomUUID(),
           nome: nome.trim(),
-          sobrenome: "", // Mantém campo vazio para compatibilidade
+          sobrenome: "",
           email: email.trim().toLowerCase(),
           turma,
+          turma_id: turmaObj?.id ?? null,
           user_type: "aluno",
           is_authenticated_student: true,
-          ativo: true // Cadastros manuais são sempre ativos
+          ativo: true
         };
 
         const { error } = await supabase
@@ -213,9 +214,9 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
                   <SelectValue placeholder="Selecione a turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  {turmas.map((turmaOption) => (
-                    <SelectItem key={turmaOption} value={turmaOption}>
-                      {turmaOption}
+                  {turmasDisponiveis.map((t) => (
+                    <SelectItem key={t.id} value={t.nome}>
+                      {t.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -249,19 +250,10 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
 
   return (
     <Tabs defaultValue="manual" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="manual" className="flex items-center gap-2">
-          <UserPlus className="w-4 h-4" />
-          CM
-        </TabsTrigger>
-        <TabsTrigger value="csv" className="flex items-center gap-2">
-          <Upload className="w-4 h-4" />
-          CSV
-        </TabsTrigger>
-        <TabsTrigger value="link" className="flex items-center gap-2">
-          <Link className="w-4 h-4" />
-          Autoatendimento
-        </TabsTrigger>
+      <TabsList>
+        <TabsTrigger value="manual">CM</TabsTrigger>
+        <TabsTrigger value="csv">CSV</TabsTrigger>
+        <TabsTrigger value="link">Autoatendimento</TabsTrigger>
       </TabsList>
       
       <TabsContent value="manual">
@@ -301,9 +293,9 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
                     <SelectValue placeholder="Selecione a turma" />
                   </SelectTrigger>
                   <SelectContent>
-                    {turmas.map((turmaOption) => (
-                      <SelectItem key={turmaOption} value={turmaOption}>
-                        {turmaOption}
+                    {turmasDisponiveis.map((t) => (
+                      <SelectItem key={t.id} value={t.nome}>
+                        {t.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>

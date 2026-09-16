@@ -81,9 +81,11 @@ export const ChatConversa = ({
       setEnviando(true);
       
       if (editingMessageId) {
-        // Atualizar mensagem existente
-        await editarMensagem(editingMessageId, novaMensagem.trim());
-        await buscarMensagensConversa(alunoId, corretorId);
+        // Atualizar mensagem existente — passa identidade para a RPC verificar propriedade
+        const corretorIdParam = tipoUsuario === 'corretor' ? corretorId : undefined;
+        const alunoEmailParam = tipoUsuario === 'aluno' ? studentData?.email : undefined;
+        await editarMensagem(editingMessageId, novaMensagem.trim(), corretorIdParam, alunoEmailParam);
+        // Não recarregar do banco — o hook já atualiza o estado local otimisticamente
         setEditingMessageId(null);
         toast({
           title: "Sucesso",
@@ -128,8 +130,10 @@ export const ChatConversa = ({
 
   const handleApagarMensagem = async (mensagemId: string) => {
     try {
-      await apagarMensagem(mensagemId);
-      await buscarMensagensConversa(alunoId, corretorId);
+      const corretorIdParam = tipoUsuario === 'corretor' ? corretorId : undefined;
+      const alunoEmailParam = tipoUsuario === 'aluno' ? studentData?.email : undefined;
+      await apagarMensagem(mensagemId, corretorIdParam, alunoEmailParam);
+      // Não recarregar do banco — o hook já remove do estado local
       toast({
         title: "Sucesso",
         description: "Mensagem apagada com sucesso",

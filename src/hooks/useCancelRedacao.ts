@@ -101,18 +101,24 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       }
 
 
-      // 5. Deletar redação
+      // 5. Soft delete da redação (marcar como deletada em vez de remover)
       const { error: deleteError } = await supabase
         .from('redacoes_enviadas')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', redacaoId);
 
       if (deleteError) {
-        console.error('❌ Erro ao deletar redação:', deleteError);
+        console.error('❌ Erro ao cancelar redação:', deleteError);
         throw new Error('Erro ao cancelar redação');
       }
 
-      console.log('🗑️ Redação deletada com sucesso');
+      console.log('🗑️ Redação marcada como cancelada (soft delete)');
+
+      // 5b. Invalidar cache de redações imediatamente após soft delete
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacao-enviada'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-home-usuario'] });
 
       // 6. Ressarcir créditos se necessário
       let novoSaldoCreditos = profile.creditos || 0;
@@ -301,13 +307,22 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       // 1. Buscar a redação de simulado e verificar se pode ser cancelada
       const { data: redacao, error: redacaoError } = await supabase
         .from('redacoes_simulado')
-        .select('*')
+        .select('*, simulados(data_fim, hora_fim)')
         .eq('id', redacaoId)
         .eq('email_aluno', normalizedEmail)
         .single();
 
       if (redacaoError || !redacao) {
         throw new Error('Redação não encontrada ou não pertence ao usuário');
+      }
+
+      // 1b. Verificar se o simulado ainda está ativo (não encerrado)
+      const simuladoInfo = (redacao as any).simulados;
+      if (simuladoInfo?.data_fim && simuladoInfo?.hora_fim) {
+        const dataFimSimulado = new Date(`${simuladoInfo.data_fim}T${simuladoInfo.hora_fim}`);
+        if (dataFimSimulado <= new Date()) {
+          throw new Error('Não é possível cancelar: o simulado já foi encerrado');
+        }
       }
 
       // 2. Verificar se ainda pode ser cancelada
@@ -342,17 +357,22 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       }
 
 
-      // 5. Deletar redação de simulado
+      // 5. Soft delete da redação de simulado (marcar como deletada em vez de remover)
       const { error: deleteError } = await supabase
         .from('redacoes_simulado')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', redacaoId);
 
       if (deleteError) {
-        console.error('❌ Erro ao deletar redação de simulado:', deleteError);
+        console.error('❌ Erro ao cancelar redação de simulado:', deleteError);
         throw new Error('Erro ao cancelar redação');
       }
 
+      // 5b. Invalidar cache de redações imediatamente após soft delete
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacao-enviada'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-home-usuario'] });
 
       // 6. Ressarcir créditos
       const novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
@@ -360,27 +380,21 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
       // ESTRATÉGIA 1: Usar refund_credits_on_cancel (mesma função do cancelamento regular)
       let creditosFoiRessarcido = false;
-      try {
+      const { data: refundResult, error: refundError } = await supabase
+        .rpc('refund_credits_on_cancel', {
+          p_user_id: profile.id,
+          p_amount: creditosParaRessarcir,
+          p_reason: 'Ressarcimento por cancelamento de redação de simulado'
+        });
 
-        const { data: refundResult, error: refundError } = await supabase
-          .rpc('refund_credits_on_cancel', {
-            p_user_id: profile.id,
-            p_amount: creditosParaRessarcir,
-            p_reason: 'Ressarcimento por cancelamento de redação de simulado'
-          });
+      if (refundError) {
+        throw new Error(`Falha no ressarcimento: ${refundError.message}`);
+      }
 
-        if (refundError) {
-          throw new Error(`Falha no ressarcimento: ${refundError.message}`);
-        }
-
-        if (refundResult === true) {
-          creditosFoiRessarcido = true;
-        } else {
-          throw new Error(`Função de refund retornou valor inválido: ${refundResult}`);
-        }
-      } catch (refundErr) {
-        // Re-lançar o erro para tentar fallback
-        throw refundErr;
+      if (refundResult === true) {
+        creditosFoiRessarcido = true;
+      } else {
+        throw new Error(`Função de refund retornou valor inválido: ${refundResult}`);
       }
 
       // ESTRATÉGIA 2: Se falhou, usar update direto múltiplas vezes
@@ -559,14 +573,135 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
         return 0;
       case 'visitante':
         return 0;
+      case 'processo_seletivo':
+        return 0; // Processo seletivo é gratuito
       default:
         return 1;
+    }
+  };
+
+  // Função específica para cancelar redação do Processo Seletivo
+  const cancelRedacaoProcessoSeletivo = async (redacaoId: string, userEmail: string, candidatoId: string) => {
+    setLoading(true);
+
+    try {
+      console.log('🔄 Iniciando cancelamento de redação do Processo Seletivo...');
+      console.log(`📧 Email: ${userEmail}, Redação ID: ${redacaoId}, Candidato ID: ${candidatoId}`);
+
+      // 1. Buscar a redação e verificar se pode ser cancelada
+      const { data: redacao, error: redacaoError } = await supabase
+        .from('redacoes_enviadas')
+        .select('*')
+        .eq('id', redacaoId)
+        .eq('email_aluno', userEmail.toLowerCase().trim())
+        .eq('processo_seletivo_candidato_id', candidatoId)
+        .single();
+
+      if (redacaoError || !redacao) {
+        throw new Error('Redação não encontrada ou não pertence ao usuário');
+      }
+
+      // 2. Verificar se ainda pode ser cancelada (não corrigida)
+      if (redacao.corrigida || redacao.nota_total !== null) {
+        throw new Error('Não é possível cancelar uma redação que já foi corrigida');
+      }
+
+      // Verificar se já iniciou correção
+      const temNotasLancadas = redacao.nota_c1 !== null ||
+                               redacao.nota_c2 !== null ||
+                               redacao.nota_c3 !== null ||
+                               redacao.nota_c4 !== null ||
+                               redacao.nota_c5 !== null;
+
+      if (temNotasLancadas) {
+        throw new Error('Não é possível cancelar uma redação que já iniciou o processo de correção');
+      }
+
+      // 3. Soft delete da redação (marcar como deletada em vez de remover)
+      const { error: deleteError } = await supabase
+        .from('redacoes_enviadas')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', redacaoId);
+
+      if (deleteError) {
+        console.error('❌ Erro ao cancelar redação:', deleteError);
+        throw new Error('Erro ao cancelar redação');
+      }
+
+      console.log('🗑️ Redação marcada como cancelada (soft delete)');
+
+      // 3b. Invalidar cache de redações imediatamente após soft delete
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacao-enviada'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-home-usuario'] });
+
+      // 4. Atualizar status do candidato de volta para 'etapa_final_liberada'
+      const { error: updateCandidatoError } = await supabase
+        .from('ps_candidatos')
+        .update({
+          status: 'etapa_final_liberada',
+          data_conclusao: null
+        })
+        .eq('id', candidatoId);
+
+      if (updateCandidatoError) {
+        console.error('❌ Erro ao atualizar status do candidato:', updateCandidatoError);
+        throw new Error('Erro ao reverter status do candidato');
+      }
+
+      console.log('✅ Status do candidato revertido para etapa_final_liberada');
+
+      // 5. Remover flag de participação do perfil
+      const { error: updateProfileError } = await supabase
+        .from('profiles')
+        .update({ participou_processo_seletivo: false })
+        .eq('email', userEmail.toLowerCase().trim());
+
+      if (updateProfileError) {
+        console.warn('⚠️ Erro ao atualizar perfil (não crítico):', updateProfileError);
+      }
+
+      // 6. Invalidar cache
+      queryClient.invalidateQueries({ queryKey: ['ps-candidato'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
+      queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+
+      toast({
+        title: "✅ Envio cancelado",
+        description: "Sua redação foi cancelada. Você pode enviar uma nova redação dentro da janela de tempo.",
+        className: "border-green-200 bg-green-50 text-green-900",
+        duration: 5000
+      });
+
+      options?.onSuccess?.();
+      return true;
+
+    } catch (error) {
+      console.error('❌ Erro ao cancelar redação do Processo Seletivo:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+
+      toast({
+        title: "Erro no cancelamento",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000
+      });
+
+      options?.onError?.(errorMessage);
+      return false;
+
+    } finally {
+      setLoading(false);
     }
   };
 
   return {
     cancelRedacao,
     cancelRedacaoSimulado,
+    cancelRedacaoProcessoSeletivo,
     canCancelRedacao,
     getCreditosACancelar,
     loading

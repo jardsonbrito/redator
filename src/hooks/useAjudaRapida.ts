@@ -203,13 +203,24 @@ export const useAjudaRapida = () => {
         }
       });
 
-      // Verificar se há resposta do corretor para marcar como respondida
-      data?.forEach((msg: any) => {
-        if (msg.autor === 'corretor') {
-          const conversa = conversasMap.get(msg.aluno_id);
-          if (conversa) {
-            conversa.eh_respondida = true;
-          }
+      // Verificar se a ÚLTIMA mensagem é do corretor para marcar como respondida
+      // Uma conversa só deve estar em "Respondidas" se a última mensagem foi do corretor
+      // Se a última mensagem foi do aluno, deve estar em "Pendentes"
+      conversasMap.forEach((conversa) => {
+        // Filtrar mensagens desta conversa específica
+        const mensagensConversa = data?.filter(
+          (msg: any) => msg.aluno_id === conversa.aluno_id
+        ) || [];
+
+        if (mensagensConversa.length > 0) {
+          // Ordenar por data para encontrar a mais recente
+          const mensagensOrdenadas = mensagensConversa.sort(
+            (a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
+          );
+
+          // A conversa só é "respondida" se a ÚLTIMA mensagem foi do corretor
+          const ultimaMensagem = mensagensOrdenadas[0];
+          conversa.eh_respondida = ultimaMensagem.autor === 'corretor';
         }
       });
 
@@ -297,7 +308,7 @@ export const useAjudaRapida = () => {
           corretor_id: corretorId,
           mensagem,
           autor,
-          lida: autor === 'corretor' // Se o corretor envia, marca como lida automaticamente
+          lida: false // destinatário ainda não leu; será true após marcarComoLida/Aluno
         });
 
       if (error) {
@@ -370,20 +381,15 @@ export const useAjudaRapida = () => {
     }
   };
 
-  // Marcar mensagens como lidas para aluno
+  // Marcar mensagens como lidas para aluno via RPC SECURITY DEFINER
+  // (update direto era bloqueado silenciosamente pelo RLS — políticas de UPDATE
+  //  cobrem apenas autor='aluno', mas aqui precisamos atualizar autor='corretor')
   const marcarComoLidaAluno = async (alunoEmail: string, corretorId: string) => {
     try {
-      const perfilAluno = await buscarPerfilAluno(alunoEmail);
-      if (!perfilAluno) return;
-
-      const { error } = await supabase
-        .from('ajuda_rapida_mensagens')
-        .update({ lida: true })
-        .eq('aluno_id', perfilAluno.id)
-        .eq('corretor_id', corretorId)
-        .eq('autor', 'corretor')
-        .eq('lida', false);
-
+      const { error } = await supabase.rpc('marcar_mensagens_lidas_aluno', {
+        p_aluno_email: alunoEmail,
+        p_corretor_id: corretorId,
+      });
       if (error) throw error;
     } catch (error) {
       console.error('Erro ao marcar mensagens como lidas para aluno:', error);
@@ -461,34 +467,35 @@ export const useAjudaRapida = () => {
     }
   };
 
-  // Editar mensagem
-  const editarMensagem = async (mensagemId: string, novoTexto: string) => {
+  // Editar mensagem via RPC com SECURITY DEFINER (bypassa RLS silencioso)
+  const editarMensagem = async (
+    mensagemId: string,
+    novoTexto: string,
+    corretorId?: string,
+    alunoEmail?: string
+  ) => {
     try {
-      const { error } = await supabase
-        .from('ajuda_rapida_mensagens')
-        .update({
-          mensagem: novoTexto,
-          editada: true,
-          editada_em: new Date().toISOString()
-        })
-        .eq('id', mensagemId);
+      const { data, error } = await supabase.rpc('editar_mensagem_ajuda_rapida', {
+        p_mensagem_id: mensagemId,
+        p_novo_texto: novoTexto,
+        p_corretor_id: corretorId ?? null,
+        p_aluno_email: alunoEmail ?? null,
+      });
 
       if (error) throw error;
-      
-      // Atualizar o estado local das mensagens
-      setMensagens(mensagensAtuais => 
-        mensagensAtuais.map(msg => 
-          msg.id === mensagemId 
-            ? { 
-                ...msg, 
-                mensagem: novoTexto, 
-                editada: true, 
-                editada_em: new Date().toISOString() 
-              }
+
+      const result = data as { success: boolean; error?: string; message: string };
+      if (!result.success) throw new Error(result.message);
+
+      // Atualizar estado local imediatamente (sem refetch)
+      setMensagens(anterior =>
+        anterior.map(msg =>
+          msg.id === mensagemId
+            ? { ...msg, mensagem: novoTexto, editada: true, editada_em: new Date().toISOString() }
             : msg
         )
       );
-      
+
       console.log('✅ Mensagem editada com sucesso');
     } catch (error) {
       console.error('❌ Erro ao editar mensagem:', error);
@@ -501,16 +508,27 @@ export const useAjudaRapida = () => {
     }
   };
 
-  // Apagar mensagem
-  const apagarMensagem = async (mensagemId: string) => {
+  // Apagar mensagem via RPC com SECURITY DEFINER (bypassa RLS silencioso)
+  const apagarMensagem = async (
+    mensagemId: string,
+    corretorId?: string,
+    alunoEmail?: string
+  ) => {
     try {
-      const { error } = await supabase
-        .from('ajuda_rapida_mensagens')
-        .delete()
-        .eq('id', mensagemId);
+      const { data, error } = await supabase.rpc('apagar_mensagem_ajuda_rapida', {
+        p_mensagem_id: mensagemId,
+        p_corretor_id: corretorId ?? null,
+        p_aluno_email: alunoEmail ?? null,
+      });
 
       if (error) throw error;
-      
+
+      const result = data as { success: boolean; error?: string; message: string };
+      if (!result.success) throw new Error(result.message);
+
+      // Atualizar estado local imediatamente (sem refetch)
+      setMensagens(anterior => anterior.filter(msg => msg.id !== mensagemId));
+
       console.log('✅ Mensagem apagada com sucesso');
     } catch (error) {
       console.error('❌ Erro ao apagar mensagem:', error);

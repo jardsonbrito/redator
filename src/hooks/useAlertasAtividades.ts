@@ -1,0 +1,274 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
+export type TipoAlertaAula = 'aula_agendada' | 'aula_hoje' | 'aula_ao_vivo';
+
+export interface AlertaAtividade {
+  tipo: TipoAlertaAula | 'exercicio' | 'lousa' | 'tema';
+  id: string;
+  titulo: string;
+  horario?: string;
+  data?: string;
+  path: string;
+  prioridade: number; // 1 = mais urgente
+}
+
+interface UseAlertasAtividadesProps {
+  turma: string | null;
+  userType: string;
+  email?: string;
+  enabled?: boolean;
+}
+
+export function useAlertasAtividades({ turma, userType, email, enabled = true }: UseAlertasAtividadesProps) {
+  return useQuery({
+    queryKey: ['alertas_atividades', turma, userType, email],
+    queryFn: async (): Promise<AlertaAtividade[]> => {
+      const alertas: AlertaAtividade[] = [];
+      const agora = new Date();
+      const hoje = agora.toISOString().split('T')[0];
+      const horaAtual = agora.toTimeString().slice(0, 8);
+
+      // Normalizar turma
+      const turmaNormalizada = turma?.toUpperCase().replace('TURMA ', '').trim() || '';
+      const isVisitante = userType === 'visitante';
+
+      // Função para verificar acesso à turma
+      const temAcessoTurma = (turmasAutorizadas: string[], permiteVisitante: boolean) => {
+        return (
+          (isVisitante && permiteVisitante) ||
+          (!isVisitante && (
+            turmasAutorizadas.includes(turmaNormalizada) ||
+            turmasAutorizadas.includes(`TURMA ${turmaNormalizada}`) ||
+            turmasAutorizadas.includes('Todas') ||
+            turmasAutorizadas.includes('TODAS')
+          ))
+        );
+      };
+
+      // ========================================
+      // 1. AULAS AO VIVO
+      // Regras de exibição no dashboard:
+      // - Todas as aulas de HOJE aparecem (ao vivo agora ou agendadas para hoje)
+      // - Aulas FUTURAS só aparecem se forem amanhã E não houver aula pendente/em curso hoje
+      // - Nunca mostrar aulas com mais de 1 dia de antecedência
+      // ========================================
+      try {
+        const amanha = new Date(agora);
+        amanha.setDate(amanha.getDate() + 1);
+        const amanhaStr = amanha.toISOString().split('T')[0];
+
+        const { data: aulasVirtuais } = await supabase
+          .from('aulas_virtuais')
+          .select('id, titulo, data_aula, horario_inicio, horario_fim, turmas_autorizadas, permite_visitante')
+          .eq('ativo', true)
+          .eq('eh_aula_ao_vivo', true)
+          .gte('data_aula', hoje)
+          .lte('data_aula', amanhaStr) // Busca só hoje e amanhã
+          .order('data_aula', { ascending: true });
+
+        if (aulasVirtuais) {
+          const aulasAcessiveis = aulasVirtuais.filter(a =>
+            temAcessoTurma(a.turmas_autorizadas || [], a.permite_visitante)
+          );
+
+          // Há aula de hoje que ainda não terminou (pendente ou em curso)?
+          const temAulaHojeAtiva = aulasAcessiveis.some(
+            a => a.data_aula === hoje && a.horario_fim >= horaAtual
+          );
+
+          for (const aula of aulasAcessiveis) {
+            const dataAula = aula.data_aula;
+            const horaInicio = aula.horario_inicio;
+            const horaFim = aula.horario_fim;
+            const dataFormatada = new Date(dataAula + 'T12:00:00').toLocaleDateString('pt-BR');
+
+            if (dataAula === hoje && horaAtual >= horaInicio && horaAtual <= horaFim) {
+              // Acontecendo AGORA
+              alertas.push({
+                tipo: 'aula_ao_vivo',
+                id: aula.id,
+                titulo: aula.titulo,
+                horario: `${horaInicio.slice(0, 5)} - ${horaFim.slice(0, 5)}`,
+                path: '/aulas-ao-vivo',
+                prioridade: 1
+              });
+            } else if (dataAula === hoje) {
+              // HOJE (antes ou depois do horário)
+              alertas.push({
+                tipo: 'aula_hoje',
+                id: aula.id,
+                titulo: aula.titulo,
+                horario: `${horaInicio.slice(0, 5)} - ${horaFim.slice(0, 5)}`,
+                path: '/aulas-ao-vivo',
+                prioridade: 2
+              });
+            } else if (dataAula === amanhaStr && !temAulaHojeAtiva) {
+              // AMANHÃ — só aparece quando não há aula pendente/em curso hoje
+              alertas.push({
+                tipo: 'aula_agendada',
+                id: aula.id,
+                titulo: aula.titulo,
+                data: dataFormatada,
+                horario: `${horaInicio.slice(0, 5)} - ${horaFim.slice(0, 5)}`,
+                path: '/aulas-ao-vivo',
+                prioridade: 3
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar aulas ao vivo:', error);
+      }
+
+      // ========================================
+      // 2. EXERCÍCIOS ATIVOS
+      // ========================================
+      try {
+        const { data: exercicios } = await supabase
+          .from('exercicios')
+          .select('id, titulo, data_inicio, hora_inicio, data_fim, hora_fim, turmas_autorizadas, permite_visitante')
+          .eq('ativo', true);
+
+        if (exercicios) {
+          for (const ex of exercicios) {
+            // Verificar se está no período ativo
+            const dataInicio = ex.data_inicio || '2000-01-01';
+            const dataFim = ex.data_fim || '2099-12-31';
+            const horaInicio = ex.hora_inicio || '00:00:00';
+            const horaFim = ex.hora_fim || '23:59:59';
+
+            const inicioCompleto = `${dataInicio}T${horaInicio}`;
+            const fimCompleto = `${dataFim}T${horaFim}`;
+            const agoraISO = agora.toISOString();
+
+            if (agoraISO >= inicioCompleto && agoraISO <= fimCompleto) {
+              const turmasAutorizadas = ex.turmas_autorizadas || [];
+              const permiteVisitante = ex.permite_visitante;
+
+              if (temAcessoTurma(turmasAutorizadas, permiteVisitante)) {
+                alertas.push({
+                  tipo: 'exercicio',
+                  id: ex.id,
+                  titulo: ex.titulo,
+                  path: '/exercicios',
+                  prioridade: 4
+                });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar exercícios:', error);
+      }
+
+      // ========================================
+      // 3. ATIVIDADES DE LOUSA ATIVAS
+      // ========================================
+      try {
+        const { data: lousas } = await supabase
+          .from('lousa')
+          .select('id, titulo, inicio_em, fim_em, turmas, permite_visitante')
+          .eq('ativo', true)
+          .in('status', ['aberta', 'ativa']);
+
+        if (lousas) {
+          for (const lousa of lousas) {
+            // Verificar se está no período ativo
+            const inicioEm = lousa.inicio_em ? new Date(lousa.inicio_em) : new Date('2000-01-01');
+            const fimEm = lousa.fim_em ? new Date(lousa.fim_em) : new Date('2099-12-31');
+
+            if (agora >= inicioEm && agora <= fimEm) {
+              const turmasLousa = lousa.turmas || [];
+              const permiteVisitante = lousa.permite_visitante;
+
+              if (temAcessoTurma(turmasLousa, permiteVisitante)) {
+                alertas.push({
+                  tipo: 'lousa',
+                  id: lousa.id,
+                  titulo: lousa.titulo,
+                  path: '/lousa',
+                  prioridade: 5
+                });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar lousas:', error);
+      }
+
+      // ========================================
+      // 4. TEMAS RECÉM-PUBLICADOS (últimos 3 dias)
+      // ========================================
+      try {
+        const cincoDiasAtras = new Date(agora.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+
+        const { data: temas } = await supabase
+          .from('temas')
+          .select('id, frase_tematica, published_at, turmas_permitidas')
+          .eq('status', 'publicado')
+          .gte('published_at', cincoDiasAtras)
+          .order('published_at', { ascending: false });
+
+        if (temas && temas.length > 0) {
+          // Buscar frases temáticas sobre as quais o aluno já escreveu
+          let frasesJaEscritas = new Set<string>();
+          if (email) {
+            const { data: redacoes } = await supabase
+              .from('redacoes_enviadas')
+              .select('frase_tematica')
+              .eq('email_aluno', email)
+              .is('deleted_at', null);
+
+            if (redacoes) {
+              frasesJaEscritas = new Set(redacoes.map(r => r.frase_tematica).filter(Boolean));
+            }
+          }
+
+          for (const tema of temas) {
+            // Filtrar por turma: turmas_permitidas vazio/null = visível para todos
+            const turmasPermitidas = (tema as any).turmas_permitidas as string[] | null;
+            if (
+              !isVisitante &&
+              turmaNormalizada &&
+              turmasPermitidas && turmasPermitidas.length > 0 &&
+              !turmasPermitidas.includes(turmaNormalizada) &&
+              !turmasPermitidas.includes(`TURMA ${turmaNormalizada}`) &&
+              !turmasPermitidas.includes('Todas') &&
+              !turmasPermitidas.includes('TODAS')
+            ) {
+              continue;
+            }
+
+            // Não alertar se o aluno já escreveu sobre este tema
+            if (tema.frase_tematica && frasesJaEscritas.has(tema.frase_tematica)) {
+              continue;
+            }
+
+            const dataPublicacao = tema.published_at
+              ? new Date(tema.published_at).toLocaleDateString('pt-BR')
+              : undefined;
+
+            alertas.push({
+              tipo: 'tema',
+              id: tema.id,
+              titulo: tema.frase_tematica || 'Novo tema disponível',
+              data: dataPublicacao,
+              path: `/temas/${tema.id}`,
+              prioridade: 6
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar temas recentes:', error);
+      }
+
+      // Ordenar por prioridade (1 = mais urgente)
+      return alertas.sort((a, b) => a.prioridade - b.prioridade);
+    },
+    enabled: enabled && (!!turma || userType === 'visitante'),
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    refetchInterval: 5 * 60 * 1000, // Refetch a cada 5 minutos
+  });
+}

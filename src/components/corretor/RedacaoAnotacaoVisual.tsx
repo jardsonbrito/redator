@@ -1,12 +1,24 @@
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Eye, Edit3 } from "lucide-react";
+import { Save, Trash2, Edit3, Mic, MicOff, Loader2, X, ChevronDown, ChevronUp, Bot, SendHorizontal } from "lucide-react";
+import { JarvisIcon } from "@/components/icons/JarvisIcon";
+import { cn } from "@/lib/utils";
+import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 import html2canvas from 'html2canvas';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Importar Annotorious
 import { Annotorious } from '@recogito/annotorious';
@@ -17,8 +29,8 @@ import '@recogito/annotorious/dist/annotorious.min.css';
 // Estilos customizados para desabilitar pop-ups nativos e estilizar anotações
 const customStyles = `
   /* DESABILITAR POP-UPS NATIVOS DO ANNOTORIOUS */
-  .r6o-editor, 
-  .r6o-widget, 
+  .r6o-editor,
+  .r6o-widget,
   .r6o-popup,
   .r6o-annotation-popup {
     display: none !important;
@@ -26,41 +38,83 @@ const customStyles = `
     opacity: 0 !important;
     pointer-events: none !important;
   }
-  
-  /* Estilos para anotações por competência */
+
+  /* Estilos premium por competência */
   .r6o-annotation.competencia-1 .r6o-shape {
-    fill: rgba(229, 57, 53, 0.15) !important;
+    fill: rgba(229, 57, 53, 0.12) !important;
     stroke: #E53935 !important;
     stroke-width: 2px !important;
   }
+  .r6o-annotation.competencia-1:hover .r6o-shape {
+    fill: rgba(229, 57, 53, 0.22) !important;
+    stroke: #E53935 !important;
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 5px rgba(229, 57, 53, 0.5)) !important;
+  }
   .r6o-annotation.competencia-2 .r6o-shape {
-    fill: rgba(67, 160, 71, 0.15) !important;
+    fill: rgba(67, 160, 71, 0.12) !important;
     stroke: #43A047 !important;
     stroke-width: 2px !important;
   }
+  .r6o-annotation.competencia-2:hover .r6o-shape {
+    fill: rgba(67, 160, 71, 0.22) !important;
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 5px rgba(67, 160, 71, 0.5)) !important;
+  }
   .r6o-annotation.competencia-3 .r6o-shape {
-    fill: rgba(33, 150, 243, 0.15) !important;
+    fill: rgba(33, 150, 243, 0.12) !important;
     stroke: #2196F3 !important;
     stroke-width: 2px !important;
   }
+  .r6o-annotation.competencia-3:hover .r6o-shape {
+    fill: rgba(33, 150, 243, 0.22) !important;
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 5px rgba(33, 150, 243, 0.5)) !important;
+  }
   .r6o-annotation.competencia-4 .r6o-shape {
-    fill: rgba(255, 152, 0, 0.15) !important;
+    fill: rgba(255, 152, 0, 0.12) !important;
     stroke: #FF9800 !important;
     stroke-width: 2px !important;
   }
+  .r6o-annotation.competencia-4:hover .r6o-shape {
+    fill: rgba(255, 152, 0, 0.22) !important;
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 5px rgba(255, 152, 0, 0.5)) !important;
+  }
   .r6o-annotation.competencia-5 .r6o-shape {
-    fill: rgba(156, 39, 176, 0.15) !important;
+    fill: rgba(156, 39, 176, 0.12) !important;
     stroke: #9C27B0 !important;
     stroke-width: 2px !important;
   }
-  
-  /* Container: mesmo tratamento para fotos e imagens convertidas */
+  .r6o-annotation.competencia-5:hover .r6o-shape {
+    fill: rgba(156, 39, 176, 0.22) !important;
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 5px rgba(156, 39, 176, 0.5)) !important;
+  }
+  .r6o-annotation.competencia-6 .r6o-shape {
+    fill: rgba(0, 188, 212, 0.12) !important;
+    stroke: #00BCD4 !important;
+    stroke-width: 2px !important;
+  }
+  .r6o-annotation.competencia-6:hover .r6o-shape {
+    fill: rgba(0, 188, 212, 0.22) !important;
+    stroke-width: 3px !important;
+    filter: drop-shadow(0 0 5px rgba(0, 188, 212, 0.5)) !important;
+  }
+
+  /* Cursor pointer em todas as anotações */
+  .r6o-annotation {
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+  }
+
+  /* Container da imagem */
   .container-imagem-redacao {
     width: 100%;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    overflow: hidden; /* Sem scroll interno */
+    overflow: hidden;
     padding: 0 !important;
     margin: 0 !important;
     background: white;
@@ -84,10 +138,8 @@ const customStyles = `
     margin: 0 !important;
     max-height: none !important;
   }
-  
-  /* Removido modo de tela cheia */
 
-  /* Efeito de destaque para comentários */
+  /* Efeito de destaque para comentários na lista */
   .comentario-destacado {
     animation: pulseGlow 2s ease-in-out !important;
     border: 3px solid hsl(var(--annotation-highlight)) !important;
@@ -101,46 +153,17 @@ const customStyles = `
   }
 
   @keyframes pulseGlow {
-    0% {
-      box-shadow: 0 0 5px hsl(var(--annotation-highlight) / 0.3);
-      border-color: hsl(var(--annotation-highlight) / 0.5);
-    }
-    50% {
-      box-shadow: 0 0 25px hsl(var(--annotation-highlight) / 0.8);
-      border-color: hsl(var(--annotation-highlight));
-    }
-    100% {
-      box-shadow: 0 0 5px hsl(var(--annotation-highlight) / 0.3);
-      border-color: hsl(var(--annotation-highlight) / 0.5);
-    }
+    0% { box-shadow: 0 0 5px hsl(var(--annotation-highlight) / 0.3); }
+    50% { box-shadow: 0 0 25px hsl(var(--annotation-highlight) / 0.8); }
+    100% { box-shadow: 0 0 5px hsl(var(--annotation-highlight) / 0.3); }
   }
 
   @keyframes pulseRetangulo {
-    0% {
-      stroke: currentColor !important;
-      stroke-width: 2px !important;
-      filter: none !important;
-    }
-    25% {
-      stroke: hsl(var(--annotation-highlight)) !important;
-      stroke-width: 5px !important;
-      filter: drop-shadow(0 0 12px hsl(var(--annotation-highlight) / 1)) !important;
-    }
-    50% {
-      stroke: hsl(var(--annotation-highlight)) !important;
-      stroke-width: 6px !important;
-      filter: drop-shadow(0 0 15px hsl(var(--annotation-highlight) / 1)) drop-shadow(0 0 25px hsl(var(--annotation-highlight) / 0.8)) !important;
-    }
-    75% {
-      stroke: hsl(var(--annotation-highlight)) !important;
-      stroke-width: 5px !important;
-      filter: drop-shadow(0 0 12px hsl(var(--annotation-highlight) / 1)) !important;
-    }
-    100% {
-      stroke: currentColor !important;
-      stroke-width: 2px !important;
-      filter: none !important;
-    }
+    0% { stroke: currentColor !important; stroke-width: 2px !important; filter: none !important; }
+    25% { stroke: hsl(var(--annotation-highlight)) !important; stroke-width: 5px !important; filter: drop-shadow(0 0 12px hsl(var(--annotation-highlight) / 1)) !important; }
+    50% { stroke: hsl(var(--annotation-highlight)) !important; stroke-width: 6px !important; filter: drop-shadow(0 0 15px hsl(var(--annotation-highlight) / 1)) drop-shadow(0 0 25px hsl(var(--annotation-highlight) / 0.8)) !important; }
+    75% { stroke: hsl(var(--annotation-highlight)) !important; stroke-width: 5px !important; filter: drop-shadow(0 0 12px hsl(var(--annotation-highlight) / 1)) !important; }
+    100% { stroke: currentColor !important; stroke-width: 2px !important; filter: none !important; }
   }
 `;
 
@@ -153,7 +176,6 @@ if (typeof document !== 'undefined' && !document.getElementById('custom-annotati
   document.head.appendChild(styleSheet);
 }
 
-// Interface que corresponde à estrutura real da tabela no banco
 interface AnotacaoVisual {
   id?: string;
   redacao_id: string;
@@ -182,12 +204,14 @@ interface RedacaoAnotacaoVisualProps {
   ehCorretor2?: boolean;
   statusMinhaCorrecao?: string;
   tipoTabela?: 'redacoes_enviadas' | 'redacoes_simulado' | 'redacoes_exercicio';
+  onAnotacoesChange?: (counts: Record<number, number>) => void;
 }
 
 interface RedacaoAnotacaoVisualRef {
   salvarTodasAnotacoes: () => Promise<void>;
   gerarImagemComAnotacoes: () => Promise<string>;
   destacarRetangulo: (annotationId: string) => void;
+  triggerLimparTodasAnotacoes: () => void;
 }
 
 const CORES_COMPETENCIAS = {
@@ -195,8 +219,16 @@ const CORES_COMPETENCIAS = {
   2: { cor: '#43A047', nome: 'Verde', label: 'Competência 2' },
   3: { cor: '#2196F3', nome: 'Azul', label: 'Competência 3' },
   4: { cor: '#FF9800', nome: 'Laranja', label: 'Competência 4' },
-  5: { cor: '#9C27B0', nome: 'Roxo', label: 'Competência 5' }
+  5: { cor: '#9C27B0', nome: 'Roxo', label: 'Competência 5' },
+  6: { cor: '#00BCD4', nome: 'Turquesa', label: 'Ponto de Atenção' }
 } as const;
+
+type MiniCardState = {
+  id: string;
+  pinned: boolean;
+  editing: boolean;
+  position: { x: number; y: number; showAbove: boolean };
+};
 
 const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps>(({
   imagemUrl,
@@ -206,114 +238,179 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   ehCorretor1 = false,
   ehCorretor2 = false,
   statusMinhaCorrecao = 'pendente',
-  tipoTabela = 'redacoes_enviadas'
+  tipoTabela = 'redacoes_enviadas',
+  onAnotacoesChange,
 }, ref) => {
   const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const annotoriousRef = useRef<any>(null);
-  
-  // Estados
+
+  // Estados principais
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState<number>(1);
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const [dialogAberto, setDialogAberto] = useState(false);
   const [currentAnnotation, setCurrentAnnotation] = useState<any>(null);
   const [comentarioTemp, setComentarioTemp] = useState("");
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-  
-  // Novos estados para o dialog de 5 bolinhas
   const [competenciaDialog, setCompetenciaDialog] = useState<number | null>(null);
-  const [competenciasExpanded, setCompetenciasExpanded] = useState<boolean>(true);
+  const [competenciasExpanded, setCompetenciasExpanded] = useState<boolean>(false);
   const [editandoAnotacao, setEditandoAnotacao] = useState<AnotacaoVisual | null>(null);
-  
+  const [refineLoading, setRefineLoading] = useState(false);
+  const [refineSugestoes, setRefineSugestoes] = useState<string[]>([]);
+  // Assistente de correção
+  const [showAssistente, setShowAssistente] = useState(false);
+  const [assistentePergunta, setAssistentePergunta] = useState('');
+  const [assistenteLoading, setAssistenteLoading] = useState(false);
+  const [assistenteHistorico, setAssistenteHistorico] = useState<Array<{ pergunta: string; resposta: string }>>([]);
+  const assistenteInputRef = useRef<HTMLTextAreaElement>(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const dragState = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
   const [contadorSequencial, setContadorSequencial] = useState(1);
 
-  // Expor métodos via ref
+  // Estados do mini-card contextual
+  const [miniCard, setMiniCard] = useState<MiniCardState | null>(null);
+  const [inlineComentario, setInlineComentario] = useState("");
+  const [inlineCompetencia, setInlineCompetencia] = useState<number>(1);
+  const [inlineRefineLoading, setInlineRefineLoading] = useState(false);
+  const [inlineRefineSugestoes, setInlineRefineSugestoes] = useState<string[]>([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Estados de UI
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [listaAberta, setListaAberta] = useState(false);
+
+  // Refs auxiliares para closures
+  const anotacoesRef = useRef<AnotacaoVisual[]>([]);
+  const imageDimensionsRef = useRef({ width: 0, height: 0 });
+  const miniCardHoverRef = useRef(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedAnnotationIdRef = useRef<string | null>(null);
+  const isSuppressClickRef = useRef(false);
+
+  // Manter refs sincronizados
+  useEffect(() => { anotacoesRef.current = anotacoes; }, [anotacoes]);
+  useEffect(() => { imageDimensionsRef.current = imageDimensions; }, [imageDimensions]);
+
+  // Notificar pai sobre contagens
+  useEffect(() => {
+    if (!onAnotacoesChange) return;
+    const counts: Record<number, number> = {};
+    anotacoes.forEach(a => { counts[a.competencia] = (counts[a.competencia] || 0) + 1; });
+    onAnotacoesChange(counts);
+  }, [anotacoes, onAnotacoesChange]);
+
+  // Ref e hook de voz para o textarea de comentário no dialog
+  const comentarioTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const { isRecording: isMicRecording, isSupported: isMicSupported, toggleRecording: toggleMicRecording, stopRecording: stopMicRecording } =
+    useVoiceTranscription(setComentarioTemp, comentarioTemp, comentarioTextareaRef);
+
+  // Hook de voz para o campo de pergunta do Assistente de correção
+  const { isRecording: isAssistenteMicRecording, isSupported: isAssistenteMicSupported, toggleRecording: toggleAssistenteMic } =
+    useVoiceTranscription(setAssistentePergunta, assistentePergunta, assistenteInputRef);
+
+  useEffect(() => {
+    if (!dialogAberto) stopMicRecording();
+  }, [dialogAberto, stopMicRecording]);
+
+  useEffect(() => {
+    if (dialogAberto) setDragPos({ x: 0, y: 0 });
+  }, [dialogAberto]);
+
+  // Fechar mini-card ao clicar fora
+  useEffect(() => {
+    if (!miniCard?.pinned) return;
+    const handleClick = () => setMiniCard(null);
+    const timer = setTimeout(() => document.addEventListener('click', handleClick), 100);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClick);
+    };
+  }, [miniCard?.pinned]);
+
+  // Drag do painel arrastável
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragState.current.isDragging) return;
+      setDragPos({
+        x: dragState.current.startPosX + (e.clientX - dragState.current.startX),
+        y: dragState.current.startPosY + (e.clientY - dragState.current.startY),
+      });
+    };
+    const onMouseUp = () => { dragState.current.isDragging = false; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragState.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: dragPos.x,
+      startPosY: dragPos.y,
+    };
+  };
+
+  // Calcular posição do mini-card em coordenadas viewport (fixed)
+  const calcMiniCardPosition = useCallback((annotationId: string): MiniCardState['position'] | null => {
+    const anotacao = anotacoesRef.current.find(a => a.id === annotationId);
+    if (!anotacao || !containerRef.current || !imageDimensionsRef.current.width) return null;
+    const rect = containerRef.current.getBoundingClientRect();
+    const scale = rect.width / imageDimensionsRef.current.width;
+    const midX = rect.left + ((anotacao.x_start + anotacao.x_end) / 2) * scale;
+    const topAnnot = rect.top + anotacao.y_start * scale;
+    const botAnnot = rect.top + anotacao.y_end * scale;
+    const showAbove = botAnnot + 320 > window.innerHeight;
+    const clampedX = Math.max(195, Math.min(midX, window.innerWidth - 195));
+    return { x: clampedX, y: showAbove ? topAnnot : botAnnot, showAbove };
+  }, []);
+
   useImperativeHandle(ref, () => ({
     salvarTodasAnotacoes,
     gerarImagemComAnotacoes,
-    destacarRetangulo
+    destacarRetangulo,
+    triggerLimparTodasAnotacoes: () => setShowClearDialog(true),
   }));
 
-  // Função para destacar retângulo específico - VERSÃO DEFINITIVA
+  // Destaque de retângulo no SVG
   const destacarRetangulo = (annotationId: string) => {
-    console.log('=== CLIQUE NO OLHO ===', annotationId);
-    
     try {
-      if (!annotoriousRef.current) {
-        console.error('❌ Annotorious não inicializado');
-        return;
-      }
-
-      // Encontrar a anotação correspondente
+      if (!annotoriousRef.current) return;
       const annotations = annotoriousRef.current.getAnnotations();
       const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
-      
-      if (annotationIndex === -1) {
-        console.error('❌ Anotação não encontrada');
-        return;
-      }
+      if (annotationIndex === -1) return;
 
-      console.log('✅ Anotação encontrada no índice:', annotationIndex);
-
-      // Buscar o SVG no container (qualquer SVG)
       const containerElement = containerRef.current;
-      if (!containerElement) {
-        console.error('❌ Container não encontrado');
-        return;
-      }
-
+      if (!containerElement) return;
       const svgElement = containerElement.querySelector('svg');
-      if (!svgElement) {
-        console.error('❌ SVG não encontrado');
-        return;
-      }
+      if (!svgElement) return;
 
-      console.log('✅ SVG encontrado');
-
-      // Buscar TODOS os grupos g no SVG
       const allGroups = svgElement.querySelectorAll('g');
-      console.log('📍 Total de grupos no SVG:', allGroups.length);
-
-      // Buscar TODOS os elementos rect, path, polygon, circle
       const allShapes = svgElement.querySelectorAll('rect, path, polygon, circle, ellipse');
-      console.log('📍 Total de shapes no SVG:', allShapes.length);
-
       let targetShape: HTMLElement | null = null;
 
-      // MÉTODO 1: Buscar por data-id exato no grupo
       for (let i = 0; i < allGroups.length; i++) {
         const group = allGroups[i];
         if (group.getAttribute('data-id') === annotationId) {
           const shape = group.querySelector('rect, path, polygon, circle, ellipse') as HTMLElement;
-          if (shape) {
-            targetShape = shape;
-            console.log('✅ MÉTODO 1: Encontrado por data-id:', annotationId);
-            break;
-          }
+          if (shape) { targetShape = shape; break; }
         }
       }
-
-      // MÉTODO 2: Se não encontrou, usar índice direto
-      if (!targetShape && annotationIndex >= 0 && annotationIndex < allShapes.length) {
+      if (!targetShape && annotationIndex < allShapes.length) {
         targetShape = allShapes[annotationIndex] as HTMLElement;
-        console.log('✅ MÉTODO 2: Encontrado por índice:', annotationIndex);
       }
-
-      // MÉTODO 3: Se ainda não encontrou, usar índice no grupo
-      if (!targetShape && annotationIndex >= 0 && annotationIndex < allGroups.length) {
-        const group = allGroups[annotationIndex];
-        const shape = group.querySelector('rect, path, polygon, circle, ellipse') as HTMLElement;
-        if (shape) {
-          targetShape = shape;
-          console.log('✅ MÉTODO 3: Encontrado shape no grupo por índice:', annotationIndex);
-        }
+      if (!targetShape && annotationIndex < allGroups.length) {
+        const shape = allGroups[annotationIndex].querySelector('rect, path, polygon, circle, ellipse') as HTMLElement;
+        if (shape) targetShape = shape;
       }
 
       if (targetShape) {
-        console.log('🎯 ELEMENTO ENCONTRADO! Aplicando destaque...');
-
-        // Limpar destaques anteriores
         document.querySelectorAll('[data-highlighted="true"]').forEach(el => {
           const element = el as HTMLElement;
           element.style.stroke = '';
@@ -322,98 +419,52 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           element.style.filter = '';
           element.removeAttribute('data-highlighted');
         });
-
-        // Aplicar destaque DUPLO
         targetShape.setAttribute('data-highlighted', 'true');
-        
-        // Estilo direto
         targetShape.style.stroke = '#FFD700 !important';
         targetShape.style.strokeWidth = '6px !important';
         targetShape.style.fill = 'rgba(255, 215, 0, 0.4) !important';
         targetShape.style.filter = 'drop-shadow(0 0 15px #FFD700) !important';
-        
-        // CSS Class também
         targetShape.classList.add('pulse-highlight');
-
-        console.log('✅ DESTAQUE APLICADO COM SUCESSO!');
-
-        // Scroll para o retângulo
-        targetShape.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'center'
-        });
-
-        // Remover destaque após 4 segundos
+        targetShape.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
         setTimeout(() => {
-          targetShape!.style.stroke = '';
-          targetShape!.style.strokeWidth = '';
-          targetShape!.style.fill = '';
-          targetShape!.style.filter = '';
-          targetShape!.classList.remove('pulse-highlight');
-          targetShape!.removeAttribute('data-highlighted');
-          console.log('✅ DESTAQUE REMOVIDO');
+          if (targetShape) {
+            targetShape.style.stroke = '';
+            targetShape.style.strokeWidth = '';
+            targetShape.style.fill = '';
+            targetShape.style.filter = '';
+            targetShape.classList.remove('pulse-highlight');
+            targetShape.removeAttribute('data-highlighted');
+          }
         }, 4000);
-
-      } else {
-        console.error('❌ FALHA TOTAL - Elemento não encontrado por nenhum método');
-        console.log('Debug - Total grupos:', allGroups.length);
-        console.log('Debug - Total shapes:', allShapes.length);
-        console.log('Debug - Índice procurado:', annotationIndex);
       }
-
     } catch (error) {
-      console.error('❌ ERRO CRÍTICO:', error);
+      console.error('Erro ao destacar retângulo:', error);
     }
   };
 
-  // Função para carregar dimensões da imagem
   const handleImageLoad = () => {
     if (imageRef.current) {
       const { naturalWidth, naturalHeight } = imageRef.current;
       setImageDimensions({ width: naturalWidth, height: naturalHeight });
-      console.log('🖼️ Dimensões da imagem carregadas:', { 
-        width: naturalWidth, 
-        height: naturalHeight,
-        src: imageRef.current.src 
-      });
-      
-      // Log adicional para debug
-      console.log('🔍 Estado atual das anotações:', anotacoes.length, 'anotações carregadas');
     }
   };
 
-  // Função para destacar comentário
   const destacarComentario = (annotationId: string) => {
-    const comentarioElement = document.querySelector(`[data-comentario-id="${annotationId}"]`);
-    if (comentarioElement) {
-      comentarioElement.classList.add('comentario-destacado');
-      
-      // Remover destaque após 2 segundos
-      setTimeout(() => {
-        comentarioElement.classList.remove('comentario-destacado');
-      }, 2000);
-      
-      // Scroll para o comentário se necessário
-      comentarioElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
+    const el = document.querySelector(`[data-comentario-id="${annotationId}"]`);
+    if (el) {
+      el.classList.add('comentario-destacado');
+      setTimeout(() => el.classList.remove('comentario-destacado'), 2000);
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
-  // Carregar anotações do banco - baseado no status da correção
   const carregarAnotacoes = async () => {
     try {
-
-      // Verificar se corretorId está disponível
       if (!corretorId || corretorId.trim() === '') {
-        console.log('⏳ CorretorId não disponível, carregando anotações gerais...');
-        // Para casos onde não há corretor específico, não carregar anotações
+        setAnotacoes([]);
         return;
       }
 
-      // Verificar se já existem anotações salvas por este corretor
       const { data: existingAnnotations } = await supabase
         .from('marcacoes_visuais')
         .select('id')
@@ -421,169 +472,94 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         .eq('corretor_id', corretorId)
         .limit(1);
 
-      // Lógica corrigida: só bloquear se status for "pendente" E não houver anotações já salvas
       const temAnotacoesSalvas = (existingAnnotations && existingAnnotations.length > 0);
-      const deveBloquearCarregamento = statusMinhaCorrecao === 'pendente' && !temAnotacoesSalvas;
-      
-
-      if (deveBloquearCarregamento) {
-        console.log('🚫 Redação pendente sem anotações - não carregar marcações');
+      const deveBloquear = statusMinhaCorrecao === 'pendente' && !temAnotacoesSalvas;
+      if (deveBloquear) {
         setAnotacoes([]);
         return;
       }
 
-      // Primeira tentativa: buscar com o tipo de tabela correto
       let { data, error } = await supabase
         .from('marcacoes_visuais')
         .select('*')
         .eq('redacao_id', redacaoId)
-        .eq('tabela_origem', tipoTabela) // Usar tipo de tabela passado como prop
-        .eq('corretor_id', corretorId) // Filtrar apenas marcações do corretor atual
-        .order('criado_em', { ascending: true }); // Ordenar pela data real de criação
+        .eq('tabela_origem', tipoTabela)
+        .eq('corretor_id', corretorId)
+        .order('criado_em', { ascending: true });
 
-      if (error) {
-        console.error('❌ Erro ao carregar anotações:', error);
-        return;
-      }
+      if (error) { console.error('Erro ao carregar anotações:', error); return; }
 
-      // Se não encontrou e é simulado, tentar buscar como 'redacoes_enviadas' (fallback para dados antigos)
       if (data?.length === 0 && tipoTabela === 'redacoes_simulado') {
-        console.log('🔄 Tentativa fallback: buscando anotações salvas como redacoes_enviadas');
-        const fallbackResult = await supabase
+        const fallback = await supabase
           .from('marcacoes_visuais')
           .select('*')
           .eq('redacao_id', redacaoId)
-          .eq('tabela_origem', 'redacoes_enviadas') // Fallback para dados antigos
+          .eq('tabela_origem', 'redacoes_enviadas')
           .eq('corretor_id', corretorId)
           .order('criado_em', { ascending: true });
-
-        if (!fallbackResult.error && fallbackResult.data) {
-          data = fallbackResult.data;
-          console.log('✅ Anotações encontradas via fallback:', data.length);
-        }
+        if (!fallback.error && fallback.data) data = fallback.data;
       }
 
-      // IMPORTANTE: Verificar se as anotações retornadas são realmente do corretor correto
-      if (data && data.length > 0) {
-        const anotacoesIncorretas = data.filter(a => a.corretor_id !== corretorId);
-        if (anotacoesIncorretas.length > 0) {
-          console.error('🚨 PROBLEMA CRÍTICO - Anotações de outros corretores encontradas:', {
-            corretorEsperado: corretorId,
-            anotacoesIncorretas: anotacoesIncorretas.map(a => ({ id: a.id, corretor_id: a.corretor_id }))
-          });
-        }
-      }
-
-      
-      // Carregar anotações sem numeração
       setAnotacoes(data || []);
-
-      // Se não há anotações, garantir que o Annotorious também está limpo
       if ((data?.length || 0) === 0 && annotoriousRef.current) {
         annotoriousRef.current.clearAnnotations();
       }
-      
-      // Definir próximo número sequencial para novas anotações
-      const maiorNumero = Math.max(0, ...(data?.map(a => a.numero_sequencial || 0) || []));
-      const proximoNumero = maiorNumero + 1;
-      setContadorSequencial(proximoNumero);
-      
+      const maiorNum = Math.max(0, ...(data?.map(a => a.numero_sequencial || 0) || []));
+      setContadorSequencial(maiorNum + 1);
     } catch (error) {
       console.error('Erro ao carregar anotações:', error);
     }
   };
 
-  // Carregar anotações e aplicar no Annotorious
   const carregarEAplicarAnotacoes = () => {
-    if (!annotoriousRef.current || !imageDimensions.width || !imageDimensions.height) {
-      return;
-    }
-
-    // SEMPRE limpar anotações existentes primeiro
+    if (!annotoriousRef.current || !imageDimensions.width || !imageDimensions.height) return;
     annotoriousRef.current.clearAnnotations();
-
-    if (anotacoes.length === 0) {
-      return;
-    }
+    if (anotacoes.length === 0) return;
 
     try {
-
-      // Converter anotações do banco para formato Annotorious
-      // CORREÇÃO: Usar dimensões atuais da imagem, não as salvas no banco
       const annotoriousAnnotations = anotacoes
-        .filter(anotacao => {
-          // Filtrar anotações com coordenadas inválidas
-          const isValid = anotacao.x_start >= 0 && 
-                          anotacao.y_start >= 0 && 
-                          anotacao.x_end > anotacao.x_start && 
-                          anotacao.y_end > anotacao.y_start;
-          if (!isValid) {
-            console.warn('⚠️ Anotação com coordenadas inválidas filtrada:', anotacao.id);
-          }
-          return isValid;
-        })
-        .map((anotacao, index) => {
-        const x = (anotacao.x_start / imageDimensions.width) * 100;
-        const y = (anotacao.y_start / imageDimensions.height) * 100;
-        const w = ((anotacao.x_end - anotacao.x_start) / imageDimensions.width) * 100;
-        const h = ((anotacao.y_end - anotacao.y_start) / imageDimensions.height) * 100;
+        .filter(a => a.x_start >= 0 && a.y_start >= 0 && a.x_end > a.x_start && a.y_end > a.y_start)
+        .map(anotacao => {
+          const x = (anotacao.x_start / imageDimensions.width) * 100;
+          const y = (anotacao.y_start / imageDimensions.height) * 100;
+          const w = ((anotacao.x_end - anotacao.x_start) / imageDimensions.width) * 100;
+          const h = ((anotacao.y_end - anotacao.y_start) / imageDimensions.height) * 100;
+          return {
+            id: anotacao.id,
+            type: "Annotation",
+            target: {
+              source: imagemUrl,
+              selector: {
+                type: "FragmentSelector",
+                conformsTo: "http://www.w3.org/TR/media-frags/",
+                value: `xywh=percent:${x},${y},${w},${h}`
+              }
+            },
+            body: [{ type: "TextualBody", purpose: anotacao.competencia, value: anotacao.comentario }],
+            competencia: anotacao.competencia
+          };
+        });
 
-        return {
-          id: anotacao.id,
-          type: "Annotation",
-          target: {
-            source: imagemUrl,
-            selector: {
-              type: "FragmentSelector",
-              conformsTo: "http://www.w3.org/TR/media-frags/",
-              value: `xywh=percent:${x},${y},${w},${h}`
-            }
-          },
-          body: [{
-            type: "TextualBody",
-            purpose: anotacao.competencia, // Usar a competência da anotação salva
-            value: anotacao.comentario
-          }],
-          // Dados customizados para a competência
-          competencia: anotacao.competencia
-        };
-      });
-
-      // Usar setAnnotations para aplicar todas de uma vez
       try {
         annotoriousRef.current.setAnnotations(annotoriousAnnotations);
-
-      } catch (error) {
-        console.error('❌ Erro ao aplicar anotações:', error);
-        
-        // Fallback: tentar adicionar uma por uma
-        annotoriousAnnotations.forEach((annotation) => {
-          try {
-            annotoriousRef.current.addAnnotation(annotation);
-          } catch (err) {
-            console.error('❌ Erro ao adicionar anotação:', err);
-          }
+      } catch {
+        annotoriousAnnotations.forEach(a => {
+          try { annotoriousRef.current.addAnnotation(a); } catch {}
         });
       }
-
     } catch (error) {
-      console.error('❌ Erro ao carregar anotações:', error);
+      console.error('Erro ao aplicar anotações:', error);
     }
   };
 
   // Inicializar Annotorious
   useEffect(() => {
-    let cleanupFunctions: (() => void)[] = [];
+    const cleanupFunctions: (() => void)[] = [];
 
     const initAnnotorious = () => {
-      if (!imageRef.current || !imageDimensions.width) {
-        return;
-      }
+      if (!imageRef.current || !imageDimensions.width) return;
 
       try {
-        console.log('Inicializando Annotorious...');
-        
-        // Destruir instância anterior se existir
         if (annotoriousRef.current) {
           annotoriousRef.current.destroy();
           annotoriousRef.current = null;
@@ -595,205 +571,254 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           allowEmpty: false,
           drawOnSingleClick: false,
           readOnly: readonly,
-          widgets: [], // Desabilitar widgets nativos
+          widgets: [],
           formatters: [
             function(annotation: any) {
-              // Primeiro tentar pegar a competência do body, depois do objeto de anotação, senão usar a selecionada
               const competencia = annotation.body?.[0]?.purpose || annotation.competencia || competenciaSelecionada;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
-              
-              console.log('🎨 Formatando anotação:', { 
-                competencia, 
-                corCompetencia: corCompetencia?.cor,
-                annotation: annotation
-              });
-              
               if (corCompetencia) {
                 const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
                 const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
                 const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
-                
                 return {
                   className: `competencia-${competencia}`,
-                  style: `fill: rgba(${r}, ${g}, ${b}, 0.15); stroke: ${corCompetencia.cor}; stroke-width: 2px; cursor: pointer;`
+                  style: `fill: rgba(${r}, ${g}, ${b}, 0.12); stroke: ${corCompetencia.cor}; stroke-width: 2px; cursor: pointer;`
                 };
               }
-              return {
-                style: 'fill: rgba(255, 0, 0, 0.15); stroke: #ff0000; stroke-width: 2px; cursor: pointer;'
-              };
+              return { style: 'fill: rgba(255, 0, 0, 0.12); stroke: #ff0000; stroke-width: 2px; cursor: pointer;' };
             }
           ]
         });
 
+        const onMouseEnter = (annotation: any) => {
+          selectedAnnotationIdRef.current = annotation.id;
+          if (readonly) {
+            // Aluno: mostra o pop-up de comentário ao passar o mouse
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+            const pos = calcMiniCardPosition(annotation.id);
+            if (pos) setMiniCard({ id: annotation.id, pinned: false, editing: false, position: pos });
+          } else {
+            // Corretor: seleciona para mostrar alças de redimensionamento
+            isSuppressClickRef.current = true;
+            annotoriousRef.current?.selectAnnotation(annotation.id);
+          }
+        };
+
+        const onMouseLeave = () => {
+          if (readonly) {
+            // Aluno: esconde o pop-up após pequeno delay (permite mover o mouse até ele)
+            hideTimerRef.current = setTimeout(() => {
+              if (!miniCardHoverRef.current) setMiniCard(null);
+            }, 200);
+          }
+          // Corretor: mantém alças visíveis; deselect ocorre ao clicar fora
+        };
+
+        // 1º clique: suprimido (disparado pelo selectAnnotation do hover)
+        // Clique subsequente na anotação já selecionada: tratado pelo onDocMouseUp abaixo
+        const onClickAnnotation = (annotation: any) => {
+          if (isSuppressClickRef.current) {
+            isSuppressClickRef.current = false;
+            return;
+          }
+          if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+          const pos = calcMiniCardPosition(annotation.id);
+          if (pos) {
+            setMiniCard({ id: annotation.id, pinned: true, editing: false, position: pos });
+          }
+          if (annotation.id) destacarComentario(annotation.id);
+        };
+
+        anno.on('mouseEnterAnnotation', onMouseEnter);
+        anno.on('mouseLeaveAnnotation', onMouseLeave);
+        anno.on('clickAnnotation', onClickAnnotation);
+
+        cleanupFunctions.push(() => {
+          if (anno) {
+            anno.off('mouseEnterAnnotation', onMouseEnter);
+            anno.off('mouseLeaveAnnotation', onMouseLeave);
+            anno.off('clickAnnotation', onClickAnnotation);
+          }
+        });
+
         if (!readonly) {
-          // Configurar eventos para modo de edição
           const onCreateSelection = (selection: any) => {
-            console.log('Selection created:', selection);
-            
             try {
-              // Prevenir pop-up nativo
               selection.preventDefault?.();
-              
-              // Extrair coordenadas
               const selectorValue = selection.target?.selector?.value || '';
-              console.log('Selector value:', selectorValue);
-              
               let x: number, y: number, width: number, height: number;
-              
-              // Parse das coordenadas
+
               if (selectorValue.includes('xywh=percent:')) {
                 const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
-                if (!match || match.length !== 5) {
-                  console.error('Formato percent inválido:', selectorValue);
-                  return;
-                }
-                
-                const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
-                x = Math.round(xPercent / 100 * imageDimensions.width);
-                y = Math.round(yPercent / 100 * imageDimensions.height);
-                width = Math.round(wPercent / 100 * imageDimensions.width);
-                height = Math.round(hPercent / 100 * imageDimensions.height);
+                if (!match || match.length !== 5) return;
+                const [, xP, yP, wP, hP] = match.map(parseFloat);
+                x = Math.round(xP / 100 * imageDimensions.width);
+                y = Math.round(yP / 100 * imageDimensions.height);
+                width = Math.round(wP / 100 * imageDimensions.width);
+                height = Math.round(hP / 100 * imageDimensions.height);
               } else if (selectorValue.includes('xywh=pixel:')) {
                 const match = selectorValue.match(/xywh=pixel:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
-                if (!match || match.length !== 5) {
-                  console.error('Formato pixel inválido:', selectorValue);
-                  return;
-                }
+                if (!match || match.length !== 5) return;
                 [, x, y, width, height] = match.map(parseFloat);
               } else {
-                console.error('Formato desconhecido do seletor:', selectorValue);
                 return;
               }
 
-              // Validar coordenadas
-              if (x < 0 || y < 0 || width <= 0 || height <= 0) {
-                console.error('Coordenadas inválidas:', { x, y, width, height });
-                return;
-              }
+              if (x < 0 || y < 0 || width <= 0 || height <= 0) return;
 
-              // Criar dados da anotação (SEM competência predefinida)
-              const annotationData = {
+              // Fechar mini-card ao criar nova marcação
+              setMiniCard(null);
+
+              setEditandoAnotacao(null);
+              setCurrentAnnotation({
                 id: `temp_${Date.now()}`,
-                target: {
-                  selector: {
-                    type: "FragmentSelector",
-                    value: `xywh=pixel:${x},${y},${width},${height}`
-                  }
-                },
-                body: [{
-                  type: "TextualBody", 
-                  purpose: null, // SEM competência inicial
-                  value: ""
-                }],
+                target: { selector: { type: "FragmentSelector", value: `xywh=pixel:${x},${y},${width},${height}` } },
+                body: [{ type: "TextualBody", purpose: null, value: "" }],
                 bounds: { x, y, width, height },
                 numero: contadorSequencial
-              };
-
-              // CRIAÇÃO: abrir sempre com as 5 bolinhas visíveis
-              setEditandoAnotacao(null);
-              setCurrentAnnotation(annotationData);
-              setComentarioTemp("");
-              setCompetenciaDialog(null);
-              setCompetenciasExpanded(true);
-              setDialogAberto(true);
-              
-              console.log('CRIAÇÃO -> Dialog aberto', {
-                editandoAnotacao: null,
-                competenciaDialog: null,
-                competenciasExpanded: true
               });
-              
+              setComentarioTemp("");
+              setCompetenciaDialog(1);
+              setCompetenciasExpanded(false);
+              setRefineSugestoes([]);
+              setDialogAberto(true);
             } catch (error) {
               console.error('Erro ao processar seleção:', error);
             }
           };
 
-          const onClickAnnotation = (annotation: any) => {
-            try {
-              console.log('🎯 Clique na anotação (modo edição):', annotation.id);
-              
-              // Destacar o comentário correspondente (sem popup)
-              if (annotation.id) {
-                destacarComentario(annotation.id);
-              }
+          anno.on('createSelection', onCreateSelection);
+          cleanupFunctions.push(() => { if (anno) anno.off('createSelection', onCreateSelection); });
 
-              // Mostrar toast informativo sem popup de remoção
-              const comment = annotation.body?.[0]?.value || '';
-              const competencia = annotation.body?.[0]?.purpose || 1;
-              const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
-              
-              toast({
-                title: `${corCompetencia?.label || 'Anotação'}`,
-                description: comment,
-                duration: 3000,
-              });
-            } catch (error) {
-              console.error('Erro ao processar clique na anotação:', error);
+          const onUpdateAnnotation = async (annotation: any) => {
+            const selectorValue = annotation.target?.selector?.value || '';
+            let x: number, y: number, width: number, height: number;
+
+            if (selectorValue.includes('xywh=percent:')) {
+              const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+              if (!match || match.length !== 5) return;
+              const [, xP, yP, wP, hP] = match.map(parseFloat);
+              x = Math.round(xP / 100 * imageDimensions.width);
+              y = Math.round(yP / 100 * imageDimensions.height);
+              width = Math.round(wP / 100 * imageDimensions.width);
+              height = Math.round(hP / 100 * imageDimensions.height);
+            } else if (selectorValue.includes('xywh=pixel:')) {
+              const match = selectorValue.match(/xywh=pixel:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+              if (!match || match.length !== 5) return;
+              [, x, y, width, height] = match.map(parseFloat);
+            } else {
+              return;
+            }
+
+            if (width <= 0 || height <= 0) return;
+
+            try {
+              const { error } = await supabase
+                .from('marcacoes_visuais')
+                .update({ x_start: x, y_start: y, x_end: x + width, y_end: y + height })
+                .eq('id', annotation.id);
+              if (error) throw error;
+              setAnotacoes(prev => prev.map(a =>
+                a.id === annotation.id
+                  ? { ...a, x_start: x, y_start: y, x_end: x + width, y_end: y + height }
+                  : a
+              ));
+            } catch (err) {
+              console.error('Erro ao salvar redimensionamento:', err);
             }
           };
 
-          // Registrar eventos
-          anno.on('createSelection', onCreateSelection);
-          anno.on('clickAnnotation', onClickAnnotation);
+          anno.on('updateAnnotation', onUpdateAnnotation);
+          cleanupFunctions.push(() => { if (anno) anno.off('updateAnnotation', onUpdateAnnotation); });
 
-          // Desabilitar completamente editores nativos
+          // ---- Salvar redimensionamento: lê geometria direto do SVG no mouseUp ----
+          const salvarRedimensionamento = async (annotationId: string) => {
+            const editableElem = document.querySelector('.a9s-annotation.editable.selected') as SVGElement | null;
+            if (!editableElem || editableElem.getAttribute('data-id') !== annotationId) return;
+            const innerRect = editableElem.querySelector('.a9s-inner') as SVGRectElement | null;
+            if (!innerRect) return;
+            const svgX = parseFloat(innerRect.getAttribute('x') || '0');
+            const svgY = parseFloat(innerRect.getAttribute('y') || '0');
+            const svgW = parseFloat(innerRect.getAttribute('width') || '0');
+            const svgH = parseFloat(innerRect.getAttribute('height') || '0');
+            if (svgW <= 0 || svgH <= 0) return;
+            const naturalW = imageRef.current?.naturalWidth || imageDimensions.width;
+            const naturalH = imageRef.current?.naturalHeight || imageDimensions.height;
+            const dims = imageDimensionsRef.current;
+            const x = Math.round(svgX / naturalW * dims.width);
+            const y = Math.round(svgY / naturalH * dims.height);
+            const w = Math.round(svgW / naturalW * dims.width);
+            const h = Math.round(svgH / naturalH * dims.height);
+            const stored = anotacoesRef.current.find(a => a.id === annotationId);
+            if (!stored) return;
+            if (stored.x_start === x && stored.y_start === y && stored.x_end === x + w && stored.y_end === y + h) return;
+            try {
+              const { error } = await supabase
+                .from('marcacoes_visuais')
+                .update({ x_start: x, y_start: y, x_end: x + w, y_end: y + h })
+                .eq('id', annotationId);
+              if (error) throw error;
+              setAnotacoes(prev => prev.map(a =>
+                a.id === annotationId
+                  ? { ...a, x_start: x, y_start: y, x_end: x + w, y_end: y + h }
+                  : a
+              ));
+            } catch (err) {
+              console.error('Erro ao salvar redimensionamento:', err);
+            }
+          };
+
+          const docPos = { x: 0, y: 0 };
+          const onDocMouseDown = (evt: MouseEvent) => {
+            docPos.x = evt.clientX;
+            docPos.y = evt.clientY;
+          };
+          const onDocMouseUp = async (evt: MouseEvent) => {
+            const dx = Math.abs(evt.clientX - docPos.x);
+            const dy = Math.abs(evt.clientY - docPos.y);
+            const isClick = dx < 5 && dy < 5;
+            const annotId = selectedAnnotationIdRef.current;
+            if (!annotId) return;
+            if (!isClick) {
+              // Drag terminou — salva nova geometria
+              await salvarRedimensionamento(annotId);
+            } else {
+              // Clique curto: se for na anotação já selecionada, abre mini-card
+              const target = evt.target as Element;
+              const annotElem = target?.closest('.a9s-annotation');
+              if (annotElem && annotElem.getAttribute('data-id') === annotId) {
+                const pos = calcMiniCardPosition(annotId);
+                if (pos) {
+                  setMiniCard({ id: annotId, pinned: true, editing: false, position: pos });
+                  destacarComentario(annotId);
+                }
+              } else if (!annotElem) {
+                selectedAnnotationIdRef.current = null;
+              }
+            }
+          };
+          document.addEventListener('mousedown', onDocMouseDown);
+          document.addEventListener('mouseup', onDocMouseUp);
+          cleanupFunctions.push(() => {
+            document.removeEventListener('mousedown', onDocMouseDown);
+            document.removeEventListener('mouseup', onDocMouseUp);
+          });
+
           setTimeout(() => {
             const editors = document.querySelectorAll('.r6o-editor, .r6o-widget, .r6o-popup');
             editors.forEach(el => {
               (el as HTMLElement).style.display = 'none';
               (el as HTMLElement).style.visibility = 'hidden';
-              (el as HTMLElement).style.opacity = '0';
               (el as HTMLElement).style.pointerEvents = 'none';
             });
           }, 100);
-
-          cleanupFunctions.push(() => {
-            if (anno) {
-              anno.off('createSelection', onCreateSelection);
-              anno.off('clickAnnotation', onClickAnnotation);
-            }
-          });
-        } else {
-          // Modo de leitura (aluno) - scroll + piscar + destacar comentário
-          const onClickAnnotation = (annotation: any) => {
-            try {
-              const id = annotation.id;
-              console.log('🎯 Clique na anotação (modo leitura):', id);
-
-              if (id) {
-                // Mesmo comportamento do clique no ícone de olho
-                destacarRetangulo(id);
-                destacarComentario(id);
-              }
-            } catch (error) {
-              console.error('Erro ao mostrar anotação (aluno):', error);
-            }
-          };
-
-          anno.on('clickAnnotation', onClickAnnotation);
-          cleanupFunctions.push(() => {
-            if (anno) {
-              anno.off('clickAnnotation', onClickAnnotation);
-            }
-          });
         }
 
         annotoriousRef.current = anno;
-
-        // Carregar anotações existentes
-        setTimeout(() => {
-          carregarEAplicarAnotacoes();
-        }, 100);
-
-        console.log('Annotorious inicializado com sucesso');
-
+        setTimeout(() => carregarEAplicarAnotacoes(), 100);
       } catch (error) {
         console.error('Erro ao inicializar Annotorious:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível inicializar o sistema de anotações.",
-          variant: "destructive"
-        });
+        toast({ title: "Erro", description: "Não foi possível inicializar o sistema de anotações.", variant: "destructive" });
       }
     };
 
@@ -803,180 +828,110 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
     return () => {
       cleanupFunctions.forEach(fn => fn());
-      
       if (annotoriousRef.current) {
-        try {
-          annotoriousRef.current.destroy();
-        } catch (error) {
-          console.warn('Erro ao destruir Annotorious:', error);
-        }
+        try { annotoriousRef.current.destroy(); } catch {}
         annotoriousRef.current = null;
       }
     };
   }, [imageDimensions, readonly]);
 
-  // Carregar anotações quando o componente monta ou corretorId muda
   useEffect(() => {
     if (corretorId && corretorId.trim() !== '') {
       carregarAnotacoes();
     } else {
       setAnotacoes([]);
-      if (annotoriousRef.current) {
-        annotoriousRef.current.clearAnnotations();
-      }
+      if (annotoriousRef.current) annotoriousRef.current.clearAnnotations();
     }
   }, [redacaoId, corretorId]);
 
-  // Atualizar anotações quando mudarem
   useEffect(() => {
     if (annotoriousRef.current && imageDimensions.width > 0) {
-      // Aguardar um frame para garantir que o Annotorious está pronto
-      requestAnimationFrame(() => {
-        carregarEAplicarAnotacoes();
-      });
+      requestAnimationFrame(() => carregarEAplicarAnotacoes());
     }
   }, [anotacoes, imageDimensions]);
 
-  // Proteção contra efeitos que derrubam o header novo
   useEffect(() => {
-    if (dialogAberto && !editandoAnotacao) {
-      // Em CRIAÇÃO, o header tem que começar expandido SEMPRE
-      setCompetenciasExpanded(true);
-      setCompetenciaDialog(null);
-      console.log('GUARDA-CHUVA: Forçando 5 bolinhas na criação');
+    if (dialogAberto) {
+      if (!editandoAnotacao) {
+        setCompetenciasExpanded(false);
+        setCompetenciaDialog(1);
+      }
+      // Resetar assistente a cada abertura do modal
+      setShowAssistente(false);
+      setAssistentePergunta('');
+      setAssistenteHistorico([]);
     }
   }, [dialogAberto, editandoAnotacao]);
 
-  // Seleção de competência no dialog
   const selecionarCompetencia = (competencia: number) => {
     setCompetenciaDialog(competencia);
     setCompetenciasExpanded(false);
-    console.log('COMPETÊNCIA SELECIONADA:', competencia);
   };
 
-  // Editar anotação
   const editarAnotacao = (anotacao: AnotacaoVisual) => {
     setEditandoAnotacao(anotacao);
-    setCurrentAnnotation({
-      bounds: {
-        x: anotacao.x_start,
-        y: anotacao.y_start,
-        width: anotacao.x_end - anotacao.x_start,
-        height: anotacao.y_end - anotacao.y_start
-      }
-    });
+    setCurrentAnnotation({ bounds: { x: anotacao.x_start, y: anotacao.y_start, width: anotacao.x_end - anotacao.x_start, height: anotacao.y_end - anotacao.y_start } });
     setComentarioTemp(anotacao.comentario);
     setCompetenciaDialog(anotacao.competencia);
-    setCompetenciasExpanded(false); // edição inicia colapsada
+    setCompetenciasExpanded(false);
+    setRefineSugestoes([]);
     setDialogAberto(true);
-    
-    console.log('EDIÇÃO -> Dialog aberto', {
-      competenciasExpanded: false,
-      competenciaDialog: anotacao.competencia
-    });
   };
 
-  // Salvar anotação
   const salvarAnotacao = async () => {
-    console.log('=== INICIANDO SALVAMENTO ===');
-    console.log('currentAnnotation:', currentAnnotation);
-    console.log('comentarioTemp:', comentarioTemp);
-    console.log('competenciaDialog:', competenciaDialog);
-    
     const competenciaFinal = competenciaDialog;
     if (!competenciaFinal) {
-      toast({
-        title: "Atenção",
-        description: "Selecione a competência",
-        variant: "destructive",
-      });
+      toast({ title: "Atenção", description: "Selecione a competência", variant: "destructive" });
       return;
     }
-
     if (!comentarioTemp.trim()) {
-      toast({
-        title: "Erro",
-        description: "Comentário não pode estar vazio.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Comentário não pode estar vazio.", variant: "destructive" });
       return;
     }
 
     try {
       const bounds = currentAnnotation.bounds;
-      console.log('bounds:', bounds);
-
-      if (!bounds || bounds.x === undefined || bounds.y === undefined) {
-        console.error('Bounds inválido:', bounds);
-        throw new Error('Coordenadas da anotação não encontradas');
-      }
-
-      // Verificar se corretorId existe (validação mais flexível)
-      if (!corretorId || corretorId.trim() === '') {
-        console.error('corretorId inválido recebido:', corretorId);
-        throw new Error('ID do corretor é obrigatório. Recebido: ' + corretorId);
-      }
+      if (!bounds || bounds.x === undefined || bounds.y === undefined) throw new Error('Coordenadas não encontradas');
+      if (!corretorId || corretorId.trim() === '') throw new Error('ID do corretor é obrigatório');
 
       if (editandoAnotacao?.id) {
-        // Editando anotação existente
         const { error } = await supabase
           .from('marcacoes_visuais')
           .update({
             competencia: competenciaFinal,
             cor_marcacao: CORES_COMPETENCIAS[competenciaFinal as keyof typeof CORES_COMPETENCIAS].cor,
             comentario: comentarioTemp.trim(),
+            x_start: bounds.x,
+            y_start: bounds.y,
+            x_end: bounds.x + bounds.width,
+            y_end: bounds.y + bounds.height,
           })
           .eq('id', editandoAnotacao.id);
-
         if (error) throw error;
-
-        toast({
-          title: "Marcação atualizada!",
-          description: "Comentário editado com sucesso.",
-        });
+        toast({ title: "Marcação atualizada!" });
       } else {
-        // Criando nova anotação
-        const novaAnotacao = {
-          redacao_id: redacaoId,
-          corretor_id: corretorId,
-          competencia: competenciaFinal,
-          cor_marcacao: CORES_COMPETENCIAS[competenciaFinal as keyof typeof CORES_COMPETENCIAS].cor,
-          comentario: comentarioTemp.trim(),
-          tabela_origem: tipoTabela,
-          x_start: bounds.x,
-          y_start: bounds.y,
-          x_end: bounds.x + bounds.width,
-          y_end: bounds.y + bounds.height,
-          imagem_largura: imageDimensions.width,
-          imagem_altura: imageDimensions.height,
-          numero_sequencial: contadorSequencial
-        };
-
-        console.log('=== DADOS DA ANOTAÇÃO ===');
-        console.log('novaAnotacao:', JSON.stringify(novaAnotacao, null, 2));
-
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('marcacoes_visuais')
-          .insert(novaAnotacao)
+          .insert({
+            redacao_id: redacaoId,
+            corretor_id: corretorId,
+            competencia: competenciaFinal,
+            cor_marcacao: CORES_COMPETENCIAS[competenciaFinal as keyof typeof CORES_COMPETENCIAS].cor,
+            comentario: comentarioTemp.trim(),
+            tabela_origem: tipoTabela,
+            x_start: bounds.x,
+            y_start: bounds.y,
+            x_end: bounds.x + bounds.width,
+            y_end: bounds.y + bounds.height,
+            imagem_largura: imageDimensions.width,
+            imagem_altura: imageDimensions.height,
+            numero_sequencial: contadorSequencial
+          })
           .select()
           .single();
-
-        console.log('=== RESULTADO DO SUPABASE ===');
-        console.log('data:', data);
-        console.log('error:', error);
-
         if (error) throw error;
-
-        console.log('=== ANOTAÇÃO SALVA COM SUCESSO ===');
-        console.log('data salva:', data);
-
-        // Incrementar contador para próxima marcação
         setContadorSequencial(prev => prev + 1);
-
-        toast({
-          title: "Comentário salvo!",
-          description: "Marcação adicionada com sucesso.",
-        });
+        toast({ title: "Comentário salvo!" });
       }
 
       setDialogAberto(false);
@@ -984,195 +939,199 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       setComentarioTemp("");
       setCompetenciaDialog(null);
       setEditandoAnotacao(null);
-      
-      // Recarregar anotações para sincronizar
+      setRefineSugestoes([]);
       await carregarAnotacoes();
-
     } catch (error: any) {
-      console.error('Erro ao salvar anotação:', error);
-      
-      let errorMessage = 'Erro desconhecido ao salvar comentário';
-      
-      if (error && typeof error === 'object') {
-        if (error.message && typeof error.message === 'string') {
-          errorMessage = error.message;
-        } else if (typeof error.toString === 'function') {
-          errorMessage = error.toString();
-        }
-      }
-      
-      toast({
-        title: "Erro ao salvar comentário",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao salvar comentário", description: error.message || 'Erro desconhecido', variant: "destructive" });
     }
   };
 
-  // Cancelar anotação
   const cancelarAnotacao = () => {
     setDialogAberto(false);
     setCurrentAnnotation(null);
     setComentarioTemp("");
+    setRefineSugestoes([]);
   };
 
-  // Salvar todas as anotações pendentes
-  const salvarTodasAnotacoes = async () => {
-    // As anotações já são salvas individualmente
-    return;
-  };
+  const salvarTodasAnotacoes = async () => {};
 
-  // Remover anotação
   const removerAnotacao = async (annotationId: string) => {
     try {
-      const { error } = await supabase
-        .from('marcacoes_visuais')
-        .delete()
-        .eq('id', annotationId);
-      
+      const { error } = await supabase.from('marcacoes_visuais').delete().eq('id', annotationId);
       if (error) throw error;
-
-      // Remover do Annotorious
-      if (annotoriousRef.current) {
-        annotoriousRef.current.removeAnnotation(annotationId);
-      }
-
-      toast({
-        title: "Anotação removida",
-        description: "A marcação foi excluída com sucesso.",
-      });
-
-      // Recarregar anotações
+      if (annotoriousRef.current) annotoriousRef.current.removeAnnotation(annotationId);
+      toast({ title: "Anotação removida" });
       await carregarAnotacoes();
     } catch (error) {
       console.error('Erro ao remover anotação:', error);
-      toast({
-        title: "Erro ao remover",
-        description: "Não foi possível remover a anotação.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao remover", variant: "destructive" });
     }
   };
 
-  // Limpar todas as anotações
   const limparTodasAnotacoes = async () => {
-    const shouldClear = confirm('Tem certeza que deseja limpar todas as anotações? Esta ação não pode ser desfeita.');
-    
-    if (!shouldClear) return;
-
     try {
-      // Remover do banco de dados - apenas marcações do corretor atual
       const { error } = await supabase
         .from('marcacoes_visuais')
         .delete()
         .eq('redacao_id', redacaoId)
         .eq('tabela_origem', tipoTabela)
         .eq('corretor_id', corretorId);
-      
       if (error) throw error;
-
-      // Limpar do Annotorious
-      if (annotoriousRef.current) {
-        annotoriousRef.current.clearAnnotations();
-      }
-
-      // Resetar estados
+      if (annotoriousRef.current) annotoriousRef.current.clearAnnotations();
       setAnotacoes([]);
       setContadorSequencial(1);
-
-      toast({
-        title: "Anotações removidas",
-        description: "Todas as marcações foram excluídas com sucesso.",
-      });
-
+      setShowClearDialog(false);
+      toast({ title: "Marcações removidas", description: "Todas as marcações foram excluídas." });
     } catch (error) {
       console.error('Erro ao limpar anotações:', error);
-      toast({
-        title: "Erro ao limpar",
-        description: "Não foi possível remover todas as anotações.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao limpar", variant: "destructive" });
     }
   };
 
-  // Gerar imagem com anotações
-  const gerarImagemComAnotacoes = async (): Promise<string> => {
-    if (!containerRef.current) {
-      throw new Error('Container não encontrado');
-    }
-
+  const chamarAssistente = async () => {
+    if (!assistentePergunta.trim()) return;
+    const perguntaAtual = assistentePergunta.trim();
+    setAssistenteLoading(true);
+    setAssistentePergunta('');
+    const compLabel = competenciaDialog
+      ? (competenciaDialog === 6 ? 'PA — Ponto de Atenção' : `C${competenciaDialog} — ${CORES_COMPETENCIAS[competenciaDialog as keyof typeof CORES_COMPETENCIAS].label}`)
+      : 'Não selecionada';
     try {
-      const canvas = await html2canvas(containerRef.current, {
-        allowTaint: true,
-        useCORS: true,
-        backgroundColor: null,
-        scale: 2
+      const { data, error } = await supabase.functions.invoke('assistente-correcao', {
+        body: { competencia: compLabel, comentarioAtual: comentarioTemp, pergunta: perguntaAtual },
       });
-
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('Erro ao gerar imagem:', error);
-      throw error;
+      if (error) throw error;
+      const resposta = data?.resposta ?? 'Sem resposta.';
+      setAssistenteHistorico(prev => [...prev.slice(-4), { pergunta: perguntaAtual, resposta }]);
+    } catch (err: any) {
+      toast({ title: "Erro no assistente", description: err.message || "Tente novamente.", variant: "destructive" });
+      setAssistentePergunta(perguntaAtual); // devolve a pergunta ao input
+    } finally {
+      setAssistenteLoading(false);
     }
   };
 
-
-  // Estilo: largura total, altura automática (container se ajusta ao conteúdo)
-  const getImageStyle = () => {
-    return {
-      userSelect: 'none' as const,
-      cursor: 'default' as const,
-      width: '100%',
-      height: 'auto',
-      objectFit: 'contain' as const,
-      transition: 'none',
-      display: 'block',
-      margin: '0',
-      padding: '0',
-    };
+  const refinarComentario = async () => {
+    if (!comentarioTemp.trim()) {
+      toast({ title: "Atenção", description: "Digite um comentário antes de refinar.", variant: "destructive" });
+      return;
+    }
+    setRefineLoading(true);
+    setRefineSugestoes([]);
+    try {
+      const { data, error } = await supabase.functions.invoke('refinar-comentario-corretor', { body: { comentario: comentarioTemp.trim() } });
+      if (error) throw error;
+      if (data?.sugestoes && Array.isArray(data.sugestoes)) setRefineSugestoes(data.sugestoes);
+    } catch (err: any) {
+      toast({ title: "Erro ao refinar", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setRefineLoading(false);
+    }
   };
+
+  // Salvar edição pelo mini-card inline
+  const salvarEdicaoInline = async () => {
+    if (!miniCard || !inlineComentario.trim()) return;
+    try {
+      const { error } = await supabase
+        .from('marcacoes_visuais')
+        .update({
+          competencia: inlineCompetencia,
+          cor_marcacao: CORES_COMPETENCIAS[inlineCompetencia as keyof typeof CORES_COMPETENCIAS].cor,
+          comentario: inlineComentario.trim(),
+        })
+        .eq('id', miniCard.id);
+      if (error) throw error;
+      setMiniCard(null);
+      setInlineRefineSugestoes([]);
+      await carregarAnotacoes();
+      toast({ title: "Comentário atualizado!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // Refinar pelo mini-card
+  const refinarComentarioInline = async () => {
+    if (!inlineComentario.trim()) return;
+    setInlineRefineLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('refinar-comentario-corretor', { body: { comentario: inlineComentario.trim() } });
+      if (error) throw error;
+      if (data?.sugestoes) setInlineRefineSugestoes(data.sugestoes);
+    } catch { /* silent */ }
+    finally { setInlineRefineLoading(false); }
+  };
+
+  const gerarImagemComAnotacoes = async (): Promise<string> => {
+    if (!containerRef.current) throw new Error('Container não encontrado');
+    const canvas = await html2canvas(containerRef.current, { allowTaint: true, useCORS: true, backgroundColor: null, scale: 2 });
+    return canvas.toDataURL('image/png');
+  };
+
+  const getImageStyle = () => ({
+    userSelect: 'none' as const,
+    cursor: 'default' as const,
+    width: '100%',
+    height: 'auto',
+    objectFit: 'contain' as const,
+    transition: 'none',
+    display: 'block',
+    margin: '0',
+    padding: '0',
+  });
+
+  // Anotação ativa para o mini-card
+  const miniCardAnotacao = miniCard ? anotacoes.find(a => a.id === miniCard.id) : null;
 
   return (
     <div>
-      {/* Painel de competências */}
+      {/* Painel de competências + legenda */}
       {!readonly && (
-        <div className="mb-4 painel-correcao">
-          <div className="flex gap-4 items-center">
+        <div className="mb-3 painel-correcao px-4 pt-3">
+          <div className="mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Legenda das competências
+            </p>
+          </div>
+          <div className="flex gap-3 items-center flex-wrap">
             {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
-              <div
-                key={num}
-                className="flex flex-col items-center gap-1"
-              >
-                <div
-                  className="w-8 h-8 rounded-full border-2 border-gray-300"
-                  style={{ backgroundColor: info.cor }}
-                />
-                <span className="text-xs font-medium text-muted-foreground">
-                  C{num}
-                </span>
+              <div key={num} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full border border-white/50 shadow-sm" style={{ backgroundColor: info.cor }} />
+                <span className="text-xs font-semibold text-slate-600">{num === '6' ? 'PA' : `C${num}`}</span>
               </div>
             ))}
-            
-            {/* Botão para limpar todas as anotações */}
-            {!readonly && anotacoes.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={limparTodasAnotacoes}
-                className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-                title="Limpar todas as anotações"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
           </div>
         </div>
       )}
 
+      {/* Competências por marcação (visão do aluno no readonly) */}
+      {readonly && anotacoes.length > 0 && (
+        <div className="mb-3 px-4 pt-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Comentários por competência
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => {
+              const count = anotacoes.filter(a => String(a.competencia) === num).length;
+              if (count === 0) return null;
+              return (
+                <span
+                  key={num}
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
+                  style={{ backgroundColor: info.cor + '18', color: info.cor, border: `1px solid ${info.cor}44` }}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: info.cor }} />
+                  {num === '6' ? 'PA' : `C${num}`} ({count})
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-      {/* Container da Imagem da Redação */}
-      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao bg-white`}>
-
+      {/* Container da imagem */}
+      <div className="container-imagem-redacao border-0 rounded-lg relative painel-correcao bg-white">
         <div ref={containerRef} className="w-full h-full">
           <img
             ref={imageRef}
@@ -1180,136 +1139,580 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             alt="Redação para correção"
             className="img-redacao"
             onLoad={handleImageLoad}
-            loading="lazy"
+            loading={readonly ? "eager" : "lazy"}
             style={getImageStyle()}
           />
         </div>
       </div>
 
-      {/* Lista de comentários */}
-      {anotacoes.length > 0 && (
-        <div className="mt-6 bg-gray-50 rounded-lg p-4">
-          <h4 className="text-lg font-semibold mb-3">Comentários ({anotacoes.length})</h4>
-          <div className="space-y-2">
-            {anotacoes.map((anotacao) => (
-              <div 
-                key={anotacao.id} 
-                className="flex items-start gap-3 p-3 bg-white rounded border transition-all duration-300"
-                data-comentario-id={anotacao.id}
-              >
-                <div 
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                  style={{ backgroundColor: anotacao.cor_marcacao }}
-                >
-                  C{anotacao.competencia}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" style={{ color: anotacao.cor_marcacao, borderColor: anotacao.cor_marcacao }}>
-                      {CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.label}
-                    </Badge>
+      {/* Lista de comentários colapsável — apenas para o corretor */}
+      {!readonly && anotacoes.length > 0 && (
+        <div className="mt-4 px-4 pb-4">
+          <button
+            onClick={() => setListaAberta(!listaAberta)}
+            className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-2 w-full"
+          >
+            {listaAberta ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <span>{listaAberta ? 'Ocultar' : 'Ver'} comentários ({anotacoes.length})</span>
+          </button>
+
+          {listaAberta && (
+            <div className="space-y-2 mt-1">
+              {anotacoes.map((anotacao) => {
+                const cor = CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.cor ?? anotacao.cor_marcacao;
+                const label = anotacao.competencia === 6 ? 'PA' : `C${anotacao.competencia}`;
+                return (
+                  <div
+                    key={anotacao.id}
+                    className="flex items-start gap-3 p-3 bg-white rounded-xl border transition-all duration-200 hover:shadow-sm"
+                    data-comentario-id={anotacao.id}
+                    style={{ borderLeft: `3px solid ${cor}` }}
+                  >
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 mt-0.5"
+                      style={{ backgroundColor: cor }}
+                    >
+                      {label}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Badge variant="outline" className="text-xs mb-1.5" style={{ color: cor, borderColor: cor }}>
+                        {CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.label}
+                      </Badge>
+                      <p className="text-sm text-slate-700 leading-relaxed">{anotacao.comentario}</p>
+                    </div>
                     {!readonly && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => editarAnotacao(anotacao)}
-                        className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
-                        aria-label="Editar comentário"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </Button>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => editarAnotacao(anotacao)}
+                          className="h-7 w-7 p-0 text-slate-400 hover:text-primary hover:bg-slate-100"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => {
+                            setConfirmDeleteId(anotacao.id!);
+                          }}
+                          className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-700">{anotacao.comentario}</p>
-                </div>
-                {!readonly && (
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm("Deseja excluir este comentário?")) {
-                          removerAnotacao(anotacao.id!);
-                        }
-                      }}
-                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      aria-label="Excluir comentário"
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Painel arrastável para nova anotação */}
+      {dialogAberto && (
+        <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
+          <div
+            className="absolute inset-0 bg-black/30"
+            style={{ pointerEvents: 'auto' }}
+            onClick={cancelarAnotacao}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              left: `calc(50% + ${dragPos.x}px)`,
+              top: `calc(50% + ${dragPos.y}px)`,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'auto',
+              width: '26rem',
+              maxWidth: '92vw',
+              borderTop: competenciaDialog
+                ? `4px solid ${CORES_COMPETENCIAS[competenciaDialog as keyof typeof CORES_COMPETENCIAS].cor}`
+                : '4px solid #7c3aed',
+            }}
+            className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden"
+          >
+            {/* Header */}
+            <div
+              onMouseDown={handleDragStart}
+              className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b cursor-grab active:cursor-grabbing select-none"
+            >
+              <div className="flex items-center gap-2">
+                {competenciaDialog && (() => {
+                  const c = CORES_COMPETENCIAS[competenciaDialog as keyof typeof CORES_COMPETENCIAS];
+                  const lbl = competenciaDialog === 6 ? 'PA' : `C${competenciaDialog}`;
+                  return (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-black"
+                      style={{ backgroundColor: c.cor + '20', color: c.cor, border: `1px solid ${c.cor}55` }}
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: c.cor }} />
+                      {lbl}
+                    </span>
+                  );
+                })()}
+                <span className="text-sm font-bold text-slate-800">
+                  {competenciaDialog
+                    ? (competenciaDialog === 6 ? 'Ponto de Atenção' : `Competência ${competenciaDialog}`)
+                    : (editandoAnotacao ? 'Editar Comentário' : 'Nova Marcação')
+                  }
+                </span>
+              </div>
+              <button onClick={cancelarAnotacao} className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              {/* Pills de competência */}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Competência</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {([1, 2, 3, 4, 5, 6] as const).map(num => {
+                    const c = CORES_COMPETENCIAS[num];
+                    const lbl = num === 6 ? 'PA' : `C${num}`;
+                    const selected = competenciaDialog === num;
+                    return (
+                      <button
+                        key={num}
+                        onClick={() => selecionarCompetencia(num)}
+                        className={cn(
+                          "rounded-full px-2.5 py-0.5 text-xs font-bold border transition-all",
+                          selected ? "ring-2 ring-offset-1" : "opacity-60 hover:opacity-100"
+                        )}
+                        style={{
+                          backgroundColor: selected ? c.cor + '20' : 'white',
+                          borderColor: c.cor,
+                          color: c.cor,
+                        }}
+                      >
+                        {lbl}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Textarea */}
+              <div className="relative">
+                <textarea
+                  ref={comentarioTextareaRef}
+                  placeholder="Digite seu comentário sobre esta marcação..."
+                  value={comentarioTemp}
+                  onChange={(e) => { setComentarioTemp(e.target.value); setRefineSugestoes([]); }}
+                  rows={4}
+                  autoFocus
+                  autoCapitalize="sentences"
+                  spellCheck={true}
+                  lang="pt-BR"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={toggleMicRecording}
+                  disabled={!isMicSupported}
+                  className={cn(
+                    "absolute bottom-2 right-2 p-1.5 rounded-full transition-colors",
+                    isMicRecording ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200" : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                    !isMicSupported && "opacity-40 cursor-not-allowed"
+                  )}
+                >
+                  {isMicRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+              </div>
+              {isMicRecording && <p className="text-xs text-red-500 font-medium animate-pulse">Ouvindo...</p>}
+
+              {/* Refinar clareza */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={refinarComentario}
+                  disabled={refineLoading || !comentarioTemp.trim()}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors"
+                >
+                  {refineLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
+                  {refineLoading ? 'Refinando…' : 'Refinar clareza'}
+                </button>
+                {refineSugestoes.length > 0 && (
+                  <button type="button" onClick={() => setRefineSugestoes([])} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                    <X className="w-3 h-3" /> Ignorar
+                  </button>
+                )}
+              </div>
+
+              {refineSugestoes.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
+                  {refineSugestoes.map((s, i) => (
+                    <button
+                      key={i} type="button"
+                      onClick={() => { setComentarioTemp(s); setRefineSugestoes([]); }}
+                      className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Assistente de correção */}
+              <div className="border-t pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAssistente(prev => !prev);
+                    if (!showAssistente) setTimeout(() => assistenteInputRef.current?.focus(), 100);
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-colors",
+                    showAssistente
+                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                      : "text-blue-700 border-blue-200 hover:bg-blue-50"
+                  )}
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  Assistente de correção
+                </button>
+
+                {showAssistente && (
+                  <div className="mt-2.5 rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
+                    {/* Histórico */}
+                    {assistenteHistorico.length > 0 && (
+                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        {assistenteHistorico.map((item, i) => (
+                          <div key={i} className="space-y-1">
+                            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide truncate">
+                              Você: {item.pergunta}
+                            </p>
+                            <div className="bg-white rounded-lg border border-blue-100 p-2.5 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                              {item.resposta}
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setComentarioTemp(prev => prev.trim() ? `${prev.trim()}\n\n${item.resposta}` : item.resposta)}
+                                  className="text-[10px] font-bold text-violet-700 border border-violet-200 bg-violet-50 hover:bg-violet-100 px-2 py-0.5 rounded-lg transition-colors"
+                                >
+                                  Inserir no comentário
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Input */}
+                    <div className="flex gap-1.5 items-end">
+                      <div className="relative flex-1">
+                        <textarea
+                          ref={assistenteInputRef}
+                          value={assistentePergunta}
+                          onChange={(e) => setAssistentePergunta(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              chamarAssistente();
+                            }
+                          }}
+                          placeholder="Pergunte ao assistente… (Enter para enviar)"
+                          rows={2}
+                          disabled={assistenteLoading}
+                          className="w-full resize-none rounded-xl border border-blue-200 bg-white p-2 pr-8 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-50"
+                        />
+                        <button
+                          type="button"
+                          onClick={toggleAssistenteMic}
+                          disabled={!isAssistenteMicSupported || assistenteLoading}
+                          className={cn(
+                            "absolute bottom-2 right-2 p-1 rounded-full transition-colors",
+                            isAssistenteMicRecording
+                              ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                              : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                            (!isAssistenteMicSupported || assistenteLoading) && "opacity-40 cursor-not-allowed"
+                          )}
+                        >
+                          {isAssistenteMicRecording ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={chamarAssistente}
+                        disabled={assistenteLoading || !assistentePergunta.trim()}
+                        className="self-end p-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {assistenteLoading
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <SendHorizontal className="w-3.5 h-3.5" />
+                        }
+                      </button>
+                    </div>
+                    {isAssistenteMicRecording && <p className="text-[10px] text-red-500 font-medium animate-pulse">Ouvindo...</p>}
+                    {!isAssistenteMicRecording && <p className="text-[10px] text-blue-400">Shift+Enter para nova linha · microfone para ditar</p>}
                   </div>
                 )}
               </div>
-            ))}
+
+              {/* Footer */}
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button
+                  onClick={cancelarAnotacao}
+                  className="text-xs px-3 py-1.5 rounded-xl border font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={salvarAnotacao}
+                  disabled={!comentarioTemp.trim()}
+                  className="text-xs px-3 py-1.5 rounded-xl bg-violet-700 text-white font-semibold hover:bg-violet-800 disabled:opacity-50 transition-colors"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Dialog para adicionar comentário */}
-      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editandoAnotacao ? "Editar Comentário" : "Redação Manuscrita"}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* TOPO DO DIALOG */}
-            <div className="flex items-center gap-2">
-              {(() => {
-                const compAtual = competenciaDialog ?? null;
-                
-                return (competenciasExpanded || !compAtual) ? (
-                  // EXPANDIDO → 5 bolinhas
-                  <div className="flex items-center gap-2">
-                    {[1,2,3,4,5].map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => selecionarCompetencia(num)}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
-                        style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
-                        aria-label={`Competência ${num}`}
-                        data-testid={`bolinha-c${num}`}
-                      />
-                    ))}
+      {/* Mini-card contextual (portal) */}
+      {miniCard && miniCardAnotacao && createPortal(
+        (() => {
+          const anotacao = miniCardAnotacao;
+          const comp = anotacao.competencia;
+          const corInfo = CORES_COMPETENCIAS[comp as keyof typeof CORES_COMPETENCIAS];
+          const compLabel = comp === 6 ? 'PA' : `C${comp}`;
+          const { x, y, showAbove } = miniCard.position;
+
+          return (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              onMouseEnter={() => {
+                miniCardHoverRef.current = true;
+                if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+              }}
+              onMouseLeave={() => {
+                miniCardHoverRef.current = false;
+                if (!miniCard.pinned) {
+                  hideTimerRef.current = setTimeout(() => setMiniCard(null), 250);
+                }
+              }}
+              style={{
+                position: 'fixed',
+                left: `${x}px`,
+                top: showAbove ? undefined : `${y + 6}px`,
+                bottom: showAbove ? `${window.innerHeight - y + 6}px` : undefined,
+                transform: 'translateX(-50%)',
+                zIndex: 9999,
+                width: '380px',
+                maxWidth: 'min(380px, 92vw)',
+                borderTop: `4px solid ${corInfo.cor}`,
+              }}
+              className="bg-white rounded-2xl shadow-2xl ring-1 ring-black/8 overflow-hidden"
+            >
+              {/* Header do mini-card */}
+              <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-black"
+                    style={{ backgroundColor: corInfo.cor + '20', color: corInfo.cor, border: `1px solid ${corInfo.cor}55` }}
+                  >
+                    <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: corInfo.cor }} />
+                    {compLabel}
+                  </span>
+                  <span className="text-xs text-slate-500 truncate max-w-[150px]">{corInfo.label}</span>
+                </div>
+                <button
+                  onClick={() => setMiniCard(null)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 rounded hover:bg-slate-200 flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Body do mini-card */}
+              <div className="p-4">
+                {!miniCard.editing ? (
+                  <div className="space-y-3">
+                    <p className="text-sm leading-relaxed text-slate-700">{anotacao.comentario}</p>
+
+                    {/* Ações — só para corretor e quando pinned */}
+                    {!readonly && (
+                      <div className="flex items-center gap-1 pt-2 border-t">
+                        {miniCard.pinned ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                setMiniCard(prev => prev ? { ...prev, editing: true, pinned: true } : null);
+                                setInlineComentario(anotacao.comentario);
+                                setInlineCompetencia(anotacao.competencia);
+                                setInlineRefineSugestoes([]);
+                              }}
+                              className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                            >
+                              Editar
+                            </button>
+                            {confirmDeleteId === anotacao.id ? (
+                              <div className="flex items-center gap-1 ml-1">
+                                <span className="text-xs text-red-600 font-medium">Excluir?</span>
+                                <button
+                                  onClick={() => { removerAnotacao(anotacao.id!); setMiniCard(null); setConfirmDeleteId(null); }}
+                                  className="text-xs font-bold text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50"
+                                >
+                                  Sim
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100"
+                                >
+                                  Não
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDeleteId(anotacao.id!)}
+                                className="text-xs font-semibold text-red-500 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                              >
+                                Excluir
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-xs text-slate-400">Clique para editar ou excluir</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  // COLAPSADO → 1 bolinha + texto
-                  <button
-                    onClick={() => setCompetenciasExpanded(true)}
-                    className="flex items-center gap-2"
-                    data-testid="bolinha-colapsada"
-                  >
-                    <span
-                      className="w-8 h-8 rounded-full border-2 border-gray-300"
-                      style={{ backgroundColor: CORES_COMPETENCIAS[compAtual].cor }}
+                  /* Modo edição inline */
+                  <div className="space-y-3">
+                    {/* Selector de competência */}
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Competência</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {([1, 2, 3, 4, 5, 6] as const).map(num => {
+                          const c = CORES_COMPETENCIAS[num];
+                          const lbl = num === 6 ? 'PA' : `C${num}`;
+                          const selected = inlineCompetencia === num;
+                          return (
+                            <button
+                              key={num}
+                              onClick={() => setInlineCompetencia(num)}
+                              className={cn(
+                                "rounded-full px-2.5 py-0.5 text-xs font-bold border transition-all",
+                                selected ? "ring-2 ring-offset-1" : "opacity-60 hover:opacity-100"
+                              )}
+                              style={{
+                                backgroundColor: selected ? c.cor + '20' : 'white',
+                                borderColor: c.cor,
+                                color: c.cor,
+                              }}
+                            >
+                              {lbl}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Textarea */}
+                    <textarea
+                      value={inlineComentario}
+                      onChange={(e) => { setInlineComentario(e.target.value); setInlineRefineSugestoes([]); }}
+                      rows={4}
+                      autoFocus
+                      className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all"
                     />
-                    <span>Competência {compAtual}</span>
-                  </button>
-                );
-              })()}
+
+                    {/* Refinar */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={refinarComentarioInline}
+                        disabled={inlineRefineLoading || !inlineComentario.trim()}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 border border-purple-300 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl disabled:opacity-50 transition-colors"
+                      >
+                        {inlineRefineLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <JarvisIcon size={12} />}
+                        {inlineRefineLoading ? 'Refinando…' : 'Refinar clareza'}
+                      </button>
+                    </div>
+
+                    {inlineRefineSugestoes.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Sugestões:</p>
+                        {inlineRefineSugestoes.map((s, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setInlineComentario(s); setInlineRefineSugestoes([]); }}
+                            className="w-full text-left text-xs p-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Ações salvar/cancelar */}
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                      <button
+                        onClick={() => setMiniCard(prev => prev ? { ...prev, editing: false } : null)}
+                        className="text-xs px-3 py-1.5 rounded-xl border font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={salvarEdicaoInline}
+                        disabled={!inlineComentario.trim()}
+                        className="text-xs px-3 py-1.5 rounded-xl bg-violet-700 text-white font-semibold hover:bg-violet-800 disabled:opacity-50 transition-colors"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <Textarea
-              placeholder="Digite seu comentário sobre esta marcação..."
-              value={comentarioTemp}
-              onChange={(e) => setComentarioTemp(e.target.value)}
-              rows={4}
-              autoFocus
-            />
-            
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={cancelarAnotacao}>
-                Cancelar
-              </Button>
-              <Button onClick={salvarAnotacao}>
-                <Save className="w-4 h-4 mr-2" />
-                Salvar Comentário
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          );
+        })(),
+        document.body
+      )}
+
+      {/* Dialog de confirmação para limpar marcações */}
+      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar todas as marcações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja limpar todas as marcações desta redação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={limparTodasAnotacoes}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Limpar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de confirmação para excluir individual (da lista) */}
+      <AlertDialog open={!!confirmDeleteId && !miniCard} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir comentário?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (confirmDeleteId) { removerAnotacao(confirmDeleteId); setConfirmDeleteId(null); } }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 });
@@ -1317,4 +1720,4 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 RedacaoAnotacaoVisual.displayName = "RedacaoAnotacaoVisual";
 
 export { RedacaoAnotacaoVisual };
-export type { RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps };
+export type { RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps, AnotacaoVisual };

@@ -23,6 +23,11 @@ export interface RedacaoEnviada {
   data_correcao: string | null;
   status: string;
   tipo_envio: string;
+  // Campos de congelamento
+  congelada?: boolean;
+  data_congelamento?: string;
+  descongelada_por?: string;
+  data_descongelamento?: string;
   // New corrector fields
   c1_corretor_1: number | null;
   c2_corretor_1: number | null;
@@ -42,6 +47,9 @@ export interface RedacaoEnviada {
   corretor_id_2: string | null;
   corretor_1: { nome_completo: string } | null;
   corretor_2: { nome_completo: string } | null;
+  // Pré-correção do Jarvis (admin)
+  jarvis_precorrecao_id: string | null;
+  jarvis_precorrecao: { status: string } | null;
 }
 
 export const useRedacoesEnviadas = () => {
@@ -78,6 +86,10 @@ export const useRedacoesEnviadas = () => {
           data_correcao,
           status,
           tipo_envio,
+          congelada,
+          data_congelamento,
+          descongelada_por,
+          data_descongelamento,
           c1_corretor_1,
           c2_corretor_1,
           c3_corretor_1,
@@ -95,36 +107,48 @@ export const useRedacoesEnviadas = () => {
           corretor_id_1,
           corretor_id_2,
           corretor_1:corretores!corretor_id_1(nome_completo),
-          corretor_2:corretores!corretor_id_2(nome_completo)
+          corretor_2:corretores!corretor_id_2(nome_completo),
+          jarvis_precorrecao_id,
+          jarvis_precorrecao:jarvis_correcoes!jarvis_precorrecao_id(status)
         `)
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order("data_envio", { ascending: false });
 
       if (error) throw error;
 
       // Resolver nomes de alunos quando o nome_aluno for genérico ("Aluno")
-      const redacoesProcessadas = await Promise.all((data || []).map(async (redacao) => {
-        // Se o nome_aluno for "Aluno" ou estiver vazio, tentar resolver pelo email
-        if (!redacao.nome_aluno || redacao.nome_aluno.trim() === "Aluno" || redacao.nome_aluno.trim() === "") {
-          try {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("nome")
-              .eq("email", redacao.email_aluno)
-              .eq("user_type", "aluno")
-              .single();
+      const redacoesComNomeGenerico = (data || []).filter(
+        r => !r.nome_aluno || r.nome_aluno.trim() === "Aluno" || r.nome_aluno.trim() === ""
+      );
 
-            if (profileData?.nome) {
-              return {
-                ...redacao,
-                nome_aluno: profileData.nome
-              };
-            }
-          } catch (profileError) {
-            console.log(`Não foi possível resolver o nome para o email: ${redacao.email_aluno}`);
+      // Buscar todos os nomes em uma única query
+      let nomesMap: Record<string, string> = {};
+      if (redacoesComNomeGenerico.length > 0) {
+        const emails = [...new Set(redacoesComNomeGenerico.map(r => r.email_aluno))];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("email, nome")
+          .in("email", emails)
+          .eq("user_type", "aluno");
+
+        if (profilesData) {
+          nomesMap = profilesData.reduce((acc, p) => {
+            if (p.email && p.nome) acc[p.email] = p.nome;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      // Aplicar os nomes resolvidos
+      const redacoesProcessadas = (data || []).map(redacao => {
+        if (!redacao.nome_aluno || redacao.nome_aluno.trim() === "Aluno" || redacao.nome_aluno.trim() === "") {
+          const nomeResolvido = nomesMap[redacao.email_aluno];
+          if (nomeResolvido) {
+            return { ...redacao, nome_aluno: nomeResolvido };
           }
         }
         return redacao;
-      }));
+      });
 
       setRedacoes(redacoesProcessadas);
     } catch (error: any) {
@@ -141,9 +165,10 @@ export const useRedacoesEnviadas = () => {
 
   const handleDeleteRedacao = async (id: string) => {
     try {
+      // Soft delete - marca como deletada ao invés de remover
       const { error } = await supabase
         .from("redacoes_enviadas")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", id);
 
       if (error) throw error;

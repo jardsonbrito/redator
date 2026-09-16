@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCheck, Home } from "lucide-react";
+import { UserCheck, Home, XCircle, Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { TURMAS_VALIDAS, formatTurmaDisplay, TurmaLetra } from "@/utils/turmaUtils";
+
+type TurmasConfig = Record<string, boolean>;
 
 export default function CadastroAluno() {
   const [nome, setNome] = useState("");
@@ -16,21 +18,57 @@ export default function CadastroAluno() {
   const [turma, setTurma] = useState("");
   const [loading, setLoading] = useState(false);
   const [cadastrado, setCadastrado] = useState(false);
+  const [turmasHabilitadas, setTurmasHabilitadas] = useState<TurmaLetra[]>([]);
+  const [verificandoConfig, setVerificandoConfig] = useState(true);
+  const [turmaDesabilitada, setTurmaDesabilitada] = useState(false);
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
-  // Lista de turmas usando padrão normalizado
-  const turmas = TURMAS_VALIDAS;
-
-  // Pré-selecionar turma se vier na URL
+  // Verificar configuração das turmas
   useEffect(() => {
-    const turmaParam = searchParams.get('turma');
-    if (turmaParam) {
-      const turmaLetra = turmaParam.toUpperCase();
-      if (turmas.includes(turmaLetra as any)) {
-        setTurma(turmaLetra);
+    const verificarConfiguracao = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("configuracoes_sistema")
+          .select("valor")
+          .eq("chave", "autoatendimento_turmas")
+          .maybeSingle();
+
+        if (error) throw error;
+
+        let turmasAtivas: TurmaLetra[] = [];
+
+        if (data?.valor) {
+          const config = data.valor as TurmasConfig;
+          // Filtrar apenas turmas habilitadas
+          turmasAtivas = TURMAS_VALIDAS.filter(t => config[t] !== false);
+        } else {
+          // Se não existir configuração, assume todas habilitadas
+          turmasAtivas = [...TURMAS_VALIDAS];
+        }
+
+        setTurmasHabilitadas(turmasAtivas);
+
+        // Verificar se há turma na URL e se está habilitada
+        const turmaParam = searchParams.get('turma')?.toUpperCase();
+        if (turmaParam && TURMAS_VALIDAS.includes(turmaParam as TurmaLetra)) {
+          if (turmasAtivas.includes(turmaParam as TurmaLetra)) {
+            setTurma(turmaParam);
+          } else {
+            // Turma específica da URL está desabilitada
+            setTurmaDesabilitada(true);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao verificar configuração:", error);
+        // Em caso de erro, assume todas habilitadas
+        setTurmasHabilitadas([...TURMAS_VALIDAS]);
+      } finally {
+        setVerificandoConfig(false);
       }
-    }
+    };
+
+    verificarConfiguracao();
   }, [searchParams]);
 
   const isFormValid = nome.trim() && email.trim() && turma;
@@ -38,6 +76,16 @@ export default function CadastroAluno() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
+
+    // Verificar novamente se a turma está habilitada (proteção extra)
+    if (!turmasHabilitadas.includes(turma as TurmaLetra)) {
+      toast({
+        title: "Turma não disponível",
+        description: "Esta turma não está aceitando novos cadastros no momento.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -95,6 +143,84 @@ export default function CadastroAluno() {
     }
   };
 
+  // Tela de carregamento
+  if (verificandoConfig) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Verificando disponibilidade...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Tela de turma específica desabilitada
+  if (turmaDesabilitada) {
+    const turmaParam = searchParams.get('turma')?.toUpperCase();
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <XCircle className="w-16 h-16 text-red-500" />
+            </div>
+            <CardTitle className="text-2xl text-red-600">Cadastro Indisponível</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              O cadastro para a Turma {turmaParam} está temporariamente desabilitado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Entre em contato com o administrador para mais informações.
+            </p>
+            <Link to="/">
+              <Button className="w-full" variant="outline">
+                <Home className="w-4 h-4 mr-2" />
+                Voltar ao Início
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Tela de nenhuma turma disponível
+  if (turmasHabilitadas.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <XCircle className="w-16 h-16 text-red-500" />
+            </div>
+            <CardTitle className="text-2xl text-red-600">Cadastro Indisponível</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              O cadastro de novos alunos está temporariamente desabilitado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Entre em contato com o administrador para mais informações.
+            </p>
+            <Link to="/">
+              <Button className="w-full" variant="outline">
+                <Home className="w-4 h-4 mr-2" />
+                Voltar ao Início
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Tela de cadastro concluído
   if (cadastrado) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 flex items-center justify-center p-4">
@@ -121,6 +247,7 @@ export default function CadastroAluno() {
     );
   }
 
+  // Formulário de cadastro
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -162,7 +289,7 @@ export default function CadastroAluno() {
                   <SelectValue placeholder="Selecione sua turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  {turmas.map((turmaOption) => (
+                  {turmasHabilitadas.map((turmaOption) => (
                     <SelectItem key={turmaOption} value={turmaOption}>
                       {formatTurmaDisplay(turmaOption)}
                     </SelectItem>
@@ -171,8 +298,8 @@ export default function CadastroAluno() {
               </Select>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!isFormValid || loading}
               className="w-full"
             >
