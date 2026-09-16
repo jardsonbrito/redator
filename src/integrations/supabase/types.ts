@@ -2674,8 +2674,10 @@ export type Database = {
           c1_admin?: number | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
+          c2_admin?: number | null
           c2_corretor_1?: number | null
           c2_corretor_2?: number | null
+          c3_admin?: number | null
           c3_corretor_1?: number | null
           c2_admin?: number | null
           c3_admin?: number | null

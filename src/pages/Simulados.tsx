@@ -165,7 +165,8 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
   // Usar dados completos diretamente do useSimuladoSubmission
   const redacaoData = submissionData?.submissionData;
 
-  // Exibir nota apenas quando o admin liberou manualmente (corrigida = true + nota_total preenchida)
+  // Nota final já calculada pelo banco (considera terceira correção da Coordenação quando houver).
+  // Exibir apenas quando o admin liberou manualmente (corrigida = true + nota_total preenchida)
   const notaMedia = (redacaoData?.corrigida && redacaoData.nota_total != null)
     ? redacaoData.nota_total
     : null;
