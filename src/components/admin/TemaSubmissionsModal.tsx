@@ -26,6 +26,8 @@ interface SubmissionData {
   status: string;
   nota_corretor_1?: number | null;
   nota_corretor_2?: number | null;
+  nota_coordenacao?: number | null;
+  teve_terceira_correcao?: boolean;
   is_simulado?: boolean;
 }
 
@@ -71,7 +73,7 @@ export const TemaSubmissionsModal = ({
         setIsSimulado(true);
         const { data: redacoesSimulado, error: redacoesError } = await supabase
           .from("redacoes_simulado")
-          .select("nome_aluno, email_aluno, turma, nota_final_corretor_1, nota_final_corretor_2, corrigida")
+          .select("nome_aluno, email_aluno, turma, nota_final_corretor_1, nota_final_corretor_2, nota_final_admin, status_terceira_correcao, nota_total, corrigida")
           .eq("id_simulado", simulado.id);
 
         if (redacoesError) {
@@ -89,19 +91,14 @@ export const TemaSubmissionsModal = ({
             (profiles || []).map(p => [p.email, p.nome])
           );
 
-          // Calcular média das duas notas para cada redação
+          // Nota final vem pronta do banco (já considera terceira correção da Coordenação, quando houver).
+          // Exibimos como corrigida assim que os dois corretores terminarem, mesmo que o admin
+          // ainda não tenha marcado a linha como finalizada manualmente.
           data = (redacoesSimulado || []).map(r => {
             const nota1 = r.nota_final_corretor_1 ?? null;
             const nota2 = r.nota_final_corretor_2 ?? null;
-
-            let notaFinal = null;
-            let corrigida = r.corrigida || false;
-
-            // Se ambas as notas existem, calcular média
-            if (nota1 !== null && nota2 !== null) {
-              notaFinal = Math.round((nota1 + nota2) / 2);
-              corrigida = true;
-            }
+            const teveTerceiraCorrecao = r.status_terceira_correcao === 'concluida';
+            const corrigida = r.corrigida || (nota1 !== null && nota2 !== null);
 
             // Usar nome do profile se disponível, senão usar nome_aluno da redação
             const nomeReal = profileMap.get(r.email_aluno) || r.nome_aluno;
@@ -110,9 +107,11 @@ export const TemaSubmissionsModal = ({
               nome_aluno: nomeReal,
               email_aluno: r.email_aluno,
               turma: r.turma || null,
-              nota_total: notaFinal,
+              nota_total: r.nota_total,
               nota_corretor_1: nota1,
               nota_corretor_2: nota2,
+              nota_coordenacao: teveTerceiraCorrecao ? r.nota_final_admin ?? null : null,
+              teve_terceira_correcao: teveTerceiraCorrecao,
               corrigida: corrigida,
               status: corrigida ? 'corrigida' : 'aguardando',
               is_simulado: true
@@ -236,7 +235,8 @@ export const TemaSubmissionsModal = ({
                     <>
                       <TableHead className="font-semibold text-center">Nota C1</TableHead>
                       <TableHead className="font-semibold text-center">Nota C2</TableHead>
-                      <TableHead className="font-semibold text-center">Média</TableHead>
+                      <TableHead className="font-semibold text-center">Nota Coordenação</TableHead>
+                      <TableHead className="font-semibold text-center">Média Final</TableHead>
                     </>
                   ) : (
                     <TableHead className="font-semibold text-center">Nota</TableHead>
@@ -272,6 +272,17 @@ export const TemaSubmissionsModal = ({
                           {submission.nota_corretor_2 !== null && submission.nota_corretor_2 !== undefined ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                               {submission.nota_corretor_2}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {submission.teve_terceira_correcao && submission.nota_coordenacao !== null && submission.nota_coordenacao !== undefined ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                              {submission.nota_coordenacao}
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600">

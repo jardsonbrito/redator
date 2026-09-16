@@ -134,21 +134,8 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
   // Usar dados completos diretamente do useSimuladoSubmission
   const redacaoData = submissionData?.submissionData;
 
-  // Calcular nota média a partir dos dados completos
-  const notaMedia = redacaoData ? (() => {
-    const nota1 = redacaoData.nota_final_corretor_1;
-    const nota2 = redacaoData.nota_final_corretor_2;
-
-    if (nota1 !== null && nota2 !== null) {
-      return (nota1 + nota2) / 2;
-    } else if (nota1 !== null) {
-      return nota1;
-    } else if (nota2 !== null) {
-      return nota2;
-    }
-
-    return null;
-  })() : null;
+  // Nota final já calculada pelo banco (considera terceira correção da Coordenação quando houver)
+  const notaMedia = redacaoData?.nota_total ?? null;
 
   const simuladoWithSubmission = {
     ...simulado,
